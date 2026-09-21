@@ -5,7 +5,7 @@ import { monitoringQueries } from "../schema/monitoring";
 import { organizations } from "../schema/organizations";
 import type { OrganizationId } from "./tenant-scope";
 
-export type AlertRuleType = "keyword" | "high_relevance" | "spike";
+export type AlertRuleType = "keyword" | "high_relevance" | "spike" | "sentiment_shift";
 export type AlertChannel = "in_app" | "email";
 
 export async function createAlertRule(
@@ -67,44 +67,66 @@ export async function getActiveAlertRulesForQuery(
 
 /**
  * The scheduler-tick counterpart to
- * listActiveMonitoringQueriesForSourceType — spike detection runs
- * per-tick across every organization's active spike rules, the same
- * documented cross-tenant exception (ADR-001) ingestion already relies on.
+ * listActiveMonitoringQueriesForSourceType — scheduler-driven alert types
+ * (spike, sentiment_shift) run per-tick across every organization's
+ * active rules of that type, the same documented cross-tenant exception
+ * (ADR-001) ingestion already relies on.
  */
-export async function getActiveSpikeAlertRules(db: Db) {
-  return db
-    .select({
-      id: alertRules.id,
-      organizationId: alertRules.organizationId,
-      projectId: alertRules.projectId,
-      queryId: alertRules.queryId,
-      createdByUserId: alertRules.createdByUserId,
-      name: alertRules.name,
-      type: alertRules.type,
-      channels: alertRules.channels,
-      cooldownMinutes: alertRules.cooldownMinutes,
-      status: alertRules.status,
-      createdAt: alertRules.createdAt,
-      updatedAt: alertRules.updatedAt,
-    })
-    .from(alertRules)
-    // A soft-deleted organization must stop firing alerts — see the same
-    // note in listActiveMonitoringQueriesForSourceType.
-    .innerJoin(organizations, eq(organizations.id, alertRules.organizationId))
-    .where(
-      and(eq(alertRules.status, "active"), eq(alertRules.type, "spike"), isNull(organizations.deletedAt)),
-    );
+async function getActiveAlertRulesOfType(db: Db, type: AlertRuleType) {
+  return (
+    db
+      .select({
+        id: alertRules.id,
+        organizationId: alertRules.organizationId,
+        projectId: alertRules.projectId,
+        queryId: alertRules.queryId,
+        createdByUserId: alertRules.createdByUserId,
+        name: alertRules.name,
+        type: alertRules.type,
+        channels: alertRules.channels,
+        cooldownMinutes: alertRules.cooldownMinutes,
+        status: alertRules.status,
+        createdAt: alertRules.createdAt,
+        updatedAt: alertRules.updatedAt,
+      })
+      .from(alertRules)
+      // A soft-deleted organization must stop firing alerts — see the same
+      // note in listActiveMonitoringQueriesForSourceType.
+      .innerJoin(organizations, eq(organizations.id, alertRules.organizationId))
+      .where(
+        and(
+          eq(alertRules.status, "active"),
+          eq(alertRules.type, type),
+          isNull(organizations.deletedAt),
+        ),
+      )
+  );
+}
+
+export function getActiveSpikeAlertRules(db: Db) {
+  return getActiveAlertRulesOfType(db, "spike");
+}
+
+export function getActiveSentimentShiftAlertRules(db: Db) {
+  return getActiveAlertRulesOfType(db, "sentiment_shift");
 }
 
 /** Alert fatigue (brief §19–20): suppress re-notifying within the rule's cooldown window. */
-export async function findRecentAlertEvent(db: Db, alertRuleId: string, cooldownMinutes: number) {
+export async function findRecentAlertEvent(
+  db: Db,
+  alertRuleId: string,
+  cooldownMinutes: number,
+) {
   const [event] = await db
     .select()
     .from(alertEvents)
     .where(
       and(
         eq(alertEvents.alertRuleId, alertRuleId),
-        gt(alertEvents.createdAt, sql`now() - (${cooldownMinutes}::text || ' minutes')::interval`),
+        gt(
+          alertEvents.createdAt,
+          sql`now() - (${cooldownMinutes}::text || ' minutes')::interval`,
+        ),
       ),
     )
     .limit(1);

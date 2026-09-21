@@ -2,6 +2,7 @@ import { Queue, Worker } from "bullmq";
 import {
   QUEUE_NAMES,
   type AiEnrichJobData,
+  type AlertSentimentShiftCheckJobData,
   type AlertSpikeCheckJobData,
   type CrawlSchedulerJobData,
   type CrawlSourceJobData,
@@ -17,6 +18,7 @@ import { processCrawlSchedulerJob } from "./jobs/crawl-scheduler";
 import { processGenerateReportJob } from "./jobs/generate-report";
 import { processGenerateDigestJob } from "./jobs/generate-digest";
 import { evaluateSpikeAlerts } from "./alerts/evaluate-spikes";
+import { evaluateSentimentShiftAlerts } from "./alerts/evaluate-sentiment-shift";
 import { processAiEnrichJob } from "./ai/enrich";
 import { processInsightGenerateJob } from "./ai/generate-insight";
 
@@ -28,35 +30,55 @@ import { processInsightGenerateJob } from "./ai/generate-insight";
  */
 const connection = getRedisConnection();
 
-const sendEmailQueue = new Queue<SendEmailJobData>(QUEUE_NAMES.sendEmail, { connection });
+const sendEmailQueue = new Queue<SendEmailJobData>(QUEUE_NAMES.sendEmail, {
+  connection,
+});
 const sendEmailWorker = new Worker<SendEmailJobData>(
   QUEUE_NAMES.sendEmail,
   processSendEmailJob,
   { connection, concurrency: 5 },
 );
 
-const crawlSourceQueue = new Queue<CrawlSourceJobData>(QUEUE_NAMES.crawlSource, { connection });
+const crawlSourceQueue = new Queue<CrawlSourceJobData>(QUEUE_NAMES.crawlSource, {
+  connection,
+});
 const crawlSourceWorker = new Worker<CrawlSourceJobData>(
   QUEUE_NAMES.crawlSource,
   (job) => processCrawlSourceJob(job, sendEmailQueue),
   { connection, concurrency: 5 },
 );
 
-const crawlSchedulerQueue = new Queue<CrawlSchedulerJobData>(QUEUE_NAMES.crawlScheduler, {
-  connection,
-});
+const crawlSchedulerQueue = new Queue<CrawlSchedulerJobData>(
+  QUEUE_NAMES.crawlScheduler,
+  {
+    connection,
+  },
+);
 const crawlSchedulerWorker = new Worker<CrawlSchedulerJobData>(
   QUEUE_NAMES.crawlScheduler,
   () => processCrawlSchedulerJob(crawlSourceQueue),
   { connection, concurrency: 1 },
 );
 
-const alertSpikeCheckQueue = new Queue<AlertSpikeCheckJobData>(QUEUE_NAMES.alertSpikeCheck, {
-  connection,
-});
+const alertSpikeCheckQueue = new Queue<AlertSpikeCheckJobData>(
+  QUEUE_NAMES.alertSpikeCheck,
+  {
+    connection,
+  },
+);
 const alertSpikeCheckWorker = new Worker<AlertSpikeCheckJobData>(
   QUEUE_NAMES.alertSpikeCheck,
   () => evaluateSpikeAlerts(sendEmailQueue),
+  { connection, concurrency: 1 },
+);
+
+const alertSentimentShiftCheckQueue = new Queue<AlertSentimentShiftCheckJobData>(
+  QUEUE_NAMES.alertSentimentShiftCheck,
+  { connection },
+);
+const alertSentimentShiftCheckWorker = new Worker<AlertSentimentShiftCheckJobData>(
+  QUEUE_NAMES.alertSentimentShiftCheck,
+  () => evaluateSentimentShiftAlerts(sendEmailQueue),
   { connection, concurrency: 1 },
 );
 
@@ -67,18 +89,24 @@ const aiEnrichWorker = new Worker<AiEnrichJobData>(
   { connection, concurrency: 1 },
 );
 
-const insightGenerateQueue = new Queue<InsightGenerateJobData>(QUEUE_NAMES.insightGenerate, {
-  connection,
-});
+const insightGenerateQueue = new Queue<InsightGenerateJobData>(
+  QUEUE_NAMES.insightGenerate,
+  {
+    connection,
+  },
+);
 const insightGenerateWorker = new Worker<InsightGenerateJobData>(
   QUEUE_NAMES.insightGenerate,
   () => processInsightGenerateJob(),
   { connection, concurrency: 1 },
 );
 
-const generateReportQueue = new Queue<GenerateReportJobData>(QUEUE_NAMES.generateReport, {
-  connection,
-});
+const generateReportQueue = new Queue<GenerateReportJobData>(
+  QUEUE_NAMES.generateReport,
+  {
+    connection,
+  },
+);
 const generateReportWorker = new Worker<GenerateReportJobData>(
   QUEUE_NAMES.generateReport,
   (job) => processGenerateReportJob(job),
@@ -88,7 +116,10 @@ const generateReportWorker = new Worker<GenerateReportJobData>(
   { connection, concurrency: 2 },
 );
 
-const generateDigestQueue = new Queue<GenerateDigestJobData>(QUEUE_NAMES.generateDigest, { connection });
+const generateDigestQueue = new Queue<GenerateDigestJobData>(
+  QUEUE_NAMES.generateDigest,
+  { connection },
+);
 const generateDigestWorker = new Worker<GenerateDigestJobData>(
   QUEUE_NAMES.generateDigest,
   () => processGenerateDigestJob(sendEmailQueue),
@@ -100,6 +131,7 @@ const allWorkers = [
   crawlSourceWorker,
   crawlSchedulerWorker,
   alertSpikeCheckWorker,
+  alertSentimentShiftCheckWorker,
   aiEnrichWorker,
   insightGenerateWorker,
   generateReportWorker,
@@ -130,6 +162,11 @@ async function scheduleRepeatingJobs() {
     { every: 60_000 },
     { name: QUEUE_NAMES.alertSpikeCheck, data: {} },
   );
+  await alertSentimentShiftCheckQueue.upsertJobScheduler(
+    "alert-sentiment-shift-check-repeat",
+    { every: 60_000 },
+    { name: QUEUE_NAMES.alertSentimentShiftCheck, data: {} },
+  );
   // Dev-friendly cadence, same rationale as the crawl scheduler above —
   // a production deployment would enrich promptly after ingestion (~20s)
   // but generate the "since yesterday" insight far less often than every
@@ -155,7 +192,8 @@ async function scheduleRepeatingJobs() {
   );
   console.log(
     "Schedulers registered: source crawl (30s), spike alert check (60s), " +
-      "AI enrichment (20s), insight generation (2m), daily digest (08:00 UTC).",
+      "sentiment shift alert check (60s), AI enrichment (20s), insight generation (2m), " +
+      "daily digest (08:00 UTC).",
   );
 }
 
@@ -169,6 +207,7 @@ async function shutdown() {
   await crawlSourceQueue.close();
   await crawlSchedulerQueue.close();
   await alertSpikeCheckQueue.close();
+  await alertSentimentShiftCheckQueue.close();
   await aiEnrichQueue.close();
   await insightGenerateQueue.close();
   await generateReportQueue.close();

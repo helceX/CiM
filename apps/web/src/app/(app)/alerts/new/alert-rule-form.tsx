@@ -7,16 +7,28 @@ import { Button, Checkbox, Field, Input, Select } from "@cim/ui";
 type MonitoringQueryOption = { id: string; name: string; projectId: string };
 
 const TYPE_OPTIONS: { value: string; label: string; description: string }[] = [
-  { value: "keyword", label: "Keyword", description: "Notify on every new mention for this query." },
+  {
+    value: "keyword",
+    label: "Keyword",
+    description: "Notify on every new mention for this query.",
+  },
   {
     value: "high_relevance",
     label: "High relevance",
-    description: "Notify only when a mention matches an exact phrase (a stronger match than a loose keyword).",
+    description:
+      "Notify only when a mention matches an exact phrase (a stronger match than a loose keyword).",
   },
   {
     value: "spike",
     label: "Spike",
-    description: "Notify when this query's hourly mention volume jumps well above its trailing 24-hour baseline.",
+    description:
+      "Notify when this query's hourly mention volume jumps well above its trailing 24-hour baseline.",
+  },
+  {
+    value: "sentiment_shift",
+    label: "Sentiment shift",
+    description:
+      "Notify when the share of negative, AI-classified mentions over the last 24 hours jumps well above the trailing week's baseline.",
   },
 ];
 
@@ -30,12 +42,17 @@ export function AlertRuleForm({ queries }: { queries: MonitoringQueryOption[] })
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const selectedQuery = useMemo(() => queries.find((q) => q.id === queryId), [queries, queryId]);
+  const selectedQuery = useMemo(
+    () => queries.find((q) => q.id === queryId),
+    [queries, queryId],
+  );
   const selectedType = TYPE_OPTIONS.find((t) => t.value === type);
 
   function toggleChannel(value: string) {
     setChannels((current) =>
-      current.includes(value) ? current.filter((c) => c !== value) : [...current, value],
+      current.includes(value)
+        ? current.filter((c) => c !== value)
+        : [...current, value],
     );
   }
 
@@ -80,7 +97,8 @@ export function AlertRuleForm({ queries }: { queries: MonitoringQueryOption[] })
   if (queries.length === 0) {
     return (
       <p className="text-sm text-muted-foreground">
-        Create a monitoring query first — alerts are attached to what you&apos;re tracking.
+        Create a monitoring query first — alerts are attached to what you&apos;re
+        tracking.
       </p>
     );
   }
@@ -88,7 +106,11 @@ export function AlertRuleForm({ queries }: { queries: MonitoringQueryOption[] })
   return (
     <div className="flex max-w-xl flex-col gap-5">
       <Field id="name" label="Name">
-        <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Critical brand alerts" />
+        <Input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="e.g. Critical brand alerts"
+        />
       </Field>
 
       <Field id="query" label="Monitoring query" required>
@@ -119,8 +141,12 @@ export function AlertRuleForm({ queries }: { queries: MonitoringQueryOption[] })
                 onChange={() => setType(option.value)}
               />
               <span>
-                <span className="block text-sm font-medium text-foreground">{option.label}</span>
-                <span className="block text-sm text-muted-foreground">{option.description}</span>
+                <span className="block text-sm font-medium text-foreground">
+                  {option.label}
+                </span>
+                <span className="block text-sm text-muted-foreground">
+                  {option.description}
+                </span>
               </span>
             </label>
           ))}
@@ -130,11 +156,17 @@ export function AlertRuleForm({ queries }: { queries: MonitoringQueryOption[] })
       <div className="flex flex-col gap-2">
         <span className="text-sm font-medium text-foreground">Channels</span>
         <label className="flex items-center gap-2 text-sm text-foreground">
-          <Checkbox checked={channels.includes("in_app")} onCheckedChange={() => toggleChannel("in_app")} />
+          <Checkbox
+            checked={channels.includes("in_app")}
+            onCheckedChange={() => toggleChannel("in_app")}
+          />
           In-app notification
         </label>
         <label className="flex items-center gap-2 text-sm text-foreground">
-          <Checkbox checked={channels.includes("email")} onCheckedChange={() => toggleChannel("email")} />
+          <Checkbox
+            checked={channels.includes("email")}
+            onCheckedChange={() => toggleChannel("email")}
+          />
           Email
         </label>
       </div>
@@ -156,8 +188,9 @@ export function AlertRuleForm({ queries }: { queries: MonitoringQueryOption[] })
 
       {selectedType?.value === "spike" ? (
         <p className="text-xs text-muted-foreground">
-          Spike alerts are checked every minute against a transparent statistical baseline — see the
-          alert&apos;s trigger summary for the exact numbers behind each notification.
+          Spike alerts are checked every minute against a transparent statistical
+          baseline — see the alert&apos;s trigger summary for the exact numbers behind
+          each notification.
         </p>
       ) : null}
 

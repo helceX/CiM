@@ -1,6 +1,11 @@
 import { z } from "zod";
 
-export const alertRuleTypeSchema = z.enum(["keyword", "high_relevance", "spike"]);
+export const alertRuleTypeSchema = z.enum([
+  "keyword",
+  "high_relevance",
+  "spike",
+  "sentiment_shift",
+]);
 export const alertChannelSchema = z.enum(["in_app", "email"]);
 
 export const createAlertRuleSchema = z.object({

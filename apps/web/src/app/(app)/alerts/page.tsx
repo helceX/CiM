@@ -8,6 +8,7 @@ const TYPE_LABEL: Record<string, string> = {
   keyword: "Keyword",
   high_relevance: "High relevance",
   spike: "Spike",
+  sentiment_shift: "Sentiment shift",
 };
 
 export default async function AlertsListPage() {
@@ -60,10 +61,16 @@ export default async function AlertsListPage() {
                     {TYPE_LABEL[rule.type] ?? rule.type}
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">{queryName}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{rule.channels.join(", ")}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{rule.cooldownMinutes}m</td>
+                  <td className="px-4 py-3 text-muted-foreground">
+                    {rule.channels.join(", ")}
+                  </td>
+                  <td className="px-4 py-3 text-muted-foreground">
+                    {rule.cooldownMinutes}m
+                  </td>
                   <td className="px-4 py-3">
-                    <Badge tone={rule.status === "active" ? "success" : "neutral"}>{rule.status}</Badge>
+                    <Badge tone={rule.status === "active" ? "success" : "neutral"}>
+                      {rule.status}
+                    </Badge>
                   </td>
                 </tr>
               ))}

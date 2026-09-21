@@ -153,7 +153,10 @@ export type QuerySpikeStats = {
  * current, still-in-progress hour is excluded from the baseline itself)
  * give a mean/stddev the alert engine compares the current hour against.
  */
-export async function getQuerySpikeStats(db: Db, queryId: string): Promise<QuerySpikeStats> {
+export async function getQuerySpikeStats(
+  db: Db,
+  queryId: string,
+): Promise<QuerySpikeStats> {
   const [row] = (
     await db.execute<{
       current_count: number;
@@ -193,5 +196,68 @@ export async function getQuerySpikeStats(db: Db, queryId: string): Promise<Query
     currentHourCount: Number(row?.current_count ?? 0),
     baselineAvg: Number(row?.baseline_avg ?? 0),
     baselineStdDev: Number(row?.baseline_stddev ?? 0),
+  };
+}
+
+export type QuerySentimentShiftStats = {
+  currentClassifiedCount: number;
+  currentNegativeShare: number;
+  baselineClassifiedCount: number;
+  baselineNegativeShare: number;
+};
+
+/**
+ * Same transparent-baseline principle as getQuerySpikeStats, applied to
+ * sentiment (docs/product/FEATURE_MATRIX.md P2 "Sentiment shift" alert):
+ * what share of *classified* mentions (sentiment AI has actually scored —
+ * unclassified ones are excluded from both windows, never counted as
+ * negative by omission) were negative in the last 24 hours, compared to
+ * the trailing 7 days before that.
+ */
+export async function getQuerySentimentShiftStats(
+  db: Db,
+  queryId: string,
+): Promise<QuerySentimentShiftStats> {
+  const [row] = (
+    await db.execute<{
+      current_classified: number;
+      current_negative: number;
+      baseline_classified: number;
+      baseline_negative: number;
+    }>(sql`
+      select
+        count(*) filter (
+          where created_at >= now() - interval '24 hours' and sentiment is not null
+        ) as current_classified,
+        count(*) filter (
+          where created_at >= now() - interval '24 hours' and sentiment = 'negative'
+        ) as current_negative,
+        count(*) filter (
+          where created_at < now() - interval '24 hours'
+            and created_at >= now() - interval '8 days'
+            and sentiment is not null
+        ) as baseline_classified,
+        count(*) filter (
+          where created_at < now() - interval '24 hours'
+            and created_at >= now() - interval '8 days'
+            and sentiment = 'negative'
+        ) as baseline_negative
+      from ${mentions}
+      where query_id = ${queryId}
+    `)
+  ).rows;
+
+  const currentClassifiedCount = Number(row?.current_classified ?? 0);
+  const currentNegativeCount = Number(row?.current_negative ?? 0);
+  const baselineClassifiedCount = Number(row?.baseline_classified ?? 0);
+  const baselineNegativeCount = Number(row?.baseline_negative ?? 0);
+
+  return {
+    currentClassifiedCount,
+    currentNegativeShare:
+      currentClassifiedCount > 0 ? currentNegativeCount / currentClassifiedCount : 0,
+    baselineClassifiedCount,
+    baselineNegativeShare:
+      baselineClassifiedCount > 0 ? baselineNegativeCount / baselineClassifiedCount : 0,
   };
 }

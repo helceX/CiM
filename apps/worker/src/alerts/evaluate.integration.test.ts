@@ -14,6 +14,7 @@ import {
 import { ingestSource, MockNewsConnector } from "@cim/ingestion";
 import { evaluateNewMentionAlerts } from "./evaluate";
 import { evaluateSpikeAlerts } from "./evaluate-spikes";
+import { evaluateSentimentShiftAlerts } from "./evaluate-sentiment-shift";
 
 /**
  * Integration test (docs/testing/TEST_STRATEGY.md) — proves the alert
@@ -27,7 +28,9 @@ describe("alert engine (integration)", () => {
   let projectId: string;
   let userId: string;
   let sourceId: string;
-  const emailQueue = { add: async () => undefined } as unknown as Queue<SendEmailJobData>;
+  const emailQueue = {
+    add: async () => undefined,
+  } as unknown as Queue<SendEmailJobData>;
 
   beforeAll(async () => {
     const [org] = await db
@@ -84,7 +87,9 @@ describe("alert engine (integration)", () => {
   });
 
   afterAll(async () => {
-    await db.delete(schema.organizations).where(eq(schema.organizations.id, organizationId));
+    await db
+      .delete(schema.organizations)
+      .where(eq(schema.organizations.id, organizationId));
     await db.delete(schema.sources).where(eq(schema.sources.id, sourceId));
   });
 
@@ -107,7 +112,10 @@ describe("alert engine (integration)", () => {
       cooldownMinutes: 60,
     });
 
-    const [source] = await db.select().from(schema.sources).where(eq(schema.sources.id, sourceId));
+    const [source] = await db
+      .select()
+      .from(schema.sources)
+      .where(eq(schema.sources.id, sourceId));
     if (!source) throw new Error("test source missing");
 
     const result = await ingestSource(db, source, new MockNewsConnector());
@@ -115,7 +123,9 @@ describe("alert engine (integration)", () => {
 
     await evaluateNewMentionAlerts(emailQueue, result.newMentions);
 
-    const notifications = await listNotifications(db, organizationId, userId, { limit: 10 });
+    const notifications = await listNotifications(db, organizationId, userId, {
+      limit: 10,
+    });
     const matching = notifications.filter((n) => n.title === rule.name);
     expect(matching.length).toBe(1);
 
@@ -123,8 +133,15 @@ describe("alert engine (integration)", () => {
     // second notification — the rule's 60-minute cooldown is still active
     // (brief §19–20 alert fatigue).
     await evaluateNewMentionAlerts(emailQueue, result.newMentions);
-    const notificationsAfterRepeat = await listNotifications(db, organizationId, userId, { limit: 10 });
-    expect(notificationsAfterRepeat.filter((n) => n.title === rule.name).length).toBe(1);
+    const notificationsAfterRepeat = await listNotifications(
+      db,
+      organizationId,
+      userId,
+      { limit: 10 },
+    );
+    expect(notificationsAfterRepeat.filter((n) => n.title === rule.name).length).toBe(
+      1,
+    );
   });
 
   it("fires a high-relevance alert only on an exact-phrase match, not a loose keyword match", async () => {
@@ -145,13 +162,18 @@ describe("alert engine (integration)", () => {
       cooldownMinutes: 60,
     });
 
-    const [source] = await db.select().from(schema.sources).where(eq(schema.sources.id, sourceId));
+    const [source] = await db
+      .select()
+      .from(schema.sources)
+      .where(eq(schema.sources.id, sourceId));
     if (!source) throw new Error("test source missing");
     const result = await ingestSource(db, source, new MockNewsConnector());
 
     await evaluateNewMentionAlerts(emailQueue, result.newMentions);
 
-    const notifications = await listNotifications(db, organizationId, userId, { limit: 50 });
+    const notifications = await listNotifications(db, organizationId, userId, {
+      limit: 50,
+    });
     expect(notifications.some((n) => n.title === looseRule.name)).toBe(false);
   });
 
@@ -220,9 +242,157 @@ describe("alert engine (integration)", () => {
 
     await evaluateSpikeAlerts(emailQueue);
 
-    const notifications = await listNotifications(db, organizationId, userId, { limit: 50 });
+    const notifications = await listNotifications(db, organizationId, userId, {
+      limit: 50,
+    });
     const spikeNotification = notifications.find((n) => n.title === spikeRule.name);
     expect(spikeNotification).toBeDefined();
     expect(spikeNotification?.body).toMatch(/baseline/i);
+  });
+
+  it("fires a sentiment-shift alert when negative share jumps over the trailing-week baseline", async () => {
+    const sentimentQuery = await createMonitoringQuery(db, organizationId, {
+      projectId,
+      name: "Sentiment shift query",
+      queryAst: { include: ["sentiment-shift-marker"], exclude: [], exactPhrases: [] },
+      booleanQuery: "sentiment-shift-marker",
+      sourceTypes: ["news"],
+    });
+    const sentimentRule = await createAlertRule(db, organizationId, {
+      projectId,
+      queryId: sentimentQuery.id,
+      createdByUserId: userId,
+      name: "Sentiment shift rule",
+      type: "sentiment_shift",
+      channels: ["in_app"],
+      cooldownMinutes: 60,
+    });
+
+    // Baseline: 10 classified mentions over the trailing week, mostly
+    // positive/neutral (2 negative = 20% negative share).
+    const baselineSentiments = [
+      "positive",
+      "positive",
+      "neutral",
+      "neutral",
+      "neutral",
+      "neutral",
+      "neutral",
+      "neutral",
+      "negative",
+      "negative",
+    ];
+    for (const [i, sentiment] of baselineSentiments.entries()) {
+      const [article] = await db
+        .insert(schema.articles)
+        .values({
+          sourceId,
+          canonicalUrl: `https://sentiment-test.example/baseline-${i}`,
+          contentHash: `sentiment-baseline-${i}`,
+          title: `sentiment-shift-marker baseline item ${i}`,
+        })
+        .returning();
+      if (!article) throw new Error("failed to create baseline article");
+      await db.insert(schema.mentions).values({
+        organizationId,
+        projectId,
+        queryId: sentimentQuery.id,
+        articleId: article.id,
+        matchedTerms: ["sentiment-shift-marker"],
+        sentiment,
+        createdAt: new Date(Date.now() - (2 + i / 2) * 24 * 60 * 60 * 1000),
+      });
+    }
+
+    // Current window: 5 classified mentions in the last few hours, mostly
+    // negative (4 negative = 80% negative share — well over the +30pt
+    // shift threshold against the 20% baseline).
+    const currentSentiments = [
+      "negative",
+      "negative",
+      "negative",
+      "negative",
+      "neutral",
+    ];
+    for (const [i, sentiment] of currentSentiments.entries()) {
+      const [article] = await db
+        .insert(schema.articles)
+        .values({
+          sourceId,
+          canonicalUrl: `https://sentiment-test.example/current-${i}`,
+          contentHash: `sentiment-current-${i}`,
+          title: `sentiment-shift-marker current item ${i}`,
+        })
+        .returning();
+      if (!article) throw new Error("failed to create current article");
+      await db.insert(schema.mentions).values({
+        organizationId,
+        projectId,
+        queryId: sentimentQuery.id,
+        articleId: article.id,
+        matchedTerms: ["sentiment-shift-marker"],
+        sentiment,
+        createdAt: new Date(Date.now() - i * 60 * 60 * 1000),
+      });
+    }
+
+    await evaluateSentimentShiftAlerts(emailQueue);
+
+    const notifications = await listNotifications(db, organizationId, userId, {
+      limit: 50,
+    });
+    const sentimentNotification = notifications.find(
+      (n) => n.title === sentimentRule.name,
+    );
+    expect(sentimentNotification).toBeDefined();
+    expect(sentimentNotification?.body).toMatch(/negative sentiment/i);
+  });
+
+  it("does not fire a sentiment-shift alert without enough classified mentions in the current window", async () => {
+    const quietQuery = await createMonitoringQuery(db, organizationId, {
+      projectId,
+      name: "Sentiment shift quiet query",
+      queryAst: { include: ["sentiment-quiet-marker"], exclude: [], exactPhrases: [] },
+      booleanQuery: "sentiment-quiet-marker",
+      sourceTypes: ["news"],
+    });
+    const quietRule = await createAlertRule(db, organizationId, {
+      projectId,
+      queryId: quietQuery.id,
+      createdByUserId: userId,
+      name: "Sentiment shift quiet rule",
+      type: "sentiment_shift",
+      channels: ["in_app"],
+      cooldownMinutes: 60,
+    });
+
+    // Only 2 classified mentions, both negative — below MIN_CLASSIFIED_COUNT (3).
+    for (let i = 0; i < 2; i += 1) {
+      const [article] = await db
+        .insert(schema.articles)
+        .values({
+          sourceId,
+          canonicalUrl: `https://sentiment-quiet.example/current-${i}`,
+          contentHash: `sentiment-quiet-current-${i}`,
+          title: `sentiment-quiet-marker current item ${i}`,
+        })
+        .returning();
+      if (!article) throw new Error("failed to create current article");
+      await db.insert(schema.mentions).values({
+        organizationId,
+        projectId,
+        queryId: quietQuery.id,
+        articleId: article.id,
+        matchedTerms: ["sentiment-quiet-marker"],
+        sentiment: "negative",
+      });
+    }
+
+    await evaluateSentimentShiftAlerts(emailQueue);
+
+    const notifications = await listNotifications(db, organizationId, userId, {
+      limit: 50,
+    });
+    expect(notifications.some((n) => n.title === quietRule.name)).toBe(false);
   });
 });

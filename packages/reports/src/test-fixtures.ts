@@ -12,6 +12,7 @@ function fakeSource(overrides: Partial<Source> = {}): Source {
     connector: "mock",
     status: "healthy",
     lastCheckedAt: null,
+    url: null,
     canStoreFullText: false,
     canDisplayFullText: false,
     canDisplayExcerpt: true,

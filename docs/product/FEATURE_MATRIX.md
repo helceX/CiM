@@ -68,9 +68,19 @@ shallow — leaving it explicitly deferred is the honest call per brief
 §154. AI risk detection and recommendations are P2 (FEATURE_MATRIX table
 below) — not called by the enrichment pipeline in this MVP.
 
-Not yet built (still MVP scope, next up): email daily digest,
-RSS/Sitemap/Web connectors. See task list in the project's ADRs/PR
-history for exact sequencing.
+Phase 10 closed the two remaining MVP-scope gaps: real `RSSConnector`
+(RSS 2.0 + Atom), `SitemapConnector` (urlset + bounded sitemapindex
+nesting, newest-first, capped pages per crawl), and `WebConnector`
+(single polled page) — all three SSRF-guarded (DNS-pinned resolve-then-
+connect, no unrevalidated redirect-follow, response size/timeout caps,
+docs/architecture/SECURITY.md) and robots.txt-respecting (Web/Sitemap;
+RSS feeds are meant to be polled and are exempt, same as every real
+crawler); and the scheduled `generate_digest` job — one daily
+(08:00 UTC) email per organization member summarizing new mentions and
+sentiment in the last 24h, skipped entirely for a quiet organization
+rather than sending an empty digest, using the same cross-tenant
+fan-out-across-active-organizations pattern as spike alerts and insight
+generation (excluding soft-deleted organizations).
 
 | Module | MVP | P2 | P3 | P4 |
 |---|---|---|---|---|

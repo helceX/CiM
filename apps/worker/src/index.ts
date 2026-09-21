@@ -5,6 +5,7 @@ import {
   type AlertSpikeCheckJobData,
   type CrawlSchedulerJobData,
   type CrawlSourceJobData,
+  type GenerateDigestJobData,
   type GenerateReportJobData,
   type InsightGenerateJobData,
   type SendEmailJobData,
@@ -14,6 +15,7 @@ import { processSendEmailJob } from "./jobs/send-email";
 import { processCrawlSourceJob } from "./jobs/crawl-source";
 import { processCrawlSchedulerJob } from "./jobs/crawl-scheduler";
 import { processGenerateReportJob } from "./jobs/generate-report";
+import { processGenerateDigestJob } from "./jobs/generate-digest";
 import { evaluateSpikeAlerts } from "./alerts/evaluate-spikes";
 import { processAiEnrichJob } from "./ai/enrich";
 import { processInsightGenerateJob } from "./ai/generate-insight";
@@ -86,6 +88,13 @@ const generateReportWorker = new Worker<GenerateReportJobData>(
   { connection, concurrency: 2 },
 );
 
+const generateDigestQueue = new Queue<GenerateDigestJobData>(QUEUE_NAMES.generateDigest, { connection });
+const generateDigestWorker = new Worker<GenerateDigestJobData>(
+  QUEUE_NAMES.generateDigest,
+  () => processGenerateDigestJob(sendEmailQueue),
+  { connection, concurrency: 1 },
+);
+
 const allWorkers = [
   sendEmailWorker,
   crawlSourceWorker,
@@ -94,6 +103,7 @@ const allWorkers = [
   aiEnrichWorker,
   insightGenerateWorker,
   generateReportWorker,
+  generateDigestWorker,
 ];
 for (const worker of allWorkers) {
   worker.on("failed", (job, error) => {
@@ -134,9 +144,18 @@ async function scheduleRepeatingJobs() {
     { every: 120_000 },
     { name: QUEUE_NAMES.insightGenerate, data: {} },
   );
+  // Unlike the dev-friendly intervals above, the digest is genuinely a
+  // once-a-day product feature (docs/product/FEATURE_MATRIX.md "Email
+  // daily digest") — a cron pattern, not a fast polling interval, so its
+  // cadence is correct in every environment, not just demo-fast in dev.
+  await generateDigestQueue.upsertJobScheduler(
+    "generate-digest-repeat",
+    { pattern: "0 8 * * *" },
+    { name: QUEUE_NAMES.generateDigest, data: {} },
+  );
   console.log(
     "Schedulers registered: source crawl (30s), spike alert check (60s), " +
-      "AI enrichment (20s), insight generation (2m).",
+      "AI enrichment (20s), insight generation (2m), daily digest (08:00 UTC).",
   );
 }
 
@@ -153,6 +172,7 @@ async function shutdown() {
   await aiEnrichQueue.close();
   await insightGenerateQueue.close();
   await generateReportQueue.close();
+  await generateDigestQueue.close();
   process.exit(0);
 }
 

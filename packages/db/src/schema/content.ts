@@ -24,6 +24,9 @@ export const sources = pgTable("sources", {
   language: text("language"),
   type: text("type").notNull(), // news | website | blog | press | tv | radio | podcast | youtube | social | forum | comments | rss | api | other
   connector: text("connector").notNull(), // mock | rss | sitemap | web | api | social | youtube | podcast | broadcast | custom
+  // The URL the connector polls — a feed URL for rss, a sitemap.xml URL
+  // for sitemap, or the page itself for web. Unused by mock/api/etc.
+  url: text("url"),
   status: text("status").notNull().default("healthy"), // healthy | delayed | error | blocked | unavailable
   lastCheckedAt: timestamp("last_checked_at", { withTimezone: true }),
   // SourcePolicy (docs/architecture/SECURITY.md — enforced at ingestion AND render)

@@ -11,6 +11,7 @@ function fakeSource(overrides: Partial<Source> = {}): Source {
     language: "en",
     type: "news",
     connector: "mock",
+    url: null,
     status: "healthy",
     lastCheckedAt: null,
     canStoreFullText: false,

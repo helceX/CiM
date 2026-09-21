@@ -13,6 +13,7 @@ export const QUEUE_NAMES = {
   aiEnrich: "ai_enrich",
   insightGenerate: "insight_generate",
   generateReport: "generate_report",
+  generateDigest: "generate_digest",
 } as const;
 
 export type SendEmailJobData = {
@@ -34,3 +35,5 @@ export type InsightGenerateJobData = Record<string, never>;
 export type GenerateReportJobData = {
   reportRunId: string;
 };
+
+export type GenerateDigestJobData = Record<string, never>;

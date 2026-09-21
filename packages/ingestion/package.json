@@ -15,7 +15,9 @@
   "dependencies": {
     "@cim/core": "workspace:*",
     "@cim/db": "workspace:*",
-    "drizzle-orm": "0.45.2"
+    "drizzle-orm": "0.45.2",
+    "fast-xml-parser": "^5.11.1",
+    "undici": "^8.10.2"
   },
   "devDependencies": {
     "@types/node": "22.15.0",

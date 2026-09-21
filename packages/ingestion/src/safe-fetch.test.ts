@@ -1,0 +1,157 @@
+import http from "node:http";
+import type { AddressInfo } from "node:net";
+import { afterEach, describe, expect, it } from "vitest";
+import { safeFetch, SsrfBlockedError } from "./safe-fetch";
+import { isBlockedIp } from "./ssrf-guard";
+
+/**
+ * These exercise the real fetch machinery (redirect revalidation, size
+ * cap, timeout) against a real local HTTP server — not mocked network
+ * calls — since that's the only way to prove the plumbing actually works,
+ * not just that the code compiles. The SSRF-rejection cases need no
+ * `resolveHostname` override at all: "localhost"/"127.0.0.1" resolve to a
+ * real loopback address on any machine, so they exercise the production
+ * DNS path exactly as a real attacker-supplied Source URL would.
+ *
+ * The one legitimate case that can't be exercised this way is "a public
+ * hostname was allowed and the fetch succeeded" — a real public DNS
+ * record here would need live internet egress this suite shouldn't
+ * depend on. `resolveHostname` is safeFetch's one test-only injection
+ * point for exactly that: it stands in for "what a real DNS lookup of a
+ * public hostname would return" while still exercising every other layer
+ * (the pinned-IP connect, response reading, size cap) unmodified from
+ * production. The IP-safety decision itself is covered exhaustively,
+ * without any DI, in ssrf-guard.test.ts.
+ */
+
+let servers: http.Server[] = [];
+
+function listen(handler: http.RequestListener): Promise<{ port: number; server: http.Server }> {
+  return new Promise((resolve) => {
+    const server = http.createServer(handler);
+    servers.push(server);
+    server.listen(0, "127.0.0.1", () => {
+      resolve({ port: (server.address() as AddressInfo).port, server });
+    });
+  });
+}
+
+afterEach(async () => {
+  await Promise.all(servers.map((s) => new Promise((resolve) => s.close(resolve))));
+  servers = [];
+});
+
+/**
+ * Stands in for "what a real DNS lookup would return" — the fixed test
+ * hostname resolves to our local server, but anything else (e.g. a
+ * redirect Location pointing at a literal IP) is still validated for
+ * real via `isBlockedIp`, exactly like the production resolver. This is
+ * what lets the "rejects a redirect to a blocked address" test prove
+ * safeFetch's redirect hop re-validates, rather than trusting the first
+ * hop's override for every subsequent one.
+ */
+function loopbackResolver() {
+  return async (hostname: string) => {
+    if (hostname === "example-cim-test.invalid") return { address: "127.0.0.1", family: 4 };
+    if (isBlockedIp(hostname)) {
+      throw new SsrfBlockedError(`Blocked address: ${hostname}`);
+    }
+    return { address: hostname, family: 4 };
+  };
+}
+
+describe("safeFetch — SSRF rejection (real DNS, no mocking)", () => {
+  it("rejects localhost before ever connecting", async () => {
+    let hit = false;
+    const { port } = await listen((_req, res) => {
+      hit = true;
+      res.end("should never be reached");
+    });
+    await expect(safeFetch(`http://localhost:${port}/`)).rejects.toThrow(SsrfBlockedError);
+    expect(hit).toBe(false);
+  });
+
+  it("rejects a literal 127.0.0.1 URL", async () => {
+    await expect(safeFetch("http://127.0.0.1:1/")).rejects.toThrow(SsrfBlockedError);
+  });
+
+  it("rejects a literal private RFC1918 address", async () => {
+    await expect(safeFetch("http://10.1.2.3/")).rejects.toThrow(SsrfBlockedError);
+  });
+
+  it("rejects the cloud metadata address", async () => {
+    await expect(safeFetch("http://169.254.169.254/latest/meta-data/")).rejects.toThrow(SsrfBlockedError);
+  });
+
+  it("rejects a non-HTTP(S) protocol", async () => {
+    await expect(safeFetch("file:///etc/passwd")).rejects.toThrow(SsrfBlockedError);
+  });
+
+  it("rejects a redirect hop that points at a blocked address", async () => {
+    const { port } = await listen((_req, res) => {
+      res.writeHead(302, { Location: "http://169.254.169.254/secret" });
+      res.end();
+    });
+    await expect(
+      safeFetch(`http://example-cim-test.invalid:${port}/`, { resolveHostname: loopbackResolver() }),
+    ).rejects.toThrow(SsrfBlockedError);
+  });
+});
+
+describe("safeFetch — fetch machinery (via injected resolver)", () => {
+  it("fetches a real 200 response end to end", async () => {
+    const { port } = await listen((_req, res) => {
+      res.writeHead(200, { "content-type": "text/plain" });
+      res.end("hello from the test server");
+    });
+    const result = await safeFetch(`http://example-cim-test.invalid:${port}/`, {
+      resolveHostname: loopbackResolver(),
+    });
+    expect(result.status).toBe(200);
+    expect(result.body).toBe("hello from the test server");
+  });
+
+  it("follows a same-server redirect and revalidates the new hop", async () => {
+    const { port } = await listen((req, res) => {
+      if (req.url === "/start") {
+        res.writeHead(302, { Location: `http://example-cim-test.invalid:${port}/final` });
+        res.end();
+        return;
+      }
+      res.writeHead(200);
+      res.end("final destination");
+    });
+    const result = await safeFetch(`http://example-cim-test.invalid:${port}/start`, {
+      resolveHostname: loopbackResolver(),
+    });
+    expect(result.status).toBe(200);
+    expect(result.body).toBe("final destination");
+    expect(result.finalUrl).toContain("/final");
+  });
+
+  it("gives up after too many redirects", async () => {
+    const { port } = await listen((_req, res) => {
+      res.writeHead(302, { Location: `http://example-cim-test.invalid:${port}/loop` });
+      res.end();
+    });
+    await expect(
+      safeFetch(`http://example-cim-test.invalid:${port}/loop`, {
+        resolveHostname: loopbackResolver(),
+        maxRedirects: 2,
+      }),
+    ).rejects.toThrow(SsrfBlockedError);
+  });
+
+  it("aborts a response that exceeds the byte cap", async () => {
+    const { port } = await listen((_req, res) => {
+      res.writeHead(200);
+      res.end("x".repeat(1000));
+    });
+    await expect(
+      safeFetch(`http://example-cim-test.invalid:${port}/`, {
+        resolveHostname: loopbackResolver(),
+        maxResponseBytes: 100,
+      }),
+    ).rejects.toThrow(SsrfBlockedError);
+  });
+});

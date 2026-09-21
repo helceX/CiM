@@ -48,6 +48,12 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      - name: Install Playwright Chromium
+        # packages/reports renders PDFs via headless Chromium (real
+        # Chromium tests + the actual generate_report worker job) — the
+        # runner has no browser installed until this step provisions one.
+        run: pnpm exec playwright install --with-deps chromium
+
       - name: Lint
         run: pnpm lint
 

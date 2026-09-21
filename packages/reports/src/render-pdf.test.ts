@@ -3,13 +3,17 @@ import { renderHtmlToPdf } from "./render-pdf";
 import { renderReportHtml } from "./render-html";
 import { fakeReportData } from "./test-fixtures";
 
-const CHROMIUM_PATH = process.env.PLAYWRIGHT_CHROMIUM_PATH ?? "/opt/pw-browsers/chromium";
+// Unset lets Playwright resolve the browser it installed the normal way
+// (`playwright install chromium`, run in CI's workflow — see
+// .github/workflows/ci.yml). PLAYWRIGHT_CHROMIUM_PATH additionally lets
+// an environment point at a pinned revision provisioned outside that
+// mechanism (see e2e's playwright.config.ts for why one might).
+const CHROMIUM_PATH = process.env.PLAYWRIGHT_CHROMIUM_PATH;
 
 /**
- * Real Chromium render (docs/testing/TEST_STRATEGY.md integration tier) —
- * this environment ships a pinned Chromium the same way e2e tests do
- * (playwright.config.ts), so this proves the actual PDF pipeline works,
- * not just that the HTML string looks right.
+ * Real Chromium render (docs/testing/TEST_STRATEGY.md integration tier)
+ * — proves the actual PDF pipeline works, not just that the HTML string
+ * looks right.
  */
 describe("renderHtmlToPdf (integration)", () => {
   it("produces a real PDF file from the report HTML", async () => {

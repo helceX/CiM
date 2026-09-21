@@ -85,7 +85,12 @@ function RetentionSelect({
   }
 
   return (
-    <Field id="retention-days" label="Mention retention" className="max-w-xs">
+    <Field
+      id="retention-days"
+      label="Mention retention"
+      className="max-w-xs"
+      error={error ?? undefined}
+    >
       <Select
         value={currentValue}
         disabled={isSaving}
@@ -97,7 +102,6 @@ function RetentionSelect({
           </option>
         ))}
       </Select>
-      {error ? <p className="mt-1 text-xs text-danger">{error}</p> : null}
     </Field>
   );
 }

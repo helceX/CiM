@@ -39,6 +39,11 @@ const envSchema = z.object({
 
   DEFAULT_TIMEZONE: z.string().default("Europe/Istanbul"),
   DEFAULT_LOCALE: z.enum(["tr", "en"]).default("tr"),
+
+  // Optional override for where Playwright's Chromium binary lives
+  // (packages/reports PDF rendering). Unset lets Playwright resolve it
+  // the normal way; some environments pin a specific revision path.
+  PLAYWRIGHT_CHROMIUM_PATH: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

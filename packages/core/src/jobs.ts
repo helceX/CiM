@@ -12,6 +12,7 @@ export const QUEUE_NAMES = {
   alertSpikeCheck: "alert_spike_check",
   aiEnrich: "ai_enrich",
   insightGenerate: "insight_generate",
+  generateReport: "generate_report",
 } as const;
 
 export type SendEmailJobData = {
@@ -29,3 +30,7 @@ export type AlertSpikeCheckJobData = Record<string, never>;
 export type AiEnrichJobData = Record<string, never>;
 
 export type InsightGenerateJobData = Record<string, never>;
+
+export type GenerateReportJobData = {
+  reportRunId: string;
+};

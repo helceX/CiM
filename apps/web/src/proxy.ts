@@ -18,6 +18,7 @@ const PROTECTED_PREFIXES = [
   "/mentions",
   "/alerts",
   "/analytics",
+  "/reports",
   "/settings",
   "/onboarding",
 ];
@@ -44,6 +45,7 @@ export const config = {
     "/mentions/:path*",
     "/alerts/:path*",
     "/analytics/:path*",
+    "/reports/:path*",
     "/settings/:path*",
     "/onboarding/:path*",
   ],

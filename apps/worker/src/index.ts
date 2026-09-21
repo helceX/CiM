@@ -5,6 +5,7 @@ import {
   type AlertSpikeCheckJobData,
   type CrawlSchedulerJobData,
   type CrawlSourceJobData,
+  type GenerateReportJobData,
   type InsightGenerateJobData,
   type SendEmailJobData,
 } from "@cim/core";
@@ -12,6 +13,7 @@ import { getRedisConnection } from "./redis";
 import { processSendEmailJob } from "./jobs/send-email";
 import { processCrawlSourceJob } from "./jobs/crawl-source";
 import { processCrawlSchedulerJob } from "./jobs/crawl-scheduler";
+import { processGenerateReportJob } from "./jobs/generate-report";
 import { evaluateSpikeAlerts } from "./alerts/evaluate-spikes";
 import { processAiEnrichJob } from "./ai/enrich";
 import { processInsightGenerateJob } from "./ai/generate-insight";
@@ -72,6 +74,18 @@ const insightGenerateWorker = new Worker<InsightGenerateJobData>(
   { connection, concurrency: 1 },
 );
 
+const generateReportQueue = new Queue<GenerateReportJobData>(QUEUE_NAMES.generateReport, {
+  connection,
+});
+const generateReportWorker = new Worker<GenerateReportJobData>(
+  QUEUE_NAMES.generateReport,
+  (job) => processGenerateReportJob(job),
+  // Headless-Chromium PDF renders are heavier than the other jobs — cap
+  // concurrency so a burst of "Generate report" clicks doesn't spike
+  // worker memory.
+  { connection, concurrency: 2 },
+);
+
 const allWorkers = [
   sendEmailWorker,
   crawlSourceWorker,
@@ -79,6 +93,7 @@ const allWorkers = [
   alertSpikeCheckWorker,
   aiEnrichWorker,
   insightGenerateWorker,
+  generateReportWorker,
 ];
 for (const worker of allWorkers) {
   worker.on("failed", (job, error) => {
@@ -137,6 +152,7 @@ async function shutdown() {
   await alertSpikeCheckQueue.close();
   await aiEnrichQueue.close();
   await insightGenerateQueue.close();
+  await generateReportQueue.close();
   process.exit(0);
 }
 

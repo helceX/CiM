@@ -16,3 +16,4 @@ export * from "./repositories/alerts";
 export * from "./repositories/notifications";
 export * from "./repositories/ai";
 export * from "./repositories/insights";
+export * from "./repositories/reports";

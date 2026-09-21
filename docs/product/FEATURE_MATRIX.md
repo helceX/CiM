@@ -39,7 +39,15 @@ surfaced end to end: Mention Detail Drawer (sentiment, summary,
 confidence, method, entities, topics, honest "Not available" per
 `ai_status`) and the dashboard's Insight card (Answer/Evidence/Confidence/
 Method, AI_ARCHITECTURE.md Trust Layer — an Insight with zero evidence
-rows is never rendered).
+rows is never rendered); reports (`packages/reports`) — two fixed
+templates (Weekly Summary, Monitoring Overview; the reorderable custom
+section builder is P2), generated on demand by the worker's
+`generate_report` job (never inline in a request): real tenant analytics
+data (the same repositories Dashboard/Analytics already read) rendered to
+an HTML document using the product's actual design tokens, then to a real
+PDF via headless Chromium and a hand-written CSV, both stored and
+downloadable, with the requesting user notified when ready — or told
+exactly what failed, never a silently missing report.
 
 Deliberately not built yet: full AI-clustered story clustering (brief
 §17/§151 Phase 3's "story clusters") — MVP scope here is dedup only
@@ -50,9 +58,9 @@ shallow — leaving it explicitly deferred is the honest call per brief
 §154. AI risk detection and recommendations are P2 (FEATURE_MATRIX table
 below) — not called by the enrichment pipeline in this MVP.
 
-Not yet built (still MVP scope, next up): email daily digest, basic
-reports, RSS/Sitemap/Web connectors, admin panel. See task list in the
-project's ADRs/PR history for exact sequencing.
+Not yet built (still MVP scope, next up): email daily digest,
+RSS/Sitemap/Web connectors, admin panel. See task list in the project's
+ADRs/PR history for exact sequencing.
 
 | Module | MVP | P2 | P3 | P4 |
 |---|---|---|---|---|

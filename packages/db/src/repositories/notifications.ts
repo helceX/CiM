@@ -12,7 +12,12 @@ import type { OrganizationId } from "./tenant-scope";
 export async function createNotificationForOrgMembers(
   db: Db,
   organizationId: OrganizationId,
-  input: { kind: "alert" | "system"; title: string; body: string; relatedAlertEventId?: string },
+  input: {
+    kind: "alert" | "system" | "report";
+    title: string;
+    body: string;
+    relatedAlertEventId?: string;
+  },
 ) {
   const members = await db
     .select({ userId: organizationMemberships.userId })
@@ -38,6 +43,20 @@ export async function createNotificationForOrgMembers(
       })),
     )
     .returning();
+}
+
+/** Single-recipient notification — for events scoped to the user who requested them (a report run), not a whole-org fan-out. */
+export async function createNotificationForUser(
+  db: Db,
+  organizationId: OrganizationId,
+  userId: string,
+  input: { kind: "alert" | "system" | "report"; title: string; body: string },
+) {
+  const [row] = await db
+    .insert(notifications)
+    .values({ organizationId, userId, kind: input.kind, title: input.title, body: input.body })
+    .returning();
+  return row;
 }
 
 export async function listNotifications(

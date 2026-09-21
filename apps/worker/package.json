@@ -15,6 +15,7 @@
     "@cim/core": "workspace:*",
     "@cim/db": "workspace:*",
     "@cim/ingestion": "workspace:*",
+    "@cim/reports": "workspace:*",
     "bullmq": "6.3.8",
     "drizzle-orm": "0.45.2",
     "ioredis": "6.0.0"

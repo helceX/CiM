@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import type { Db } from "../client";
 import { organizationMemberships, organizations } from "../schema/organizations";
 import { users } from "../schema/users";
@@ -24,7 +24,10 @@ export async function getMembership(
 }
 
 /** All active memberships for a user, across organizations — used to
- * resolve which organization a freshly authenticated user lands in. */
+ * resolve which organization a freshly authenticated user lands in.
+ * Excludes soft-deleted organizations (docs/architecture/SECURITY.md
+ * organization deletion) — a former member simply has no organization
+ * to resolve into, same as if they'd never been invited. */
 export async function listMembershipsForUser(db: Db, userId: string) {
   return db
     .select({
@@ -40,6 +43,7 @@ export async function listMembershipsForUser(db: Db, userId: string) {
       and(
         eq(organizationMemberships.userId, userId),
         eq(organizationMemberships.status, "active"),
+        isNull(organizations.deletedAt),
       ),
     );
 }

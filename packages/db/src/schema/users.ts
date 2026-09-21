@@ -22,4 +22,12 @@ export const users = pgTable("users", {
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
+  // Account deletion (docs/architecture/SECURITY.md) is anonymization,
+  // not a hard DELETE: many tables reference users.id without cascade
+  // (reports.createdByUserId, auditLogs.actorUserId, …) precisely
+  // because that history should survive the actor's account being
+  // deleted — a hard delete would violate those FKs or require nulling
+  // out records that should stay attributable. PII (email/name) is
+  // overwritten in place; the row and its id persist.
+  deletedAt: timestamp("deleted_at", { withTimezone: true }),
 });

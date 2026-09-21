@@ -3,7 +3,7 @@ import type { Db } from "../client";
 import { articles, mentions, sources } from "../schema/content";
 import { insightEvidence, insights } from "../schema/ai";
 import { monitoringQueries } from "../schema/monitoring";
-import { projects } from "../schema/organizations";
+import { organizations, projects } from "../schema/organizations";
 import { asOrganizationId, type OrganizationId } from "./tenant-scope";
 
 export type ActiveProjectRef = { organizationId: OrganizationId; projectId: string };
@@ -21,7 +21,14 @@ export async function listActiveProjectsForInsightGeneration(db: Db): Promise<Ac
       projectId: monitoringQueries.projectId,
     })
     .from(monitoringQueries)
-    .where(and(eq(monitoringQueries.status, "active"), isNull(monitoringQueries.deletedAt)));
+    .innerJoin(organizations, eq(organizations.id, monitoringQueries.organizationId))
+    .where(
+      and(
+        eq(monitoringQueries.status, "active"),
+        isNull(monitoringQueries.deletedAt),
+        isNull(organizations.deletedAt),
+      ),
+    );
   return rows.map((row) => ({ ...row, organizationId: asOrganizationId(row.organizationId) }));
 }
 

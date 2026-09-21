@@ -2,6 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { Badge } from "@cim/ui";
 import { db, schema } from "@cim/db";
 import { requireOrgContext } from "@/lib/tenant";
+import { DataExportButton, DeleteAccountDialog, DeleteOrganizationDialog } from "./danger-zone";
 
 export default async function SettingsPage() {
   const context = await requireOrgContext();
@@ -49,6 +50,42 @@ export default async function SettingsPage() {
         <p className="mt-2 text-xs text-muted-foreground">
           Inviting additional members ships in a later phase — see the product roadmap.
         </p>
+      </section>
+
+      <section>
+        <h2 className="text-sm font-semibold text-foreground">Your data</h2>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Download a copy of your account and membership data.
+        </p>
+        <div className="mt-3">
+          <DataExportButton />
+        </div>
+      </section>
+
+      <section className="rounded-lg border border-danger/30 p-4">
+        <h2 className="text-sm font-semibold text-danger">Danger zone</h2>
+        <div className="mt-3 flex flex-col gap-4">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-sm font-medium text-foreground">Delete your account</p>
+              <p className="text-xs text-muted-foreground">
+                Anonymizes your identity across every organization you belong to.
+              </p>
+            </div>
+            <DeleteAccountDialog />
+          </div>
+          {context.role === "organization_owner" ? (
+            <div className="flex items-center justify-between gap-4 border-t border-border pt-4">
+              <div>
+                <p className="text-sm font-medium text-foreground">Delete this organization</p>
+                <p className="text-xs text-muted-foreground">
+                  Removes every member&apos;s access and stops all monitoring.
+                </p>
+              </div>
+              <DeleteOrganizationDialog organizationName={context.organizationName} />
+            </div>
+          ) : null}
+        </div>
       </section>
     </div>
   );

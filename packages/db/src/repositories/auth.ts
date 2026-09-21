@@ -37,6 +37,14 @@ export async function revokeSession(db: Db, sessionId: string) {
   await db.update(sessions).set({ revokedAt: new Date() }).where(eq(sessions.id, sessionId));
 }
 
+/** Account deletion / anonymization must not leave any session still usable. */
+export async function revokeAllSessionsForUser(db: Db, userId: string) {
+  await db
+    .update(sessions)
+    .set({ revokedAt: new Date() })
+    .where(and(eq(sessions.userId, userId), isNull(sessions.revokedAt)));
+}
+
 export async function createEmailVerificationToken(
   db: Db,
   input: { userId: string; tokenHash: string; expiresAt: Date },

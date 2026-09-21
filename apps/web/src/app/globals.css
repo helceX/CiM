@@ -1,6 +1,14 @@
 @import "tailwindcss";
 @import "@cim/ui/styles.css";
 
+/*
+ * Tailwind v4's automatic content detection skips node_modules, including
+ * pnpm workspace symlinks — so any utility class used only inside
+ * @cim/ui's own components (never duplicated in this app's source) would
+ * otherwise silently never be generated. This makes that source explicit.
+ */
+@source "../../../../packages/ui/src";
+
 @theme {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

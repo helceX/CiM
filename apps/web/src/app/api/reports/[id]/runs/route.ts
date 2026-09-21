@@ -3,6 +3,7 @@ import { createReportRun, db, getReport, recordAuditLog } from "@cim/db";
 import { periodTypeToSinceDays } from "@cim/reports/templates";
 import { requireOrgContext } from "@/lib/tenant";
 import { enqueueReportGeneration } from "@/lib/reports";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 /** "Run again" — a new execution of an existing saved Report (docs/product/USER_FLOWS.md §5). */
 export async function POST(_request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -11,6 +12,16 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
     context = await requireOrgContext();
   } catch {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  }
+
+  // Same resource-exhaustion rationale as POST /api/reports — shares the
+  // per-organization budget so "run again" can't be used to bypass it.
+  const rateLimit = await checkRateLimit(`report-generate:${context.organizationId}`, {
+    limit: 10,
+    windowSeconds: 10 * 60,
+  });
+  if (!rateLimit.allowed) {
+    return NextResponse.json({ error: "Too many reports requested. Try again later." }, { status: 429 });
   }
 
   const { id } = await params;

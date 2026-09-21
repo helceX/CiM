@@ -1,7 +1,8 @@
-import { and, desc, eq, gt, sql } from "drizzle-orm";
+import { and, desc, eq, gt, isNull, sql } from "drizzle-orm";
 import type { Db } from "../client";
 import { alertEvents, alertRules } from "../schema/alerts";
 import { monitoringQueries } from "../schema/monitoring";
+import { organizations } from "../schema/organizations";
 import type { OrganizationId } from "./tenant-scope";
 
 export type AlertRuleType = "keyword" | "high_relevance" | "spike";
@@ -71,9 +72,28 @@ export async function getActiveAlertRulesForQuery(
  * documented cross-tenant exception (ADR-001) ingestion already relies on.
  */
 export async function getActiveSpikeAlertRules(db: Db) {
-  return db.select().from(alertRules).where(
-    and(eq(alertRules.status, "active"), eq(alertRules.type, "spike")),
-  );
+  return db
+    .select({
+      id: alertRules.id,
+      organizationId: alertRules.organizationId,
+      projectId: alertRules.projectId,
+      queryId: alertRules.queryId,
+      createdByUserId: alertRules.createdByUserId,
+      name: alertRules.name,
+      type: alertRules.type,
+      channels: alertRules.channels,
+      cooldownMinutes: alertRules.cooldownMinutes,
+      status: alertRules.status,
+      createdAt: alertRules.createdAt,
+      updatedAt: alertRules.updatedAt,
+    })
+    .from(alertRules)
+    // A soft-deleted organization must stop firing alerts — see the same
+    // note in listActiveMonitoringQueriesForSourceType.
+    .innerJoin(organizations, eq(organizations.id, alertRules.organizationId))
+    .where(
+      and(eq(alertRules.status, "active"), eq(alertRules.type, "spike"), isNull(organizations.deletedAt)),
+    );
 }
 
 /** Alert fatigue (brief §19–20): suppress re-notifying within the rule's cooldown window. */

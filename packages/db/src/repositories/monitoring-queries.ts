@@ -1,6 +1,7 @@
 import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import type { Db } from "../client";
 import { monitoringQueries, type QueryAst } from "../schema/monitoring";
+import { organizations } from "../schema/organizations";
 import type { OrganizationId } from "./tenant-scope";
 
 export async function listMonitoringQueries(
@@ -75,12 +76,30 @@ export async function getMonitoringQuery(
  */
 export async function listActiveMonitoringQueriesForSourceType(db: Db, sourceType: string) {
   return db
-    .select()
+    .select({
+      id: monitoringQueries.id,
+      organizationId: monitoringQueries.organizationId,
+      projectId: monitoringQueries.projectId,
+      name: monitoringQueries.name,
+      queryAst: monitoringQueries.queryAst,
+      booleanQuery: monitoringQueries.booleanQuery,
+      sourceTypes: monitoringQueries.sourceTypes,
+      status: monitoringQueries.status,
+      createdAt: monitoringQueries.createdAt,
+      updatedAt: monitoringQueries.updatedAt,
+      deletedAt: monitoringQueries.deletedAt,
+    })
     .from(monitoringQueries)
+    // A soft-deleted organization (docs/architecture/SECURITY.md
+    // organization deletion) must stop being crawled — deleting the org
+    // doesn't cascade-mark its queries individually, so this is the one
+    // place that has to check both.
+    .innerJoin(organizations, eq(organizations.id, monitoringQueries.organizationId))
     .where(
       and(
         eq(monitoringQueries.status, "active"),
         isNull(monitoringQueries.deletedAt),
+        isNull(organizations.deletedAt),
         sql`${sourceType} = any(${monitoringQueries.sourceTypes})`,
       ),
     );

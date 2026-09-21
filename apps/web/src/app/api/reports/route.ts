@@ -4,6 +4,7 @@ import { createReport, createReportRun, db, getProject, recordAuditLog } from "@
 import { periodTypeToSinceDays } from "@cim/reports/templates";
 import { requireOrgContext } from "@/lib/tenant";
 import { enqueueReportGeneration } from "@/lib/reports";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export async function POST(request: Request) {
   let context;
@@ -11,6 +12,17 @@ export async function POST(request: Request) {
     context = await requireOrgContext();
   } catch {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  }
+
+  // A report run spins up a real headless-Chromium render in the worker
+  // (packages/reports) — genuine resource-exhaustion surface, so it's
+  // rate-limited per organization on top of the auth requirement.
+  const rateLimit = await checkRateLimit(`report-generate:${context.organizationId}`, {
+    limit: 10,
+    windowSeconds: 10 * 60,
+  });
+  if (!rateLimit.allowed) {
+    return NextResponse.json({ error: "Too many reports requested. Try again later." }, { status: 429 });
   }
 
   const json = await request.json().catch(() => null);

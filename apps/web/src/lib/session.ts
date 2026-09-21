@@ -77,7 +77,10 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
   if (!session) return null;
 
   const user = await findUserById(db, session.userId);
-  if (!user) return null;
+  // Defense in depth: an anonymized/deleted account's session should already
+  // be revoked by account deletion, but a deleted user must never resolve to
+  // a usable identity even if that revocation is ever missed.
+  if (!user || user.deletedAt) return null;
 
   return {
     id: user.id,

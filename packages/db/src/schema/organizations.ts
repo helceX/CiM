@@ -19,6 +19,14 @@ export const organizations = pgTable("organizations", {
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
+  // Soft delete (docs/architecture/SECURITY.md — "Supported from MVP:
+  // ... organization deletion, audit trail of these actions"). A hard
+  // DELETE would cascade away audit_logs.organization_id rows in the
+  // same stroke, destroying the very audit trail of the deletion it's
+  // supposed to leave — soft delete keeps the record intact. A
+  // background purge worker enforcing real retention is later scope
+  // (DataRetentionPolicy, per docs/product/FEATURE_MATRIX.md).
+  deletedAt: timestamp("deleted_at", { withTimezone: true }),
 });
 
 /**

@@ -13,6 +13,23 @@ try {
 }
 
 export default defineConfig({
+  resolve: {
+    // apps/web's server-only modules (session/redis/rate-limit/…) import
+    // the "server-only" marker package, whose default export throws and
+    // only resolves to a no-op under the "react-server" export condition
+    // — the one Next.js's own server bundler sets. Vitest doesn't set it
+    // by default, so tests importing those modules need it here too.
+    // Vite resolves SSR/Node code (what Vitest's "node" environment runs)
+    // through the separate `ssr.resolve` conditions, not the top-level
+    // (client-bundle) ones — both are set so this holds regardless of
+    // which path a given test file's imports take.
+    conditions: ["react-server"],
+  },
+  ssr: {
+    resolve: {
+      conditions: ["react-server"],
+    },
+  },
   test: {
     environment: "node",
     include: ["packages/*/src/**/*.test.ts", "apps/*/src/**/*.test.ts"],

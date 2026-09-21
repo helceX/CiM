@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { completeOnboardingSchema } from "@cim/validation";
-import { astToBooleanQuery, emptyQueryAst } from "@cim/core";
+import { astToBooleanQuery, emptyQueryAst, expandSourceCategoriesToTypes } from "@cim/core";
 import { createProject, createMonitoringQuery, recordAuditLog, db, schema } from "@cim/db";
 import { requireOrgContext } from "@/lib/tenant";
 
@@ -38,9 +38,10 @@ export async function POST(request: Request) {
   });
 
   const ast = { ...emptyQueryAst(), include: input.keywords };
-  const sourceTypes = input.sourceTypes.includes("all")
-    ? ["news", "web", "social", "video", "podcast", "forums", "comments"]
-    : input.sourceTypes;
+  // Onboarding collects user-facing categories (brief §6); the pipeline
+  // matches against Source.type, so they're expanded here — see
+  // packages/core/source-categories.ts.
+  const sourceTypes = expandSourceCategoriesToTypes(input.sourceTypes);
 
   await createMonitoringQuery(db, context.organizationId, {
     projectId: project.id,

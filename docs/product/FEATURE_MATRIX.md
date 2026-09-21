@@ -3,6 +3,21 @@
 Status legend: `MVP` (this build target), `P2`, `P3`, `P4` (future phase),
 `—` (not planned / explicit non-goal).
 
+## Build status (within MVP scope)
+
+Shipped, working end-to-end against a real database and job queue: public
+site; registration/verification/login/logout/password reset; onboarding
+wizard; organizations/workspaces/projects; RBAC permission checks; audit
+log; monitoring queries (simple + advanced builder, preview); source
+abstraction + `MockNewsConnector`; ingestion pipeline (fetch → normalize →
+dedupe → query match); worker job queue (BullMQ) with a scheduled crawl
+cycle; dashboard reading real tenant-scoped data.
+
+Not yet built (still MVP scope, next up): Mentions list/detail drawer,
+alerts + notifications, email daily digest, basic reports, AI summary/
+insights, RSS/Sitemap/Web connectors, admin panel. See task list in the
+project's ADRs/PR history for exact sequencing.
+
 | Module | MVP | P2 | P3 | P4 |
 |---|---|---|---|---|
 | Public site (marketing, pricing, security, docs) | ✅ | | | |

@@ -104,7 +104,10 @@ async function main() {
         name: q.name,
         queryAst: { include: q.include, exclude: [], exactPhrases: [] },
         booleanQuery: q.include.map((t) => `"${t}"`).join(" OR "),
-        sourceTypes: ["news", "web"],
+        // Matches the seeded sources' actual Source.type values below
+        // (news/blog/forum) so live mock crawls of those sources can
+        // match these queries too, not just the pre-seeded mentions.
+        sourceTypes: ["news", "blog", "forum"],
       })),
     )
     .returning();

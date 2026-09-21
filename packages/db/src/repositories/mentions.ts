@@ -30,6 +30,37 @@ export async function listRecentMentions(
     .limit(limit);
 }
 
+/**
+ * Idempotent by design (docs/architecture/INGESTION.md): re-running the
+ * pipeline over the same Article must not create a second Mention for the
+ * same query — enforced by the DB unique index, not just this check.
+ */
+export async function createMentionIfNotExists(
+  db: Db,
+  organizationId: OrganizationId,
+  input: {
+    projectId: string;
+    queryId: string;
+    articleId: string;
+    matchedTerms: string[];
+    priority?: "low" | "normal" | "high" | "critical";
+  },
+): Promise<boolean> {
+  const result = await db
+    .insert(mentions)
+    .values({
+      organizationId,
+      projectId: input.projectId,
+      queryId: input.queryId,
+      articleId: input.articleId,
+      matchedTerms: input.matchedTerms,
+      priority: input.priority ?? "normal",
+    })
+    .onConflictDoNothing({ target: [mentions.queryId, mentions.articleId] })
+    .returning({ id: mentions.id });
+  return result.length > 0;
+}
+
 export type DashboardSummary = {
   totalMentions: number;
   uniqueSources: number;

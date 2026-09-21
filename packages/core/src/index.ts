@@ -5,3 +5,4 @@ export * from "./query-ast";
 export * from "./turkish";
 export * from "./email-provider";
 export * from "./jobs";
+export * from "./source-categories";

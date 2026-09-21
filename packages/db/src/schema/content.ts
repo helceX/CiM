@@ -6,6 +6,7 @@ import {
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 import { organizations, projects } from "./organizations";
@@ -108,6 +109,9 @@ export const mentions = pgTable(
     index("mentions_org_created_idx").on(table.organizationId, table.createdAt),
     index("mentions_org_project_idx").on(table.organizationId, table.projectId),
     index("mentions_article_idx").on(table.articleId),
+    // Re-processing the same Article must not duplicate a Mention for the
+    // same query (docs/architecture/INGESTION.md — pipeline idempotency).
+    uniqueIndex("mentions_query_article_uidx").on(table.queryId, table.articleId),
   ],
 );
 
@@ -132,3 +136,7 @@ export const engagementMetrics = pgTable(
   },
   (table) => [index("engagement_metrics_article_idx").on(table.articleId)],
 );
+
+export type Source = typeof sources.$inferSelect;
+export type Article = typeof articles.$inferSelect;
+export type Mention = typeof mentions.$inferSelect;

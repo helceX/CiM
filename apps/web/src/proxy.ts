@@ -12,7 +12,14 @@ import { NextResponse, type NextRequest } from "next/server";
  * file/export name; this project follows the current convention rather
  * than the deprecated one.
  */
-const PROTECTED_PREFIXES = ["/dashboard", "/monitoring", "/mentions", "/settings", "/onboarding"];
+const PROTECTED_PREFIXES = [
+  "/dashboard",
+  "/monitoring",
+  "/mentions",
+  "/analytics",
+  "/settings",
+  "/onboarding",
+];
 const SESSION_COOKIE = "cim_session";
 
 export function proxy(request: NextRequest) {
@@ -34,6 +41,7 @@ export const config = {
     "/dashboard/:path*",
     "/monitoring/:path*",
     "/mentions/:path*",
+    "/analytics/:path*",
     "/settings/:path*",
     "/onboarding/:path*",
   ],

@@ -11,9 +11,20 @@ wizard; organizations/workspaces/projects; RBAC permission checks; audit
 log; monitoring queries (simple + advanced builder, preview); source
 abstraction + `MockNewsConnector`; ingestion pipeline (fetch → normalize →
 dedupe → query match); worker job queue (BullMQ) with a scheduled crawl
-cycle; dashboard reading real tenant-scoped data; Mentions table (filters,
-search, pagination) + Mention Detail Drawer ("why did this match",
-relevant/irrelevant/duplicate feedback).
+cycle; dashboard reading real tenant-scoped data with a mention-trend
+chart; Mentions table (filters, search, pagination) + Mention Detail
+Drawer ("why did this match", relevant/irrelevant/duplicate feedback);
+Analytics (mention volume, sentiment trend, source distribution, topics
+by monitoring query with period-over-period change — all DB-aggregated,
+zero-filled series, real Recharts visualizations).
+
+Deliberately not built yet: full AI-clustered story clustering (brief
+§17/§151 Phase 3's "story clusters") — MVP scope here is dedup only
+(canonical URL / content hash); clustering near-duplicate coverage across
+sources needs title/semantic similarity, which needs both an AI
+enrichment pass (Phase 6) and multi-source overlapping content the mock
+connector doesn't yet produce. Building it now would be shallow — leaving it explicitly deferred is the
+honest call per brief §154.
 
 Not yet built (still MVP scope, next up): alerts + notifications, email
 daily digest, basic reports, AI summary/insights, RSS/Sitemap/Web

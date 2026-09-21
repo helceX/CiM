@@ -86,7 +86,15 @@ export function MentionsTable({ result }: { result: MentionsPage }) {
                 <tr
                   key={mention.id}
                   onClick={() => setSelectedMentionId(mention.id)}
-                  className="cursor-pointer hover:bg-surface-muted"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setSelectedMentionId(mention.id);
+                    }
+                  }}
+                  tabIndex={0}
+                  aria-label={`Open details for ${article.title}`}
+                  className="cursor-pointer hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
                 >
                   <td className="max-w-md px-4 py-3 font-medium text-foreground">{article.title}</td>
                   <td className="px-4 py-3 text-muted-foreground">{source.name}</td>

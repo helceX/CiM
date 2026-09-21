@@ -8,8 +8,10 @@ export function KpiRow({ items }: { items: Kpi[] }) {
       {items.map((item) => (
         <div key={item.label} className="bg-surface px-4 py-3">
           <dt className="text-xs text-muted-foreground">{item.label}</dt>
-          <dd className="mt-1 text-xl font-semibold text-foreground">{item.value}</dd>
-          {item.hint ? <p className="mt-0.5 text-xs text-muted-foreground">{item.hint}</p> : null}
+          <dd className="mt-1 text-xl font-semibold text-foreground">
+            {item.value}
+            {item.hint ? <span className="mt-0.5 block text-xs font-normal text-muted-foreground">{item.hint}</span> : null}
+          </dd>
         </div>
       ))}
     </dl>

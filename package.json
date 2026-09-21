@@ -25,6 +25,10 @@
     "onlyBuiltDependencies": ["esbuild", "msgpackr-extract"]
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.10.2",
+    "@cim/db": "workspace:*",
+    "@cim/ingestion": "workspace:*",
+    "drizzle-orm": "0.45.2",
     "@playwright/test": "1.63.0",
     "@types/node": "22.15.0",
     "eslint": "10.11.0",

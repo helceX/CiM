@@ -5,13 +5,17 @@ export default defineConfig({
   timeout: 30_000,
   fullyParallel: false,
   workers: 1,
-  reporter: [["list"]],
+  reporter: [["list"], ["html", { open: "never" }]],
   use: {
     baseURL: "http://localhost:3000",
     trace: "retain-on-failure",
-    // This environment ships a pinned Chromium revision rather than the
-    // one @playwright/test would otherwise try to download.
-    launchOptions: { executablePath: "/opt/pw-browsers/chromium" },
+    // Some sandboxes ship a pinned Chromium revision at a fixed path
+    // rather than the one `playwright install` (CI, and most local
+    // setups) provisions — only override when that's actually where
+    // this environment put it.
+    launchOptions: {
+      executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH ?? undefined,
+    },
   },
   webServer: {
     command: "pnpm --filter @cim/web dev",

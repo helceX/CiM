@@ -59,6 +59,11 @@ export default async function ReportsListPage() {
                     <Link href={`/reports/${report.id}`} className="hover:underline">
                       {report.name}
                     </Link>
+                    {report.scheduleFrequency !== "none" ? (
+                      <Badge tone="info" className="ml-2 align-middle capitalize">
+                        {report.scheduleFrequency}
+                      </Badge>
+                    ) : null}
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">{projectName}</td>
                   <td className="px-4 py-3 text-muted-foreground">
@@ -66,7 +71,9 @@ export default async function ReportsListPage() {
                   </td>
                   <td className="px-4 py-3">
                     {latestRun ? (
-                      <Badge tone={STATUS_TONE[latestRun.status] ?? "neutral"}>{latestRun.status}</Badge>
+                      <Badge tone={STATUS_TONE[latestRun.status] ?? "neutral"}>
+                        {latestRun.status}
+                      </Badge>
                     ) : (
                       <span className="text-muted-foreground">Not available</span>
                     )}

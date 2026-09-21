@@ -1,9 +1,11 @@
 import { notFound } from "next/navigation";
+import { can } from "@cim/core";
 import { Badge } from "@cim/ui";
 import { db, getReport, listReportRuns } from "@cim/db";
 import { getReportTemplate } from "@cim/reports/templates";
 import { requireOrgContext } from "@/lib/tenant";
 import { RunAgainButton } from "./run-again-button";
+import { ScheduleSection } from "./schedule-section";
 
 const STATUS_TONE: Record<string, "neutral" | "warning" | "success" | "danger"> = {
   queued: "neutral",
@@ -17,7 +19,11 @@ const PERIOD_LABEL: Record<string, string> = {
   rolling_30d: "Last 30 days",
 };
 
-export default async function ReportDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function ReportDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const context = await requireOrgContext();
   const { id } = await params;
 
@@ -26,6 +32,7 @@ export default async function ReportDetailPage({ params }: { params: Promise<{ i
 
   const runs = await listReportRuns(db, report.id);
   const template = getReportTemplate(report.templateKey);
+  const canManageSchedule = can(context.role, "reports:write");
 
   return (
     <div className="flex flex-col gap-6">
@@ -33,11 +40,18 @@ export default async function ReportDetailPage({ params }: { params: Promise<{ i
         <div>
           <h1 className="text-lg font-semibold text-foreground">{report.name}</h1>
           <p className="text-sm text-muted-foreground">
-            {template?.name ?? report.templateKey} · {PERIOD_LABEL[report.periodType] ?? report.periodType}
+            {template?.name ?? report.templateKey} ·{" "}
+            {PERIOD_LABEL[report.periodType] ?? report.periodType}
           </p>
         </div>
         <RunAgainButton reportId={report.id} />
       </div>
+
+      <ScheduleSection
+        reportId={report.id}
+        scheduleFrequency={report.scheduleFrequency}
+        canManageSchedule={canManageSchedule}
+      />
 
       <section>
         <h2 className="text-sm font-semibold text-foreground">Run history</h2>
@@ -57,9 +71,13 @@ export default async function ReportDetailPage({ params }: { params: Promise<{ i
                     {run.createdAt.toLocaleString()}
                   </td>
                   <td className="px-4 py-3">
-                    <Badge tone={STATUS_TONE[run.status] ?? "neutral"}>{run.status}</Badge>
+                    <Badge tone={STATUS_TONE[run.status] ?? "neutral"}>
+                      {run.status}
+                    </Badge>
                     {run.status === "failed" && run.error ? (
-                      <p className="mt-1 text-xs text-danger">Report generation failed: {run.error}</p>
+                      <p className="mt-1 text-xs text-danger">
+                        Report generation failed: {run.error}
+                      </p>
                     ) : null}
                   </td>
                   <td className="px-4 py-3">

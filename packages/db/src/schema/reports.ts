@@ -1,4 +1,12 @@
-import { customType, index, integer, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import {
+  customType,
+  index,
+  integer,
+  pgTable,
+  text,
+  timestamp,
+  uuid,
+} from "drizzle-orm/pg-core";
 import { organizations, projects } from "./organizations";
 import { users } from "./users";
 
@@ -30,10 +38,18 @@ export const reports = pgTable(
     name: text("name").notNull(),
     templateKey: text("template_key").notNull(), // weekly_summary | monitoring_overview
     periodType: text("period_type").notNull(), // rolling_7d | rolling_30d
+    // docs/product/FEATURE_MATRIX.md P2 "Weekly/monthly/yearly scheduled
+    // reports" — independent of periodType (a weekly schedule can still
+    // cover a rolling_30d window). "none" (default) means on-demand only,
+    // same as every report before this column existed.
+    scheduleFrequency: text("schedule_frequency").notNull().default("none"),
+    lastScheduledRunAt: timestamp("last_scheduled_run_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
-  (table) => [index("reports_org_project_idx").on(table.organizationId, table.projectId)],
+  (table) => [
+    index("reports_org_project_idx").on(table.organizationId, table.projectId),
+  ],
 );
 
 /**

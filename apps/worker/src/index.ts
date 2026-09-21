@@ -8,6 +8,7 @@ import {
   type CrawlSourceJobData,
   type GenerateDigestJobData,
   type GenerateReportJobData,
+  type GenerateScheduledReportsJobData,
   type InsightGenerateJobData,
   type SendEmailJobData,
 } from "@cim/core";
@@ -17,6 +18,7 @@ import { processCrawlSourceJob } from "./jobs/crawl-source";
 import { processCrawlSchedulerJob } from "./jobs/crawl-scheduler";
 import { processGenerateReportJob } from "./jobs/generate-report";
 import { processGenerateDigestJob } from "./jobs/generate-digest";
+import { processGenerateScheduledReportsJob } from "./jobs/generate-scheduled-reports";
 import { evaluateSpikeAlerts } from "./alerts/evaluate-spikes";
 import { evaluateSentimentShiftAlerts } from "./alerts/evaluate-sentiment-shift";
 import { processAiEnrichJob } from "./ai/enrich";
@@ -126,6 +128,16 @@ const generateDigestWorker = new Worker<GenerateDigestJobData>(
   { connection, concurrency: 1 },
 );
 
+const generateScheduledReportsQueue = new Queue<GenerateScheduledReportsJobData>(
+  QUEUE_NAMES.generateScheduledReports,
+  { connection },
+);
+const generateScheduledReportsWorker = new Worker<GenerateScheduledReportsJobData>(
+  QUEUE_NAMES.generateScheduledReports,
+  () => processGenerateScheduledReportsJob(generateReportQueue),
+  { connection, concurrency: 1 },
+);
+
 const allWorkers = [
   sendEmailWorker,
   crawlSourceWorker,
@@ -136,6 +148,7 @@ const allWorkers = [
   insightGenerateWorker,
   generateReportWorker,
   generateDigestWorker,
+  generateScheduledReportsWorker,
 ];
 for (const worker of allWorkers) {
   worker.on("failed", (job, error) => {
@@ -190,10 +203,19 @@ async function scheduleRepeatingJobs() {
     { pattern: "0 8 * * *" },
     { name: QUEUE_NAMES.generateDigest, data: {} },
   );
+  // Same once-a-day cron shape as the digest, offset 15 minutes so the
+  // two don't contend — finest schedule granularity is weekly, so a
+  // daily due-check is plenty (docs/product/FEATURE_MATRIX.md "Weekly/
+  // monthly/yearly scheduled reports").
+  await generateScheduledReportsQueue.upsertJobScheduler(
+    "generate-scheduled-reports-repeat",
+    { pattern: "15 8 * * *" },
+    { name: QUEUE_NAMES.generateScheduledReports, data: {} },
+  );
   console.log(
     "Schedulers registered: source crawl (30s), spike alert check (60s), " +
       "sentiment shift alert check (60s), AI enrichment (20s), insight generation (2m), " +
-      "daily digest (08:00 UTC).",
+      "daily digest (08:00 UTC), scheduled reports (08:15 UTC).",
   );
 }
 
@@ -212,6 +234,7 @@ async function shutdown() {
   await insightGenerateQueue.close();
   await generateReportQueue.close();
   await generateDigestQueue.close();
+  await generateScheduledReportsQueue.close();
   process.exit(0);
 }
 

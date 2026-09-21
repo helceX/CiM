@@ -15,6 +15,7 @@ export const QUEUE_NAMES = {
   insightGenerate: "insight_generate",
   generateReport: "generate_report",
   generateDigest: "generate_digest",
+  generateScheduledReports: "generate_scheduled_reports",
 } as const;
 
 export type SendEmailJobData = {
@@ -40,3 +41,5 @@ export type GenerateReportJobData = {
 };
 
 export type GenerateDigestJobData = Record<string, never>;
+
+export type GenerateScheduledReportsJobData = Record<string, never>;

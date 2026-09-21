@@ -1,8 +1,8 @@
-import { and, desc, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, isNull, ne, sql } from "drizzle-orm";
 import type { Db } from "../client";
-import { projects } from "../schema/organizations";
+import { organizations, projects } from "../schema/organizations";
 import { reportFiles, reportRuns, reports } from "../schema/reports";
-import type { OrganizationId } from "./tenant-scope";
+import { asOrganizationId, type OrganizationId } from "./tenant-scope";
 
 export type ReportListItem = {
   report: typeof reports.$inferSelect;
@@ -36,7 +36,11 @@ export async function createReport(
   return row;
 }
 
-export async function getReport(db: Db, organizationId: OrganizationId, reportId: string) {
+export async function getReport(
+  db: Db,
+  organizationId: OrganizationId,
+  reportId: string,
+) {
   const [row] = await db
     .select()
     .from(reports)
@@ -49,6 +53,29 @@ export async function getReport(db: Db, organizationId: OrganizationId, reportId
     )
     .limit(1);
   return row;
+}
+
+export type ReportScheduleFrequency = "none" | "weekly" | "monthly" | "yearly";
+
+/** Returns false (not a throw) when the report doesn't exist/belong to this org — same shape callers already handle for getReport. */
+export async function updateReportSchedule(
+  db: Db,
+  organizationId: OrganizationId,
+  reportId: string,
+  scheduleFrequency: ReportScheduleFrequency,
+): Promise<boolean> {
+  const [row] = await db
+    .update(reports)
+    .set({ scheduleFrequency })
+    .where(
+      and(
+        eq(reports.organizationId, organizationId),
+        eq(reports.id, reportId),
+        isNull(reports.deletedAt),
+      ),
+    )
+    .returning({ id: reports.id });
+  return Boolean(row);
 }
 
 /** List view — each report's most recent run, so the UI can show live status without an N+1 per row on click. */
@@ -80,7 +107,12 @@ export async function listReports(
 export async function createReportRun(
   db: Db,
   organizationId: OrganizationId,
-  input: { reportId: string; requestedByUserId: string; periodStart: Date; periodEnd: Date },
+  input: {
+    reportId: string;
+    requestedByUserId: string | null;
+    periodStart: Date;
+    periodEnd: Date;
+  },
 ) {
   const [row] = await db
     .insert(reportRuns)
@@ -97,7 +129,11 @@ export async function createReportRun(
 }
 
 export async function listReportRuns(db: Db, reportId: string) {
-  return db.select().from(reportRuns).where(eq(reportRuns.reportId, reportId)).orderBy(desc(reportRuns.createdAt));
+  return db
+    .select()
+    .from(reportRuns)
+    .where(eq(reportRuns.reportId, reportId))
+    .orderBy(desc(reportRuns.createdAt));
 }
 
 export type ReportRunForWorker = {
@@ -127,11 +163,20 @@ export async function getReportRunForWorker(
   return row;
 }
 
-export async function getReportRun(db: Db, organizationId: OrganizationId, reportRunId: string) {
+export async function getReportRun(
+  db: Db,
+  organizationId: OrganizationId,
+  reportRunId: string,
+) {
   const [row] = await db
     .select()
     .from(reportRuns)
-    .where(and(eq(reportRuns.organizationId, organizationId), eq(reportRuns.id, reportRunId)))
+    .where(
+      and(
+        eq(reportRuns.organizationId, organizationId),
+        eq(reportRuns.id, reportRunId),
+      ),
+    )
     .limit(1);
   return row;
 }
@@ -144,7 +189,10 @@ export async function markReportRunRunning(db: Db, reportRunId: string): Promise
     .where(eq(reportRuns.id, reportRunId));
 }
 
-export async function markReportRunCompleted(db: Db, reportRunId: string): Promise<void> {
+export async function markReportRunCompleted(
+  db: Db,
+  reportRunId: string,
+): Promise<void> {
   await db
     .update(reportRuns)
     .set({ status: "completed", completedAt: new Date() })
@@ -152,7 +200,11 @@ export async function markReportRunCompleted(db: Db, reportRunId: string): Promi
 }
 
 /** brief/USER_FLOWS.md §5 — failure surfaces with its error, never a silently missing report. */
-export async function markReportRunFailed(db: Db, reportRunId: string, error: string): Promise<void> {
+export async function markReportRunFailed(
+  db: Db,
+  reportRunId: string,
+  error: string,
+): Promise<void> {
   await db
     .update(reportRuns)
     .set({ status: "failed", completedAt: new Date(), error })
@@ -172,11 +224,80 @@ export async function createReportFile(
   });
 }
 
-export async function getReportFile(db: Db, reportRunId: string, format: "pdf" | "csv") {
+export async function getReportFile(
+  db: Db,
+  reportRunId: string,
+  format: "pdf" | "csv",
+) {
   const [row] = await db
     .select()
     .from(reportFiles)
-    .where(and(eq(reportFiles.reportRunId, reportRunId), eq(reportFiles.format, format)))
+    .where(
+      and(eq(reportFiles.reportRunId, reportRunId), eq(reportFiles.format, format)),
+    )
     .limit(1);
   return row;
+}
+
+export type DueScheduledReport = {
+  id: string;
+  organizationId: OrganizationId;
+  projectId: string;
+  createdByUserId: string | null;
+  name: string;
+  templateKey: string;
+  periodType: string;
+  scheduleFrequency: string;
+};
+
+/**
+ * The scheduler-tick counterpart to listActiveOrganizationIdsForDigest —
+ * one pass across every still-existing organization's still-existing
+ * reports (docs/product/FEATURE_MATRIX.md P2 "Weekly/monthly/yearly
+ * scheduled reports"), the same cross-tenant exception ADR-001
+ * documents. "Due" is calendar-accurate per frequency (a `monthly`
+ * report waits a real month, not a fixed 30 days) and a report that has
+ * never run on schedule before is always due immediately.
+ */
+export async function getReportsDueForScheduledRun(
+  db: Db,
+): Promise<DueScheduledReport[]> {
+  const rows = await db
+    .select({
+      id: reports.id,
+      organizationId: reports.organizationId,
+      projectId: reports.projectId,
+      createdByUserId: reports.createdByUserId,
+      name: reports.name,
+      templateKey: reports.templateKey,
+      periodType: reports.periodType,
+      scheduleFrequency: reports.scheduleFrequency,
+    })
+    .from(reports)
+    .innerJoin(organizations, eq(organizations.id, reports.organizationId))
+    .where(
+      and(
+        ne(reports.scheduleFrequency, "none"),
+        isNull(reports.deletedAt),
+        isNull(organizations.deletedAt),
+        sql`(
+          ${reports.lastScheduledRunAt} is null
+          or (${reports.scheduleFrequency} = 'weekly' and ${reports.lastScheduledRunAt} <= now() - interval '7 days')
+          or (${reports.scheduleFrequency} = 'monthly' and ${reports.lastScheduledRunAt} <= now() - interval '1 month')
+          or (${reports.scheduleFrequency} = 'yearly' and ${reports.lastScheduledRunAt} <= now() - interval '1 year')
+        )`,
+      ),
+    );
+
+  return rows.map((row) => ({
+    ...row,
+    organizationId: asOrganizationId(row.organizationId),
+  }));
+}
+
+export async function markReportScheduledRun(db: Db, reportId: string): Promise<void> {
+  await db
+    .update(reports)
+    .set({ lastScheduledRunAt: new Date() })
+    .where(eq(reports.id, reportId));
 }

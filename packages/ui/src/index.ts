@@ -10,3 +10,5 @@ export * from "./components/checkbox";
 export * from "./components/tooltip";
 export * from "./components/dialog";
 export * from "./components/dropdown-menu";
+export * from "./components/sheet";
+export * from "./components/select";

@@ -1,6 +1,7 @@
-import { and, count, desc, eq, gte, sql } from "drizzle-orm";
+import { and, count, desc, eq, gte, ilike, sql } from "drizzle-orm";
 import type { Db } from "../client";
 import { articles, mentions, sources } from "../schema/content";
+import { monitoringQueries } from "../schema/monitoring";
 import type { OrganizationId } from "./tenant-scope";
 
 export type MentionListItem = {
@@ -57,6 +58,130 @@ export async function createMentionIfNotExists(
       priority: input.priority ?? "normal",
     })
     .onConflictDoNothing({ target: [mentions.queryId, mentions.articleId] })
+    .returning({ id: mentions.id });
+  return result.length > 0;
+}
+
+export type MentionFilters = {
+  projectId?: string;
+  sentiment?: "positive" | "neutral" | "negative" | "unclassified";
+  priority?: "low" | "normal" | "high" | "critical";
+  search?: string;
+  sinceDays?: number;
+  includeArchived?: boolean;
+};
+
+export type MentionsPage = {
+  items: MentionListItem[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+};
+
+function mentionFiltersToWhere(organizationId: OrganizationId, filters: MentionFilters) {
+  return and(
+    eq(mentions.organizationId, organizationId),
+    // Mentions marked irrelevant/duplicate (setMentionFeedback -> status
+    // "archived") are noise the reviewer already dismissed — excluded by
+    // default, same as any inbox hides what you've already triaged.
+    filters.includeArchived ? undefined : sql`${mentions.status} != 'archived'`,
+    filters.projectId ? eq(mentions.projectId, filters.projectId) : undefined,
+    filters.priority ? eq(mentions.priority, filters.priority) : undefined,
+    filters.sentiment === "unclassified"
+      ? sql`${mentions.sentiment} is null`
+      : filters.sentiment
+        ? eq(mentions.sentiment, filters.sentiment)
+        : undefined,
+    filters.sinceDays
+      ? gte(mentions.createdAt, sql`now() - (${filters.sinceDays}::text || ' days')::interval`)
+      : undefined,
+    // Substring match on title — the MVP baseline ahead of the tsvector/
+    // Meilisearch tiers in docs/architecture/SEARCH.md (ADR-002).
+    filters.search ? ilike(articles.title, `%${filters.search}%`) : undefined,
+  );
+}
+
+/**
+ * The Mentions table (brief §14/§51) — the product's primary working
+ * screen. Filtered and paginated in the database, never by fetching
+ * everything and slicing client-side (brief §90).
+ */
+export async function listMentionsFiltered(
+  db: Db,
+  organizationId: OrganizationId,
+  filters: MentionFilters,
+  pagination: { page: number; pageSize: number },
+): Promise<MentionsPage> {
+  const where = mentionFiltersToWhere(organizationId, filters);
+  const offset = (pagination.page - 1) * pagination.pageSize;
+
+  const [items, [countRow]] = await Promise.all([
+    db
+      .select({ mention: mentions, article: articles, source: sources })
+      .from(mentions)
+      .innerJoin(articles, eq(articles.id, mentions.articleId))
+      .innerJoin(sources, eq(sources.id, articles.sourceId))
+      .where(where)
+      .orderBy(desc(mentions.createdAt))
+      .limit(pagination.pageSize)
+      .offset(offset),
+    db
+      .select({ total: count() })
+      .from(mentions)
+      .innerJoin(articles, eq(articles.id, mentions.articleId))
+      .where(where),
+  ]);
+
+  return {
+    items,
+    totalCount: Number(countRow?.total ?? 0),
+    page: pagination.page,
+    pageSize: pagination.pageSize,
+  };
+}
+
+export type MentionDetail = MentionListItem & {
+  queryName: string;
+};
+
+/** For the Mention Detail Drawer's "Why did this match?" (brief §15). */
+export async function getMentionDetail(
+  db: Db,
+  organizationId: OrganizationId,
+  mentionId: string,
+): Promise<MentionDetail | undefined> {
+  const [row] = await db
+    .select({ mention: mentions, article: articles, source: sources, queryName: monitoringQueries.name })
+    .from(mentions)
+    .innerJoin(articles, eq(articles.id, mentions.articleId))
+    .innerJoin(sources, eq(sources.id, articles.sourceId))
+    .innerJoin(monitoringQueries, eq(monitoringQueries.id, mentions.queryId))
+    .where(and(eq(mentions.organizationId, organizationId), eq(mentions.id, mentionId)))
+    .limit(1);
+  return row;
+}
+
+export type MentionFeedback = "relevant" | "irrelevant" | "duplicate";
+
+/**
+ * brief §139 — this feedback is stored for future query-quality tuning,
+ * not silently discarded; irrelevant/duplicate also move the mention out
+ * of the "new" working set (status: archived) so it stops cluttering the
+ * table it was reviewed from.
+ */
+export async function setMentionFeedback(
+  db: Db,
+  organizationId: OrganizationId,
+  mentionId: string,
+  feedback: MentionFeedback,
+): Promise<boolean> {
+  const result = await db
+    .update(mentions)
+    .set({
+      reviewFeedback: feedback,
+      status: feedback === "relevant" ? "reviewed" : "archived",
+    })
+    .where(and(eq(mentions.organizationId, organizationId), eq(mentions.id, mentionId)))
     .returning({ id: mentions.id });
   return result.length > 0;
 }

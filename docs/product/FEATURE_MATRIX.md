@@ -11,12 +11,14 @@ wizard; organizations/workspaces/projects; RBAC permission checks; audit
 log; monitoring queries (simple + advanced builder, preview); source
 abstraction + `MockNewsConnector`; ingestion pipeline (fetch → normalize →
 dedupe → query match); worker job queue (BullMQ) with a scheduled crawl
-cycle; dashboard reading real tenant-scoped data.
+cycle; dashboard reading real tenant-scoped data; Mentions table (filters,
+search, pagination) + Mention Detail Drawer ("why did this match",
+relevant/irrelevant/duplicate feedback).
 
-Not yet built (still MVP scope, next up): Mentions list/detail drawer,
-alerts + notifications, email daily digest, basic reports, AI summary/
-insights, RSS/Sitemap/Web connectors, admin panel. See task list in the
-project's ADRs/PR history for exact sequencing.
+Not yet built (still MVP scope, next up): alerts + notifications, email
+daily digest, basic reports, AI summary/insights, RSS/Sitemap/Web
+connectors, admin panel. See task list in the project's ADRs/PR history
+for exact sequencing.
 
 | Module | MVP | P2 | P3 | P4 |
 |---|---|---|---|---|

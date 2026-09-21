@@ -1,5 +1,5 @@
 import { can } from "@cim/core";
-import { db, listMembersForOrganization } from "@cim/db";
+import { db, getRetentionPolicy, listMembersForOrganization } from "@cim/db";
 import { requireOrgContext } from "@/lib/tenant";
 import {
   DataExportButton,
@@ -7,11 +7,16 @@ import {
   DeleteOrganizationDialog,
 } from "./danger-zone";
 import { MembersSection } from "./members-section";
+import { RetentionSection } from "./retention-section";
 
 export default async function SettingsPage() {
   const context = await requireOrgContext();
-  const members = await listMembersForOrganization(db, context.organizationId);
+  const [members, retentionPolicy] = await Promise.all([
+    listMembersForOrganization(db, context.organizationId),
+    getRetentionPolicy(db, context.organizationId),
+  ]);
   const canManageMembers = can(context.role, "org:manage_members");
+  const canManageSettings = can(context.role, "org:manage_settings");
 
   return (
     <div className="flex max-w-2xl flex-col gap-8">
@@ -31,6 +36,11 @@ export default async function SettingsPage() {
         members={members}
         canManageMembers={canManageMembers}
         currentUserId={context.userId}
+      />
+
+      <RetentionSection
+        mentionRetentionDays={retentionPolicy.mentionRetentionDays}
+        canManageSettings={canManageSettings}
       />
 
       <section>

@@ -21,3 +21,4 @@ export * from "./repositories/admin";
 export * from "./repositories/privacy";
 export * from "./repositories/digest";
 export * from "./repositories/members";
+export * from "./repositories/retention";

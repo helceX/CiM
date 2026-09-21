@@ -4,7 +4,7 @@ import { QUEUE_NAMES, type SendEmailJobData } from "@cim/core";
 import { db, enqueueEmail } from "@cim/db";
 import { getRedis } from "./redis";
 
-export type EmailKind = "verify_email" | "password_reset";
+export type EmailKind = "verify_email" | "password_reset" | "invitation";
 
 let sendEmailQueue: Queue<SendEmailJobData> | undefined;
 
@@ -57,5 +57,20 @@ export function passwordResetEmailBody(link: string): string {
     link,
     "",
     "This link expires in 1 hour. If you didn't request this, you can ignore this email.",
+  ].join("\n");
+}
+
+export function invitationEmailBody(
+  organizationName: string,
+  inviterName: string,
+  link: string,
+): string {
+  return [
+    `${inviterName} invited you to join ${organizationName} on CiM.`,
+    "",
+    "Accept the invitation and set up your account:",
+    link,
+    "",
+    "This link expires in 7 days. If you weren't expecting this, you can ignore this email.",
   ].join("\n");
 }

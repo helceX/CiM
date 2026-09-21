@@ -1,6 +1,11 @@
 import "server-only";
-import { asOrganizationId, db, listMembershipsForUser, type OrganizationId } from "@cim/db";
-import { isOrgRole, type OrgRole } from "@cim/core";
+import {
+  asOrganizationId,
+  db,
+  listMembershipsForUser,
+  type OrganizationId,
+} from "@cim/db";
+import { can, isOrgRole, type OrgRole, type Permission } from "@cim/core";
 import { getCurrentUser } from "./session";
 
 export type OrgContext = {
@@ -38,6 +43,25 @@ export async function requireOrgContext(): Promise<OrgContext> {
   const context = await getOrgContext();
   if (!context) {
     throw new Error("UNAUTHENTICATED");
+  }
+  return context;
+}
+
+/**
+ * packages/core/authz.ts's permission table has existed since Phase 1,
+ * but nothing actually called `can()` until Screen 18 "Organization
+ * Users" (docs/ux/SCREEN_INVENTORY.md) needed its first real
+ * enforcement point: inviting/re-role-ing/revoking members is
+ * `org:manage_members`, owner and admin only. Throws the same
+ * "UNAUTHENTICATED"-shaped signal `requireOrgContext` does so route
+ * handlers can handle both with one catch — but with its own message,
+ * since "not authenticated" and "authenticated but not allowed" are
+ * different failures a caller may want to tell apart.
+ */
+export async function requirePermission(permission: Permission): Promise<OrgContext> {
+  const context = await requireOrgContext();
+  if (!can(context.role, permission)) {
+    throw new Error("FORBIDDEN");
   }
   return context;
 }

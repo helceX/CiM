@@ -5,7 +5,7 @@ import { z } from "zod";
  * validate against two different definitions of "valid".
  */
 
-const passwordSchema = z
+export const passwordSchema = z
   .string()
   .min(10, "Password must be at least 10 characters")
   .max(128, "Password is too long")
@@ -37,9 +37,7 @@ export type VerifyEmailInput = z.infer<typeof verifyEmailSchema>;
 export const requestPasswordResetSchema = z.object({
   email: z.email().max(255).toLowerCase(),
 });
-export type RequestPasswordResetInput = z.infer<
-  typeof requestPasswordResetSchema
->;
+export type RequestPasswordResetInput = z.infer<typeof requestPasswordResetSchema>;
 
 export const resetPasswordSchema = z.object({
   token: z.string().min(1),

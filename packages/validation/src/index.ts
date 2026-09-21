@@ -4,3 +4,4 @@ export * from "./monitoring";
 export * from "./alerts";
 export * from "./reports";
 export * from "./privacy";
+export * from "./members";

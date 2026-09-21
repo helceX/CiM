@@ -57,7 +57,8 @@ export default async function AnalyticsPage({
           <section className="rounded-lg border border-border p-4">
             <h2 className="text-sm font-semibold text-foreground">Mention volume</h2>
             <p className="text-xs text-muted-foreground">
-              {totalMentions} mention{totalMentions === 1 ? "" : "s"} over the last {sinceDays} days.
+              {totalMentions} mention{totalMentions === 1 ? "" : "s"} over the last{" "}
+              {sinceDays} days.
             </p>
             <div className="mt-3">
               <MentionTrendChart data={volume} />
@@ -67,8 +68,9 @@ export default async function AnalyticsPage({
           <section className="rounded-lg border border-border p-4">
             <h2 className="text-sm font-semibold text-foreground">Sentiment trend</h2>
             <p className="text-xs text-muted-foreground">
-              Sentiment classification ships in a later phase — most mentions show as
-              unclassified until then, never guessed.
+              From AI enrichment (sentiment, entities, topics per mention). Mentions AI
+              hasn&apos;t analyzed yet — or ran without an AI provider configured — show
+              as unclassified, never guessed.
             </p>
             <div className="mt-3">
               <SentimentTrendChart data={sentimentTrend} />
@@ -77,14 +79,23 @@ export default async function AnalyticsPage({
 
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <section className="rounded-lg border border-border p-4">
-              <h2 className="text-sm font-semibold text-foreground">Source distribution</h2>
-              <p className="text-xs text-muted-foreground">Top sources by mention count.</p>
+              <h2 className="text-sm font-semibold text-foreground">
+                Source distribution
+              </h2>
+              <p className="text-xs text-muted-foreground">
+                Top sources by mention count.
+              </p>
               <div className="mt-3">
                 {sourceDistribution.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No sources in this period.</p>
+                  <p className="text-sm text-muted-foreground">
+                    No sources in this period.
+                  </p>
                 ) : (
                   <DistributionBarChart
-                    data={sourceDistribution.map((s) => ({ label: s.sourceName, value: s.count }))}
+                    data={sourceDistribution.map((s) => ({
+                      label: s.sourceName,
+                      value: s.count,
+                    }))}
                   />
                 )}
               </div>
@@ -97,16 +108,26 @@ export default async function AnalyticsPage({
               </p>
               <div className="mt-3 flex flex-col gap-2">
                 {topics.filter((t) => t.currentCount > 0).length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No topic activity in this period.</p>
+                  <p className="text-sm text-muted-foreground">
+                    No topic activity in this period.
+                  </p>
                 ) : (
                   topics
                     .filter((t) => t.currentCount > 0)
                     .map((topic) => (
-                      <div key={topic.queryId} className="flex items-center justify-between text-sm">
+                      <div
+                        key={topic.queryId}
+                        className="flex items-center justify-between text-sm"
+                      >
                         <span className="text-foreground">{topic.queryName}</span>
                         <span className="flex items-center gap-2">
-                          <span className="text-muted-foreground">{topic.currentCount}</span>
-                          <ChangeBadge current={topic.currentCount} previous={topic.previousCount} />
+                          <span className="text-muted-foreground">
+                            {topic.currentCount}
+                          </span>
+                          <ChangeBadge
+                            current={topic.currentCount}
+                            previous={topic.previousCount}
+                          />
                         </span>
                       </div>
                     ))

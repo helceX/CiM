@@ -8,9 +8,7 @@ import { z } from "zod";
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   APP_URL: z.url().default("http://localhost:3000"),
-  SESSION_SECRET: z
-    .string()
-    .min(32, "SESSION_SECRET must be at least 32 characters"),
+  SESSION_SECRET: z.string().min(32, "SESSION_SECRET must be at least 32 characters"),
 
   DATABASE_URL: z.url(),
 
@@ -27,6 +25,7 @@ const envSchema = z.object({
 
   EMAIL_PROVIDER: z.enum(["console", "resend", "ses"]).default("console"),
   EMAIL_FROM: z.string().default("CiM <no-reply@cim.example>"),
+  EMAIL_API_KEY: z.string().optional(),
 
   // "disabled": no enrichment, AI fields stay "Not available" (brief §92).
   // "mock": deterministic heuristic provider, no API key needed (dev/demo

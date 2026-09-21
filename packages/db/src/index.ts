@@ -14,3 +14,5 @@ export * from "./repositories/articles";
 export * from "./repositories/analytics";
 export * from "./repositories/alerts";
 export * from "./repositories/notifications";
+export * from "./repositories/ai";
+export * from "./repositories/insights";

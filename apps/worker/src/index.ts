@@ -1,9 +1,11 @@
 import { Queue, Worker } from "bullmq";
 import {
   QUEUE_NAMES,
+  type AiEnrichJobData,
   type AlertSpikeCheckJobData,
   type CrawlSchedulerJobData,
   type CrawlSourceJobData,
+  type InsightGenerateJobData,
   type SendEmailJobData,
 } from "@cim/core";
 import { getRedisConnection } from "./redis";
@@ -11,6 +13,8 @@ import { processSendEmailJob } from "./jobs/send-email";
 import { processCrawlSourceJob } from "./jobs/crawl-source";
 import { processCrawlSchedulerJob } from "./jobs/crawl-scheduler";
 import { evaluateSpikeAlerts } from "./alerts/evaluate-spikes";
+import { processAiEnrichJob } from "./ai/enrich";
+import { processInsightGenerateJob } from "./ai/generate-insight";
 
 /**
  * One BullMQ Worker per queue (docs/architecture/ARCHITECTURE.md — worker
@@ -52,7 +56,30 @@ const alertSpikeCheckWorker = new Worker<AlertSpikeCheckJobData>(
   { connection, concurrency: 1 },
 );
 
-const allWorkers = [sendEmailWorker, crawlSourceWorker, crawlSchedulerWorker, alertSpikeCheckWorker];
+const aiEnrichQueue = new Queue<AiEnrichJobData>(QUEUE_NAMES.aiEnrich, { connection });
+const aiEnrichWorker = new Worker<AiEnrichJobData>(
+  QUEUE_NAMES.aiEnrich,
+  () => processAiEnrichJob(),
+  { connection, concurrency: 1 },
+);
+
+const insightGenerateQueue = new Queue<InsightGenerateJobData>(QUEUE_NAMES.insightGenerate, {
+  connection,
+});
+const insightGenerateWorker = new Worker<InsightGenerateJobData>(
+  QUEUE_NAMES.insightGenerate,
+  () => processInsightGenerateJob(),
+  { connection, concurrency: 1 },
+);
+
+const allWorkers = [
+  sendEmailWorker,
+  crawlSourceWorker,
+  crawlSchedulerWorker,
+  alertSpikeCheckWorker,
+  aiEnrichWorker,
+  insightGenerateWorker,
+];
 for (const worker of allWorkers) {
   worker.on("failed", (job, error) => {
     console.error(`[worker] job ${job?.id} (${worker.name}) failed:`, error);
@@ -78,7 +105,24 @@ async function scheduleRepeatingJobs() {
     { every: 60_000 },
     { name: QUEUE_NAMES.alertSpikeCheck, data: {} },
   );
-  console.log("Schedulers registered: source crawl (30s), spike alert check (60s).");
+  // Dev-friendly cadence, same rationale as the crawl scheduler above —
+  // a production deployment would enrich promptly after ingestion (~20s)
+  // but generate the "since yesterday" insight far less often than every
+  // 2 minutes; kept fast here so the pipeline is observable in dev/demo.
+  await aiEnrichQueue.upsertJobScheduler(
+    "ai-enrich-repeat",
+    { every: 20_000 },
+    { name: QUEUE_NAMES.aiEnrich, data: {} },
+  );
+  await insightGenerateQueue.upsertJobScheduler(
+    "insight-generate-repeat",
+    { every: 120_000 },
+    { name: QUEUE_NAMES.insightGenerate, data: {} },
+  );
+  console.log(
+    "Schedulers registered: source crawl (30s), spike alert check (60s), " +
+      "AI enrichment (20s), insight generation (2m).",
+  );
 }
 
 console.log("Worker started. Listening for queued jobs…");
@@ -91,6 +135,8 @@ async function shutdown() {
   await crawlSourceQueue.close();
   await crawlSchedulerQueue.close();
   await alertSpikeCheckQueue.close();
+  await aiEnrichQueue.close();
+  await insightGenerateQueue.close();
   process.exit(0);
 }
 

@@ -3,6 +3,7 @@ import type { Db } from "../client";
 import { articles, mentions, sources } from "../schema/content";
 import { monitoringQueries } from "../schema/monitoring";
 import type { OrganizationId } from "./tenant-scope";
+import { listMentionEntities, listMentionTopics, type MentionEntityRow, type MentionTopicRow } from "./ai";
 
 export type MentionListItem = {
   mention: typeof mentions.$inferSelect;
@@ -142,9 +143,16 @@ export async function listMentionsFiltered(
 
 export type MentionDetail = MentionListItem & {
   queryName: string;
+  aiEntities: MentionEntityRow[];
+  aiTopics: MentionTopicRow[];
 };
 
-/** For the Mention Detail Drawer's "Why did this match?" (brief §15). */
+/**
+ * For the Mention Detail Drawer's "Why did this match?" (brief §15) and
+ * AI trust layer (summary/sentiment/entities/topics with confidence +
+ * method, AI_ARCHITECTURE.md) — `mention.aiStatus` tells the UI whether to
+ * render enrichment or "Not available".
+ */
 export async function getMentionDetail(
   db: Db,
   organizationId: OrganizationId,
@@ -158,7 +166,13 @@ export async function getMentionDetail(
     .innerJoin(monitoringQueries, eq(monitoringQueries.id, mentions.queryId))
     .where(and(eq(mentions.organizationId, organizationId), eq(mentions.id, mentionId)))
     .limit(1);
-  return row;
+  if (!row) return undefined;
+
+  const [aiEntities, aiTopics] = await Promise.all([
+    listMentionEntities(db, mentionId),
+    listMentionTopics(db, mentionId),
+  ]);
+  return { ...row, aiEntities, aiTopics };
 }
 
 export type MentionFeedback = "relevant" | "irrelevant" | "duplicate";

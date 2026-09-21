@@ -1,7 +1,14 @@
 import Link from "next/link";
 import { Badge, Button, EmptyState } from "@cim/ui";
 import { Radar } from "lucide-react";
-import { db, getDashboardSummary, getMentionVolumeSeries, listProjects, listRecentMentions } from "@cim/db";
+import {
+  db,
+  getDashboardSummary,
+  getLatestInsightForOrganization,
+  getMentionVolumeSeries,
+  listProjects,
+  listRecentMentions,
+} from "@cim/db";
 import { requireOrgContext } from "@/lib/tenant";
 import { KpiRow } from "@/components/kpi-row";
 import { MentionTrendChart } from "@/components/charts/mention-trend-chart";
@@ -38,10 +45,11 @@ export default async function DashboardPage() {
     );
   }
 
-  const [summary, recentMentions, trend] = await Promise.all([
+  const [summary, recentMentions, trend, insight] = await Promise.all([
     getDashboardSummary(db, context.organizationId, { sinceDays: 7 }),
     listRecentMentions(db, context.organizationId, { limit: 10 }),
     getMentionVolumeSeries(db, context.organizationId, { sinceDays: 14 }),
+    getLatestInsightForOrganization(db, context.organizationId, "whats_changed"),
   ]);
 
   return (
@@ -63,6 +71,23 @@ export default async function DashboardPage() {
           },
         ]}
       />
+
+      {insight ? (
+        <section className="rounded-lg border border-border p-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-foreground">Since yesterday</h2>
+            <span className="text-xs text-muted-foreground">{insight.projectName}</span>
+          </div>
+          <p className="mt-2 text-sm text-foreground">{insight.summary}</p>
+          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+            <span>Confidence {Math.round(Number(insight.confidence) * 100)}%</span>
+            <span>Method: {insight.method}</span>
+            <span>
+              Based on {insight.evidence.length} mention{insight.evidence.length === 1 ? "" : "s"}
+            </span>
+          </div>
+        </section>
+      ) : null}
 
       {summary.totalMentions > 0 ? (
         <section className="rounded-lg border border-border p-4">

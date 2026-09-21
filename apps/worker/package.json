@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@cim/ai": "workspace:*",
     "@cim/config": "workspace:*",
     "@cim/core": "workspace:*",
     "@cim/db": "workspace:*",

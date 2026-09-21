@@ -5,3 +5,4 @@ export * from "./monitoring";
 export * from "./content";
 export * from "./audit";
 export * from "./alerts";
+export * from "./ai";

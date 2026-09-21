@@ -109,9 +109,54 @@ export function MentionDetailDrawer({
               </div>
             </section>
 
-            <section className="flex flex-col gap-1">
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">AI insight</p>
-              <p className="text-muted-foreground">Not available — AI enrichment ships in a later phase.</p>
+            <section className="flex flex-col gap-2">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">AI summary</p>
+              {detail.mention.aiStatus === "completed" ? (
+                <>
+                  <p className="text-foreground">{detail.mention.aiSummary}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Confidence{" "}
+                    {detail.mention.sentimentConfidence
+                      ? `${Math.round(Number(detail.mention.sentimentConfidence) * 100)}%`
+                      : "Not available"}{" "}
+                    · Method: {detail.mention.aiMethod ?? "Not available"}
+                  </p>
+                </>
+              ) : detail.mention.aiStatus === "failed" ? (
+                <p className="text-muted-foreground">Not available — AI enrichment failed for this item.</p>
+              ) : detail.mention.aiStatus === "skipped" ? (
+                <p className="text-muted-foreground">
+                  Not available — this source&apos;s content rights don&apos;t permit AI processing.
+                </p>
+              ) : (
+                <p className="text-muted-foreground">Not available — AI enrichment is still in progress.</p>
+              )}
+
+              {detail.aiEntities.length > 0 ? (
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Entities</p>
+                  <div className="mt-1 flex flex-wrap gap-1.5">
+                    {detail.aiEntities.map((entity) => (
+                      <Badge key={entity.name} tone="neutral">
+                        {entity.name}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
+              {detail.aiTopics.length > 0 ? (
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Topics</p>
+                  <div className="mt-1 flex flex-wrap gap-1.5">
+                    {detail.aiTopics.map((topic) => (
+                      <Badge key={topic.name} tone="info">
+                        {topic.name}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
             </section>
 
             <section className="flex flex-col gap-2 border-t border-border pt-4">

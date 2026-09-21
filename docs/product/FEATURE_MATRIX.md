@@ -25,19 +25,34 @@ with a minimum absolute-count floor) — with per-rule cooldown to prevent
 alert fatigue; notifications fan out in-app (Notification Center, unread
 badge, mark read/mark all read) and by email (provider-agnostic
 `email_outbox` → BullMQ `send_email` job), scoped to active organization
-members only.
+members only; AI enrichment (`packages/ai`, ADR-003) — provider-agnostic
+interface behind a `MockAIProvider` (deterministic heuristic, the default
+until a real key is configured) and a real `AnthropicAIProvider`
+(structured tool-output, schema-validated, retry-then-fail, prompt
+injection defended by construction — SOURCE CONTENT is always a delimited,
+forced-tool-choice call, never free text the model could be steered by);
+the worker's `ai_enrich` job runs sentiment/entities/topics/summary per
+Mention (content-hash-cached across Mentions of the same Article, so
+identical content is analyzed once) and `insight_generate` produces a
+grounded, evidence-linked "since yesterday" Insight per project — both
+surfaced end to end: Mention Detail Drawer (sentiment, summary,
+confidence, method, entities, topics, honest "Not available" per
+`ai_status`) and the dashboard's Insight card (Answer/Evidence/Confidence/
+Method, AI_ARCHITECTURE.md Trust Layer — an Insight with zero evidence
+rows is never rendered).
 
 Deliberately not built yet: full AI-clustered story clustering (brief
 §17/§151 Phase 3's "story clusters") — MVP scope here is dedup only
 (canonical URL / content hash); clustering near-duplicate coverage across
-sources needs title/semantic similarity, which needs both an AI
-enrichment pass (Phase 6) and multi-source overlapping content the mock
-connector doesn't yet produce. Building it now would be shallow — leaving it explicitly deferred is the
-honest call per brief §154.
+sources needs title/semantic similarity and multi-source overlapping
+content the mock connector doesn't yet produce. Building it now would be
+shallow — leaving it explicitly deferred is the honest call per brief
+§154. AI risk detection and recommendations are P2 (FEATURE_MATRIX table
+below) — not called by the enrichment pipeline in this MVP.
 
 Not yet built (still MVP scope, next up): email daily digest, basic
-reports, AI summary/insights, RSS/Sitemap/Web connectors, admin panel.
-See task list in the project's ADRs/PR history for exact sequencing.
+reports, RSS/Sitemap/Web connectors, admin panel. See task list in the
+project's ADRs/PR history for exact sequencing.
 
 | Module | MVP | P2 | P3 | P4 |
 |---|---|---|---|---|

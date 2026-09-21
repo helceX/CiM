@@ -97,6 +97,13 @@ export const mentions = pgTable(
       precision: 4,
       scale: 3,
     }),
+    // AI enrichment (docs/architecture/AI_ARCHITECTURE.md) — pending until
+    // the worker's ai_enrich job runs; failed/skipped both surface as
+    // "Not available" in the UI, never a fabricated fallback (brief §92).
+    aiStatus: text("ai_status").notNull().default("pending"), // pending | completed | failed | skipped
+    aiSummary: text("ai_summary"),
+    aiMethod: text("ai_method"), // e.g. "mock-heuristic-v1" | "anthropic:claude-haiku-4-5"
+    aiAnalyzedAt: timestamp("ai_analyzed_at", { withTimezone: true }),
     priority: text("priority").notNull().default("normal"), // low | normal | high | critical
     status: text("status").notNull().default("new"), // new | reviewed | archived
     reviewFeedback: text("review_feedback"), // relevant | irrelevant | duplicate
@@ -109,6 +116,10 @@ export const mentions = pgTable(
     index("mentions_org_created_idx").on(table.organizationId, table.createdAt),
     index("mentions_org_project_idx").on(table.organizationId, table.projectId),
     index("mentions_article_idx").on(table.articleId),
+    // The worker's ai_enrich job scans for pending work across tenants
+    // (the ingestion cross-tenant-read exception, ADR-001) — indexed so
+    // that scan stays cheap as mention volume grows.
+    index("mentions_ai_status_idx").on(table.aiStatus),
     // Re-processing the same Article must not duplicate a Mention for the
     // same query (docs/architecture/INGESTION.md — pipeline idempotency).
     uniqueIndex("mentions_query_article_uidx").on(table.queryId, table.articleId),

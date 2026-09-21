@@ -22,6 +22,12 @@ being trusted anywhere in the system — an invalid response triggers a
 defined fallback (retry once, then mark the enrichment `failed` and show
 "Not available"), never a best-effort guess passed through.
 
+MVP implements `classifySentiment`, `extractEntities`, `detectTopics`,
+`generateSummary`, and `generateInsight` (docs/product/FEATURE_MATRIX.md
+"AI: summary, sentiment, entities, topics"). `detectRisk` and
+`generateRecommendations` are P2 — not on the interface yet, added when
+that scope is built rather than stubbed ahead of it.
+
 ## AI is an enhancement layer, not the core (brief §92)
 
 Ingestion, search, dashboards, alerts, and reports all function with AI

@@ -28,8 +28,14 @@ const envSchema = z.object({
   EMAIL_PROVIDER: z.enum(["console", "resend", "ses"]).default("console"),
   EMAIL_FROM: z.string().default("CiM <no-reply@cim.example>"),
 
-  AI_PROVIDER: z.enum(["disabled", "anthropic", "openai"]).default("disabled"),
+  // "disabled": no enrichment, AI fields stay "Not available" (brief §92).
+  // "mock": deterministic heuristic provider, no API key needed (dev/demo
+  // default — see packages/ai/src/mock-provider.ts). "openai" is reserved,
+  // not yet implemented — treated the same as "disabled" until it is.
+  AI_PROVIDER: z.enum(["disabled", "mock", "anthropic", "openai"]).default("disabled"),
   AI_API_KEY: z.string().optional(),
+  AI_CHEAP_MODEL: z.string().default("claude-haiku-4-5"),
+  AI_SYNTHESIS_MODEL: z.string().default("claude-sonnet-5"),
 
   DEFAULT_TIMEZONE: z.string().default("Europe/Istanbul"),
   DEFAULT_LOCALE: z.enum(["tr", "en"]).default("tr"),

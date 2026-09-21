@@ -6,7 +6,7 @@ export const alertRuleTypeSchema = z.enum([
   "spike",
   "sentiment_shift",
 ]);
-export const alertChannelSchema = z.enum(["in_app", "email"]);
+export const alertChannelSchema = z.enum(["in_app", "email", "webhook"]);
 
 export const createAlertRuleSchema = z.object({
   projectId: z.uuid(),

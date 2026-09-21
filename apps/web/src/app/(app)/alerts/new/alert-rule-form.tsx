@@ -169,6 +169,19 @@ export function AlertRuleForm({ queries }: { queries: MonitoringQueryOption[] })
           />
           Email
         </label>
+        <label className="flex items-center gap-2 text-sm text-foreground">
+          <Checkbox
+            checked={channels.includes("webhook")}
+            onCheckedChange={() => toggleChannel("webhook")}
+          />
+          Webhook
+        </label>
+        {channels.includes("webhook") ? (
+          <p className="text-xs text-muted-foreground">
+            Sent to the webhook URL configured in Settings. If none is set, webhook
+            delivery is silently skipped.
+          </p>
+        ) : null}
       </div>
 
       <Field

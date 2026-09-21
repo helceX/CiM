@@ -26,7 +26,9 @@ import { isBlockedIp } from "./ssrf-guard";
 
 let servers: http.Server[] = [];
 
-function listen(handler: http.RequestListener): Promise<{ port: number; server: http.Server }> {
+function listen(
+  handler: http.RequestListener,
+): Promise<{ port: number; server: http.Server }> {
   return new Promise((resolve) => {
     const server = http.createServer(handler);
     servers.push(server);
@@ -52,7 +54,8 @@ afterEach(async () => {
  */
 function loopbackResolver() {
   return async (hostname: string) => {
-    if (hostname === "example-cim-test.invalid") return { address: "127.0.0.1", family: 4 };
+    if (hostname === "example-cim-test.invalid")
+      return { address: "127.0.0.1", family: 4 };
     if (isBlockedIp(hostname)) {
       throw new SsrfBlockedError(`Blocked address: ${hostname}`);
     }
@@ -67,7 +70,9 @@ describe("safeFetch — SSRF rejection (real DNS, no mocking)", () => {
       hit = true;
       res.end("should never be reached");
     });
-    await expect(safeFetch(`http://localhost:${port}/`)).rejects.toThrow(SsrfBlockedError);
+    await expect(safeFetch(`http://localhost:${port}/`)).rejects.toThrow(
+      SsrfBlockedError,
+    );
     expect(hit).toBe(false);
   });
 
@@ -80,7 +85,9 @@ describe("safeFetch — SSRF rejection (real DNS, no mocking)", () => {
   });
 
   it("rejects the cloud metadata address", async () => {
-    await expect(safeFetch("http://169.254.169.254/latest/meta-data/")).rejects.toThrow(SsrfBlockedError);
+    await expect(safeFetch("http://169.254.169.254/latest/meta-data/")).rejects.toThrow(
+      SsrfBlockedError,
+    );
   });
 
   it("rejects a non-HTTP(S) protocol", async () => {
@@ -93,7 +100,9 @@ describe("safeFetch — SSRF rejection (real DNS, no mocking)", () => {
       res.end();
     });
     await expect(
-      safeFetch(`http://example-cim-test.invalid:${port}/`, { resolveHostname: loopbackResolver() }),
+      safeFetch(`http://example-cim-test.invalid:${port}/`, {
+        resolveHostname: loopbackResolver(),
+      }),
     ).rejects.toThrow(SsrfBlockedError);
   });
 });
@@ -114,7 +123,9 @@ describe("safeFetch — fetch machinery (via injected resolver)", () => {
   it("follows a same-server redirect and revalidates the new hop", async () => {
     const { port } = await listen((req, res) => {
       if (req.url === "/start") {
-        res.writeHead(302, { Location: `http://example-cim-test.invalid:${port}/final` });
+        res.writeHead(302, {
+          Location: `http://example-cim-test.invalid:${port}/final`,
+        });
         res.end();
         return;
       }
@@ -153,5 +164,27 @@ describe("safeFetch — fetch machinery (via injected resolver)", () => {
         maxResponseBytes: 100,
       }),
     ).rejects.toThrow(SsrfBlockedError);
+  });
+
+  it("sends a POST with a body through the same SSRF-guarded path (webhook delivery)", async () => {
+    let receivedMethod: string | undefined;
+    let receivedBody = "";
+    const { port } = await listen((req, res) => {
+      receivedMethod = req.method;
+      req.on("data", (chunk) => (receivedBody += chunk));
+      req.on("end", () => {
+        res.writeHead(200);
+        res.end("ok");
+      });
+    });
+    const result = await safeFetch(`http://example-cim-test.invalid:${port}/`, {
+      resolveHostname: loopbackResolver(),
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ hello: "world" }),
+    });
+    expect(result.status).toBe(200);
+    expect(receivedMethod).toBe("POST");
+    expect(receivedBody).toBe('{"hello":"world"}');
   });
 });

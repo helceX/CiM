@@ -6,3 +6,4 @@ export * from "./reports";
 export * from "./privacy";
 export * from "./members";
 export * from "./retention";
+export * from "./organizations";

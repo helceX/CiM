@@ -25,11 +25,15 @@ async function resolveValidatedIp(hostname: string): Promise<ResolvedAddress> {
     });
   });
   if (results.length === 0) {
-    throw new SsrfBlockedError(`DNS resolution returned no addresses for "${hostname}"`);
+    throw new SsrfBlockedError(
+      `DNS resolution returned no addresses for "${hostname}"`,
+    );
   }
   for (const result of results) {
     if (isBlockedIp(result.address)) {
-      throw new SsrfBlockedError(`Blocked address for "${hostname}": ${result.address}`);
+      throw new SsrfBlockedError(
+        `Blocked address for "${hostname}": ${result.address}`,
+      );
     }
   }
   const first = results[0]!;
@@ -69,7 +73,10 @@ function pinnedLookup(resolved: ResolvedAddress) {
   };
 }
 
-async function readBodyWithCap(response: Awaited<ReturnType<typeof undiciFetch>>, maxBytes: number): Promise<string> {
+async function readBodyWithCap(
+  response: Awaited<ReturnType<typeof undiciFetch>>,
+  maxBytes: number,
+): Promise<string> {
   const reader = response.body?.getReader();
   if (!reader) return "";
   const chunks: Uint8Array[] = [];
@@ -96,6 +103,9 @@ export type SafeFetchOptions = {
   maxRedirects?: number;
   maxResponseBytes?: number;
   headers?: Record<string, string>;
+  /** Defaults to GET. A redirect hop always re-sends the same method/body — never silently downgraded. */
+  method?: string;
+  body?: string;
   /** Test-only injection point — defaults to the real DNS-backed resolver. */
   resolveHostname?: (hostname: string) => Promise<ResolvedAddress>;
 };
@@ -114,7 +124,10 @@ export type SafeFetchResult = {
  * open internet (RSS/Sitemap/Web) — never call the global `fetch`
  * directly from a connector.
  */
-export async function safeFetch(url: string, options: SafeFetchOptions = {}): Promise<SafeFetchResult> {
+export async function safeFetch(
+  url: string,
+  options: SafeFetchOptions = {},
+): Promise<SafeFetchResult> {
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const maxRedirects = options.maxRedirects ?? DEFAULT_MAX_REDIRECTS;
   const maxResponseBytes = options.maxResponseBytes ?? DEFAULT_MAX_RESPONSE_BYTES;
@@ -124,11 +137,15 @@ export async function safeFetch(url: string, options: SafeFetchOptions = {}): Pr
   for (let hop = 0; ; hop += 1) {
     assertProtocolIsFetchable(currentUrl);
     const resolved = await resolveHostname(currentUrl.hostname);
-    const agent = new Agent({ connect: { lookup: pinnedLookup(resolved), timeout: timeoutMs } });
+    const agent = new Agent({
+      connect: { lookup: pinnedLookup(resolved), timeout: timeoutMs },
+    });
 
     let response: Awaited<ReturnType<typeof undiciFetch>>;
     try {
       response = await undiciFetch(currentUrl, {
+        method: options.method ?? "GET",
+        body: options.body,
         redirect: "manual",
         headers: { "user-agent": "CiM-Bot/1.0 (+monitoring)", ...options.headers },
         dispatcher: agent,
@@ -141,7 +158,9 @@ export async function safeFetch(url: string, options: SafeFetchOptions = {}): Pr
     if (response.status >= 300 && response.status < 400) {
       const location = response.headers.get("location");
       if (!location) {
-        throw new SsrfBlockedError(`Redirect response (${response.status}) with no Location header`);
+        throw new SsrfBlockedError(
+          `Redirect response (${response.status}) with no Location header`,
+        );
       }
       if (hop >= maxRedirects) {
         throw new SsrfBlockedError(`Too many redirects (max ${maxRedirects})`);
@@ -151,6 +170,11 @@ export async function safeFetch(url: string, options: SafeFetchOptions = {}): Pr
     }
 
     const body = await readBodyWithCap(response, maxResponseBytes);
-    return { status: response.status, headers: response.headers, body, finalUrl: currentUrl.toString() };
+    return {
+      status: response.status,
+      headers: response.headers,
+      body,
+      finalUrl: currentUrl.toString(),
+    };
   }
 }

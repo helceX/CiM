@@ -1,5 +1,10 @@
 import { can } from "@cim/core";
-import { db, getRetentionPolicy, listMembersForOrganization } from "@cim/db";
+import {
+  db,
+  getOrganizationWebhookUrl,
+  getRetentionPolicy,
+  listMembersForOrganization,
+} from "@cim/db";
 import { requireOrgContext } from "@/lib/tenant";
 import {
   DataExportButton,
@@ -8,12 +13,14 @@ import {
 } from "./danger-zone";
 import { MembersSection } from "./members-section";
 import { RetentionSection } from "./retention-section";
+import { WebhookSection } from "./webhook-section";
 
 export default async function SettingsPage() {
   const context = await requireOrgContext();
-  const [members, retentionPolicy] = await Promise.all([
+  const [members, retentionPolicy, webhookUrl] = await Promise.all([
     listMembersForOrganization(db, context.organizationId),
     getRetentionPolicy(db, context.organizationId),
+    getOrganizationWebhookUrl(db, context.organizationId),
   ]);
   const canManageMembers = can(context.role, "org:manage_members");
   const canManageSettings = can(context.role, "org:manage_settings");
@@ -42,6 +49,8 @@ export default async function SettingsPage() {
         mentionRetentionDays={retentionPolicy.mentionRetentionDays}
         canManageSettings={canManageSettings}
       />
+
+      <WebhookSection webhookUrl={webhookUrl} canManageSettings={canManageSettings} />
 
       <section>
         <h2 className="text-sm font-semibold text-foreground">Your data</h2>

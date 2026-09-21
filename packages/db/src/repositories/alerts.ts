@@ -6,7 +6,7 @@ import { organizations } from "../schema/organizations";
 import type { OrganizationId } from "./tenant-scope";
 
 export type AlertRuleType = "keyword" | "high_relevance" | "spike" | "sentiment_shift";
-export type AlertChannel = "in_app" | "email";
+export type AlertChannel = "in_app" | "email" | "webhook";
 
 export async function createAlertRule(
   db: Db,

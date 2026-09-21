@@ -1,6 +1,7 @@
 import { Queue, Worker } from "bullmq";
 import {
   QUEUE_NAMES,
+  type AlertSpikeCheckJobData,
   type CrawlSchedulerJobData,
   type CrawlSourceJobData,
   type SendEmailJobData,
@@ -9,6 +10,7 @@ import { getRedisConnection } from "./redis";
 import { processSendEmailJob } from "./jobs/send-email";
 import { processCrawlSourceJob } from "./jobs/crawl-source";
 import { processCrawlSchedulerJob } from "./jobs/crawl-scheduler";
+import { evaluateSpikeAlerts } from "./alerts/evaluate-spikes";
 
 /**
  * One BullMQ Worker per queue (docs/architecture/ARCHITECTURE.md — worker
@@ -18,6 +20,7 @@ import { processCrawlSchedulerJob } from "./jobs/crawl-scheduler";
  */
 const connection = getRedisConnection();
 
+const sendEmailQueue = new Queue<SendEmailJobData>(QUEUE_NAMES.sendEmail, { connection });
 const sendEmailWorker = new Worker<SendEmailJobData>(
   QUEUE_NAMES.sendEmail,
   processSendEmailJob,
@@ -27,20 +30,29 @@ const sendEmailWorker = new Worker<SendEmailJobData>(
 const crawlSourceQueue = new Queue<CrawlSourceJobData>(QUEUE_NAMES.crawlSource, { connection });
 const crawlSourceWorker = new Worker<CrawlSourceJobData>(
   QUEUE_NAMES.crawlSource,
-  processCrawlSourceJob,
+  (job) => processCrawlSourceJob(job, sendEmailQueue),
   { connection, concurrency: 5 },
 );
 
+const crawlSchedulerQueue = new Queue<CrawlSchedulerJobData>(QUEUE_NAMES.crawlScheduler, {
+  connection,
+});
 const crawlSchedulerWorker = new Worker<CrawlSchedulerJobData>(
   QUEUE_NAMES.crawlScheduler,
   () => processCrawlSchedulerJob(crawlSourceQueue),
   { connection, concurrency: 1 },
 );
-const crawlSchedulerQueue = new Queue<CrawlSchedulerJobData>(QUEUE_NAMES.crawlScheduler, {
+
+const alertSpikeCheckQueue = new Queue<AlertSpikeCheckJobData>(QUEUE_NAMES.alertSpikeCheck, {
   connection,
 });
+const alertSpikeCheckWorker = new Worker<AlertSpikeCheckJobData>(
+  QUEUE_NAMES.alertSpikeCheck,
+  () => evaluateSpikeAlerts(sendEmailQueue),
+  { connection, concurrency: 1 },
+);
 
-const allWorkers = [sendEmailWorker, crawlSourceWorker, crawlSchedulerWorker];
+const allWorkers = [sendEmailWorker, crawlSourceWorker, crawlSchedulerWorker, alertSpikeCheckWorker];
 for (const worker of allWorkers) {
   worker.on("failed", (job, error) => {
     console.error(`[worker] job ${job?.id} (${worker.name}) failed:`, error);
@@ -50,7 +62,7 @@ for (const worker of allWorkers) {
   });
 }
 
-async function scheduleSourceCrawling() {
+async function scheduleRepeatingJobs() {
   // Every-30-seconds cadence is a dev-friendly default, not a fixed
   // architectural choice — per-source polling intervals (brief §35) are
   // Phase 3+ scope once source volume justifies differentiated cadence.
@@ -61,17 +73,24 @@ async function scheduleSourceCrawling() {
     { every: 30_000 },
     { name: QUEUE_NAMES.crawlScheduler, data: {} },
   );
-  console.log("Source crawl scheduler registered (every 30s).");
+  await alertSpikeCheckQueue.upsertJobScheduler(
+    "alert-spike-check-repeat",
+    { every: 60_000 },
+    { name: QUEUE_NAMES.alertSpikeCheck, data: {} },
+  );
+  console.log("Schedulers registered: source crawl (30s), spike alert check (60s).");
 }
 
 console.log("Worker started. Listening for queued jobs…");
-void scheduleSourceCrawling();
+void scheduleRepeatingJobs();
 
 async function shutdown() {
   console.log("Worker shutting down…");
   await Promise.all(allWorkers.map((worker) => worker.close()));
+  await sendEmailQueue.close();
   await crawlSourceQueue.close();
   await crawlSchedulerQueue.close();
+  await alertSpikeCheckQueue.close();
   process.exit(0);
 }
 

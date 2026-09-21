@@ -1,4 +1,4 @@
-import { matchesText } from "@cim/core";
+import { computeMatchPriority, matchesText } from "@cim/core";
 import {
   asOrganizationId,
   createMentionIfNotExists,
@@ -6,16 +6,26 @@ import {
   insertArticle,
   listActiveMonitoringQueriesForSourceType,
   type Db,
+  type OrganizationId,
 } from "@cim/db";
 import type { Source } from "@cim/db/schema";
 import type { SourceConnector } from "./connector";
 import { normalizeToArticleInput } from "./normalize";
+
+export type NewMentionRecord = {
+  mentionId: string;
+  organizationId: OrganizationId;
+  projectId: string;
+  queryId: string;
+  priority: "high" | "normal";
+};
 
 export type IngestSourceResult = {
   sourceId: string;
   itemsFetched: number;
   articlesCreated: number;
   mentionsCreated: number;
+  newMentions: NewMentionRecord[];
 };
 
 /**
@@ -38,7 +48,7 @@ export async function ingestSource(
   const activeQueries = await listActiveMonitoringQueriesForSourceType(db, source.type);
 
   let articlesCreated = 0;
-  let mentionsCreated = 0;
+  const newMentions: NewMentionRecord[] = [];
 
   for (const raw of rawItems) {
     const normalized = normalizeToArticleInput(source, raw);
@@ -51,13 +61,24 @@ export async function ingestSource(
 
     for (const query of activeQueries) {
       if (!matchesText(query.queryAst, article.title)) continue;
-      const created = await createMentionIfNotExists(db, asOrganizationId(query.organizationId), {
+      const priority = computeMatchPriority(query.queryAst, article.title);
+      const organizationId = asOrganizationId(query.organizationId);
+      const mentionId = await createMentionIfNotExists(db, organizationId, {
         projectId: query.projectId,
         queryId: query.id,
         articleId: article.id,
         matchedTerms: query.queryAst.include,
+        priority,
       });
-      if (created) mentionsCreated += 1;
+      if (mentionId) {
+        newMentions.push({
+          mentionId,
+          organizationId,
+          projectId: query.projectId,
+          queryId: query.id,
+          priority,
+        });
+      }
     }
   }
 
@@ -65,7 +86,8 @@ export async function ingestSource(
     sourceId: source.id,
     itemsFetched: rawItems.length,
     articlesCreated,
-    mentionsCreated,
+    mentionsCreated: newMentions.length,
+    newMentions,
   };
 }
 

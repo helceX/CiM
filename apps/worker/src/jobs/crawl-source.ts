@@ -1,16 +1,20 @@
-import type { Job } from "bullmq";
+import type { Job, Queue } from "bullmq";
 import { eq } from "drizzle-orm";
 import { ingestSource } from "@cim/ingestion";
-import type { CrawlSourceJobData } from "@cim/core";
+import type { CrawlSourceJobData, SendEmailJobData } from "@cim/core";
 import { db, markSourceChecked, schema } from "@cim/db";
 import { getConnectorFor } from "../connector-registry";
+import { evaluateNewMentionAlerts } from "../alerts/evaluate";
 
 /**
  * One job per Source (docs/architecture/INGESTION.md) — a failure here
  * (thrown, triggering BullMQ retry/backoff) never blocks any other
  * source's job; each is independent (brief §135, §93).
  */
-export async function processCrawlSourceJob(job: Job<CrawlSourceJobData>): Promise<void> {
+export async function processCrawlSourceJob(
+  job: Job<CrawlSourceJobData>,
+  emailQueue: Queue<SendEmailJobData>,
+): Promise<void> {
   const [source] = await db
     .select()
     .from(schema.sources)
@@ -38,4 +42,8 @@ export async function processCrawlSourceJob(job: Job<CrawlSourceJobData>): Promi
     `[worker] crawled source "${source.name}": ${result.itemsFetched} item(s), ` +
       `${result.articlesCreated} new article(s), ${result.mentionsCreated} new mention(s)`,
   );
+
+  if (result.newMentions.length > 0) {
+    await evaluateNewMentionAlerts(emailQueue, result.newMentions);
+  }
 }

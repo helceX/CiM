@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import type { Db } from "../client";
 import { organizationMemberships, organizations } from "../schema/organizations";
+import { users } from "../schema/users";
 import type { OrganizationId } from "./tenant-scope";
 
 export async function getMembership(
@@ -41,4 +42,22 @@ export async function listMembershipsForUser(db: Db, userId: string) {
         eq(organizationMemberships.status, "active"),
       ),
     );
+}
+
+/** For the alert engine's email channel — who to notify in this org. */
+export async function listActiveMemberEmails(
+  db: Db,
+  organizationId: OrganizationId,
+): Promise<string[]> {
+  const rows = await db
+    .select({ email: users.email })
+    .from(organizationMemberships)
+    .innerJoin(users, eq(users.id, organizationMemberships.userId))
+    .where(
+      and(
+        eq(organizationMemberships.organizationId, organizationId),
+        eq(organizationMemberships.status, "active"),
+      ),
+    );
+  return rows.map((row) => row.email);
 }

@@ -46,7 +46,7 @@ export async function createMentionIfNotExists(
     matchedTerms: string[];
     priority?: "low" | "normal" | "high" | "critical";
   },
-): Promise<boolean> {
+): Promise<string | null> {
   const result = await db
     .insert(mentions)
     .values({
@@ -59,7 +59,7 @@ export async function createMentionIfNotExists(
     })
     .onConflictDoNothing({ target: [mentions.queryId, mentions.articleId] })
     .returning({ id: mentions.id });
-  return result.length > 0;
+  return result[0]?.id ?? null;
 }
 
 export type MentionFilters = {

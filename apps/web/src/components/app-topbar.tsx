@@ -4,13 +4,16 @@ import { useRouter } from "next/navigation";
 import { Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@cim/ui";
 import { LogOut, User } from "lucide-react";
 import { CommandPalette } from "./command-palette";
+import { NotificationBell } from "./notification-bell";
 
 export function AppTopbar({
   organizationName,
   userLabel,
+  initialUnreadCount,
 }: {
   organizationName: string;
   userLabel: string;
+  initialUnreadCount: number;
 }) {
   const router = useRouter();
 
@@ -27,6 +30,7 @@ export function AppTopbar({
       </div>
       <div className="flex items-center gap-3">
         <CommandPalette />
+        <NotificationBell initialUnreadCount={initialUnreadCount} />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="sm" aria-label="Account menu">

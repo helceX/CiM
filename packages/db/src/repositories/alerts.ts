@@ -1,0 +1,119 @@
+import { and, desc, eq, gt, sql } from "drizzle-orm";
+import type { Db } from "../client";
+import { alertEvents, alertRules } from "../schema/alerts";
+import { monitoringQueries } from "../schema/monitoring";
+import type { OrganizationId } from "./tenant-scope";
+
+export type AlertRuleType = "keyword" | "high_relevance" | "spike";
+export type AlertChannel = "in_app" | "email";
+
+export async function createAlertRule(
+  db: Db,
+  organizationId: OrganizationId,
+  input: {
+    projectId: string;
+    queryId: string;
+    createdByUserId: string;
+    name: string;
+    type: AlertRuleType;
+    channels: AlertChannel[];
+    cooldownMinutes?: number;
+  },
+) {
+  const [rule] = await db
+    .insert(alertRules)
+    .values({
+      organizationId,
+      projectId: input.projectId,
+      queryId: input.queryId,
+      createdByUserId: input.createdByUserId,
+      name: input.name,
+      type: input.type,
+      channels: input.channels,
+      cooldownMinutes: input.cooldownMinutes ?? 60,
+    })
+    .returning();
+  if (!rule) throw new Error("Failed to create alert rule");
+  return rule;
+}
+
+export async function listAlertRules(db: Db, organizationId: OrganizationId) {
+  return db
+    .select({ rule: alertRules, queryName: monitoringQueries.name })
+    .from(alertRules)
+    .innerJoin(monitoringQueries, eq(monitoringQueries.id, alertRules.queryId))
+    .where(eq(alertRules.organizationId, organizationId))
+    .orderBy(desc(alertRules.createdAt));
+}
+
+/** Called right after the ingestion pipeline creates mentions for a query. */
+export async function getActiveAlertRulesForQuery(
+  db: Db,
+  queryId: string,
+  type?: AlertRuleType,
+) {
+  return db
+    .select()
+    .from(alertRules)
+    .where(
+      and(
+        eq(alertRules.queryId, queryId),
+        eq(alertRules.status, "active"),
+        type ? eq(alertRules.type, type) : undefined,
+      ),
+    );
+}
+
+/**
+ * The scheduler-tick counterpart to
+ * listActiveMonitoringQueriesForSourceType — spike detection runs
+ * per-tick across every organization's active spike rules, the same
+ * documented cross-tenant exception (ADR-001) ingestion already relies on.
+ */
+export async function getActiveSpikeAlertRules(db: Db) {
+  return db.select().from(alertRules).where(
+    and(eq(alertRules.status, "active"), eq(alertRules.type, "spike")),
+  );
+}
+
+/** Alert fatigue (brief §19–20): suppress re-notifying within the rule's cooldown window. */
+export async function findRecentAlertEvent(db: Db, alertRuleId: string, cooldownMinutes: number) {
+  const [event] = await db
+    .select()
+    .from(alertEvents)
+    .where(
+      and(
+        eq(alertEvents.alertRuleId, alertRuleId),
+        gt(alertEvents.createdAt, sql`now() - (${cooldownMinutes}::text || ' minutes')::interval`),
+      ),
+    )
+    .limit(1);
+  return event;
+}
+
+export async function createAlertEvent(
+  db: Db,
+  organizationId: OrganizationId,
+  input: { alertRuleId: string; triggerSummary: string; mentionIds: string[] },
+) {
+  const [event] = await db
+    .insert(alertEvents)
+    .values({
+      organizationId,
+      alertRuleId: input.alertRuleId,
+      triggerSummary: input.triggerSummary,
+      mentionIds: input.mentionIds,
+    })
+    .returning();
+  if (!event) throw new Error("Failed to create alert event");
+  return event;
+}
+
+export async function listAlertEventsForRule(db: Db, alertRuleId: string, limit = 20) {
+  return db
+    .select()
+    .from(alertEvents)
+    .where(eq(alertEvents.alertRuleId, alertRuleId))
+    .orderBy(alertEvents.createdAt)
+    .limit(limit);
+}

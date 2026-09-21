@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
+import { db, countUnreadNotifications } from "@cim/db";
 import { getOrgContext } from "@/lib/tenant";
 import { getCurrentUser } from "@/lib/session";
 import { AppSidebar } from "@/components/app-sidebar";
@@ -11,6 +12,8 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     redirect("/login");
   }
 
+  const unreadCount = await countUnreadNotifications(db, context.organizationId, context.userId);
+
   return (
     <div className="flex min-h-screen">
       <AppSidebar />
@@ -18,6 +21,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         <AppTopbar
           organizationName={context.organizationName}
           userLabel={`${user.firstName} ${user.lastName}`}
+          initialUnreadCount={unreadCount}
         />
         <main className="flex-1 px-6 py-8">{children}</main>
       </div>

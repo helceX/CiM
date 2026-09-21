@@ -16,7 +16,16 @@ chart; Mentions table (filters, search, pagination) + Mention Detail
 Drawer ("why did this match", relevant/irrelevant/duplicate feedback);
 Analytics (mention volume, sentiment trend, source distribution, topics
 by monitoring query with period-over-period change — all DB-aggregated,
-zero-filled series, real Recharts visualizations).
+zero-filled series, real Recharts visualizations); alert rules (keyword,
+high-relevance, spike) evaluated by the worker against real ingestion
+output — keyword rules on any new mention, high-relevance rules only on
+an exact-phrase match (`computeMatchPriority`), spike rules off a real
+24-hour zero-filled statistical baseline (mean + 3×stddev or 3× baseline,
+with a minimum absolute-count floor) — with per-rule cooldown to prevent
+alert fatigue; notifications fan out in-app (Notification Center, unread
+badge, mark read/mark all read) and by email (provider-agnostic
+`email_outbox` → BullMQ `send_email` job), scoped to active organization
+members only.
 
 Deliberately not built yet: full AI-clustered story clustering (brief
 §17/§151 Phase 3's "story clusters") — MVP scope here is dedup only
@@ -26,10 +35,9 @@ enrichment pass (Phase 6) and multi-source overlapping content the mock
 connector doesn't yet produce. Building it now would be shallow — leaving it explicitly deferred is the
 honest call per brief §154.
 
-Not yet built (still MVP scope, next up): alerts + notifications, email
-daily digest, basic reports, AI summary/insights, RSS/Sitemap/Web
-connectors, admin panel. See task list in the project's ADRs/PR history
-for exact sequencing.
+Not yet built (still MVP scope, next up): email daily digest, basic
+reports, AI summary/insights, RSS/Sitemap/Web connectors, admin panel.
+See task list in the project's ADRs/PR history for exact sequencing.
 
 | Module | MVP | P2 | P3 | P4 |
 |---|---|---|---|---|

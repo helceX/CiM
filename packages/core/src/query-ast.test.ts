@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   astToBooleanQuery,
+  computeMatchPriority,
   matchesText,
   parseBooleanQuery,
   queryQualityWarning,
@@ -47,5 +48,22 @@ describe("query AST", () => {
   it("does not flag a multi-term or phrase query", () => {
     const ast = { include: ["Apple", "Inc"], exclude: [], exactPhrases: [] };
     expect(queryQualityWarning(ast)).toBeNull();
+  });
+
+  describe("computeMatchPriority", () => {
+    it("is 'high' when an exact phrase matches (a stronger signal than a loose keyword)", () => {
+      const ast = { include: [], exclude: [], exactPhrases: ["Northwind Atlas"] };
+      expect(computeMatchPriority(ast, "Northwind Atlas wins regional award")).toBe("high");
+    });
+
+    it("is 'normal' when only a loose include term matches, even with exact phrases configured", () => {
+      const ast = { include: ["Northwind"], exclude: [], exactPhrases: ["Northwind Atlas"] };
+      expect(computeMatchPriority(ast, "Northwind expands into a new region")).toBe("normal");
+    });
+
+    it("is 'normal' when there are no exact phrases configured at all", () => {
+      const ast = { include: ["Northwind"], exclude: [], exactPhrases: [] };
+      expect(computeMatchPriority(ast, "Northwind announces quarterly results")).toBe("normal");
+    });
   });
 });

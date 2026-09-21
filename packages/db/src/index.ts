@@ -12,3 +12,5 @@ export * from "./repositories/registration";
 export * from "./repositories/sources";
 export * from "./repositories/articles";
 export * from "./repositories/analytics";
+export * from "./repositories/alerts";
+export * from "./repositories/notifications";

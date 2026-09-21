@@ -102,6 +102,20 @@ export function matchesText(ast: QueryAst, text: string): boolean {
   return !hasExcluded;
 }
 
+/**
+ * A transparent, explainable MVP relevance signal (docs/architecture/
+ * ARCHITECTURE.md notes the full weighted Media Impact Score — brief
+ * §27 — as later-phase scope): an exact-phrase match is a stronger
+ * signal than a loose include-term match, so it's surfaced as "high"
+ * priority. This is what the "high relevance" alert type checks against
+ * — never a fabricated confidence number.
+ */
+export function computeMatchPriority(ast: QueryAst, text: string): "high" | "normal" {
+  const folded = turkishFold(text);
+  const hasExactPhraseMatch = ast.exactPhrases.some((phrase) => folded.includes(turkishFold(phrase)));
+  return hasExactPhraseMatch ? "high" : "normal";
+}
+
 /** Flags obviously ambiguous/too-broad single-term queries (brief §101). */
 export function queryQualityWarning(ast: QueryAst): string | null {
   const totalTerms = ast.include.length + ast.exactPhrases.length;

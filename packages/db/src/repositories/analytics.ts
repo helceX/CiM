@@ -139,3 +139,59 @@ export async function getTopicBreakdown(
   `);
   return rows.rows;
 }
+
+export type QuerySpikeStats = {
+  currentHourCount: number;
+  baselineAvg: number;
+  baselineStdDev: number;
+};
+
+/**
+ * Transparent statistical baseline for spike alerts (brief §72 —
+ * "Volume increased 4.2x compared to 30-day baseline" style explanation,
+ * not an opaque AI score). 24 zero-filled trailing hourly buckets (the
+ * current, still-in-progress hour is excluded from the baseline itself)
+ * give a mean/stddev the alert engine compares the current hour against.
+ */
+export async function getQuerySpikeStats(db: Db, queryId: string): Promise<QuerySpikeStats> {
+  const [row] = (
+    await db.execute<{
+      current_count: number;
+      baseline_avg: string | null;
+      baseline_stddev: string | null;
+    }>(sql`
+      with hours as (
+        select generate_series(
+          date_trunc('hour', now()) - interval '24 hours',
+          date_trunc('hour', now()) - interval '1 hour',
+          interval '1 hour'
+        ) as hour
+      ),
+      hourly as (
+        select h.hour, count(m.id) as cnt
+        from hours h
+        left join ${mentions} m
+          on date_trunc('hour', m.created_at) = h.hour
+          and m.query_id = ${queryId}
+        group by h.hour
+      ),
+      current_hour as (
+        select count(*) as cnt
+        from ${mentions}
+        where query_id = ${queryId}
+          and created_at >= date_trunc('hour', now())
+      )
+      select
+        (select cnt from current_hour) as current_count,
+        avg(hourly.cnt) as baseline_avg,
+        stddev_pop(hourly.cnt) as baseline_stddev
+      from hourly
+    `)
+  ).rows;
+
+  return {
+    currentHourCount: Number(row?.current_count ?? 0),
+    baselineAvg: Number(row?.baseline_avg ?? 0),
+    baselineStdDev: Number(row?.baseline_stddev ?? 0),
+  };
+}

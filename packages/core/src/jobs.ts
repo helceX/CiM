@@ -9,6 +9,7 @@ export const QUEUE_NAMES = {
   sendEmail: "send_email",
   crawlSource: "crawl_source",
   crawlScheduler: "crawl_scheduler",
+  alertSpikeCheck: "alert_spike_check",
 } as const;
 
 export type SendEmailJobData = {
@@ -20,3 +21,5 @@ export type CrawlSourceJobData = {
 };
 
 export type CrawlSchedulerJobData = Record<string, never>;
+
+export type AlertSpikeCheckJobData = Record<string, never>;

@@ -56,13 +56,17 @@ accessible label and a tooltip — no exceptions.
 
 ## Component library
 
-Built on shadcn/ui's copy-in model on top of **Base UI** primitives (per
-current shadcn/ui default as of this build — see version notes in
-`package.json`/setup scripts; Radix remains a supported, swappable
-primitive if a specific component needs it). Components are copied into
-`packages/ui` and customized to the token system, not left as
-unmodified upstream defaults, and not endlessly forked into one-off
-variants per screen.
+Built on shadcn/ui's copy-in model on top of **Radix UI** primitives.
+shadcn/ui's own default moved to Base UI in mid-2026, but as of this build
+`@base-ui/react` is still pre-1.0 (release-candidate) with an API still
+settling; Radix is the mature, stable primitive with a well-documented,
+verified API and remains fully supported by shadcn/ui (`shadcn migrate
+base-ui` can move components later once Base UI reaches a stable 1.0 and
+its API is verified against current docs at that time — not guessed).
+This is a deliberate stability-over-novelty choice, not an oversight.
+Components are copied into `packages/ui` and customized to the token
+system, not left as unmodified upstream defaults, and not endlessly
+forked into one-off variants per screen.
 
 Core set (brief §58): Button, Input, Select, Combobox, DatePicker,
 Popover, Dropdown, Dialog, Drawer, Sheet, Table, DataTable, Badge, Tabs,

@@ -47,7 +47,17 @@ data (the same repositories Dashboard/Analytics already read) rendered to
 an HTML document using the product's actual design tokens, then to a real
 PDF via headless Chromium and a hand-written CSV, both stored and
 downloadable, with the requesting user notified when ready — or told
-exactly what failed, never a silently missing report.
+exactly what failed, never a silently missing report; a Platform Super
+Admin panel (`/admin`, `users.is_platform_super_admin`, entirely separate
+from any organization role) — real, live operational aggregates across
+every tenant: database/Redis reachability, per-queue BullMQ job counts
+(waiting/active/completed/failed/delayed) for all seven queues, an
+organization list with real member/project/mention counts, and source
+health across every tenant. Deliberately never a way to browse a
+tenant's actual mentions/queries/content (docs/architecture/SECURITY.md
+brief §86 — no implicit access to tenant application views); a
+non-admin user hitting `/admin` gets a plain 404, not a redirect that
+would confirm the panel exists.
 
 Deliberately not built yet: full AI-clustered story clustering (brief
 §17/§151 Phase 3's "story clusters") — MVP scope here is dedup only
@@ -59,8 +69,8 @@ shallow — leaving it explicitly deferred is the honest call per brief
 below) — not called by the enrichment pipeline in this MVP.
 
 Not yet built (still MVP scope, next up): email daily digest,
-RSS/Sitemap/Web connectors, admin panel. See task list in the project's
-ADRs/PR history for exact sequencing.
+RSS/Sitemap/Web connectors. See task list in the project's ADRs/PR
+history for exact sequencing.
 
 | Module | MVP | P2 | P3 | P4 |
 |---|---|---|---|---|

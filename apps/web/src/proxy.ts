@@ -21,6 +21,7 @@ const PROTECTED_PREFIXES = [
   "/reports",
   "/settings",
   "/onboarding",
+  "/admin",
 ];
 const SESSION_COOKIE = "cim_session";
 
@@ -48,5 +49,6 @@ export const config = {
     "/reports/:path*",
     "/settings/:path*",
     "/onboarding/:path*",
+    "/admin/:path*",
   ],
 };

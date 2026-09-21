@@ -60,6 +60,7 @@ export type CurrentUser = {
   firstName: string;
   lastName: string;
   emailVerifiedAt: Date | null;
+  isPlatformSuperAdmin: boolean;
 };
 
 /** Resolves the session cookie to a verified, non-expired session and its
@@ -84,5 +85,6 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     firstName: user.firstName,
     lastName: user.lastName,
     emailVerifiedAt: user.emailVerifiedAt,
+    isPlatformSuperAdmin: user.isPlatformSuperAdmin,
   };
 }

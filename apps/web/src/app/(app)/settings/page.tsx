@@ -1,8 +1,10 @@
 import { can } from "@cim/core";
 import {
   db,
+  getLatestFeatureUsage,
   getOrganizationWebhookUrl,
   getRetentionPolicy,
+  getSubscription,
   listApiKeys,
   listMembersForOrganization,
 } from "@cim/db";
@@ -16,14 +18,17 @@ import { MembersSection } from "./members-section";
 import { RetentionSection } from "./retention-section";
 import { WebhookSection } from "./webhook-section";
 import { ApiKeysSection } from "./api-keys-section";
+import { UsageSection } from "./usage-section";
 
 export default async function SettingsPage() {
   const context = await requireOrgContext();
-  const [members, retentionPolicy, webhookUrl, apiKeys] = await Promise.all([
+  const [members, retentionPolicy, webhookUrl, apiKeys, subscription, usage] = await Promise.all([
     listMembersForOrganization(db, context.organizationId),
     getRetentionPolicy(db, context.organizationId),
     getOrganizationWebhookUrl(db, context.organizationId),
     listApiKeys(db, context.organizationId),
+    getSubscription(db, context.organizationId),
+    getLatestFeatureUsage(db, context.organizationId),
   ]);
   const canManageMembers = can(context.role, "org:manage_members");
   const canManageSettings = can(context.role, "org:manage_settings");
@@ -55,6 +60,8 @@ export default async function SettingsPage() {
       />
 
       <WebhookSection webhookUrl={webhookUrl} canManageSettings={canManageSettings} />
+
+      <UsageSection plan={subscription.plan} usage={usage} />
 
       <ApiKeysSection
         apiKeys={apiKeys.map((key) => ({

@@ -5,6 +5,7 @@ import {
   type AlertEmergingTopicCheckJobData,
   type AlertSentimentShiftCheckJobData,
   type AlertSpikeCheckJobData,
+  type CaptureFeatureUsageJobData,
   type CrawlSchedulerJobData,
   type CrawlSourceJobData,
   type EnforceRetentionJobData,
@@ -22,6 +23,7 @@ import { processGenerateReportJob } from "./jobs/generate-report";
 import { processGenerateDigestJob } from "./jobs/generate-digest";
 import { processGenerateScheduledReportsJob } from "./jobs/generate-scheduled-reports";
 import { processEnforceRetentionJob } from "./jobs/enforce-retention";
+import { processCaptureFeatureUsageJob } from "./jobs/capture-feature-usage";
 import { evaluateSpikeAlerts } from "./alerts/evaluate-spikes";
 import { evaluateSentimentShiftAlerts } from "./alerts/evaluate-sentiment-shift";
 import { evaluateEmergingTopicAlerts } from "./alerts/evaluate-emerging-topics";
@@ -162,6 +164,16 @@ const enforceRetentionWorker = new Worker<EnforceRetentionJobData>(
   { connection, concurrency: 1 },
 );
 
+const captureFeatureUsageQueue = new Queue<CaptureFeatureUsageJobData>(
+  QUEUE_NAMES.captureFeatureUsage,
+  { connection },
+);
+const captureFeatureUsageWorker = new Worker<CaptureFeatureUsageJobData>(
+  QUEUE_NAMES.captureFeatureUsage,
+  () => processCaptureFeatureUsageJob(),
+  { connection, concurrency: 1 },
+);
+
 const allWorkers = [
   sendEmailWorker,
   crawlSourceWorker,
@@ -175,6 +187,7 @@ const allWorkers = [
   generateDigestWorker,
   generateScheduledReportsWorker,
   enforceRetentionWorker,
+  captureFeatureUsageWorker,
 ];
 for (const worker of allWorkers) {
   worker.on("failed", (job, error) => {
@@ -251,11 +264,21 @@ async function scheduleRepeatingJobs() {
     { pattern: "30 8 * * *" },
     { name: QUEUE_NAMES.enforceRetention, data: {} },
   );
+  // Same once-a-day cron shape, offset another 15 minutes so the four
+  // daily cross-tenant passes don't contend (docs/architecture/
+  // DATA_MODEL.md "Subscription / FeatureUsage ... populated from day
+  // one even though billing enforcement is a later phase").
+  await captureFeatureUsageQueue.upsertJobScheduler(
+    "capture-feature-usage-repeat",
+    { pattern: "45 8 * * *" },
+    { name: QUEUE_NAMES.captureFeatureUsage, data: {} },
+  );
   console.log(
     "Schedulers registered: source crawl (30s), spike alert check (60s), " +
       "sentiment shift alert check (60s), emerging topic alert check (60s), " +
       "AI enrichment (20s), insight generation (2m), " +
-      "daily digest (08:00 UTC), scheduled reports (08:15 UTC), retention enforcement (08:30 UTC).",
+      "daily digest (08:00 UTC), scheduled reports (08:15 UTC), retention enforcement (08:30 UTC), " +
+      "feature usage capture (08:45 UTC).",
   );
 }
 

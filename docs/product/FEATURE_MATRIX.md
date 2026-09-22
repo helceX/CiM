@@ -115,7 +115,7 @@ generation (excluding soft-deleted organizations).
 | API keys + public API | ✅ (internal, scoped, revocable) | | v1 public API | |
 | Webhooks | — | ✅ | | |
 | SSO/SAML/OIDC | Auth abstraction only | | Enterprise SSO | |
-| Billing | Usage counters only | | Plan enforcement | |
+| Billing | ✅ Usage counters only | | Plan enforcement | |
 | Incident management | — | — | | ✅ |
 | Mobile/PWA | — | — | — | ✅ |
 

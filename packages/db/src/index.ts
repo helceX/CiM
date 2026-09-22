@@ -25,3 +25,4 @@ export * from "./repositories/retention";
 export * from "./repositories/organizations";
 export * from "./repositories/tags";
 export * from "./repositories/api-keys";
+export * from "./repositories/billing";

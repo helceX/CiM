@@ -5,7 +5,12 @@ import { monitoringQueries } from "../schema/monitoring";
 import { organizations } from "../schema/organizations";
 import type { OrganizationId } from "./tenant-scope";
 
-export type AlertRuleType = "keyword" | "high_relevance" | "spike" | "sentiment_shift";
+export type AlertRuleType =
+  | "keyword"
+  | "high_relevance"
+  | "spike"
+  | "sentiment_shift"
+  | "emerging_topic";
 export type AlertChannel = "in_app" | "email" | "webhook";
 
 export async function createAlertRule(
@@ -109,6 +114,10 @@ export function getActiveSpikeAlertRules(db: Db) {
 
 export function getActiveSentimentShiftAlertRules(db: Db) {
   return getActiveAlertRulesOfType(db, "sentiment_shift");
+}
+
+export function getActiveEmergingTopicAlertRules(db: Db) {
+  return getActiveAlertRulesOfType(db, "emerging_topic");
 }
 
 /** Alert fatigue (brief §19–20): suppress re-notifying within the rule's cooldown window. */

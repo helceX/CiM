@@ -2,6 +2,7 @@ import { and, eq, sql } from "drizzle-orm";
 import type { Db } from "../client";
 import { articles, mentions, sources } from "../schema/content";
 import { monitoringQueries } from "../schema/monitoring";
+import { mentionTopics, topics } from "../schema/ai";
 import type { OrganizationId } from "./tenant-scope";
 
 export type AnalyticsScope = { projectId?: string; sinceDays: number };
@@ -197,6 +198,72 @@ export async function getQuerySpikeStats(
     baselineAvg: Number(row?.baseline_avg ?? 0),
     baselineStdDev: Number(row?.baseline_stddev ?? 0),
   };
+}
+
+export type EmergingTopicStat = {
+  topicId: string;
+  topicName: string;
+  currentCount: number;
+  baselineAvgPerDay: number;
+};
+
+/**
+ * Same transparent-baseline principle as getQuerySpikeStats/
+ * getQuerySentimentShiftStats, applied per AI-derived topic
+ * (docs/product/FEATURE_MATRIX.md P2 "Emerging topic" alert) — these are
+ * `mentionTopics` rows from the worker's `ai_enrich` job
+ * (docs/architecture/AI_ARCHITECTURE.md), real classified topics, never
+ * the "topic = monitoring query" simplification getTopicBreakdown above
+ * uses for the Analytics screen. One row per topic that appeared on this
+ * query's mentions in the last 24 hours; a topic with zero baseline
+ * history (never seen before this window) still gets a real row with
+ * `baselineAvgPerDay: 0` — the caller's floor, not this query, decides
+ * whether that counts as "emerging".
+ */
+export async function getEmergingTopicStats(
+  db: Db,
+  queryId: string,
+): Promise<EmergingTopicStat[]> {
+  const rows = await db.execute<{
+    topic_id: string;
+    topic_name: string;
+    current_count: number;
+    baseline_count: number;
+  }>(sql`
+    with current_counts as (
+      select t.id as topic_id, t.name as topic_name, count(distinct m.id) as current_count
+      from ${mentions} m
+      join ${mentionTopics} mt on mt.mention_id = m.id
+      join ${topics} t on t.id = mt.topic_id
+      where m.query_id = ${queryId}
+        and m.created_at >= now() - interval '24 hours'
+      group by t.id, t.name
+    ),
+    baseline_counts as (
+      select mt.topic_id, count(distinct m.id) as baseline_count
+      from ${mentions} m
+      join ${mentionTopics} mt on mt.mention_id = m.id
+      where m.query_id = ${queryId}
+        and m.created_at < now() - interval '24 hours'
+        and m.created_at >= now() - interval '8 days'
+      group by mt.topic_id
+    )
+    select
+      cc.topic_id,
+      cc.topic_name,
+      cc.current_count,
+      coalesce(bc.baseline_count, 0) as baseline_count
+    from current_counts cc
+    left join baseline_counts bc on bc.topic_id = cc.topic_id
+    order by cc.current_count desc
+  `);
+
+  return rows.rows.map((row) => ({
+    topicId: row.topic_id,
+    topicName: row.topic_name,
+    currentCount: Number(row.current_count),
+    baselineAvgPerDay: Number(row.baseline_count) / 7,
+  }));
 }
 
 export type QuerySentimentShiftStats = {

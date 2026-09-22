@@ -30,6 +30,12 @@ const TYPE_OPTIONS: { value: string; label: string; description: string }[] = [
     description:
       "Notify when the share of negative, AI-classified mentions over the last 24 hours jumps well above the trailing week's baseline.",
   },
+  {
+    value: "emerging_topic",
+    label: "Emerging topic",
+    description:
+      "Notify when an AI-detected topic in this query's mentions surges well above its trailing week's baseline.",
+  },
 ];
 
 export function AlertRuleForm({ queries }: { queries: MonitoringQueryOption[] }) {

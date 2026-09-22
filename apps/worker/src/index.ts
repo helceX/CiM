@@ -2,6 +2,7 @@ import { Queue, Worker } from "bullmq";
 import {
   QUEUE_NAMES,
   type AiEnrichJobData,
+  type AlertEmergingTopicCheckJobData,
   type AlertSentimentShiftCheckJobData,
   type AlertSpikeCheckJobData,
   type CrawlSchedulerJobData,
@@ -23,6 +24,7 @@ import { processGenerateScheduledReportsJob } from "./jobs/generate-scheduled-re
 import { processEnforceRetentionJob } from "./jobs/enforce-retention";
 import { evaluateSpikeAlerts } from "./alerts/evaluate-spikes";
 import { evaluateSentimentShiftAlerts } from "./alerts/evaluate-sentiment-shift";
+import { evaluateEmergingTopicAlerts } from "./alerts/evaluate-emerging-topics";
 import { processAiEnrichJob } from "./ai/enrich";
 import { processInsightGenerateJob } from "./ai/generate-insight";
 
@@ -83,6 +85,16 @@ const alertSentimentShiftCheckQueue = new Queue<AlertSentimentShiftCheckJobData>
 const alertSentimentShiftCheckWorker = new Worker<AlertSentimentShiftCheckJobData>(
   QUEUE_NAMES.alertSentimentShiftCheck,
   () => evaluateSentimentShiftAlerts(sendEmailQueue),
+  { connection, concurrency: 1 },
+);
+
+const alertEmergingTopicCheckQueue = new Queue<AlertEmergingTopicCheckJobData>(
+  QUEUE_NAMES.alertEmergingTopicCheck,
+  { connection },
+);
+const alertEmergingTopicCheckWorker = new Worker<AlertEmergingTopicCheckJobData>(
+  QUEUE_NAMES.alertEmergingTopicCheck,
+  () => evaluateEmergingTopicAlerts(sendEmailQueue),
   { connection, concurrency: 1 },
 );
 
@@ -156,6 +168,7 @@ const allWorkers = [
   crawlSchedulerWorker,
   alertSpikeCheckWorker,
   alertSentimentShiftCheckWorker,
+  alertEmergingTopicCheckWorker,
   aiEnrichWorker,
   insightGenerateWorker,
   generateReportWorker,
@@ -192,6 +205,11 @@ async function scheduleRepeatingJobs() {
     "alert-sentiment-shift-check-repeat",
     { every: 60_000 },
     { name: QUEUE_NAMES.alertSentimentShiftCheck, data: {} },
+  );
+  await alertEmergingTopicCheckQueue.upsertJobScheduler(
+    "alert-emerging-topic-check-repeat",
+    { every: 60_000 },
+    { name: QUEUE_NAMES.alertEmergingTopicCheck, data: {} },
   );
   // Dev-friendly cadence, same rationale as the crawl scheduler above —
   // a production deployment would enrich promptly after ingestion (~20s)
@@ -235,7 +253,8 @@ async function scheduleRepeatingJobs() {
   );
   console.log(
     "Schedulers registered: source crawl (30s), spike alert check (60s), " +
-      "sentiment shift alert check (60s), AI enrichment (20s), insight generation (2m), " +
+      "sentiment shift alert check (60s), emerging topic alert check (60s), " +
+      "AI enrichment (20s), insight generation (2m), " +
       "daily digest (08:00 UTC), scheduled reports (08:15 UTC), retention enforcement (08:30 UTC).",
   );
 }
@@ -251,6 +270,7 @@ async function shutdown() {
   await crawlSchedulerQueue.close();
   await alertSpikeCheckQueue.close();
   await alertSentimentShiftCheckQueue.close();
+  await alertEmergingTopicCheckQueue.close();
   await aiEnrichQueue.close();
   await insightGenerateQueue.close();
   await generateReportQueue.close();

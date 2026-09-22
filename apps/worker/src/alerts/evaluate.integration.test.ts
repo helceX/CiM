@@ -15,6 +15,7 @@ import { ingestSource, MockNewsConnector } from "@cim/ingestion";
 import { evaluateNewMentionAlerts } from "./evaluate";
 import { evaluateSpikeAlerts } from "./evaluate-spikes";
 import { evaluateSentimentShiftAlerts } from "./evaluate-sentiment-shift";
+import { evaluateEmergingTopicAlerts } from "./evaluate-emerging-topics";
 
 /**
  * Integration test (docs/testing/TEST_STRATEGY.md) — proves the alert
@@ -394,5 +395,167 @@ describe("alert engine (integration)", () => {
       limit: 50,
     });
     expect(notifications.some((n) => n.title === quietRule.name)).toBe(false);
+  });
+
+  it("fires an emerging-topic alert when a topic surges over the trailing-week baseline", async () => {
+    const topicQuery = await createMonitoringQuery(db, organizationId, {
+      projectId,
+      name: "Emerging topic query",
+      queryAst: { include: ["emerging-topic-marker"], exclude: [], exactPhrases: [] },
+      booleanQuery: "emerging-topic-marker",
+      sourceTypes: ["news"],
+    });
+    const topicRule = await createAlertRule(db, organizationId, {
+      projectId,
+      queryId: topicQuery.id,
+      createdByUserId: userId,
+      name: "Emerging topic rule",
+      type: "emerging_topic",
+      channels: ["in_app"],
+      cooldownMinutes: 60,
+    });
+
+    const [topic] = await db
+      .insert(schema.topics)
+      .values({ name: `Product Recall ${Date.now()}` })
+      .returning();
+    if (!topic) throw new Error("failed to create test topic");
+
+    // Baseline: 1 mention/day for the trailing week (~1/day baseline).
+    for (let daysAgo = 7; daysAgo >= 2; daysAgo -= 1) {
+      const [article] = await db
+        .insert(schema.articles)
+        .values({
+          sourceId,
+          canonicalUrl: `https://emerging-topic-test.example/baseline-${daysAgo}`,
+          contentHash: `emerging-topic-baseline-${daysAgo}`,
+          title: `emerging-topic-marker baseline item ${daysAgo}`,
+        })
+        .returning();
+      if (!article) throw new Error("failed to create baseline article");
+      const [mention] = await db
+        .insert(schema.mentions)
+        .values({
+          organizationId,
+          projectId,
+          queryId: topicQuery.id,
+          articleId: article.id,
+          matchedTerms: ["emerging-topic-marker"],
+          createdAt: new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000),
+        })
+        .returning();
+      if (!mention) throw new Error("failed to create baseline mention");
+      await db.insert(schema.mentionTopics).values({
+        mentionId: mention.id,
+        topicId: topic.id,
+        confidence: "0.900",
+      });
+    }
+
+    // Current window: 8 mentions on the same topic in the last few hours —
+    // well over both the MIN_ABSOLUTE_COUNT floor and 3x the ~1/day baseline.
+    for (let i = 0; i < 8; i += 1) {
+      const [article] = await db
+        .insert(schema.articles)
+        .values({
+          sourceId,
+          canonicalUrl: `https://emerging-topic-test.example/current-${i}`,
+          contentHash: `emerging-topic-current-${i}`,
+          title: `emerging-topic-marker current item ${i}`,
+        })
+        .returning();
+      if (!article) throw new Error("failed to create current article");
+      const [mention] = await db
+        .insert(schema.mentions)
+        .values({
+          organizationId,
+          projectId,
+          queryId: topicQuery.id,
+          articleId: article.id,
+          matchedTerms: ["emerging-topic-marker"],
+        })
+        .returning();
+      if (!mention) throw new Error("failed to create current mention");
+      await db.insert(schema.mentionTopics).values({
+        mentionId: mention.id,
+        topicId: topic.id,
+        confidence: "0.900",
+      });
+    }
+
+    await evaluateEmergingTopicAlerts(emailQueue);
+
+    const notifications = await listNotifications(db, organizationId, userId, {
+      limit: 50,
+    });
+    const topicNotification = notifications.find((n) => n.title === topicRule.name);
+    expect(topicNotification).toBeDefined();
+    expect(topicNotification?.body).toContain(topic.name);
+  });
+
+  it("does not fire an emerging-topic alert below the minimum absolute-count floor", async () => {
+    const quietTopicQuery = await createMonitoringQuery(db, organizationId, {
+      projectId,
+      name: "Emerging topic quiet query",
+      queryAst: {
+        include: ["emerging-topic-quiet-marker"],
+        exclude: [],
+        exactPhrases: [],
+      },
+      booleanQuery: "emerging-topic-quiet-marker",
+      sourceTypes: ["news"],
+    });
+    const quietTopicRule = await createAlertRule(db, organizationId, {
+      projectId,
+      queryId: quietTopicQuery.id,
+      createdByUserId: userId,
+      name: "Emerging topic quiet rule",
+      type: "emerging_topic",
+      channels: ["in_app"],
+      cooldownMinutes: 60,
+    });
+
+    const [topic] = await db
+      .insert(schema.topics)
+      .values({ name: `Quiet Topic ${Date.now()}` })
+      .returning();
+    if (!topic) throw new Error("failed to create test topic");
+
+    // Only 2 mentions on this topic, brand new — below MIN_ABSOLUTE_COUNT (3).
+    for (let i = 0; i < 2; i += 1) {
+      const [article] = await db
+        .insert(schema.articles)
+        .values({
+          sourceId,
+          canonicalUrl: `https://emerging-topic-quiet.example/current-${i}`,
+          contentHash: `emerging-topic-quiet-current-${i}`,
+          title: `emerging-topic-quiet-marker current item ${i}`,
+        })
+        .returning();
+      if (!article) throw new Error("failed to create current article");
+      const [mention] = await db
+        .insert(schema.mentions)
+        .values({
+          organizationId,
+          projectId,
+          queryId: quietTopicQuery.id,
+          articleId: article.id,
+          matchedTerms: ["emerging-topic-quiet-marker"],
+        })
+        .returning();
+      if (!mention) throw new Error("failed to create current mention");
+      await db.insert(schema.mentionTopics).values({
+        mentionId: mention.id,
+        topicId: topic.id,
+        confidence: "0.900",
+      });
+    }
+
+    await evaluateEmergingTopicAlerts(emailQueue);
+
+    const notifications = await listNotifications(db, organizationId, userId, {
+      limit: 50,
+    });
+    expect(notifications.some((n) => n.title === quietTopicRule.name)).toBe(false);
   });
 });

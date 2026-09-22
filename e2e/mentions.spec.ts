@@ -1,43 +1,69 @@
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import { test, expect } from "@playwright/test";
 import { registerAndOnboard } from "./helpers";
 import { simulateCrawl } from "./simulate";
 
 /**
  * docs/testing/TEST_STRATEGY.md E2E list: "Filter mentions, open detail
- * drawer, mark relevant/irrelevant." Onboarding with "Daily Tech Wire" as
- * the tracked keyword gives this org a real MonitoringQuery matching one
- * of the seeded demo sources out of the box.
+ * drawer, mark relevant/irrelevant." Both tests below use one org tracking
+ * "Daily Tech Wire" — the empty-state test runs first, before any crawl
+ * has populated mentions, then the second simulates a crawl and exercises
+ * the populated table. Sharing one registered account via storageState
+ * (the same fix already applied in e2e/reports.spec.ts and e2e/a11y.spec.ts)
+ * keeps the suite's total account creation within headroom of the register
+ * endpoint's own rate limit (SECURITY.md): with zero headroom, a single
+ * unrelated test failure elsewhere that trips Playwright's
+ * restart-the-worker-on-failure behavior — which re-runs a worker-scoped
+ * beforeAll — is enough to push the suite's real registration count over
+ * the limit and cascade-fail whichever file happens to register last.
  */
-test("filter mentions, open the detail drawer, and submit relevant feedback", async ({ page }) => {
-  await registerAndOnboard(page, { keyword: "Daily Tech Wire" });
-  await simulateCrawl("Daily Tech Wire");
+test.describe("mentions", () => {
+  const storageStatePath = path.join(os.tmpdir(), `cim-e2e-mentions-${Date.now()}.json`);
 
-  await page.goto("/mentions");
-  await page.getByLabel("Search").fill("Daily Tech Wire");
-  await page.getByLabel("Search").press("Enter");
+  test.beforeAll(async ({ browser }) => {
+    const context = await browser.newContext({ storageState: undefined });
+    const page = await context.newPage();
+    await registerAndOnboard(page, { keyword: "Daily Tech Wire" });
+    await context.storageState({ path: storageStatePath });
+    await context.close();
+  });
 
-  const row = page.getByRole("row", { name: /Daily Tech Wire/ }).first();
-  await expect(row).toBeVisible({ timeout: 5000 });
-  await row.click();
+  test.afterAll(() => {
+    fs.rmSync(storageStatePath, { force: true });
+  });
 
-  const drawer = page.getByRole("dialog");
-  await expect(drawer).toBeVisible();
-  await expect(drawer.getByText("Why did this match?")).toBeVisible();
-  await expect(drawer.getByText(/Matched monitoring query/)).toBeVisible();
+  test.use({ storageState: storageStatePath });
 
-  const feedbackResponse = page.waitForResponse(
-    (response) => response.url().includes("/feedback") && response.request().method() === "POST",
-  );
-  await drawer.getByRole("button", { name: "Relevant", exact: true }).click();
-  const response = await feedbackResponse;
-  expect(response.ok()).toBe(true);
+  test("an empty filter combination shows the empty state, not a broken table", async ({ page }) => {
+    await page.goto("/mentions");
+    await expect(page.getByText("No mentions match your filters.")).toBeVisible();
+  });
 
-  await expect(page.getByRole("dialog")).not.toBeVisible();
-});
+  test("filter mentions, open the detail drawer, and submit relevant feedback", async ({ page }) => {
+    await simulateCrawl("Daily Tech Wire");
 
-test("an empty filter combination shows the empty state, not a broken table", async ({ page }) => {
-  await registerAndOnboard(page, { keyword: "a keyword nothing will ever match xyzzy123" });
+    await page.goto("/mentions");
+    await page.getByLabel("Search").fill("Daily Tech Wire");
+    await page.getByLabel("Search").press("Enter");
 
-  await page.goto("/mentions");
-  await expect(page.getByText("No mentions match your filters.")).toBeVisible();
+    const row = page.getByRole("row", { name: /Daily Tech Wire/ }).first();
+    await expect(row).toBeVisible({ timeout: 5000 });
+    await row.click();
+
+    const drawer = page.getByRole("dialog");
+    await expect(drawer).toBeVisible();
+    await expect(drawer.getByText("Why did this match?")).toBeVisible();
+    await expect(drawer.getByText(/Matched monitoring query/)).toBeVisible();
+
+    const feedbackResponse = page.waitForResponse(
+      (response) => response.url().includes("/feedback") && response.request().method() === "POST",
+    );
+    await drawer.getByRole("button", { name: "Relevant", exact: true }).click();
+    const response = await feedbackResponse;
+    expect(response.ok()).toBe(true);
+
+    await expect(page.getByRole("dialog")).not.toBeVisible();
+  });
 });

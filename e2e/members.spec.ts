@@ -86,7 +86,7 @@ test("a custom role grants exactly its own permissions, nothing more", async ({
   page,
   browser,
 }) => {
-  const owner = await registerAndOnboard(page, { keyword: "Custom Roles E2E Co" });
+  await registerAndOnboard(page, { keyword: "Custom Roles E2E Co" });
 
   await page.goto("/settings");
   await page.getByRole("button", { name: "New role" }).click();

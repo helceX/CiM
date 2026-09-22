@@ -25,8 +25,17 @@ export const sources = pgTable("sources", {
   type: text("type").notNull(), // news | website | blog | press | tv | radio | podcast | youtube | social | forum | comments | rss | api | other
   connector: text("connector").notNull(), // mock | rss | sitemap | web | api | social | youtube | podcast | broadcast | custom
   // The URL the connector polls — a feed URL for rss, a sitemap.xml URL
-  // for sitemap, or the page itself for web. Unused by mock/api/etc.
+  // for sitemap, the page itself for web, or the API endpoint for api.
+  // Unused by mock.
   url: text("url"),
+  // docs/architecture/INGESTION.md APIConnector — an official third-party
+  // API's bearer/key header, sent on every request (packages/ingestion's
+  // safeFetch). Both null (the common case for rss/sitemap/web/mock) means
+  // no auth header is added. `apiKey` is never returned by any API route
+  // or audit log entry, the same discipline organizations.webhookUrl
+  // follows for the secrets it can embed.
+  apiKeyHeaderName: text("api_key_header_name"),
+  apiKey: text("api_key"),
   status: text("status").notNull().default("healthy"), // healthy | delayed | error | blocked | unavailable
   lastCheckedAt: timestamp("last_checked_at", { withTimezone: true }),
   // SourcePolicy (docs/architecture/SECURITY.md — enforced at ingestion AND render)
@@ -37,12 +46,8 @@ export const sources = pgTable("sources", {
   canProcessAi: boolean("can_process_ai").notNull().default(true),
   license: text("license"),
   termsUrl: text("terms_url"),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 /** Global/reference — one Article can produce Mentions across tenants. */
@@ -60,14 +65,10 @@ export const articles = pgTable(
     storedExcerpt: text("stored_excerpt"),
     language: text("language"),
     publishedAt: timestamp("published_at", { withTimezone: true }),
-    fetchedAt: timestamp("fetched_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
+    fetchedAt: timestamp("fetched_at", { withTimezone: true }).notNull().defaultNow(),
     authorName: text("author_name"),
     storyClusterId: uuid("story_cluster_id"),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
     index("articles_source_idx").on(table.sourceId),
@@ -111,9 +112,7 @@ export const mentions = pgTable(
     status: text("status").notNull().default("new"), // new | reviewed | archived
     reviewFeedback: text("review_feedback"), // relevant | irrelevant | duplicate
     assignedToUserId: uuid("assigned_to_user_id"),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
     index("mentions_org_created_idx").on(table.organizationId, table.createdAt),
@@ -144,9 +143,7 @@ export const engagementMetrics = pgTable(
     measurementMethod: text("measurement_method").notNull(), // reported | estimated | observed
     confidence: numeric("confidence", { precision: 4, scale: 3 }),
     isEstimated: boolean("is_estimated").notNull().default(false),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [index("engagement_metrics_article_idx").on(table.articleId)],
 );

@@ -13,6 +13,8 @@ function fakeSource(overrides: Partial<Source> = {}): Source {
     status: "healthy",
     lastCheckedAt: null,
     url: null,
+    apiKeyHeaderName: null,
+    apiKey: null,
     canStoreFullText: false,
     canDisplayFullText: false,
     canDisplayExcerpt: true,

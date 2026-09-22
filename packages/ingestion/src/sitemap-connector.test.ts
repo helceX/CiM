@@ -3,16 +3,24 @@ import type { Source } from "@cim/db/schema";
 import { SsrfBlockedError, type SafeFetchResult } from "./safe-fetch";
 
 /** Same layering rationale as rss-connector.test.ts. */
-const safeFetchMock = vi.fn<(url: string, options?: unknown) => Promise<SafeFetchResult>>();
+const safeFetchMock =
+  vi.fn<(url: string, options?: unknown) => Promise<SafeFetchResult>>();
 vi.mock("./safe-fetch", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./safe-fetch")>();
-  return { ...actual, safeFetch: (...args: Parameters<typeof safeFetchMock>) => safeFetchMock(...args) };
+  return {
+    ...actual,
+    safeFetch: (...args: Parameters<typeof safeFetchMock>) => safeFetchMock(...args),
+  };
 });
 
 const robotsMock = vi.fn<(url: string) => Promise<boolean>>();
 vi.mock("./robots", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./robots")>();
-  return { ...actual, isAllowedByRobotsTxt: (...args: Parameters<typeof robotsMock>) => robotsMock(...args) };
+  return {
+    ...actual,
+    isAllowedByRobotsTxt: (...args: Parameters<typeof robotsMock>) =>
+      robotsMock(...args),
+  };
 });
 
 const { SitemapConnector } = await import("./sitemap-connector");
@@ -29,6 +37,8 @@ function fakeSource(overrides: Partial<Source> = {}): Source {
     status: "healthy",
     lastCheckedAt: null,
     url: "https://cim-test.invalid/sitemap.xml",
+    apiKeyHeaderName: null,
+    apiKey: null,
     canStoreFullText: false,
     canDisplayFullText: false,
     canDisplayExcerpt: true,
@@ -43,7 +53,13 @@ function fakeSource(overrides: Partial<Source> = {}): Source {
 }
 
 function fetchResult(overrides: Partial<SafeFetchResult> = {}): SafeFetchResult {
-  return { status: 200, headers: new Headers() as never, body: "", finalUrl: "", ...overrides };
+  return {
+    status: 200,
+    headers: new Headers() as never,
+    body: "",
+    finalUrl: "",
+    ...overrides,
+  };
 }
 
 const URLSET = `<urlset>
@@ -55,7 +71,8 @@ const SITEMAP_INDEX = `<sitemapindex>
   <sitemap><loc>https://cim-test.invalid/sitemap-1.xml</loc></sitemap>
 </sitemapindex>`;
 
-const PAGE_HTML = (title: string) => `<html><head><title>${title}</title></head><body><p>Body of ${title}.</p></body></html>`;
+const PAGE_HTML = (title: string) =>
+  `<html><head><title>${title}</title></head><body><p>Body of ${title}.</p></body></html>`;
 
 describe("SitemapConnector", () => {
   it("fetches the sitemap, then each page, newest first", async () => {
@@ -67,8 +84,14 @@ describe("SitemapConnector", () => {
 
     const items = await new SitemapConnector().fetch(fakeSource());
     expect(items).toHaveLength(2);
-    expect(items[0]).toMatchObject({ canonicalUrl: "https://cim-test.invalid/b", title: "B" });
-    expect(items[1]).toMatchObject({ canonicalUrl: "https://cim-test.invalid/a", title: "A" });
+    expect(items[0]).toMatchObject({
+      canonicalUrl: "https://cim-test.invalid/b",
+      title: "B",
+    });
+    expect(items[1]).toMatchObject({
+      canonicalUrl: "https://cim-test.invalid/a",
+      title: "A",
+    });
   });
 
   it("follows one level of sitemapindex nesting", async () => {
@@ -106,7 +129,9 @@ describe("SitemapConnector", () => {
   });
 
   it("throws fetching a source with no sitemap URL configured", async () => {
-    await expect(new SitemapConnector().fetch(fakeSource({ url: null }))).rejects.toThrow(/no sitemap URL/i);
+    await expect(
+      new SitemapConnector().fetch(fakeSource({ url: null })),
+    ).rejects.toThrow(/no sitemap URL/i);
   });
 
   it("healthCheck reports blocked when safeFetch raises SsrfBlockedError", async () => {

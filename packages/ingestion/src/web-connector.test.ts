@@ -3,16 +3,24 @@ import type { Source } from "@cim/db/schema";
 import { SsrfBlockedError, type SafeFetchResult } from "./safe-fetch";
 
 /** Same layering rationale as rss-connector.test.ts. */
-const safeFetchMock = vi.fn<(url: string, options?: unknown) => Promise<SafeFetchResult>>();
+const safeFetchMock =
+  vi.fn<(url: string, options?: unknown) => Promise<SafeFetchResult>>();
 vi.mock("./safe-fetch", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./safe-fetch")>();
-  return { ...actual, safeFetch: (...args: Parameters<typeof safeFetchMock>) => safeFetchMock(...args) };
+  return {
+    ...actual,
+    safeFetch: (...args: Parameters<typeof safeFetchMock>) => safeFetchMock(...args),
+  };
 });
 
 const robotsMock = vi.fn<(url: string) => Promise<boolean>>();
 vi.mock("./robots", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./robots")>();
-  return { ...actual, isAllowedByRobotsTxt: (...args: Parameters<typeof robotsMock>) => robotsMock(...args) };
+  return {
+    ...actual,
+    isAllowedByRobotsTxt: (...args: Parameters<typeof robotsMock>) =>
+      robotsMock(...args),
+  };
 });
 
 const { WebConnector } = await import("./web-connector");
@@ -29,6 +37,8 @@ function fakeSource(overrides: Partial<Source> = {}): Source {
     status: "healthy",
     lastCheckedAt: null,
     url: "https://cim-test.invalid/newsroom",
+    apiKeyHeaderName: null,
+    apiKey: null,
     canStoreFullText: false,
     canDisplayFullText: false,
     canDisplayExcerpt: true,
@@ -43,7 +53,13 @@ function fakeSource(overrides: Partial<Source> = {}): Source {
 }
 
 function fetchResult(overrides: Partial<SafeFetchResult> = {}): SafeFetchResult {
-  return { status: 200, headers: new Headers() as never, body: "", finalUrl: "", ...overrides };
+  return {
+    status: 200,
+    headers: new Headers() as never,
+    body: "",
+    finalUrl: "",
+    ...overrides,
+  };
 }
 
 const PAGE_HTML = `<html><head><title>Company Newsroom</title></head><body><p>Latest updates.</p></body></html>`;
@@ -70,7 +86,9 @@ describe("WebConnector", () => {
   });
 
   it("throws fetching a source with no page URL configured", async () => {
-    await expect(new WebConnector().fetch(fakeSource({ url: null }))).rejects.toThrow(/no page URL/i);
+    await expect(new WebConnector().fetch(fakeSource({ url: null }))).rejects.toThrow(
+      /no page URL/i,
+    );
   });
 
   it("healthCheck reports blocked when safeFetch raises SsrfBlockedError", async () => {

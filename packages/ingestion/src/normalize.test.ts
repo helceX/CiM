@@ -13,6 +13,8 @@ function fakeSource(overrides: Partial<Source> = {}): Source {
     type: "news",
     connector: "mock",
     url: null,
+    apiKeyHeaderName: null,
+    apiKey: null,
     status: "healthy",
     lastCheckedAt: null,
     canStoreFullText: false,
@@ -50,12 +52,18 @@ describe("computeContentHash", () => {
 
 describe("normalizeToArticleInput", () => {
   it("stores an excerpt when the source policy allows displaying one", () => {
-    const article = normalizeToArticleInput(fakeSource({ canDisplayExcerpt: true }), raw);
+    const article = normalizeToArticleInput(
+      fakeSource({ canDisplayExcerpt: true }),
+      raw,
+    );
     expect(article.storedExcerpt).not.toBeNull();
   });
 
   it("stores nothing when the source policy forbids displaying an excerpt", () => {
-    const article = normalizeToArticleInput(fakeSource({ canDisplayExcerpt: false }), raw);
+    const article = normalizeToArticleInput(
+      fakeSource({ canDisplayExcerpt: false }),
+      raw,
+    );
     expect(article.storedExcerpt).toBeNull();
   });
 });

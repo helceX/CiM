@@ -12,10 +12,14 @@ import { SsrfBlockedError, type SafeFetchResult } from "./safe-fetch";
  * this connector's own responsibility: mapping feed items to
  * RawFetchResult, and classifying health-check outcomes.
  */
-const safeFetchMock = vi.fn<(url: string, options?: unknown) => Promise<SafeFetchResult>>();
+const safeFetchMock =
+  vi.fn<(url: string, options?: unknown) => Promise<SafeFetchResult>>();
 vi.mock("./safe-fetch", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./safe-fetch")>();
-  return { ...actual, safeFetch: (...args: Parameters<typeof safeFetchMock>) => safeFetchMock(...args) };
+  return {
+    ...actual,
+    safeFetch: (...args: Parameters<typeof safeFetchMock>) => safeFetchMock(...args),
+  };
 });
 
 const { RSSConnector } = await import("./rss-connector");
@@ -32,6 +36,8 @@ function fakeSource(overrides: Partial<Source> = {}): Source {
     status: "healthy",
     lastCheckedAt: null,
     url: "https://cim-test.invalid/feed.xml",
+    apiKeyHeaderName: null,
+    apiKey: null,
     canStoreFullText: false,
     canDisplayFullText: false,
     canDisplayExcerpt: true,
@@ -46,7 +52,13 @@ function fakeSource(overrides: Partial<Source> = {}): Source {
 }
 
 function fetchResult(overrides: Partial<SafeFetchResult> = {}): SafeFetchResult {
-  return { status: 200, headers: new Headers() as never, body: "", finalUrl: "", ...overrides };
+  return {
+    status: 200,
+    headers: new Headers() as never,
+    body: "",
+    finalUrl: "",
+    ...overrides,
+  };
 }
 
 const FEED_XML = `<rss version="2.0"><channel><title>Feed</title>
@@ -75,7 +87,9 @@ describe("RSSConnector", () => {
 
   it("throws fetching a source with no feed URL configured, without calling safeFetch", async () => {
     safeFetchMock.mockClear();
-    await expect(new RSSConnector().fetch(fakeSource({ url: null }))).rejects.toThrow(/no feed URL/i);
+    await expect(new RSSConnector().fetch(fakeSource({ url: null }))).rejects.toThrow(
+      /no feed URL/i,
+    );
     expect(safeFetchMock).not.toHaveBeenCalled();
   });
 
@@ -97,7 +111,9 @@ describe("RSSConnector", () => {
   });
 
   it("healthCheck reports error on unparseable XML", async () => {
-    safeFetchMock.mockResolvedValueOnce(fetchResult({ status: 200, body: "not xml at all" }));
+    safeFetchMock.mockResolvedValueOnce(
+      fetchResult({ status: 200, body: "not xml at all" }),
+    );
     const health = await new RSSConnector().healthCheck(fakeSource());
     expect(health.status).toBe("error");
   });

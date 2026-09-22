@@ -3,6 +3,7 @@ export * from "./mock-connector";
 export * from "./rss-connector";
 export * from "./sitemap-connector";
 export * from "./web-connector";
+export * from "./api-connector";
 export * from "./normalize";
 export * from "./pipeline";
 export * from "./safe-fetch";

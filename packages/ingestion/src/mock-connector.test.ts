@@ -12,6 +12,8 @@ function fakeSource(overrides: Partial<Source> = {}): Source {
     type: "news",
     connector: "mock",
     url: null,
+    apiKeyHeaderName: null,
+    apiKey: null,
     status: "healthy",
     lastCheckedAt: null,
     canStoreFullText: false,
@@ -38,8 +40,12 @@ describe("MockNewsConnector", () => {
 
   it("produces different content for different sources", async () => {
     const connector = new MockNewsConnector();
-    const [a] = await connector.fetch(fakeSource({ id: "a", name: "Wire A", domain: "a.example" }));
-    const [b] = await connector.fetch(fakeSource({ id: "b", name: "Wire B", domain: "b.example" }));
+    const [a] = await connector.fetch(
+      fakeSource({ id: "a", name: "Wire A", domain: "a.example" }),
+    );
+    const [b] = await connector.fetch(
+      fakeSource({ id: "b", name: "Wire B", domain: "b.example" }),
+    );
     expect(a?.canonicalUrl).not.toEqual(b?.canonicalUrl);
     expect(a?.title).not.toEqual(b?.title);
   });

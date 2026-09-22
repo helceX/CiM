@@ -1,4 +1,5 @@
 import type { ReportData } from "./gather-data";
+import { REPORT_SECTION_LABELS, type ReportSectionKey } from "./sections";
 import { getReportTemplate } from "./templates";
 
 const SENTIMENT_BADGE: Record<string, string> = {
@@ -96,6 +97,59 @@ function topStoriesSection(data: ReportData): string {
   return `<table><thead><tr><th>Headline</th><th>Source</th><th>Sentiment</th><th>Priority</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 
+function topicsSection(data: ReportData): string {
+  if (data.topicBreakdown.length === 0) return `<p class="empty">No monitoring queries in this period.</p>`;
+  const rows = data.topicBreakdown
+    .map(
+      (row) =>
+        `<tr><td>${escapeHtml(row.queryName)}</td><td>${row.currentCount}</td><td>${row.previousCount}</td></tr>`,
+    )
+    .join("");
+  return `<table><thead><tr><th>Query</th><th>This period</th><th>Previous period</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+function competitorsSection(data: ReportData): string {
+  if (data.competitorComparison.length === 0) {
+    return `<p class="empty">No company/competitor-tagged queries configured.</p>`;
+  }
+  const rows = data.competitorComparison
+    .map(
+      (row) =>
+        `<tr><td>${escapeHtml(row.queryName)}</td><td>${escapeHtml(row.trackingTarget)}</td><td>${row.totalMentions}</td><td>${row.positive}/${row.neutral}/${row.negative}</td></tr>`,
+    )
+    .join("");
+  return `<table><thead><tr><th>Query</th><th>Tracking</th><th>Mentions</th><th>Sentiment mix</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+function aiInsightSection(data: ReportData): string {
+  if (!data.insight) return `<p class="empty">Not available — no AI insight generated for this project yet.</p>`;
+  return `
+    <p>${escapeHtml(data.insight.summary)}</p>
+    <p class="chart-axis">Confidence ${Math.round(Number(data.insight.confidence) * 100)}% · Method: ${escapeHtml(data.insight.method)} · Based on ${data.insight.evidence.length} mention${data.insight.evidence.length === 1 ? "" : "s"}</p>
+  `;
+}
+
+const CUSTOM_SECTION_RENDERERS: Record<ReportSectionKey, (data: ReportData) => string> = {
+  trend: (data) => volumeBarChart(data.volumeSeries),
+  sentiment: sentimentSection,
+  sources: sourceDistributionSection,
+  topics: topicsSection,
+  top_stories: topStoriesSection,
+  competitors: competitorsSection,
+  ai_insight: aiInsightSection,
+};
+
+function customSections(data: ReportData): string {
+  const keys = data.sections ?? [];
+  if (keys.length === 0) return `<p class="empty">No sections selected for this report.</p>`;
+  return keys
+    .map(
+      (key) =>
+        `<section><h2>${escapeHtml(REPORT_SECTION_LABELS[key])}</h2>${CUSTOM_SECTION_RENDERERS[key](data)}</section>`,
+    )
+    .join("");
+}
+
 /**
  * Renders the fixed-template report as a self-contained HTML document —
  * inline `<style>` using the same OKLCH design tokens as the app
@@ -108,13 +162,15 @@ export function renderReportHtml(data: ReportData): string {
   const templateName = template?.name ?? data.templateKey;
 
   const sections =
-    data.templateKey === "weekly_summary"
-      ? `
+    data.templateKey === "custom"
+      ? customSections(data)
+      : data.templateKey === "weekly_summary"
+        ? `
         <section><h2>Mention trend</h2>${volumeBarChart(data.volumeSeries)}</section>
         <section><h2>Sentiment mix</h2>${sentimentSection(data)}</section>
         <section><h2>Top stories</h2>${topStoriesSection(data)}</section>
       `
-      : `
+        : `
         <section><h2>Mention trend</h2>${volumeBarChart(data.volumeSeries)}</section>
         <section><h2>Sentiment trend</h2>${sentimentSection(data)}</section>
         <section><h2>Source distribution</h2>${sourceDistributionSection(data)}</section>

@@ -88,6 +88,21 @@ describe("reports repository — scheduling (integration)", () => {
     expect(due.some((r) => r.id === report.id)).toBe(false);
   });
 
+  it("persists a custom template's ordered section list, and leaves it null for a fixed template", async () => {
+    const custom = await createReport(db, organizationId, {
+      projectId,
+      createdByUserId: userId,
+      name: `Custom report ${Date.now()}`,
+      templateKey: "custom",
+      sections: ["competitors", "trend", "ai_insight"],
+      periodType: "rolling_7d",
+    });
+    expect(custom.sections).toEqual(["competitors", "trend", "ai_insight"]);
+
+    const fixed = await makeReport();
+    expect(fixed.sections).toBeNull();
+  });
+
   it("includes a scheduled report that has never run before", async () => {
     const report = await makeReport();
     await updateReportSchedule(db, organizationId, report.id, "weekly");

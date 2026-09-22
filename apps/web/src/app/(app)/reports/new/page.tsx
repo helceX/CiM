@@ -11,7 +11,7 @@ export default async function NewReportPage() {
       <div>
         <h1 className="text-lg font-semibold text-foreground">New report</h1>
         <p className="text-sm text-muted-foreground">
-          Pick a fixed template and a period — generation runs in the background.
+          Pick a template — or build a custom one — and a period. Generation runs in the background.
         </p>
       </div>
       <ReportForm projects={projects.map((p) => ({ id: p.id, name: p.name }))} />

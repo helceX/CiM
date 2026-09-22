@@ -73,6 +73,7 @@ function fakeMention(overrides: Partial<Mention> = {}): Mention {
 export function fakeReportData(overrides: Partial<ReportData> = {}): ReportData {
   return {
     templateKey: "weekly_summary",
+    sections: null,
     projectName: "Brand Monitoring",
     periodStart: new Date("2026-01-01T00:00:00Z"),
     periodEnd: new Date("2026-01-08T00:00:00Z"),
@@ -113,6 +114,19 @@ export function fakeReportData(overrides: Partial<ReportData> = {}): ReportData 
         assigneeName: null,
       },
     ],
+    topicBreakdown: [{ queryId: "66666666-6666-6666-6666-666666666666", queryName: "Brand mentions", currentCount: 12, previousCount: 8 }],
+    competitorComparison: [
+      {
+        queryId: "66666666-6666-6666-6666-666666666666",
+        queryName: "Brand mentions",
+        trackingTarget: "company",
+        totalMentions: 12,
+        positive: 5,
+        neutral: 6,
+        negative: 1,
+      },
+    ],
+    insight: undefined,
     ...overrides,
   };
 }

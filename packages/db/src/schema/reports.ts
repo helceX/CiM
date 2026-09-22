@@ -17,11 +17,12 @@ const bytea = customType<{ data: Buffer }>({
 });
 
 /**
- * A saved report definition (docs/product/FEATURE_MATRIX.md — MVP ships
- * "fixed templates, PDF/CSV export"; the reorderable custom section
- * builder is P2, so there is deliberately no ReportSection table yet —
- * `templateKey` selects one of `@cim/reports`' fixed templates). Soft-
- * delete (DATA_MODEL.md conventions — same as Project/MonitoringQuery/
+ * A saved report definition (docs/product/FEATURE_MATRIX.md — MVP shipped
+ * "fixed templates, PDF/CSV export"; `templateKey` selects one of
+ * `@cim/reports`' fixed templates, or "custom" to read its section list
+ * from `sections` below — no separate ReportSection table needed since
+ * it's just an ordered array of keys, not per-section configuration).
+ * Soft-delete (DATA_MODEL.md conventions — same as Project/MonitoringQuery/
  * AlertRule).
  */
 export const reports = pgTable(
@@ -36,7 +37,13 @@ export const reports = pgTable(
       .references(() => projects.id, { onDelete: "cascade" }),
     createdByUserId: uuid("created_by_user_id").references(() => users.id),
     name: text("name").notNull(),
-    templateKey: text("template_key").notNull(), // weekly_summary | monitoring_overview
+    templateKey: text("template_key").notNull(), // weekly_summary | monitoring_overview | custom
+    // Only set (and only read) when templateKey is "custom" — the
+    // reorderable section list docs/product/USER_FLOWS.md §5 describes
+    // (packages/reports/src/sections.ts's ReportSectionKey, in the
+    // user's chosen order). Null for the two fixed templates, which keep
+    // their hardcoded section lists in packages/reports/src/render-html.ts.
+    sections: text("sections").array(),
     periodType: text("period_type").notNull(), // rolling_7d | rolling_30d
     // docs/product/FEATURE_MATRIX.md P2 "Weekly/monthly/yearly scheduled
     // reports" — independent of periodType (a weekly schedule can still

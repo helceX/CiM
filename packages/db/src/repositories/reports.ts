@@ -18,6 +18,7 @@ export async function createReport(
     createdByUserId: string;
     name: string;
     templateKey: string;
+    sections?: string[];
     periodType: string;
   },
 ) {
@@ -29,6 +30,7 @@ export async function createReport(
       createdByUserId: input.createdByUserId,
       name: input.name,
       templateKey: input.templateKey,
+      sections: input.sections,
       periodType: input.periodType,
     })
     .returning();

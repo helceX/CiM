@@ -17,6 +17,7 @@ import {
   renderReportCsv,
   renderReportHtml,
   renderReportXlsx,
+  type ReportSectionKey,
 } from "@cim/reports";
 
 /**
@@ -41,8 +42,9 @@ export async function processGenerateReportJob(
     const data = await gatherReportData(db, organizationId, {
       projectId: report.projectId,
       projectName,
-      templateKey: report.templateKey as "weekly_summary" | "monitoring_overview",
+      templateKey: report.templateKey as "weekly_summary" | "monitoring_overview" | "custom",
       periodType: report.periodType,
+      sections: report.sections as ReportSectionKey[] | null,
     });
 
     const html = renderReportHtml(data);

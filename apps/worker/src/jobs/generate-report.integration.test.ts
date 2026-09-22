@@ -164,6 +164,32 @@ describe("processGenerateReportJob (integration)", () => {
     expect(notifications.some((n) => n.body.includes("ready to download"))).toBe(true);
   }, 30_000);
 
+  it("generates a custom-template report using only the chosen, reordered sections", async () => {
+    const report = await createReport(db, organizationId, {
+      projectId,
+      createdByUserId: userId,
+      name: "Custom report — smoke test",
+      templateKey: "custom",
+      sections: ["competitors", "top_stories"],
+      periodType: "rolling_7d",
+    });
+    const run = await createReportRun(db, organizationId, {
+      reportId: report.id,
+      requestedByUserId: userId,
+      periodStart: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+      periodEnd: new Date(),
+    });
+
+    await processGenerateReportJob(fakeJob(run.id));
+
+    const updatedRun = await getReportRun(db, organizationId, run.id);
+    expect(updatedRun?.status).toBe("completed");
+
+    const pdfFile = await getReportFile(db, run.id, "pdf");
+    expect(pdfFile).toBeDefined();
+    expect(pdfFile?.data.subarray(0, 5).toString("ascii")).toBe("%PDF-");
+  }, 30_000);
+
   it("marks the run failed with a real error and notifies the requester, never a silently missing report", async () => {
     const report = await createReport(db, organizationId, {
       projectId,

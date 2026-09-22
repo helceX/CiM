@@ -44,6 +44,7 @@ export async function POST(request: Request) {
     createdByUserId: context.userId,
     name: input.name,
     templateKey: input.templateKey,
+    sections: input.templateKey === "custom" ? input.sections : undefined,
     periodType: input.periodType,
   });
 

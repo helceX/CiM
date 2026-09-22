@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button, Field, Input, Select } from "@cim/ui";
+import { Button, Checkbox, Field, Input, Select } from "@cim/ui";
 import { REPORT_TEMPLATES, type ReportPeriodType, type ReportTemplateKey } from "@cim/reports/templates";
+import { REPORT_SECTION_KEYS, REPORT_SECTION_LABELS, type ReportSectionKey } from "@cim/reports/sections";
 
 type ProjectOption = { id: string; name: string };
 
@@ -18,6 +19,7 @@ export function ReportForm({ projects }: { projects: ProjectOption[] }) {
   const [projectId, setProjectId] = useState(projects[0]?.id ?? "");
   const [templateKey, setTemplateKey] = useState<ReportTemplateKey>(REPORT_TEMPLATES[0]!.key);
   const [periodType, setPeriodType] = useState(REPORT_TEMPLATES[0]!.defaultPeriodType);
+  const [sections, setSections] = useState<ReportSectionKey[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -27,10 +29,30 @@ export function ReportForm({ projects }: { projects: ProjectOption[] }) {
     if (template) setPeriodType(template.defaultPeriodType);
   }
 
+  function toggleSection(key: ReportSectionKey) {
+    setSections((current) =>
+      current.includes(key) ? current.filter((k) => k !== key) : [...current, key],
+    );
+  }
+
+  function moveSection(index: number, direction: -1 | 1) {
+    setSections((current) => {
+      const next = [...current];
+      const target = index + direction;
+      if (target < 0 || target >= next.length) return current;
+      [next[index], next[target]] = [next[target]!, next[index]!];
+      return next;
+    });
+  }
+
   async function handleSave() {
     setError(null);
     if (!projectId) {
       setError("Select a project first.");
+      return;
+    }
+    if (templateKey === "custom" && sections.length === 0) {
+      setError("Choose at least one section.");
       return;
     }
     setIsSubmitting(true);
@@ -42,6 +64,7 @@ export function ReportForm({ projects }: { projects: ProjectOption[] }) {
           projectId,
           name: name || REPORT_TEMPLATES.find((t) => t.key === templateKey)?.name || "Report",
           templateKey,
+          sections: templateKey === "custom" ? sections : undefined,
           periodType,
         }),
       });
@@ -108,6 +131,57 @@ export function ReportForm({ projects }: { projects: ProjectOption[] }) {
           ))}
         </div>
       </div>
+
+      {templateKey === "custom" ? (
+        <div className="flex flex-col gap-3 rounded-lg border border-border p-4">
+          <div>
+            <span className="text-sm font-medium text-foreground">Sections</span>
+            <p className="text-xs text-muted-foreground">Choose sections, then reorder them below.</p>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            {REPORT_SECTION_KEYS.map((key) => (
+              <label key={key} className="flex items-center gap-2 text-sm text-foreground">
+                <Checkbox checked={sections.includes(key)} onCheckedChange={() => toggleSection(key)} />
+                {REPORT_SECTION_LABELS[key]}
+              </label>
+            ))}
+          </div>
+          {sections.length > 0 ? (
+            <ol className="flex flex-col gap-1.5 border-t border-border pt-3">
+              {sections.map((key, index) => (
+                <li
+                  key={key}
+                  className="flex items-center justify-between gap-2 rounded-sm bg-secondary px-2.5 py-1.5 text-sm text-secondary-foreground"
+                >
+                  <span>
+                    {index + 1}. {REPORT_SECTION_LABELS[key]}
+                  </span>
+                  <span className="flex gap-1">
+                    <button
+                      type="button"
+                      onClick={() => moveSection(index, -1)}
+                      disabled={index === 0}
+                      aria-label={`Move ${REPORT_SECTION_LABELS[key]} up`}
+                      className="text-muted-foreground hover:text-foreground disabled:opacity-30"
+                    >
+                      ↑
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => moveSection(index, 1)}
+                      disabled={index === sections.length - 1}
+                      aria-label={`Move ${REPORT_SECTION_LABELS[key]} down`}
+                      className="text-muted-foreground hover:text-foreground disabled:opacity-30"
+                    >
+                      ↓
+                    </button>
+                  </span>
+                </li>
+              ))}
+            </ol>
+          ) : null}
+        </div>
+      ) : null}
 
       <Field id="period" label="Period">
         <Select

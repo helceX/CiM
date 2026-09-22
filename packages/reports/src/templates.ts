@@ -1,4 +1,4 @@
-export type ReportTemplateKey = "weekly_summary" | "monitoring_overview";
+export type ReportTemplateKey = "weekly_summary" | "monitoring_overview" | "custom";
 export type ReportPeriodType = "rolling_7d" | "rolling_30d";
 
 export type ReportTemplate = {
@@ -9,10 +9,11 @@ export type ReportTemplate = {
 };
 
 /**
- * docs/product/FEATURE_MATRIX.md — MVP ships "fixed templates, PDF/CSV
- * export"; a reorderable custom section builder is P2. Each template is a
- * fixed, hardcoded section list — adding a template is a code change, not
- * a data-driven builder, and that's the deliberate, honest MVP scope.
+ * docs/product/FEATURE_MATRIX.md — MVP shipped two fixed templates
+ * (hardcoded section lists, docs/product/USER_FLOWS.md §5); "custom" adds
+ * the reorderable section builder (`sections.ts`) on top — a Report with
+ * `templateKey: "custom"` reads its section list from `reports.sections`
+ * (packages/db/src/schema/reports.ts) instead of a hardcoded list here.
  */
 export const REPORT_TEMPLATES: ReportTemplate[] = [
   {
@@ -26,6 +27,12 @@ export const REPORT_TEMPLATES: ReportTemplate[] = [
     name: "Monitoring Overview",
     description: "A broader 30-day view: KPIs, sentiment trend, source distribution, and top stories.",
     defaultPeriodType: "rolling_30d",
+  },
+  {
+    key: "custom",
+    name: "Custom",
+    description: "Choose and reorder the sections that go in the report.",
+    defaultPeriodType: "rolling_7d",
   },
 ];
 

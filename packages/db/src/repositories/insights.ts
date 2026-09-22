@@ -230,18 +230,27 @@ export type InsightWithEvidenceAndProject = InsightWithEvidence & { projectName:
  * The dashboard (docs/product/PRODUCT_VISION.md "since yesterday"
  * executive brief) aggregates across every project, so it shows the most
  * recently generated insight org-wide rather than requiring one project
- * to be selected.
+ * to be selected. A report's "AI Insight" section (FEATURE_MATRIX.md P2
+ * report builder) is scoped to one project, so it passes `projectId` to
+ * avoid surfacing a different project's insight in this project's report.
  */
 export async function getLatestInsightForOrganization(
   db: Db,
   organizationId: OrganizationId,
   kind: string,
+  options: { projectId?: string } = {},
 ): Promise<InsightWithEvidenceAndProject | undefined> {
   const [row] = await db
     .select({ insight: insights, projectName: projects.name })
     .from(insights)
     .innerJoin(projects, eq(projects.id, insights.projectId))
-    .where(and(eq(insights.organizationId, organizationId), eq(insights.kind, kind)))
+    .where(
+      and(
+        eq(insights.organizationId, organizationId),
+        eq(insights.kind, kind),
+        options.projectId ? eq(insights.projectId, options.projectId) : undefined,
+      ),
+    )
     .orderBy(desc(insights.createdAt))
     .limit(1);
   if (!row) return undefined;

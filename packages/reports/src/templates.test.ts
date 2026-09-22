@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { getReportTemplate, periodTypeToSinceDays, REPORT_TEMPLATES } from "./templates";
 
 describe("templates", () => {
-  it("exposes only the MVP's fixed templates (custom builder is P2)", () => {
-    expect(REPORT_TEMPLATES.map((t) => t.key)).toEqual(["weekly_summary", "monitoring_overview"]);
+  it("exposes the two fixed templates plus the custom section builder", () => {
+    expect(REPORT_TEMPLATES.map((t) => t.key)).toEqual(["weekly_summary", "monitoring_overview", "custom"]);
   });
 
   it("resolves a template by key", () => {

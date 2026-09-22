@@ -135,6 +135,11 @@ describe("fireAlert — webhook channel (integration)", () => {
     const payload = JSON.parse(options.body);
     expect(payload.alertRuleName).toBe("Webhook rule");
     expect(payload.triggerSummary).toBe("3 new mentions matched");
+    // A Slack incoming webhook rejects any payload without a top-level
+    // "text" string (HTTP 400 no_text) — without this, the URL being
+    // Slack-shaped wouldn't actually make delivery work against Slack.
+    expect(payload.text).toContain("Webhook rule");
+    expect(payload.text).toContain("3 new mentions matched");
   });
 
   it("skips webhook delivery silently when no URL is configured", async () => {

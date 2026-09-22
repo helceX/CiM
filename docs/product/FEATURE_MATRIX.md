@@ -99,7 +99,7 @@ generation (excluding soft-deleted organizations).
 | Search (Postgres full-text) | ✅ | Meilisearch + facets | Semantic/vector search | |
 | Alerts: keyword, high-relevance, spike | ✅ | Sentiment shift, competitor, engagement spike, emerging topic, crisis | | |
 | Alert fatigue controls (grouping/cooldown) | ✅ | | | |
-| Notification center (in-app) | ✅ | Slack/Teams/webhook channels | | |
+| Notification center (in-app) | ✅ | ✅ (Slack/Teams/webhook channels) | | |
 | Email daily digest | ✅ | Weekly/monthly/yearly scheduled reports | | |
 | Reports: fixed templates, PDF/CSV export | ✅ | Report builder (custom sections), XLSX, sharing links | | |
 | Dashboard: KPIs, trend, top stories, topics, sentiment | ✅ | Competitor comparison, source distribution depth | | |

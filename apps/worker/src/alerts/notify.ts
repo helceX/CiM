@@ -78,6 +78,13 @@ export async function fireAlert(
  * capped timeout. A delivery failure (unreachable endpoint, non-2xx,
  * blocked address) is logged, never thrown — it must not undo the
  * in_app/email delivery this alert already fired.
+ *
+ * `text` is what actually makes this Slack/Teams-compatible, not just
+ * Slack/Teams-URL-shaped: a Slack incoming webhook rejects any payload
+ * without a top-level `text` string (HTTP 400 `no_text`), and Teams'
+ * legacy Connector card renders the same field as its message body. A
+ * generic/custom webhook receiver that only reads the structured fields
+ * below simply ignores the extra key.
  */
 async function deliverWebhook(
   organizationId: ReturnType<typeof asOrganizationId>,
@@ -93,6 +100,7 @@ async function deliverWebhook(
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
+        text: `CiM alert "${rule.name}": ${triggerSummary}`,
         alertEventId,
         alertRuleId: rule.id,
         alertRuleName: rule.name,

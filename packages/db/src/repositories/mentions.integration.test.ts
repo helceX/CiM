@@ -14,6 +14,7 @@ import {
   setMentionFeedback,
 } from "./mentions";
 import { addTagToMention, findOrCreateTag, listTagsForOrganization, removeTagFromMention } from "./tags";
+import { addCommentToMention, deleteMentionComment, listCommentsForMention } from "./mention-comments";
 import { asOrganizationId } from "./tenant-scope";
 
 /**
@@ -412,6 +413,52 @@ describe("mentions repository (integration)", () => {
 
     const detail = await getMentionDetail(db, organizationId, mentionId);
     expect(detail?.tags.some((t) => t.id === tagId)).toBe(true);
+  });
+
+  it("comments on a mention, lists oldest-first with author names, and lets only the author delete their own", async () => {
+    const mentionId = mentionIds[0];
+    if (!mentionId) throw new Error("no seeded mention");
+
+    const first = await addCommentToMention(db, organizationId, mentionId, memberUserId, "First note");
+    expect(first.ok).toBe(true);
+    if (!first.ok) throw new Error("unreachable");
+    expect(first.comment.authorFirstName).toBe("Ada");
+    expect(first.comment.body).toBe("First note");
+
+    const second = await addCommentToMention(
+      db,
+      organizationId,
+      mentionId,
+      outsiderUserId,
+      "Second note",
+    );
+    expect(second.ok).toBe(true);
+    if (!second.ok) throw new Error("unreachable");
+
+    const comments = await listCommentsForMention(db, mentionId);
+    expect(comments.map((c) => c.body)).toEqual(["First note", "Second note"]);
+
+    const detail = await getMentionDetail(db, organizationId, mentionId);
+    expect(detail?.comments.map((c) => c.id)).toEqual(comments.map((c) => c.id));
+
+    // The outsider cannot delete the member's comment...
+    const wrongAuthor = await deleteMentionComment(db, organizationId, first.comment.id, outsiderUserId);
+    expect(wrongAuthor).toBe(false);
+    // ...but can delete their own.
+    const ownComment = await deleteMentionComment(db, organizationId, second.comment.id, outsiderUserId);
+    expect(ownComment).toBe(true);
+
+    const remaining = await listCommentsForMention(db, mentionId);
+    expect(remaining.map((c) => c.id)).toEqual([first.comment.id]);
+  });
+
+  it("does not let a comment be added to another organization's mention", async () => {
+    const mentionId = mentionIds[0];
+    if (!mentionId) throw new Error("no seeded mention");
+    const otherOrgId = asOrganizationId("00000000-0000-0000-0000-000000000000");
+
+    const result = await addCommentToMention(db, otherOrgId, mentionId, memberUserId, "Cross-tenant");
+    expect(result).toEqual({ ok: false, reason: "mention_not_found" });
   });
 
   it("groups mentions by tracking target for competitor comparison, excluding non-company/competitor queries", async () => {

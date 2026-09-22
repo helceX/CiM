@@ -12,6 +12,7 @@ import {
   type MentionTopicRow,
 } from "./ai";
 import { listTagsForMention } from "./tags";
+import { listCommentsForMention, type MentionCommentWithAuthor } from "./mention-comments";
 
 export type MentionListItem = {
   mention: typeof mentions.$inferSelect;
@@ -202,6 +203,7 @@ export type MentionDetail = MentionListItem & {
   aiEntities: MentionEntityRow[];
   aiTopics: MentionTopicRow[];
   tags: Tag[];
+  comments: MentionCommentWithAuthor[];
 };
 
 /**
@@ -232,12 +234,13 @@ export async function getMentionDetail(
     .limit(1);
   if (!row) return undefined;
 
-  const [aiEntities, aiTopics, tags] = await Promise.all([
+  const [aiEntities, aiTopics, tags, comments] = await Promise.all([
     listMentionEntities(db, mentionId),
     listMentionTopics(db, mentionId),
     listTagsForMention(db, mentionId),
+    listCommentsForMention(db, mentionId),
   ]);
-  return { ...row, aiEntities, aiTopics, tags };
+  return { ...row, aiEntities, aiTopics, tags, comments };
 }
 
 export type AssignMentionResult = "ok" | "not_found" | "invalid_assignee";

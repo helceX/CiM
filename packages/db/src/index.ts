@@ -24,5 +24,6 @@ export * from "./repositories/members";
 export * from "./repositories/retention";
 export * from "./repositories/organizations";
 export * from "./repositories/tags";
+export * from "./repositories/mention-comments";
 export * from "./repositories/api-keys";
 export * from "./repositories/billing";

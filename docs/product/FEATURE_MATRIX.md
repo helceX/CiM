@@ -94,13 +94,13 @@ generation (excluding soft-deleted organizations).
 | Query preview ("test before save") | ✅ | | | |
 | Source connectors: Mock, RSS, Sitemap, Web, API | ✅ | | Social/YouTube/Podcast/Broadcast | |
 | Ingestion pipeline (fetch→normalize→dedupe→index) | ✅ | | | |
-| Mentions list + detail drawer | ✅ (assign, tag) | Collaboration (comment) | | |
+| Mentions list + detail drawer | ✅ (assign, tag, comment) | | | |
 | Deduplication / story clustering | Dedup only | Full story clustering | | |
 | Search (Postgres full-text) | ✅ | Meilisearch + facets | Semantic/vector search | |
 | Alerts: keyword, high-relevance, spike | ✅ | ✅ Sentiment shift, ✅ emerging topic, ✅ competitor, engagement spike, crisis | | |
 | Alert fatigue controls (grouping/cooldown) | ✅ | | | |
 | Notification center (in-app) | ✅ | ✅ (Slack/Teams/webhook channels) | | |
-| Email daily digest | ✅ | Weekly/monthly/yearly scheduled reports | | |
+| Email daily digest | ✅ | ✅ Weekly/monthly/yearly scheduled reports | | |
 | Reports: fixed templates, PDF/CSV export | ✅ | ✅ Report builder (custom, reorderable sections), XLSX, sharing links | | |
 | Dashboard: KPIs, trend, top stories, topics, sentiment | ✅ | ✅ Competitor comparison, source distribution depth | | |
 | Analytics deep views | Basic (volume, sentiment, sources) | Full matrix (§25 of brief) | Journalist/author, geography | |

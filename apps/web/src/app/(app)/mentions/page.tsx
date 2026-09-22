@@ -60,7 +60,12 @@ export default async function MentionsPage({
           filters.
         </p>
       </div>
-      <MentionsTable result={result} members={assignableMembers} tags={tags} />
+      <MentionsTable
+        result={result}
+        members={assignableMembers}
+        tags={tags}
+        currentUserId={context.userId}
+      />
     </div>
   );
 }

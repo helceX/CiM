@@ -101,4 +101,41 @@ test.describe("mentions", () => {
     expect((await removeResponse).ok()).toBe(true);
     await expect(drawer.getByText("Needs follow-up")).not.toBeVisible();
   });
+
+  /**
+   * docs/product/FEATURE_MATRIX.md P2 "Collaboration (assign/comment/tag)"
+   * — the "comment" slice. Reuses the same shared session/org as the
+   * tests above, for the same rate-limit-headroom reason documented at
+   * the top of this file.
+   */
+  test("adds and deletes a comment on a mention", async ({ page }) => {
+    await page.goto("/mentions");
+    await page.getByLabel("Search").fill("Daily Tech Wire");
+    await page.getByLabel("Search").press("Enter");
+
+    const row = page.getByRole("row", { name: /Daily Tech Wire/ }).first();
+    await expect(row).toBeVisible({ timeout: 5000 });
+    await row.click();
+
+    const drawer = page.getByRole("dialog");
+    await expect(drawer).toBeVisible();
+    await expect(drawer.getByText("No comments yet.")).toBeVisible();
+
+    const commentResponse = page.waitForResponse(
+      (response) => response.url().includes("/comments") && response.request().method() === "POST",
+    );
+    await drawer.getByLabel("Comment").fill("Flagging this for legal review");
+    await drawer.getByRole("button", { name: "Comment", exact: true }).click();
+    const addResponse = await commentResponse;
+    expect(addResponse.ok()).toBe(true);
+    await expect(drawer.getByText("Flagging this for legal review")).toBeVisible();
+
+    const deleteResponse = page.waitForResponse(
+      (response) => response.url().includes("/comments/") && response.request().method() === "DELETE",
+    );
+    await drawer.getByRole("button", { name: "Delete comment" }).click();
+    expect((await deleteResponse).ok()).toBe(true);
+    await expect(drawer.getByText("Flagging this for legal review")).not.toBeVisible();
+    await expect(drawer.getByText("No comments yet.")).toBeVisible();
+  });
 });

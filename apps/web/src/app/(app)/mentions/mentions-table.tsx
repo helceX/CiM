@@ -24,10 +24,12 @@ export function MentionsTable({
   result,
   members,
   tags,
+  currentUserId,
 }: {
   result: MentionsPage;
   members: AssignableMember[];
   tags: Tag[];
+  currentUserId: string;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -205,6 +207,7 @@ export function MentionsTable({
           mentionId={selectedMentionId}
           members={members}
           existingTagNames={tags.map((tag) => tag.name)}
+          currentUserId={currentUserId}
           onClose={() => setSelectedMentionId(null)}
         />
       ) : null}

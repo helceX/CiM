@@ -13,6 +13,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { organizations, projects } from "./organizations";
 import { monitoringQueries } from "./monitoring";
+import { users } from "./users";
 
 /**
  * Global/reference data — NOT tenant-scoped (ADR-001, DATA_MODEL.md).
@@ -193,7 +194,39 @@ export const mentionTags = pgTable(
   ],
 );
 
+/**
+ * docs/product/FEATURE_MATRIX.md P2 "Collaboration (assign/comment/tag)"
+ * — the "comment" slice (assign shipped in Phase 20, tag in Phase 24;
+ * each is its own, separately-scoped feature per those features' own
+ * comments). A free-text note an org member leaves on a Mention, visible
+ * to every member of the organization — no threading/replies, no edit
+ * history, matching the scope the matrix names (a comment, not a full
+ * discussion thread).
+ */
+export const mentionComments = pgTable(
+  "mention_comments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    mentionId: uuid("mention_id")
+      .notNull()
+      .references(() => mentions.id, { onDelete: "cascade" }),
+    authorUserId: uuid("author_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    body: text("body").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("mention_comments_mention_idx").on(table.mentionId, table.createdAt),
+    index("mention_comments_org_idx").on(table.organizationId),
+  ],
+);
+
 export type Source = typeof sources.$inferSelect;
 export type Article = typeof articles.$inferSelect;
 export type Mention = typeof mentions.$inferSelect;
 export type Tag = typeof tags.$inferSelect;
+export type MentionComment = typeof mentionComments.$inferSelect;

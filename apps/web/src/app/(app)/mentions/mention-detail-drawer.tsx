@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Badge, Button, Field, Input, Select, Sheet, SheetContent, Skeleton } from "@cim/ui";
+import { Badge, Button, Field, Input, Select, Sheet, SheetContent, Skeleton, Textarea } from "@cim/ui";
 import type { MentionDetail, Tag } from "@cim/db";
 
 const SENTIMENT_TONE = {
@@ -17,11 +17,13 @@ export function MentionDetailDrawer({
   mentionId,
   members,
   existingTagNames,
+  currentUserId,
   onClose,
 }: {
   mentionId: string;
   members: AssignableMember[];
   existingTagNames: string[];
+  currentUserId: string;
   onClose: () => void;
 }) {
   const router = useRouter();
@@ -32,6 +34,9 @@ export function MentionDetailDrawer({
   const [tagInput, setTagInput] = useState("");
   const [isAddingTag, setIsAddingTag] = useState(false);
   const [tagError, setTagError] = useState<string | null>(null);
+  const [commentInput, setCommentInput] = useState("");
+  const [isAddingComment, setIsAddingComment] = useState(false);
+  const [commentError, setCommentError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -135,6 +140,47 @@ export function MentionDetailDrawer({
     }
     setDetail((prev) =>
       prev ? { ...prev, tags: prev.tags.filter((t) => t.id !== tagId) } : prev,
+    );
+    router.refresh();
+  }
+
+  async function addComment() {
+    const body = commentInput.trim();
+    if (!body) return;
+    setCommentError(null);
+    setIsAddingComment(true);
+    try {
+      const response = await fetch(`/api/mentions/${mentionId}/comments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ body }),
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        setCommentError(data.error ?? "Something went wrong. Please try again.");
+        return;
+      }
+      const comment = await response.json();
+      setDetail((prev) => (prev ? { ...prev, comments: [...prev.comments, comment] } : prev));
+      setCommentInput("");
+      router.refresh();
+    } finally {
+      setIsAddingComment(false);
+    }
+  }
+
+  async function removeComment(commentId: string) {
+    setCommentError(null);
+    const response = await fetch(`/api/mentions/${mentionId}/comments/${commentId}`, {
+      method: "DELETE",
+    });
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      setCommentError(data.error ?? "Something went wrong. Please try again.");
+      return;
+    }
+    setDetail((prev) =>
+      prev ? { ...prev, comments: prev.comments.filter((c) => c.id !== commentId) } : prev,
     );
     router.refresh();
   }
@@ -390,6 +436,67 @@ export function MentionDetailDrawer({
                   Duplicate
                 </Button>
               </div>
+            </section>
+
+            <section className="flex flex-col gap-2 border-t border-border pt-4">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Comments
+              </p>
+              {detail.comments.length > 0 ? (
+                <ul className="flex flex-col gap-3">
+                  {detail.comments.map((comment) => (
+                    <li key={comment.id} className="rounded-md border border-border p-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <p className="text-xs font-medium text-foreground">
+                          {comment.authorFirstName} {comment.authorLastName}
+                          <span className="ml-2 font-normal text-muted-foreground">
+                            {new Date(comment.createdAt).toLocaleString()}
+                          </span>
+                        </p>
+                        {comment.authorUserId === currentUserId ? (
+                          <button
+                            type="button"
+                            onClick={() => removeComment(comment.id)}
+                            aria-label="Delete comment"
+                            className="shrink-0 text-muted-foreground hover:text-foreground"
+                          >
+                            &times;
+                          </button>
+                        ) : null}
+                      </div>
+                      <p className="mt-1 whitespace-pre-wrap text-sm text-foreground">
+                        {comment.body}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-muted-foreground">No comments yet.</p>
+              )}
+              <div className="flex flex-col gap-2">
+                <Textarea
+                  value={commentInput}
+                  onChange={(e) => setCommentInput(e.target.value)}
+                  placeholder="Leave a comment for your team…"
+                  aria-label="Comment"
+                  disabled={isAddingComment}
+                />
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  className="self-start"
+                  disabled={isAddingComment || !commentInput.trim()}
+                  onClick={addComment}
+                >
+                  Comment
+                </Button>
+              </div>
+              {commentError ? (
+                <p role="alert" className="text-sm text-danger">
+                  {commentError}
+                </p>
+              ) : null}
             </section>
           </div>
         )}

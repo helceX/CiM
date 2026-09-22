@@ -84,3 +84,25 @@ export type GenerateInsightInput = {
   periodLabel: string;
   mentions: InsightSourceMention[];
 };
+
+/**
+ * docs/architecture/AI_ARCHITECTURE.md "Grounded, contextual assistant"
+ * (brief §97–98) — same Answer/Evidence/Confidence trust contract as
+ * every other AI surface. `evidenceMentionIds` may be empty (unlike
+ * `InsightOutput`'s, which requires at least one) — a question like "how
+ * many sources do I have configured?" or "no mentions matched" has a
+ * true, grounded answer that cites nothing.
+ */
+export const assistantAnswerOutputSchema = z.object({
+  answer: z.string().min(1).max(1200),
+  confidence: z.number().min(0).max(1),
+  evidenceMentionIds: z.array(z.string()).max(50),
+});
+export type AssistantAnswerOutput = z.infer<typeof assistantAnswerOutputSchema>;
+
+export type AssistantAnswerInput = {
+  question: string;
+  /** e.g. "Viewing the Dashboard" — what the user was looking at when they asked. */
+  screenContext: string;
+  mentions: InsightSourceMention[];
+};

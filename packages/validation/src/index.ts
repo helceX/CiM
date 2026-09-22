@@ -8,3 +8,4 @@ export * from "./members";
 export * from "./retention";
 export * from "./organizations";
 export * from "./mentions";
+export * from "./assistant";

@@ -146,4 +146,46 @@ describe("AnthropicAIProvider", () => {
     await provider.classifySentiment({ title: "T", text: "Body" });
     expect(create).toHaveBeenCalledTimes(1);
   });
+
+  it("filters answerQuestion evidence to mentions actually provided, dropping a hallucinated id", async () => {
+    const client = fakeClient(async () =>
+      toolUseMessage("answer_question", {
+        answer: "Coverage of the launch was positive.",
+        confidence: 0.75,
+        evidenceMentionIds: ["m1", "hallucinated-id"],
+      }),
+    );
+    const provider = new AnthropicAIProvider({ client });
+
+    const result = await provider.answerQuestion({
+      question: "How did the launch go?",
+      screenContext: "Viewing the Dashboard",
+      mentions: [
+        { id: "m1", title: "A", sourceName: "Wire", sentiment: "positive", priority: "normal", publishedAt: null },
+      ],
+    });
+    expect(result.evidenceMentionIds).toEqual(["m1"]);
+    expect(result.method).toBe("anthropic:claude-sonnet-5");
+  });
+
+  it("does not throw when answerQuestion's evidence is entirely hallucinated — an empty citation list is a valid answer", async () => {
+    const client = fakeClient(async () =>
+      toolUseMessage("answer_question", {
+        answer: "None of your recent mentions relate to that.",
+        confidence: 0.4,
+        evidenceMentionIds: ["hallucinated-id"],
+      }),
+    );
+    const provider = new AnthropicAIProvider({ client });
+
+    const result = await provider.answerQuestion({
+      question: "What's our competitor's revenue?",
+      screenContext: "Viewing the Dashboard",
+      mentions: [
+        { id: "m1", title: "A", sourceName: "Wire", sentiment: null, priority: "normal", publishedAt: null },
+      ],
+    });
+    expect(result.evidenceMentionIds).toEqual([]);
+    expect(result.answer).toMatch(/none of your recent mentions/i);
+  });
 });

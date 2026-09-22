@@ -92,7 +92,7 @@ generation (excluding soft-deleted organizations).
 | Monitoring queries (simple builder) | ✅ | | | |
 | Boolean / advanced query mode | ✅ | Query quality assistant | | |
 | Query preview ("test before save") | ✅ | | | |
-| Source connectors: Mock, RSS, Sitemap, Web | ✅ | API connector | Social/YouTube/Podcast/Broadcast | |
+| Source connectors: Mock, RSS, Sitemap, Web, API | ✅ | | Social/YouTube/Podcast/Broadcast | |
 | Ingestion pipeline (fetch→normalize→dedupe→index) | ✅ | | | |
 | Mentions list + detail drawer | ✅ (assign, tag) | Collaboration (comment) | | |
 | Deduplication / story clustering | Dedup only | Full story clustering | | |
@@ -105,7 +105,7 @@ generation (excluding soft-deleted organizations).
 | Dashboard: KPIs, trend, top stories, topics, sentiment | ✅ | Competitor comparison, source distribution depth | | |
 | Analytics deep views | Basic (volume, sentiment, sources) | Full matrix (§25 of brief) | Journalist/author, geography | |
 | AI: summary, sentiment, entities, topics | ✅ (grounded, evidence-linked) | Recommendations, executive brief automation | | |
-| AI Assistant (context-aware) | — | ✅ | Deeper agentic workflows | |
+| AI Assistant (context-aware) | — | ✅ (dashboard, single-turn Q&A) | Deeper agentic workflows, multi-turn | |
 | Crisis detection | — | Multi-signal detection | Predictive | |
 | Competitor tracking | — | ✅ | | |
 | AI Visibility (ChatGPT/Gemini/Claude/Perplexity tracking) | — | — | ✅ | |

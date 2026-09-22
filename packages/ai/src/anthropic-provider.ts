@@ -2,11 +2,14 @@ import Anthropic from "@anthropic-ai/sdk";
 import type { z } from "zod";
 import type { AIProvider } from "./provider";
 import {
+  assistantAnswerOutputSchema,
   entityOutputSchema,
   insightOutputSchema,
   sentimentOutputSchema,
   summaryOutputSchema,
   topicOutputSchema,
+  type AssistantAnswerInput,
+  type AssistantAnswerOutput,
   type ClassifySentimentInput,
   type DetectTopicsInput,
   type EntityOutput,
@@ -291,6 +294,51 @@ export class AnthropicAIProvider implements AIProvider {
         new Error("evidenceMentionIds did not match any mention actually provided"),
       );
     }
+
+    return { ...result, evidenceMentionIds, method: `anthropic:${this.synthesisModel}` };
+  }
+
+  async answerQuestion(input: AssistantAnswerInput): Promise<WithMethod<AssistantAnswerOutput>> {
+    const mentionList =
+      input.mentions.length === 0
+        ? "(no recent mentions available)"
+        : input.mentions
+            .map(
+              (m) =>
+                `- id=${m.id} | ${m.sourceName} | "${m.title}" | sentiment=${m.sentiment ?? "unclassified"} | priority=${m.priority} | published=${m.publishedAt ?? "unknown"}`,
+            )
+            .join("\n");
+
+    const result = await this.callTool({
+      model: this.synthesisModel,
+      maxTokens: 600,
+      toolName: "answer_question",
+      toolDescription: "Answer the user's question about their media coverage.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          answer: { type: "string" },
+          confidence: { type: "number", minimum: 0, maximum: 1 },
+          evidenceMentionIds: {
+            type: "array",
+            items: { type: "string" },
+            maxItems: 50,
+          },
+        },
+        required: ["answer", "confidence", "evidenceMentionIds"],
+      },
+      userQuery: [
+        `Screen context: ${input.screenContext}`,
+        `User's question: ${input.question}`,
+        "Answer using only the mentions listed below as evidence. If none of them are relevant, say so rather than guessing — do not answer from general knowledge about the subject.",
+        "Set evidenceMentionIds to the id values (from the list below) that support your answer — never an id not listed, and an empty array if your answer cites no specific mention.",
+      ].join(" "),
+      sourceContent: mentionList,
+      outputSchema: assistantAnswerOutputSchema,
+    });
+
+    const knownIds = new Set(input.mentions.map((m) => m.id));
+    const evidenceMentionIds = result.evidenceMentionIds.filter((id) => knownIds.has(id));
 
     return { ...result, evidenceMentionIds, method: `anthropic:${this.synthesisModel}` };
   }

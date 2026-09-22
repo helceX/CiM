@@ -12,6 +12,7 @@ import {
 import { requireOrgContext } from "@/lib/tenant";
 import { KpiRow } from "@/components/kpi-row";
 import { MentionTrendChart } from "@/components/charts/mention-trend-chart";
+import { AiAssistantPanel } from "./ai-assistant-panel";
 
 const SENTIMENT_TONE = {
   positive: "success",
@@ -88,6 +89,8 @@ export default async function DashboardPage() {
           </div>
         </section>
       ) : null}
+
+      <AiAssistantPanel />
 
       {summary.totalMentions > 0 ? (
         <section className="rounded-lg border border-border p-4">

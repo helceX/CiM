@@ -1,4 +1,6 @@
 import type {
+  AssistantAnswerInput,
+  AssistantAnswerOutput,
   ClassifySentimentInput,
   DetectTopicsInput,
   EntityOutput,
@@ -29,4 +31,5 @@ export interface AIProvider {
   detectTopics(input: DetectTopicsInput): Promise<WithMethod<TopicOutput>>;
   generateSummary(input: GenerateSummaryInput): Promise<WithMethod<SummaryOutput>>;
   generateInsight(input: GenerateInsightInput): Promise<WithMethod<InsightOutput>>;
+  answerQuestion(input: AssistantAnswerInput): Promise<WithMethod<AssistantAnswerOutput>>;
 }

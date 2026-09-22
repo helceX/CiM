@@ -47,6 +47,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@cim/ai':
+        specifier: workspace:*
+        version: link:../../packages/ai
       '@cim/config':
         specifier: workspace:*
         version: link:../../packages/config

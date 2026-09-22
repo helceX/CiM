@@ -90,6 +90,51 @@ export async function listMentionsForInsightPeriod(
   }));
 }
 
+/**
+ * Grounding for the AI Assistant (docs/architecture/AI_ARCHITECTURE.md
+ * "Grounded, contextual assistant") — the org's most recent mentions,
+ * capped the same way `listMentionsForInsightPeriod` caps synthesis input
+ * (AI_ARCHITECTURE.md §Cost control), just without a time window: a
+ * question can reasonably be about anything still recent enough to matter,
+ * not only the last 24h.
+ */
+export async function listRecentMentionsForAssistant(
+  db: Db,
+  organizationId: OrganizationId,
+  options: { projectId?: string; limit?: number } = {},
+): Promise<InsightMentionRow[]> {
+  const limit = options.limit ?? 30;
+  const rows = await db
+    .select({
+      id: mentions.id,
+      title: articles.title,
+      sourceName: sources.name,
+      sentiment: mentions.sentiment,
+      priority: mentions.priority,
+      publishedAt: articles.publishedAt,
+    })
+    .from(mentions)
+    .innerJoin(articles, eq(articles.id, mentions.articleId))
+    .innerJoin(sources, eq(sources.id, articles.sourceId))
+    .where(
+      and(
+        eq(mentions.organizationId, organizationId),
+        options.projectId ? eq(mentions.projectId, options.projectId) : undefined,
+      ),
+    )
+    .orderBy(desc(mentions.createdAt))
+    .limit(limit);
+
+  return rows.map((row) => ({
+    id: row.id,
+    title: row.title,
+    sourceName: row.sourceName,
+    sentiment: (row.sentiment as InsightMentionRow["sentiment"]) ?? null,
+    priority: row.priority,
+    publishedAt: row.publishedAt ? row.publishedAt.toISOString() : null,
+  }));
+}
+
 export async function createInsight(
   db: Db,
   organizationId: OrganizationId,

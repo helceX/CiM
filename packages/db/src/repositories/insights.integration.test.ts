@@ -6,7 +6,12 @@ import { organizations, workspaces } from "../schema/index";
 import { createProject } from "./projects";
 import { createMonitoringQuery } from "./monitoring-queries";
 import { createMentionIfNotExists } from "./mentions";
-import { createInsight, getLatestInsight, listMentionsForInsightPeriod } from "./insights";
+import {
+  createInsight,
+  getLatestInsight,
+  listMentionsForInsightPeriod,
+  listRecentMentionsForAssistant,
+} from "./insights";
 import { asOrganizationId } from "./tenant-scope";
 
 describe("insights repository (integration)", () => {
@@ -120,5 +125,16 @@ describe("insights repository (integration)", () => {
   it("returns undefined when no insight of that kind exists yet, never a fabricated placeholder", async () => {
     const latest = await getLatestInsight(db, organizationId, projectId, "risk");
     expect(latest).toBeUndefined();
+  });
+
+  it("grounds the AI Assistant with the org's recent mentions regardless of age", async () => {
+    const rows = await listRecentMentionsForAssistant(db, organizationId);
+    expect(rows.some((r) => r.id === mentionId)).toBe(true);
+  });
+
+  it("never grounds the AI Assistant with another organization's mentions", async () => {
+    const otherOrgId = asOrganizationId("00000000-0000-0000-0000-000000000000");
+    const rows = await listRecentMentionsForAssistant(db, otherOrgId);
+    expect(rows.some((r) => r.id === mentionId)).toBe(false);
   });
 });

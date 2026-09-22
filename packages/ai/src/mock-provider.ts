@@ -1,5 +1,7 @@
 import type { AIProvider } from "./provider";
 import type {
+  AssistantAnswerInput,
+  AssistantAnswerOutput,
   ClassifySentimentInput,
   DetectTopicsInput,
   EntityOutput,
@@ -169,6 +171,46 @@ export class MockAIProvider implements AIProvider {
       summary,
       confidence: 0.9,
       evidenceMentionIds: input.mentions.slice(0, 50).map((m) => m.id),
+      method: METHOD,
+    };
+  }
+
+  async answerQuestion(input: AssistantAnswerInput): Promise<WithMethod<AssistantAnswerOutput>> {
+    const questionWords = new Set(tokenizeWords(input.question));
+    const scored = input.mentions
+      .map((mention) => {
+        const overlap = tokenizeWords(`${mention.title} ${mention.sourceName}`).filter((w) =>
+          questionWords.has(w),
+        ).length;
+        return { mention, overlap };
+      })
+      .filter((s) => s.overlap > 0)
+      .sort((a, b) => b.overlap - a.overlap);
+
+    if (scored.length === 0) {
+      return {
+        answer:
+          input.mentions.length === 0
+            ? "I don't have any mentions to check yet — nothing has been crawled for this project."
+            : `I couldn't find any of your ${input.mentions.length} recent mentions that relate to that question.`,
+        confidence: 0.3,
+        evidenceMentionIds: [],
+        method: METHOD,
+      };
+    }
+
+    const top = scored.slice(0, 5);
+    const positive = top.filter((s) => s.mention.sentiment === "positive").length;
+    const negative = top.filter((s) => s.mention.sentiment === "negative").length;
+    const answer =
+      `Found ${top.length} relevant mention${top.length === 1 ? "" : "s"}: ` +
+      top.map((s) => `"${s.mention.title}" (${s.mention.sourceName})`).join(", ") +
+      (positive || negative ? ` — ${positive} positive, ${negative} negative.` : ".");
+
+    return {
+      answer,
+      confidence: Math.min(0.8, 0.4 + top[0]!.overlap * 0.1),
+      evidenceMentionIds: top.map((s) => s.mention.id),
       method: METHOD,
     };
   }

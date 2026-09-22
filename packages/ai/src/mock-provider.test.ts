@@ -99,4 +99,56 @@ describe("MockAIProvider", () => {
       provider.generateInsight({ periodLabel: "today", mentions: [] }),
     ).rejects.toThrow();
   });
+
+  describe("answerQuestion", () => {
+    const mentions = [
+      {
+        id: "m1",
+        title: "Northwind launches new product",
+        sourceName: "Daily Tech Wire",
+        sentiment: "positive" as const,
+        priority: "normal" as const,
+        publishedAt: null,
+      },
+      {
+        id: "m2",
+        title: "Unrelated regional weather report",
+        sourceName: "Local Gazette",
+        sentiment: "neutral" as const,
+        priority: "low" as const,
+        publishedAt: null,
+      },
+    ];
+
+    it("grounds its answer only in mentions whose text overlaps the question", async () => {
+      const result = await provider.answerQuestion({
+        question: "What's happening with our product launch?",
+        screenContext: "Viewing the Dashboard",
+        mentions,
+      });
+      expect(result.evidenceMentionIds).toEqual(["m1"]);
+      expect(result.answer).toContain("Northwind launches new product");
+      expect(result.method).toBe("mock-heuristic-v1");
+    });
+
+    it("cites no evidence and says so when nothing matches", async () => {
+      const result = await provider.answerQuestion({
+        question: "What is our competitor's stock price?",
+        screenContext: "Viewing the Dashboard",
+        mentions,
+      });
+      expect(result.evidenceMentionIds).toEqual([]);
+      expect(result.answer).toMatch(/couldn't find/i);
+    });
+
+    it("says there is nothing to check when there are no mentions at all", async () => {
+      const result = await provider.answerQuestion({
+        question: "Anything new?",
+        screenContext: "Viewing the Dashboard",
+        mentions: [],
+      });
+      expect(result.evidenceMentionIds).toEqual([]);
+      expect(result.answer).toMatch(/nothing has been crawled/i);
+    });
+  });
 });

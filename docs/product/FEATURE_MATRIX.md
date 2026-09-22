@@ -112,7 +112,7 @@ generation (excluding soft-deleted organizations).
 | Admin panel (orgs, jobs, source health, system health) | ✅ (core) | Full observability views | | |
 | Audit log | ✅ | | | |
 | Data retention policy engine | Policy field only | Enforcement worker | | |
-| API keys + public API | Internal only | | v1 public API | |
+| API keys + public API | ✅ (internal, scoped, revocable) | | v1 public API | |
 | Webhooks | — | ✅ | | |
 | SSO/SAML/OIDC | Auth abstraction only | | Enterprise SSO | |
 | Billing | Usage counters only | | Plan enforcement | |

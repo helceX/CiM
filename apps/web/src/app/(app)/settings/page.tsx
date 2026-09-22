@@ -3,6 +3,7 @@ import {
   db,
   getOrganizationWebhookUrl,
   getRetentionPolicy,
+  listApiKeys,
   listMembersForOrganization,
 } from "@cim/db";
 import { requireOrgContext } from "@/lib/tenant";
@@ -14,16 +15,19 @@ import {
 import { MembersSection } from "./members-section";
 import { RetentionSection } from "./retention-section";
 import { WebhookSection } from "./webhook-section";
+import { ApiKeysSection } from "./api-keys-section";
 
 export default async function SettingsPage() {
   const context = await requireOrgContext();
-  const [members, retentionPolicy, webhookUrl] = await Promise.all([
+  const [members, retentionPolicy, webhookUrl, apiKeys] = await Promise.all([
     listMembersForOrganization(db, context.organizationId),
     getRetentionPolicy(db, context.organizationId),
     getOrganizationWebhookUrl(db, context.organizationId),
+    listApiKeys(db, context.organizationId),
   ]);
   const canManageMembers = can(context.role, "org:manage_members");
   const canManageSettings = can(context.role, "org:manage_settings");
+  const canManageApiKeys = can(context.role, "api_keys:manage");
 
   return (
     <div className="flex max-w-2xl flex-col gap-8">
@@ -51,6 +55,16 @@ export default async function SettingsPage() {
       />
 
       <WebhookSection webhookUrl={webhookUrl} canManageSettings={canManageSettings} />
+
+      <ApiKeysSection
+        apiKeys={apiKeys.map((key) => ({
+          ...key,
+          lastUsedAt: key.lastUsedAt ? key.lastUsedAt.toISOString() : null,
+          revokedAt: key.revokedAt ? key.revokedAt.toISOString() : null,
+          createdAt: key.createdAt.toISOString(),
+        }))}
+        canManageApiKeys={canManageApiKeys}
+      />
 
       <section>
         <h2 className="text-sm font-semibold text-foreground">Your data</h2>

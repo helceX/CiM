@@ -3,6 +3,8 @@ import {
   asOrganizationId,
   db,
   listMembershipsForUser,
+  resolveApiKeyByRawKey,
+  touchApiKeyLastUsed,
   type OrganizationId,
 } from "@cim/db";
 import { can, isOrgRole, type OrgRole, type Permission } from "@cim/core";
@@ -64,4 +66,30 @@ export async function requirePermission(permission: Permission): Promise<OrgCont
     throw new Error("FORBIDDEN");
   }
   return context;
+}
+
+/**
+ * docs/architecture/SECURITY.md §83 "same authorization path as
+ * session-based requests" — an API key's scope is checked against the
+ * exact same `Permission` enum a session role is checked against
+ * (`can()`, above), just via array membership on the key's own `scopes`
+ * instead of a role lookup. Returns null (never throws) on anything short
+ * of "valid, unrevoked key whose scopes include this permission" — a
+ * route calls this first and falls back to `requireOrgContext`/
+ * `requirePermission` when it returns null, so a request presenting
+ * neither still gets that path's ordinary 401.
+ */
+export async function resolveApiKeyAuth(
+  request: Request,
+  permission: Permission,
+): Promise<{ organizationId: OrganizationId } | null> {
+  const header = request.headers.get("authorization");
+  const match = header?.match(/^Bearer\s+(\S+)$/i);
+  if (!match?.[1]) return null;
+
+  const resolved = await resolveApiKeyByRawKey(db, match[1]);
+  if (!resolved || !resolved.scopes.includes(permission)) return null;
+
+  await touchApiKeyLastUsed(db, resolved.id);
+  return { organizationId: resolved.organizationId };
 }

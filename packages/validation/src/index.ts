@@ -9,3 +9,4 @@ export * from "./retention";
 export * from "./organizations";
 export * from "./mentions";
 export * from "./assistant";
+export * from "./api-keys";

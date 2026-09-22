@@ -95,3 +95,42 @@ export const projects = pgTable(
     index("projects_workspace_idx").on(table.workspaceId),
   ],
 );
+
+/**
+ * docs/architecture/SECURITY.md §83 / docs/architecture/DATA_MODEL.md
+ * "ApiKey" — FEATURE_MATRIX.md's "API keys + public API" row (MVP:
+ * "Internal only"; a self-serve v1 public API is its own later phase).
+ * Only `hashedSecret` is ever stored — the raw secret is returned once,
+ * at creation, and never again (same discipline as verification/reset
+ * tokens, `packages/core/tokens.ts`). `scopes` reuses `Permission`
+ * (`packages/core/authz.ts`) rather than inventing a parallel taxonomy —
+ * SECURITY.md's own "same authorization path as session-based requests"
+ * requirement means an API key's `read:mentions`-style scope IS a
+ * `Permission` string, just checked by array membership instead of
+ * `can(role, permission)`.
+ */
+export const apiKeys = pgTable(
+  "api_keys",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    hashedSecret: text("hashed_secret").notNull(),
+    scopes: text("scopes").array().notNull(),
+    createdByUserId: uuid("created_by_user_id")
+      .notNull()
+      .references(() => users.id),
+    lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+    // Revoked, not deleted — a revoked key stays visible in the list
+    // (with its scopes/creator) so an admin can see it was issued and
+    // pulled, the same append-only-history spirit as an AuditLog row.
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("api_keys_hashed_secret_uidx").on(table.hashedSecret),
+    index("api_keys_org_idx").on(table.organizationId),
+  ],
+);

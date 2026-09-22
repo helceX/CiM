@@ -1,4 +1,5 @@
 import { and, count, desc, eq, isNull, sql } from "drizzle-orm";
+import { getMonitoringQueryLimit } from "@cim/core";
 import type { Db } from "../client";
 import { featureUsageSnapshots, subscriptions } from "../schema/billing";
 import { organizationMemberships, organizations } from "../schema/organizations";
@@ -18,6 +19,38 @@ export async function getSubscription(db: Db, organizationId: OrganizationId): P
     .where(eq(subscriptions.organizationId, organizationId))
     .limit(1);
   return row ?? DEFAULT_SUBSCRIPTION;
+}
+
+export type PlanLimitCheck = { ok: true } | { ok: false; limit: number };
+
+/**
+ * docs/product/FEATURE_MATRIX.md P3 "Billing: Plan enforcement" — the
+ * one plan limit this codebase actually enforces (@cim/core's
+ * plan-limits.ts). Counts live, never from the daily
+ * captureFeatureUsageSnapshot — that can be up to 24h stale, which
+ * would wrongly block an org that just deleted its only query, or
+ * wrongly admit one that just hit the cap.
+ */
+export async function checkMonitoringQueryLimit(
+  db: Db,
+  organizationId: OrganizationId,
+): Promise<PlanLimitCheck> {
+  const { plan } = await getSubscription(db, organizationId);
+  const limit = getMonitoringQueryLimit(plan);
+  if (limit === null) return { ok: true };
+
+  const [row] = await db
+    .select({ value: count() })
+    .from(monitoringQueries)
+    .where(
+      and(
+        eq(monitoringQueries.organizationId, organizationId),
+        eq(monitoringQueries.status, "active"),
+        isNull(monitoringQueries.deletedAt),
+      ),
+    );
+  const current = Number(row?.value ?? 0);
+  return current >= limit ? { ok: false, limit } : { ok: true };
 }
 
 export type OrgRef = { organizationId: OrganizationId };

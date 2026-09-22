@@ -11,6 +11,7 @@ import { createMonitoringQuery } from "./monitoring-queries";
 import { createMentionIfNotExists } from "./mentions";
 import {
   captureFeatureUsageSnapshot,
+  checkMonitoringQueryLimit,
   getLatestFeatureUsage,
   getSubscription,
   listActiveOrganizationsForUsageCapture,
@@ -163,5 +164,65 @@ describe("billing repository (integration)", () => {
   it("includes this organization in the cross-tenant capture fan-out", async () => {
     const orgs = await listActiveOrganizationsForUsageCapture(db);
     expect(orgs.some((o) => o.organizationId === organizationId)).toBe(true);
+  });
+});
+
+/**
+ * docs/product/FEATURE_MATRIX.md P3 "Billing: Plan enforcement" — its
+ * own isolated org/query fixture, not the shared one above (whose plan
+ * changes across tests and whose query count other tests depend on).
+ */
+describe("checkMonitoringQueryLimit (integration)", () => {
+  let organizationId: ReturnType<typeof asOrganizationId>;
+  let projectId: string;
+
+  beforeAll(async () => {
+    const [org] = await db
+      .insert(organizations)
+      .values({ name: "Plan Limit Test Co", slug: `plan-limit-test-${Date.now()}` })
+      .returning();
+    if (!org) throw new Error("failed to create test organization");
+    organizationId = asOrganizationId(org.id);
+
+    const [workspace] = await db
+      .insert(workspaces)
+      .values({ organizationId, name: "Default" })
+      .returning();
+    if (!workspace) throw new Error("failed to create test workspace");
+
+    const project = await createProject(db, organizationId, {
+      workspaceId: workspace.id,
+      name: "Plan Limit Test Project",
+    });
+    projectId = project.id;
+  });
+
+  afterAll(async () => {
+    await db.delete(organizations).where(eq(organizations.id, organizationId));
+  });
+
+  it("allows the first monitoring query on the (default) free plan", async () => {
+    const check = await checkMonitoringQueryLimit(db, organizationId);
+    expect(check).toEqual({ ok: true });
+  });
+
+  it("blocks a second monitoring query once the free plan's cap is reached", async () => {
+    await createMonitoringQuery(db, organizationId, {
+      projectId,
+      name: "First free-plan query",
+      queryAst: { include: ["Acme"], exclude: [], exactPhrases: [] },
+      booleanQuery: "Acme",
+      sourceTypes: ["news"],
+    });
+
+    const check = await checkMonitoringQueryLimit(db, organizationId);
+    expect(check).toEqual({ ok: false, limit: 1 });
+  });
+
+  it("is unlimited once the organization is on a paid plan", async () => {
+    await db.insert(subscriptions).values({ organizationId, plan: "pro" });
+
+    const check = await checkMonitoringQueryLimit(db, organizationId);
+    expect(check).toEqual({ ok: true });
   });
 });

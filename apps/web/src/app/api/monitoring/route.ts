@@ -1,7 +1,13 @@
 import { NextResponse } from "next/server";
 import { createMonitoringQuerySchema } from "@cim/validation";
 import { astToBooleanQuery, expandSourceCategoriesToTypes } from "@cim/core";
-import { createMonitoringQuery, getProject, recordAuditLog, db } from "@cim/db";
+import {
+  checkMonitoringQueryLimit,
+  createMonitoringQuery,
+  getProject,
+  recordAuditLog,
+  db,
+} from "@cim/db";
 import { requireOrgContext } from "@/lib/tenant";
 
 export async function POST(request: Request) {
@@ -32,6 +38,16 @@ export async function POST(request: Request) {
   const ast = { include: input.include, exclude: input.exclude, exactPhrases: input.exactPhrases };
   if (ast.include.length === 0 && ast.exactPhrases.length === 0 && ast.exclude.length === 0) {
     return NextResponse.json({ error: "Add at least one include, exclude, or exact-phrase term" }, { status: 400 });
+  }
+
+  const limitCheck = await checkMonitoringQueryLimit(db, context.organizationId);
+  if (!limitCheck.ok) {
+    return NextResponse.json(
+      {
+        error: `Your plan allows up to ${limitCheck.limit} monitoring quer${limitCheck.limit === 1 ? "y" : "ies"}. Upgrade to add more.`,
+      },
+      { status: 409 },
+    );
   }
 
   const query = await createMonitoringQuery(db, context.organizationId, {

@@ -1,4 +1,6 @@
+import { eq } from "drizzle-orm";
 import { test, expect } from "@playwright/test";
+import { db, schema } from "@cim/db";
 import { registerAndOnboard } from "./helpers";
 import { simulateCrawl } from "./simulate";
 
@@ -13,7 +15,18 @@ import { simulateCrawl } from "./simulate";
 test("create a monitoring query, preview real matches, save it, and see it produce a mention", async ({
   page,
 }) => {
-  await registerAndOnboard(page, { keyword: "unrelated onboarding term" });
+  const owner = await registerAndOnboard(page, { keyword: "unrelated onboarding term" });
+
+  // Onboarding itself already created this org's first monitoring query
+  // — its Free-plan cap of one (FEATURE_MATRIX.md "Billing: Plan
+  // enforcement") would otherwise block the second query this test is
+  // actually about, the same upgrade a real user would need.
+  const [org] = await db
+    .select()
+    .from(schema.organizations)
+    .where(eq(schema.organizations.name, owner.companyName));
+  if (!org) throw new Error("e2e fixture organization not found");
+  await db.insert(schema.subscriptions).values({ organizationId: org.id, plan: "pro" });
 
   await page.goto("/monitoring/new");
   await page.getByLabel("Name").fill("Daily Tech Wire watch");

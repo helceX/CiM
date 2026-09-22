@@ -23,6 +23,7 @@ describe("renderReportCsv", () => {
             mention: { ...fakeReportData().topStories[0]!.mention, sentiment: null },
             article: fakeReportData().topStories[0]!.article,
             source: fakeReportData().topStories[0]!.source,
+            assigneeName: null,
           },
         ],
       }),

@@ -1,15 +1,35 @@
-import { and, count, desc, eq, gte, ilike, sql } from "drizzle-orm";
+import { and, count, desc, eq, gte, ilike, isNull, sql } from "drizzle-orm";
 import type { Db } from "../client";
 import { articles, mentions, sources } from "../schema/content";
 import { monitoringQueries } from "../schema/monitoring";
+import { organizationMemberships } from "../schema/organizations";
+import { users } from "../schema/users";
 import type { OrganizationId } from "./tenant-scope";
-import { listMentionEntities, listMentionTopics, type MentionEntityRow, type MentionTopicRow } from "./ai";
+import {
+  listMentionEntities,
+  listMentionTopics,
+  type MentionEntityRow,
+  type MentionTopicRow,
+} from "./ai";
 
 export type MentionListItem = {
   mention: typeof mentions.$inferSelect;
   article: typeof articles.$inferSelect;
   source: typeof sources.$inferSelect;
+  assigneeName: string | null;
 };
+
+/**
+ * The `case when` guards against a left join's own null-propagation
+ * surprise: `firstName || ' ' || lastName` on a genuinely unassigned row
+ * is null either way, but being explicit means this reads the same
+ * whether or not the join columns happen to be non-null for other
+ * reasons later.
+ */
+const assigneeNameColumn = sql<
+  string | null
+>`case when ${mentions.assignedToUserId} is null
+  then null else ${users.firstName} || ' ' || ${users.lastName} end`;
 
 export async function listRecentMentions(
   db: Db,
@@ -18,10 +38,16 @@ export async function listRecentMentions(
 ): Promise<MentionListItem[]> {
   const limit = options.limit ?? 20;
   return db
-    .select({ mention: mentions, article: articles, source: sources })
+    .select({
+      mention: mentions,
+      article: articles,
+      source: sources,
+      assigneeName: assigneeNameColumn,
+    })
     .from(mentions)
     .innerJoin(articles, eq(articles.id, mentions.articleId))
     .innerJoin(sources, eq(sources.id, articles.sourceId))
+    .leftJoin(users, eq(users.id, mentions.assignedToUserId))
     .where(
       and(
         eq(mentions.organizationId, organizationId),
@@ -70,6 +96,11 @@ export type MentionFilters = {
   search?: string;
   sinceDays?: number;
   includeArchived?: boolean;
+  // Resolved server-side (e.g. "assigned to me" -> the caller's own
+  // userId) — never a raw value read straight off the request, same
+  // discipline as organizationId itself (ADR-001).
+  assignedToUserId?: string;
+  unassignedOnly?: boolean;
 };
 
 export type MentionsPage = {
@@ -79,7 +110,10 @@ export type MentionsPage = {
   pageSize: number;
 };
 
-function mentionFiltersToWhere(organizationId: OrganizationId, filters: MentionFilters) {
+function mentionFiltersToWhere(
+  organizationId: OrganizationId,
+  filters: MentionFilters,
+) {
   return and(
     eq(mentions.organizationId, organizationId),
     // Mentions marked irrelevant/duplicate (setMentionFeedback -> status
@@ -94,11 +128,18 @@ function mentionFiltersToWhere(organizationId: OrganizationId, filters: MentionF
         ? eq(mentions.sentiment, filters.sentiment)
         : undefined,
     filters.sinceDays
-      ? gte(mentions.createdAt, sql`now() - (${filters.sinceDays}::text || ' days')::interval`)
+      ? gte(
+          mentions.createdAt,
+          sql`now() - (${filters.sinceDays}::text || ' days')::interval`,
+        )
       : undefined,
     // Substring match on title — the MVP baseline ahead of the tsvector/
     // Meilisearch tiers in docs/architecture/SEARCH.md (ADR-002).
     filters.search ? ilike(articles.title, `%${filters.search}%`) : undefined,
+    filters.assignedToUserId
+      ? eq(mentions.assignedToUserId, filters.assignedToUserId)
+      : undefined,
+    filters.unassignedOnly ? isNull(mentions.assignedToUserId) : undefined,
   );
 }
 
@@ -118,10 +159,16 @@ export async function listMentionsFiltered(
 
   const [items, [countRow]] = await Promise.all([
     db
-      .select({ mention: mentions, article: articles, source: sources })
+      .select({
+        mention: mentions,
+        article: articles,
+        source: sources,
+        assigneeName: assigneeNameColumn,
+      })
       .from(mentions)
       .innerJoin(articles, eq(articles.id, mentions.articleId))
       .innerJoin(sources, eq(sources.id, articles.sourceId))
+      .leftJoin(users, eq(users.id, mentions.assignedToUserId))
       .where(where)
       .orderBy(desc(mentions.createdAt))
       .limit(pagination.pageSize)
@@ -159,11 +206,18 @@ export async function getMentionDetail(
   mentionId: string,
 ): Promise<MentionDetail | undefined> {
   const [row] = await db
-    .select({ mention: mentions, article: articles, source: sources, queryName: monitoringQueries.name })
+    .select({
+      mention: mentions,
+      article: articles,
+      source: sources,
+      queryName: monitoringQueries.name,
+      assigneeName: assigneeNameColumn,
+    })
     .from(mentions)
     .innerJoin(articles, eq(articles.id, mentions.articleId))
     .innerJoin(sources, eq(sources.id, articles.sourceId))
     .innerJoin(monitoringQueries, eq(monitoringQueries.id, mentions.queryId))
+    .leftJoin(users, eq(users.id, mentions.assignedToUserId))
     .where(and(eq(mentions.organizationId, organizationId), eq(mentions.id, mentionId)))
     .limit(1);
   if (!row) return undefined;
@@ -173,6 +227,49 @@ export async function getMentionDetail(
     listMentionTopics(db, mentionId),
   ]);
   return { ...row, aiEntities, aiTopics };
+}
+
+export type AssignMentionResult = "ok" | "not_found" | "invalid_assignee";
+
+/**
+ * docs/product/FEATURE_MATRIX.md P2 "Collaboration (assign/comment/tag)"
+ * — `mentions.assignedToUserId` has existed since Phase 1's schema but was
+ * never wired to a mutation until now; this is the "assign" slice of that
+ * row (comment/tag are their own, separately-scoped features).
+ * `assignedToUserId: null` unassigns. A non-null value must name an
+ * *active* member of this organization — checked here, not just left to
+ * the caller's UI, the same defense-in-depth every tenant-scoped mutation
+ * in this codebase applies (ADR-001): a crafted request naming an
+ * arbitrary user id (a former member, or one from an entirely different
+ * organization) is rejected rather than silently stored.
+ */
+export async function assignMention(
+  db: Db,
+  organizationId: OrganizationId,
+  mentionId: string,
+  assignedToUserId: string | null,
+): Promise<AssignMentionResult> {
+  if (assignedToUserId) {
+    const [membership] = await db
+      .select({ id: organizationMemberships.id })
+      .from(organizationMemberships)
+      .where(
+        and(
+          eq(organizationMemberships.organizationId, organizationId),
+          eq(organizationMemberships.userId, assignedToUserId),
+          eq(organizationMemberships.status, "active"),
+        ),
+      )
+      .limit(1);
+    if (!membership) return "invalid_assignee";
+  }
+
+  const result = await db
+    .update(mentions)
+    .set({ assignedToUserId })
+    .where(and(eq(mentions.organizationId, organizationId), eq(mentions.id, mentionId)))
+    .returning({ id: mentions.id });
+  return result.length > 0 ? "ok" : "not_found";
 }
 
 export type MentionFeedback = "relevant" | "irrelevant" | "duplicate";

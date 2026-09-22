@@ -2,10 +2,12 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { db } from "../client";
 import { articles, mentions, sources } from "../schema/content";
-import { organizations, workspaces } from "../schema/index";
+import { organizations, organizationMemberships, workspaces } from "../schema/index";
+import { users } from "../schema/users";
 import { createProject } from "./projects";
 import { createMonitoringQuery } from "./monitoring-queries";
 import {
+  assignMention,
   getMentionDetail,
   listMentionsFiltered,
   setMentionFeedback,
@@ -23,6 +25,8 @@ describe("mentions repository (integration)", () => {
   let projectId: string;
   let sourceId: string;
   let queryId: string;
+  let memberUserId: string;
+  let outsiderUserId: string;
   const mentionIds: string[] = [];
 
   beforeAll(async () => {
@@ -68,10 +72,26 @@ describe("mentions repository (integration)", () => {
     queryId = query.id;
 
     const seedArticles = [
-      { title: "Positive story about the brand", sentiment: "positive" as const, priority: "high" as const },
-      { title: "Neutral coverage piece", sentiment: "neutral" as const, priority: "normal" as const },
-      { title: "Negative press about a recall", sentiment: "negative" as const, priority: "critical" as const },
-      { title: "Unclassified mention with no sentiment yet", sentiment: null, priority: "low" as const },
+      {
+        title: "Positive story about the brand",
+        sentiment: "positive" as const,
+        priority: "high" as const,
+      },
+      {
+        title: "Neutral coverage piece",
+        sentiment: "neutral" as const,
+        priority: "normal" as const,
+      },
+      {
+        title: "Negative press about a recall",
+        sentiment: "negative" as const,
+        priority: "critical" as const,
+      },
+      {
+        title: "Unclassified mention with no sentiment yet",
+        sentiment: null,
+        priority: "low" as const,
+      },
     ];
 
     for (const [i, def] of seedArticles.entries()) {
@@ -102,11 +122,45 @@ describe("mentions repository (integration)", () => {
       if (!mention) throw new Error("failed to create test mention");
       mentionIds.push(mention.id);
     }
+
+    const [member] = await db
+      .insert(users)
+      .values({
+        email: `mentions-test-member-${Date.now()}@example.com`,
+        passwordHash: "unused-in-this-test",
+        firstName: "Ada",
+        lastName: "Reviewer",
+        emailVerifiedAt: new Date(),
+      })
+      .returning();
+    if (!member) throw new Error("failed to create test member user");
+    memberUserId = member.id;
+    await db.insert(organizationMemberships).values({
+      organizationId,
+      userId: memberUserId,
+      role: "analyst",
+      status: "active",
+    });
+
+    const [outsider] = await db
+      .insert(users)
+      .values({
+        email: `mentions-test-outsider-${Date.now()}@example.com`,
+        passwordHash: "unused-in-this-test",
+        firstName: "Outside",
+        lastName: "Person",
+        emailVerifiedAt: new Date(),
+      })
+      .returning();
+    if (!outsider) throw new Error("failed to create test outsider user");
+    outsiderUserId = outsider.id;
   });
 
   afterAll(async () => {
     await db.delete(organizations).where(eq(organizations.id, organizationId));
     await db.delete(sources).where(eq(sources.id, sourceId));
+    await db.delete(users).where(eq(users.id, memberUserId));
+    await db.delete(users).where(eq(users.id, outsiderUserId));
   });
 
   it("filters by sentiment", async () => {
@@ -153,8 +207,18 @@ describe("mentions repository (integration)", () => {
   });
 
   it("paginates results", async () => {
-    const page1 = await listMentionsFiltered(db, organizationId, {}, { page: 1, pageSize: 2 });
-    const page2 = await listMentionsFiltered(db, organizationId, {}, { page: 2, pageSize: 2 });
+    const page1 = await listMentionsFiltered(
+      db,
+      organizationId,
+      {},
+      { page: 1, pageSize: 2 },
+    );
+    const page2 = await listMentionsFiltered(
+      db,
+      organizationId,
+      {},
+      { page: 2, pageSize: 2 },
+    );
     expect(page1.items).toHaveLength(2);
     expect(page2.items).toHaveLength(2);
     expect(page1.totalCount).toBe(4);
@@ -163,7 +227,12 @@ describe("mentions repository (integration)", () => {
 
   it("never returns another organization's mentions", async () => {
     const otherOrgId = asOrganizationId("00000000-0000-0000-0000-000000000000");
-    const result = await listMentionsFiltered(db, otherOrgId, {}, { page: 1, pageSize: 10 });
+    const result = await listMentionsFiltered(
+      db,
+      otherOrgId,
+      {},
+      { page: 1, pageSize: 10 },
+    );
     expect(result.totalCount).toBe(0);
   });
 
@@ -178,14 +247,24 @@ describe("mentions repository (integration)", () => {
   it("records feedback and moves the mention out of the new/reviewed queue when irrelevant", async () => {
     const mentionId = mentionIds[1];
     if (!mentionId) throw new Error("no seeded mention");
-    const updated = await setMentionFeedback(db, organizationId, mentionId, "irrelevant");
+    const updated = await setMentionFeedback(
+      db,
+      organizationId,
+      mentionId,
+      "irrelevant",
+    );
     expect(updated).toBe(true);
 
     const [row] = await db.select().from(mentions).where(eq(mentions.id, mentionId));
     expect(row?.reviewFeedback).toBe("irrelevant");
     expect(row?.status).toBe("archived");
 
-    const defaultView = await listMentionsFiltered(db, organizationId, {}, { page: 1, pageSize: 10 });
+    const defaultView = await listMentionsFiltered(
+      db,
+      organizationId,
+      {},
+      { page: 1, pageSize: 10 },
+    );
     expect(defaultView.items.some((item) => item.mention.id === mentionId)).toBe(false);
 
     const withArchived = await listMentionsFiltered(
@@ -203,5 +282,77 @@ describe("mentions repository (integration)", () => {
     const otherOrgId = asOrganizationId("00000000-0000-0000-0000-000000000000");
     const updated = await setMentionFeedback(db, otherOrgId, mentionId, "relevant");
     expect(updated).toBe(false);
+  });
+
+  it("assigns a mention to an active org member and surfaces the name via detail/list", async () => {
+    const mentionId = mentionIds[3];
+    if (!mentionId) throw new Error("no seeded mention");
+
+    const result = await assignMention(db, organizationId, mentionId, memberUserId);
+    expect(result).toBe("ok");
+
+    const detail = await getMentionDetail(db, organizationId, mentionId);
+    expect(detail?.mention.assignedToUserId).toBe(memberUserId);
+    expect(detail?.assigneeName).toBe("Ada Reviewer");
+
+    const filtered = await listMentionsFiltered(
+      db,
+      organizationId,
+      { assignedToUserId: memberUserId },
+      { page: 1, pageSize: 10 },
+    );
+    expect(filtered.items.some((item) => item.mention.id === mentionId)).toBe(true);
+    expect(filtered.items[0]?.assigneeName).toBe("Ada Reviewer");
+  });
+
+  it("unassigns when given null", async () => {
+    const mentionId = mentionIds[3];
+    if (!mentionId) throw new Error("no seeded mention");
+    await assignMention(db, organizationId, mentionId, memberUserId);
+
+    const result = await assignMention(db, organizationId, mentionId, null);
+    expect(result).toBe("ok");
+
+    const detail = await getMentionDetail(db, organizationId, mentionId);
+    expect(detail?.mention.assignedToUserId).toBeNull();
+    expect(detail?.assigneeName).toBeNull();
+  });
+
+  it("rejects assigning to a user who isn't an active member of the organization", async () => {
+    const mentionId = mentionIds[3];
+    if (!mentionId) throw new Error("no seeded mention");
+
+    const result = await assignMention(db, organizationId, mentionId, outsiderUserId);
+    expect(result).toBe("invalid_assignee");
+
+    const detail = await getMentionDetail(db, organizationId, mentionId);
+    expect(detail?.mention.assignedToUserId).not.toBe(outsiderUserId);
+  });
+
+  it("returns not_found for a mention outside the organization", async () => {
+    const mentionId = mentionIds[3];
+    if (!mentionId) throw new Error("no seeded mention");
+    const otherOrgId = asOrganizationId("00000000-0000-0000-0000-000000000000");
+
+    // null skips the assignee-membership check entirely, isolating this
+    // assertion to the tenant-scope guard on the update itself.
+    const result = await assignMention(db, otherOrgId, mentionId, null);
+    expect(result).toBe("not_found");
+  });
+
+  it("filters to unassigned mentions only", async () => {
+    const mentionId = mentionIds[3];
+    if (!mentionId) throw new Error("no seeded mention");
+    await assignMention(db, organizationId, mentionId, memberUserId);
+
+    const result = await listMentionsFiltered(
+      db,
+      organizationId,
+      { unassignedOnly: true },
+      { page: 1, pageSize: 10 },
+    );
+    expect(result.items.some((item) => item.mention.id === mentionId)).toBe(false);
+
+    await assignMention(db, organizationId, mentionId, null);
   });
 });

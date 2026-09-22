@@ -6,12 +6,27 @@ import { Badge, Button, EmptyState } from "@cim/ui";
 import { Inbox } from "lucide-react";
 import type { MentionsPage } from "@cim/db";
 import { FilterBar } from "@/components/filter-bar";
-import { MentionDetailDrawer } from "./mention-detail-drawer";
+import { MentionDetailDrawer, type AssignableMember } from "./mention-detail-drawer";
 
-const SENTIMENT_TONE = { positive: "success", neutral: "neutral", negative: "danger" } as const;
-const PRIORITY_TONE = { low: "neutral", normal: "neutral", high: "warning", critical: "danger" } as const;
+const SENTIMENT_TONE = {
+  positive: "success",
+  neutral: "neutral",
+  negative: "danger",
+} as const;
+const PRIORITY_TONE = {
+  low: "neutral",
+  normal: "neutral",
+  high: "warning",
+  critical: "danger",
+} as const;
 
-export function MentionsTable({ result }: { result: MentionsPage }) {
+export function MentionsTable({
+  result,
+  members,
+}: {
+  result: MentionsPage;
+  members: AssignableMember[];
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -60,6 +75,14 @@ export function MentionsTable({ result }: { result: MentionsPage }) {
               { value: "90", label: "Last 90 days" },
             ],
           },
+          {
+            key: "assigned",
+            label: "Assignment",
+            options: [
+              { value: "me", label: "Assigned to me" },
+              { value: "unassigned", label: "Unassigned" },
+            ],
+          },
         ]}
       />
 
@@ -78,11 +101,12 @@ export function MentionsTable({ result }: { result: MentionsPage }) {
                 <th className="px-4 py-2 font-medium">Source</th>
                 <th className="px-4 py-2 font-medium">Sentiment</th>
                 <th className="px-4 py-2 font-medium">Priority</th>
+                <th className="px-4 py-2 font-medium">Assigned</th>
                 <th className="px-4 py-2 font-medium">Date</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {result.items.map(({ mention, article, source }) => (
+              {result.items.map(({ mention, article, source, assigneeName }) => (
                 <tr
                   key={mention.id}
                   onClick={() => setSelectedMentionId(mention.id)}
@@ -96,11 +120,19 @@ export function MentionsTable({ result }: { result: MentionsPage }) {
                   aria-label={`Open details for ${article.title}`}
                   className="cursor-pointer hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
                 >
-                  <td className="max-w-md px-4 py-3 font-medium text-foreground">{article.title}</td>
+                  <td className="max-w-md px-4 py-3 font-medium text-foreground">
+                    {article.title}
+                  </td>
                   <td className="px-4 py-3 text-muted-foreground">{source.name}</td>
                   <td className="px-4 py-3">
                     {mention.sentiment ? (
-                      <Badge tone={SENTIMENT_TONE[mention.sentiment as keyof typeof SENTIMENT_TONE]}>
+                      <Badge
+                        tone={
+                          SENTIMENT_TONE[
+                            mention.sentiment as keyof typeof SENTIMENT_TONE
+                          ]
+                        }
+                      >
                         {mention.sentiment}
                       </Badge>
                     ) : (
@@ -108,9 +140,16 @@ export function MentionsTable({ result }: { result: MentionsPage }) {
                     )}
                   </td>
                   <td className="px-4 py-3">
-                    <Badge tone={PRIORITY_TONE[mention.priority as keyof typeof PRIORITY_TONE]}>
+                    <Badge
+                      tone={
+                        PRIORITY_TONE[mention.priority as keyof typeof PRIORITY_TONE]
+                      }
+                    >
                       {mention.priority}
                     </Badge>
+                  </td>
+                  <td className="px-4 py-3 text-muted-foreground">
+                    {assigneeName ?? "—"}
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">
                     {new Date(mention.createdAt).toLocaleDateString()}
@@ -151,7 +190,11 @@ export function MentionsTable({ result }: { result: MentionsPage }) {
       ) : null}
 
       {selectedMentionId ? (
-        <MentionDetailDrawer mentionId={selectedMentionId} onClose={() => setSelectedMentionId(null)} />
+        <MentionDetailDrawer
+          mentionId={selectedMentionId}
+          members={members}
+          onClose={() => setSelectedMentionId(null)}
+        />
       ) : null}
     </div>
   );

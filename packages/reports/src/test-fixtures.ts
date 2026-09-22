@@ -94,7 +94,12 @@ export function fakeReportData(overrides: Partial<ReportData> = {}): ReportData 
     ],
     sourceDistribution: [{ sourceName: "Test Wire", count: 12 }],
     topStories: [
-      { mention: fakeMention(), article: fakeArticle(), source: fakeSource() },
+      {
+        mention: fakeMention(),
+        article: fakeArticle(),
+        source: fakeSource(),
+        assigneeName: null,
+      },
       {
         mention: fakeMention({ id: "m2", sentiment: "negative" }),
         article: fakeArticle({
@@ -103,6 +108,7 @@ export function fakeReportData(overrides: Partial<ReportData> = {}): ReportData 
           canonicalUrl: "https://testwire.example/b",
         }),
         source: fakeSource(),
+        assigneeName: null,
       },
     ],
     ...overrides,

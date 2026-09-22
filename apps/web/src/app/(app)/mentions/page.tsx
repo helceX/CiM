@@ -2,6 +2,7 @@ import {
   db,
   listMembersForOrganization,
   listMentionsFiltered,
+  listTagsForOrganization,
   type MentionFilters,
 } from "@cim/db";
 import { requireOrgContext } from "@/lib/tenant";
@@ -37,14 +38,16 @@ export default async function MentionsPage({
     // (MentionFilters' own contract) — "me" is the only client-facing value.
     assignedToUserId: assigned === "me" ? context.userId : undefined,
     unassignedOnly: assigned === "unassigned",
+    tagId: param(resolvedParams, "tag") || undefined,
   };
 
-  const [result, members] = await Promise.all([
+  const [result, members, tags] = await Promise.all([
     listMentionsFiltered(db, context.organizationId, filters, {
       page,
       pageSize: PAGE_SIZE,
     }),
     listMembersForOrganization(db, context.organizationId),
+    listTagsForOrganization(db, context.organizationId),
   ]);
   const assignableMembers = members.filter((m) => m.status === "active");
 
@@ -57,7 +60,7 @@ export default async function MentionsPage({
           filters.
         </p>
       </div>
-      <MentionsTable result={result} members={assignableMembers} />
+      <MentionsTable result={result} members={assignableMembers} tags={tags} />
     </div>
   );
 }

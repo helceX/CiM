@@ -23,3 +23,4 @@ export * from "./repositories/digest";
 export * from "./repositories/members";
 export * from "./repositories/retention";
 export * from "./repositories/organizations";
+export * from "./repositories/tags";

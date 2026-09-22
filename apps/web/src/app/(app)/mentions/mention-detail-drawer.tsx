@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Badge, Button, Field, Select, Sheet, SheetContent, Skeleton } from "@cim/ui";
-import type { MentionDetail } from "@cim/db";
+import { Badge, Button, Field, Input, Select, Sheet, SheetContent, Skeleton } from "@cim/ui";
+import type { MentionDetail, Tag } from "@cim/db";
 
 const SENTIMENT_TONE = {
   positive: "success",
@@ -16,10 +16,12 @@ export type AssignableMember = { userId: string; firstName: string; lastName: st
 export function MentionDetailDrawer({
   mentionId,
   members,
+  existingTagNames,
   onClose,
 }: {
   mentionId: string;
   members: AssignableMember[];
+  existingTagNames: string[];
   onClose: () => void;
 }) {
   const router = useRouter();
@@ -27,6 +29,9 @@ export function MentionDetailDrawer({
   const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
   const [isAssigning, setIsAssigning] = useState(false);
   const [assignError, setAssignError] = useState<string | null>(null);
+  const [tagInput, setTagInput] = useState("");
+  const [isAddingTag, setIsAddingTag] = useState(false);
+  const [tagError, setTagError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -87,6 +92,51 @@ export function MentionDetailDrawer({
     } finally {
       setIsAssigning(false);
     }
+  }
+
+  async function addTag() {
+    const name = tagInput.trim();
+    if (!name) return;
+    setTagError(null);
+    setIsAddingTag(true);
+    try {
+      const response = await fetch(`/api/mentions/${mentionId}/tags`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        setTagError(data.error ?? "Something went wrong. Please try again.");
+        return;
+      }
+      const tag: Tag = await response.json();
+      setDetail((prev) =>
+        prev && !prev.tags.some((t) => t.id === tag.id)
+          ? { ...prev, tags: [...prev.tags, tag].sort((a, b) => a.name.localeCompare(b.name)) }
+          : prev,
+      );
+      setTagInput("");
+      router.refresh();
+    } finally {
+      setIsAddingTag(false);
+    }
+  }
+
+  async function removeTag(tagId: string) {
+    setTagError(null);
+    const response = await fetch(`/api/mentions/${mentionId}/tags/${tagId}`, {
+      method: "DELETE",
+    });
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      setTagError(data.error ?? "Something went wrong. Please try again.");
+      return;
+    }
+    setDetail((prev) =>
+      prev ? { ...prev, tags: prev.tags.filter((t) => t.id !== tagId) } : prev,
+    );
+    router.refresh();
   }
 
   return (
@@ -250,6 +300,61 @@ export function MentionDetailDrawer({
                   ))}
                 </Select>
               </Field>
+            </section>
+
+            <section className="flex flex-col gap-2 border-t border-border pt-4">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Tags
+              </p>
+              {detail.tags.length > 0 ? (
+                <ul className="flex flex-wrap gap-2">
+                  {detail.tags.map((tag) => (
+                    <li
+                      key={tag.id}
+                      className="flex items-center gap-2 rounded-sm bg-secondary px-2.5 py-1 text-sm text-secondary-foreground"
+                    >
+                      {tag.name}
+                      <button
+                        type="button"
+                        onClick={() => removeTag(tag.id)}
+                        aria-label={`Remove ${tag.name}`}
+                        className="text-muted-foreground hover:text-foreground"
+                      >
+                        &times;
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+              <div className="flex gap-2">
+                <Input
+                  value={tagInput}
+                  onChange={(e) => setTagInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      addTag();
+                    }
+                  }}
+                  placeholder="Add a tag…"
+                  aria-label="Tag"
+                  list="mention-tag-suggestions"
+                  disabled={isAddingTag}
+                />
+                <datalist id="mention-tag-suggestions">
+                  {existingTagNames.map((name) => (
+                    <option key={name} value={name} />
+                  ))}
+                </datalist>
+                <Button type="button" variant="secondary" disabled={isAddingTag} onClick={addTag}>
+                  Add
+                </Button>
+              </div>
+              {tagError ? (
+                <p role="alert" className="text-sm text-danger">
+                  {tagError}
+                </p>
+              ) : null}
             </section>
 
             <section className="flex flex-col gap-2 border-t border-border pt-4">

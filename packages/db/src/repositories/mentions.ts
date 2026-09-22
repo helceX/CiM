@@ -1,6 +1,6 @@
 import { and, count, desc, eq, gte, ilike, isNull, sql } from "drizzle-orm";
 import type { Db } from "../client";
-import { articles, mentions, sources } from "../schema/content";
+import { articles, mentions, sources, type Tag } from "../schema/content";
 import { monitoringQueries } from "../schema/monitoring";
 import { organizationMemberships } from "../schema/organizations";
 import { users } from "../schema/users";
@@ -11,6 +11,7 @@ import {
   type MentionEntityRow,
   type MentionTopicRow,
 } from "./ai";
+import { listTagsForMention } from "./tags";
 
 export type MentionListItem = {
   mention: typeof mentions.$inferSelect;
@@ -101,6 +102,7 @@ export type MentionFilters = {
   // discipline as organizationId itself (ADR-001).
   assignedToUserId?: string;
   unassignedOnly?: boolean;
+  tagId?: string;
 };
 
 export type MentionsPage = {
@@ -140,6 +142,13 @@ function mentionFiltersToWhere(
       ? eq(mentions.assignedToUserId, filters.assignedToUserId)
       : undefined,
     filters.unassignedOnly ? isNull(mentions.assignedToUserId) : undefined,
+    // A subquery, not a join, so filtering by tag never turns one Mention
+    // into duplicate rows for a second matching tag — this only asks
+    // "does at least one mention_tags row for (this mention, this tag)
+    // exist", same shape as the entity/topic exists-checks in ai.ts.
+    filters.tagId
+      ? sql`exists (select 1 from mention_tags mt where mt.mention_id = ${mentions.id} and mt.tag_id = ${filters.tagId})`
+      : undefined,
   );
 }
 
@@ -192,6 +201,7 @@ export type MentionDetail = MentionListItem & {
   queryName: string;
   aiEntities: MentionEntityRow[];
   aiTopics: MentionTopicRow[];
+  tags: Tag[];
 };
 
 /**
@@ -222,11 +232,12 @@ export async function getMentionDetail(
     .limit(1);
   if (!row) return undefined;
 
-  const [aiEntities, aiTopics] = await Promise.all([
+  const [aiEntities, aiTopics, tags] = await Promise.all([
     listMentionEntities(db, mentionId),
     listMentionTopics(db, mentionId),
+    listTagsForMention(db, mentionId),
   ]);
-  return { ...row, aiEntities, aiTopics };
+  return { ...row, aiEntities, aiTopics, tags };
 }
 
 export type AssignMentionResult = "ok" | "not_found" | "invalid_assignee";

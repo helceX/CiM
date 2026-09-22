@@ -1,9 +1,11 @@
+import { sql } from "drizzle-orm";
 import {
   boolean,
   index,
   integer,
   numeric,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   uniqueIndex,
@@ -148,6 +150,50 @@ export const engagementMetrics = pgTable(
   (table) => [index("engagement_metrics_article_idx").on(table.articleId)],
 );
 
+/**
+ * docs/architecture/DATA_MODEL.md "Tag — user-created label, tenant-
+ * scoped" — the "tag" slice of FEATURE_MATRIX.md P2 "Collaboration
+ * (assign/comment/tag)" (assign shipped in Phase 20; comment is its own,
+ * separately-scoped feature). Case-insensitive uniqueness per org so
+ * "Northwind" and "northwind" reuse the same tag rather than silently
+ * forking it, the same reuse discipline findOrCreateEntity/findOrCreateTopic
+ * already apply (packages/db/src/repositories/ai.ts).
+ */
+export const tags = pgTable(
+  "tags",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("tags_org_name_lower_uidx").on(table.organizationId, sql`lower(${table.name})`),
+    index("tags_org_idx").on(table.organizationId),
+  ],
+);
+
+/** Many-to-many join — a Mention can carry several Tags, a Tag can label many Mentions. */
+export const mentionTags = pgTable(
+  "mention_tags",
+  {
+    mentionId: uuid("mention_id")
+      .notNull()
+      .references(() => mentions.id, { onDelete: "cascade" }),
+    tagId: uuid("tag_id")
+      .notNull()
+      .references(() => tags.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.mentionId, table.tagId] }),
+    index("mention_tags_tag_idx").on(table.tagId),
+  ],
+);
+
 export type Source = typeof sources.$inferSelect;
 export type Article = typeof articles.$inferSelect;
 export type Mention = typeof mentions.$inferSelect;
+export type Tag = typeof tags.$inferSelect;

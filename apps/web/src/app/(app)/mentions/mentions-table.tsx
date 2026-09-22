@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { Badge, Button, EmptyState } from "@cim/ui";
 import { Inbox } from "lucide-react";
-import type { MentionsPage } from "@cim/db";
+import type { MentionsPage, Tag } from "@cim/db";
 import { FilterBar } from "@/components/filter-bar";
 import { MentionDetailDrawer, type AssignableMember } from "./mention-detail-drawer";
 
@@ -23,9 +23,11 @@ const PRIORITY_TONE = {
 export function MentionsTable({
   result,
   members,
+  tags,
 }: {
   result: MentionsPage;
   members: AssignableMember[];
+  tags: Tag[];
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -83,6 +85,15 @@ export function MentionsTable({
               { value: "unassigned", label: "Unassigned" },
             ],
           },
+          ...(tags.length > 0
+            ? [
+                {
+                  key: "tag",
+                  label: "Tag",
+                  options: tags.map((tag) => ({ value: tag.id, label: tag.name })),
+                },
+              ]
+            : []),
         ]}
       />
 
@@ -193,6 +204,7 @@ export function MentionsTable({
         <MentionDetailDrawer
           mentionId={selectedMentionId}
           members={members}
+          existingTagNames={tags.map((tag) => tag.name)}
           onClose={() => setSelectedMentionId(null)}
         />
       ) : null}

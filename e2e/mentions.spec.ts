@@ -66,4 +66,39 @@ test.describe("mentions", () => {
 
     await expect(page.getByRole("dialog")).not.toBeVisible();
   });
+
+  /**
+   * docs/product/FEATURE_MATRIX.md P2 "Collaboration (assign/comment/tag)"
+   * — the "tag" slice. Reuses the same shared session/org as the test
+   * above rather than registering again, for the same rate-limit-headroom
+   * reason documented at the top of this file.
+   */
+  test("adds and removes a tag from a mention", async ({ page }) => {
+    await page.goto("/mentions");
+    await page.getByLabel("Search").fill("Daily Tech Wire");
+    await page.getByLabel("Search").press("Enter");
+
+    const row = page.getByRole("row", { name: /Daily Tech Wire/ }).first();
+    await expect(row).toBeVisible({ timeout: 5000 });
+    await row.click();
+
+    const drawer = page.getByRole("dialog");
+    await expect(drawer).toBeVisible();
+
+    const tagResponse = page.waitForResponse(
+      (response) => response.url().includes("/tags") && response.request().method() === "POST",
+    );
+    await drawer.getByLabel("Tag").fill("Needs follow-up");
+    await drawer.getByRole("button", { name: "Add" }).click();
+    const addResponse = await tagResponse;
+    expect(addResponse.ok()).toBe(true);
+    await expect(drawer.getByText("Needs follow-up")).toBeVisible();
+
+    const removeResponse = page.waitForResponse(
+      (response) => response.url().includes("/tags/") && response.request().method() === "DELETE",
+    );
+    await drawer.getByRole("button", { name: "Remove Needs follow-up" }).click();
+    expect((await removeResponse).ok()).toBe(true);
+    await expect(drawer.getByText("Needs follow-up")).not.toBeVisible();
+  });
 });

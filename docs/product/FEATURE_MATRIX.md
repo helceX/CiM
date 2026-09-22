@@ -94,7 +94,7 @@ generation (excluding soft-deleted organizations).
 | Query preview ("test before save") | ✅ | | | |
 | Source connectors: Mock, RSS, Sitemap, Web | ✅ | API connector | Social/YouTube/Podcast/Broadcast | |
 | Ingestion pipeline (fetch→normalize→dedupe→index) | ✅ | | | |
-| Mentions list + detail drawer | ✅ | Collaboration (assign/comment/tag) | | |
+| Mentions list + detail drawer | ✅ (assign, tag) | Collaboration (comment) | | |
 | Deduplication / story clustering | Dedup only | Full story clustering | | |
 | Search (Postgres full-text) | ✅ | Meilisearch + facets | Semantic/vector search | |
 | Alerts: keyword, high-relevance, spike | ✅ | Sentiment shift, competitor, engagement spike, emerging topic, crisis | | |

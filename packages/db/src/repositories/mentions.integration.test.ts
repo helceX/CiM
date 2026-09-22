@@ -12,6 +12,7 @@ import {
   listMentionsFiltered,
   setMentionFeedback,
 } from "./mentions";
+import { addTagToMention, findOrCreateTag, listTagsForOrganization, removeTagFromMention } from "./tags";
 import { asOrganizationId } from "./tenant-scope";
 
 /**
@@ -354,5 +355,61 @@ describe("mentions repository (integration)", () => {
     expect(result.items.some((item) => item.mention.id === mentionId)).toBe(false);
 
     await assignMention(db, organizationId, mentionId, null);
+  });
+
+  it("tags a mention, reuses an existing tag case-insensitively, and filters by tag", async () => {
+    // mentionIds[1] was archived by an earlier test (feedback: irrelevant)
+    // and listMentionsFiltered excludes archived by default — [0] and [2]
+    // are still "new" here.
+    const mentionId = mentionIds[0];
+    const otherMentionId = mentionIds[2];
+    if (!mentionId || !otherMentionId) throw new Error("no seeded mention");
+
+    const first = await addTagToMention(db, organizationId, mentionId, "Crisis");
+    expect(first.ok).toBe(true);
+    if (!first.ok) throw new Error("unreachable");
+
+    const reused = await addTagToMention(db, organizationId, otherMentionId, "crisis");
+    expect(reused.ok).toBe(true);
+    if (!reused.ok) throw new Error("unreachable");
+    expect(reused.tag.id).toBe(first.tag.id);
+
+    const orgTags = await listTagsForOrganization(db, organizationId);
+    expect(orgTags.filter((t) => t.id === first.tag.id)).toHaveLength(1);
+
+    const detail = await getMentionDetail(db, organizationId, mentionId);
+    expect(detail?.tags.map((t) => t.name)).toEqual(["Crisis"]);
+
+    const filtered = await listMentionsFiltered(
+      db,
+      organizationId,
+      { tagId: first.tag.id },
+      { page: 1, pageSize: 10 },
+    );
+    expect(filtered.items.map((i) => i.mention.id).sort()).toEqual(
+      [mentionId, otherMentionId].sort(),
+    );
+
+    const removed = await removeTagFromMention(db, organizationId, mentionId, first.tag.id);
+    expect(removed).toBe(true);
+    const afterRemove = await getMentionDetail(db, organizationId, mentionId);
+    expect(afterRemove?.tags).toHaveLength(0);
+  });
+
+  it("does not let a tag be attached to or removed from another organization's mention", async () => {
+    const mentionId = mentionIds[0];
+    if (!mentionId) throw new Error("no seeded mention");
+    const otherOrgId = asOrganizationId("00000000-0000-0000-0000-000000000000");
+
+    const attach = await addTagToMention(db, otherOrgId, mentionId, "Cross-tenant");
+    expect(attach).toEqual({ ok: false, reason: "mention_not_found" });
+
+    const tagId = await findOrCreateTag(db, organizationId, "Removable");
+    await addTagToMention(db, organizationId, mentionId, "Removable");
+    const removed = await removeTagFromMention(db, otherOrgId, mentionId, tagId);
+    expect(removed).toBe(false);
+
+    const detail = await getMentionDetail(db, organizationId, mentionId);
+    expect(detail?.tags.some((t) => t.id === tagId)).toBe(true);
   });
 });

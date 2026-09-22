@@ -1,7 +1,8 @@
 import type { ReportData } from "./gather-data";
+import { sanitizeCellValue } from "./sanitize-cell";
 
 function csvCell(value: string): string {
-  return `"${value.replace(/"/g, '""')}"`;
+  return `"${sanitizeCellValue(value).replace(/"/g, '""')}"`;
 }
 
 /**

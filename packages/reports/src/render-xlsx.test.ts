@@ -74,4 +74,21 @@ describe("renderReportXlsx", () => {
     const topStoriesSheet = workbook.getWorksheet("Top Stories")!;
     expect(topStoriesSheet.rowCount).toBe(1);
   });
+
+  it("neutralizes a formula-injection payload in an ingested article title (CWE-1236)", async () => {
+    const base = fakeReportData().topStories[0]!;
+    const buffer = await renderReportXlsx(
+      fakeReportData({
+        topStories: [
+          { ...base, article: { ...base.article, title: "=cmd|' /C calc'!A0" } },
+        ],
+      }),
+    );
+    const workbook = await loadWorkbook(buffer);
+
+    const topStoriesSheet = workbook.getWorksheet("Top Stories")!;
+    const titleCell = String(topStoriesSheet.getRow(2).getCell(1).value);
+    expect(titleCell.startsWith("=")).toBe(false);
+    expect(titleCell).toBe("'=cmd|' /C calc'!A0");
+  });
 });

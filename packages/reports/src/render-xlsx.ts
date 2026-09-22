@@ -1,5 +1,6 @@
 import ExcelJS from "exceljs";
 import type { ReportData } from "./gather-data";
+import { sanitizeCellValue } from "./sanitize-cell";
 
 function formatDate(date: Date): string {
   return date.toISOString().slice(0, 10);
@@ -80,7 +81,7 @@ export async function renderReportXlsx(data: ReportData): Promise<Buffer> {
   styleHeaderRow(sourcesSheet.getRow(1));
   sourcesSheet.addRows(
     data.sourceDistribution.map((row) => ({
-      sourceName: row.sourceName,
+      sourceName: sanitizeCellValue(row.sourceName),
       count: row.count,
     })),
   );
@@ -97,12 +98,12 @@ export async function renderReportXlsx(data: ReportData): Promise<Buffer> {
   styleHeaderRow(topStoriesSheet.getRow(1));
   topStoriesSheet.addRows(
     data.topStories.map(({ mention, article, source }) => ({
-      title: article.title,
-      source: source.name,
+      title: sanitizeCellValue(article.title),
+      source: sanitizeCellValue(source.name),
       sentiment: mention.sentiment ?? "Unclassified",
       priority: mention.priority,
       published: article.publishedAt ? formatDate(article.publishedAt) : "",
-      url: article.canonicalUrl,
+      url: sanitizeCellValue(article.canonicalUrl),
     })),
   );
 

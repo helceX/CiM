@@ -35,4 +35,18 @@ describe("renderReportCsv", () => {
     const csv = renderReportCsv(fakeReportData({ topStories: [] }));
     expect(csv.split("\r\n")).toHaveLength(1);
   });
+
+  it("neutralizes a formula-injection payload in an ingested article title (CWE-1236)", () => {
+    const base = fakeReportData().topStories[0]!;
+    const csv = renderReportCsv(
+      fakeReportData({
+        topStories: [
+          { ...base, article: { ...base.article, title: "=cmd|' /C calc'!A0" } },
+        ],
+      }),
+    );
+    const dataRow = csv.split("\r\n")[1]!;
+    expect(dataRow.startsWith('"=')).toBe(false);
+    expect(dataRow.startsWith("\"'=cmd")).toBe(true);
+  });
 });

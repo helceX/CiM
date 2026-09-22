@@ -4,7 +4,12 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Checkbox, Field, Input, Select } from "@cim/ui";
 
-type MonitoringQueryOption = { id: string; name: string; projectId: string };
+type MonitoringQueryOption = {
+  id: string;
+  name: string;
+  projectId: string;
+  trackingTarget: string;
+};
 
 const TYPE_OPTIONS: { value: string; label: string; description: string }[] = [
   {
@@ -36,6 +41,12 @@ const TYPE_OPTIONS: { value: string; label: string; description: string }[] = [
     description:
       "Notify when an AI-detected topic in this query's mentions surges well above its trailing week's baseline.",
   },
+  {
+    value: "competitor",
+    label: "Competitor",
+    description:
+      "Notify when a query tagged \"Competitor\" gets more mentions in 24 hours than your tracked company queries in the same project.",
+  },
 ];
 
 export function AlertRuleForm({ queries }: { queries: MonitoringQueryOption[] }) {
@@ -48,9 +59,24 @@ export function AlertRuleForm({ queries }: { queries: MonitoringQueryOption[] })
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // A "competitor" rule only means something against a query tagged that
+  // way (apps/web/src/app/api/alerts/route.ts enforces the same rule
+  // server-side) — narrow the picker instead of letting the user hit a
+  // 400 after filling out the rest of the form.
+  const selectableQueries =
+    type === "competitor" ? queries.filter((q) => q.trackingTarget === "competitor") : queries;
+
+  function selectType(value: string) {
+    setType(value);
+    const nextOptions = value === "competitor" ? queries.filter((q) => q.trackingTarget === "competitor") : queries;
+    if (!nextOptions.some((q) => q.id === queryId)) {
+      setQueryId(nextOptions[0]?.id ?? "");
+    }
+  }
+
   const selectedQuery = useMemo(
-    () => queries.find((q) => q.id === queryId),
-    [queries, queryId],
+    () => selectableQueries.find((q) => q.id === queryId),
+    [selectableQueries, queryId],
   );
   const selectedType = TYPE_OPTIONS.find((t) => t.value === type);
 
@@ -120,13 +146,20 @@ export function AlertRuleForm({ queries }: { queries: MonitoringQueryOption[] })
       </Field>
 
       <Field id="query" label="Monitoring query" required>
-        <Select id="query" value={queryId} onChange={(e) => setQueryId(e.target.value)}>
-          {queries.map((query) => (
-            <option key={query.id} value={query.id}>
-              {query.name}
-            </option>
-          ))}
-        </Select>
+        {selectableQueries.length > 0 ? (
+          <Select id="query" value={queryId} onChange={(e) => setQueryId(e.target.value)}>
+            {selectableQueries.map((query) => (
+              <option key={query.id} value={query.id}>
+                {query.name}
+              </option>
+            ))}
+          </Select>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            No query is tagged &quot;Competitor&quot; yet — tag one when creating a
+            monitoring query, then come back here.
+          </p>
+        )}
       </Field>
 
       <div className="flex flex-col gap-2">
@@ -144,7 +177,7 @@ export function AlertRuleForm({ queries }: { queries: MonitoringQueryOption[] })
                 name="alertType"
                 className="mt-1"
                 checked={type === option.value}
-                onChange={() => setType(option.value)}
+                onChange={() => selectType(option.value)}
               />
               <span>
                 <span className="block text-sm font-medium text-foreground">

@@ -2,6 +2,7 @@ import { Queue, Worker } from "bullmq";
 import {
   QUEUE_NAMES,
   type AiEnrichJobData,
+  type AlertCompetitorCheckJobData,
   type AlertEmergingTopicCheckJobData,
   type AlertSentimentShiftCheckJobData,
   type AlertSpikeCheckJobData,
@@ -27,6 +28,7 @@ import { processCaptureFeatureUsageJob } from "./jobs/capture-feature-usage";
 import { evaluateSpikeAlerts } from "./alerts/evaluate-spikes";
 import { evaluateSentimentShiftAlerts } from "./alerts/evaluate-sentiment-shift";
 import { evaluateEmergingTopicAlerts } from "./alerts/evaluate-emerging-topics";
+import { evaluateCompetitorAlerts } from "./alerts/evaluate-competitor";
 import { processAiEnrichJob } from "./ai/enrich";
 import { processInsightGenerateJob } from "./ai/generate-insight";
 
@@ -97,6 +99,16 @@ const alertEmergingTopicCheckQueue = new Queue<AlertEmergingTopicCheckJobData>(
 const alertEmergingTopicCheckWorker = new Worker<AlertEmergingTopicCheckJobData>(
   QUEUE_NAMES.alertEmergingTopicCheck,
   () => evaluateEmergingTopicAlerts(sendEmailQueue),
+  { connection, concurrency: 1 },
+);
+
+const alertCompetitorCheckQueue = new Queue<AlertCompetitorCheckJobData>(
+  QUEUE_NAMES.alertCompetitorCheck,
+  { connection },
+);
+const alertCompetitorCheckWorker = new Worker<AlertCompetitorCheckJobData>(
+  QUEUE_NAMES.alertCompetitorCheck,
+  () => evaluateCompetitorAlerts(sendEmailQueue),
   { connection, concurrency: 1 },
 );
 
@@ -181,6 +193,7 @@ const allWorkers = [
   alertSpikeCheckWorker,
   alertSentimentShiftCheckWorker,
   alertEmergingTopicCheckWorker,
+  alertCompetitorCheckWorker,
   aiEnrichWorker,
   insightGenerateWorker,
   generateReportWorker,
@@ -223,6 +236,11 @@ async function scheduleRepeatingJobs() {
     "alert-emerging-topic-check-repeat",
     { every: 60_000 },
     { name: QUEUE_NAMES.alertEmergingTopicCheck, data: {} },
+  );
+  await alertCompetitorCheckQueue.upsertJobScheduler(
+    "alert-competitor-check-repeat",
+    { every: 60_000 },
+    { name: QUEUE_NAMES.alertCompetitorCheck, data: {} },
   );
   // Dev-friendly cadence, same rationale as the crawl scheduler above —
   // a production deployment would enrich promptly after ingestion (~20s)
@@ -294,6 +312,7 @@ async function shutdown() {
   await alertSpikeCheckQueue.close();
   await alertSentimentShiftCheckQueue.close();
   await alertEmergingTopicCheckQueue.close();
+  await alertCompetitorCheckQueue.close();
   await aiEnrichQueue.close();
   await insightGenerateQueue.close();
   await generateReportQueue.close();

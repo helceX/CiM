@@ -33,6 +33,15 @@ export async function POST(request: Request) {
   if (!query) {
     return NextResponse.json({ error: "Monitoring query not found" }, { status: 404 });
   }
+  // A "competitor" alert compares this query's volume against the
+  // project's "company" queries (getCompetitorAlertStats) — meaningless,
+  // and confusing to read, against a query not tagged that way.
+  if (input.type === "competitor" && query.trackingTarget !== "competitor") {
+    return NextResponse.json(
+      { error: 'Competitor alerts can only be created for a query tagged "Competitor".' },
+      { status: 400 },
+    );
+  }
 
   const rule = await createAlertRule(db, context.organizationId, {
     projectId: project.id,

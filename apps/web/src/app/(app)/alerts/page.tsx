@@ -10,6 +10,7 @@ const TYPE_LABEL: Record<string, string> = {
   spike: "Spike",
   sentiment_shift: "Sentiment shift",
   emerging_topic: "Emerging topic",
+  competitor: "Competitor",
 };
 
 export default async function AlertsListPage() {

@@ -16,6 +16,7 @@ import { evaluateNewMentionAlerts } from "./evaluate";
 import { evaluateSpikeAlerts } from "./evaluate-spikes";
 import { evaluateSentimentShiftAlerts } from "./evaluate-sentiment-shift";
 import { evaluateEmergingTopicAlerts } from "./evaluate-emerging-topics";
+import { evaluateCompetitorAlerts } from "./evaluate-competitor";
 
 /**
  * Integration test (docs/testing/TEST_STRATEGY.md) — proves the alert
@@ -26,6 +27,7 @@ import { evaluateEmergingTopicAlerts } from "./evaluate-emerging-topics";
  */
 describe("alert engine (integration)", () => {
   let organizationId: ReturnType<typeof asOrganizationId>;
+  let workspaceId: string;
   let projectId: string;
   let userId: string;
   let sourceId: string;
@@ -46,9 +48,10 @@ describe("alert engine (integration)", () => {
       .values({ organizationId, name: "Default" })
       .returning();
     if (!workspace) throw new Error("failed to create test workspace");
+    workspaceId = workspace.id;
 
     const project = await createProject(db, organizationId, {
-      workspaceId: workspace.id,
+      workspaceId,
       name: "Alert Test Project",
     });
     projectId = project.id;
@@ -557,5 +560,120 @@ describe("alert engine (integration)", () => {
       limit: 50,
     });
     expect(notifications.some((n) => n.title === quietTopicRule.name)).toBe(false);
+  });
+
+  async function seedMentions(
+    forProjectId: string,
+    queryId: string,
+    count: number,
+    urlPrefix: string,
+  ) {
+    for (let i = 0; i < count; i++) {
+      const [article] = await db
+        .insert(schema.articles)
+        .values({
+          sourceId,
+          canonicalUrl: `https://${urlPrefix}.example/${i}`,
+          contentHash: `${urlPrefix}-${i}`,
+          title: `${urlPrefix} item ${i}`,
+        })
+        .returning();
+      if (!article) throw new Error("failed to create test article");
+      await db.insert(schema.mentions).values({
+        organizationId,
+        projectId: forProjectId,
+        queryId,
+        articleId: article.id,
+        matchedTerms: [urlPrefix],
+      });
+    }
+  }
+
+  it("fires a competitor alert when the competitor query outpaces the project's company queries", async () => {
+    // A dedicated project, not this file's shared `projectId` — the
+    // stats query sums every "company"-tagged query in the project, and
+    // every query created without an explicit trackingTarget elsewhere
+    // in this file defaults to "company" (packages/db/src/schema/
+    // monitoring.ts), so sharing the project would pull in unrelated
+    // tests' mention counts.
+    const project = await createProject(db, organizationId, {
+      workspaceId,
+      name: "Competitor Alert Test Project (outpacing)",
+    });
+    const companyQuery = await createMonitoringQuery(db, organizationId, {
+      projectId: project.id,
+      name: "Competitor-alert company query",
+      queryAst: { include: ["competitor-alert-company"], exclude: [], exactPhrases: [] },
+      booleanQuery: "competitor-alert-company",
+      sourceTypes: ["news"],
+      trackingTarget: "company",
+    });
+    const competitorQuery = await createMonitoringQuery(db, organizationId, {
+      projectId: project.id,
+      name: "Rival Corp",
+      queryAst: { include: ["competitor-alert-rival"], exclude: [], exactPhrases: [] },
+      booleanQuery: "competitor-alert-rival",
+      sourceTypes: ["news"],
+      trackingTarget: "competitor",
+    });
+    const competitorRule = await createAlertRule(db, organizationId, {
+      projectId: project.id,
+      queryId: competitorQuery.id,
+      createdByUserId: userId,
+      name: "Competitor outpacing rule",
+      type: "competitor",
+      channels: ["in_app"],
+      cooldownMinutes: 60,
+    });
+
+    await seedMentions(project.id, companyQuery.id, 2, "competitor-alert-company-mention");
+    await seedMentions(project.id, competitorQuery.id, 5, "competitor-alert-rival-mention");
+
+    await evaluateCompetitorAlerts(emailQueue);
+
+    const notifications = await listNotifications(db, organizationId, userId, { limit: 50 });
+    const notification = notifications.find((n) => n.title === competitorRule.name);
+    expect(notification).toBeDefined();
+    expect(notification?.body).toMatch(/Rival Corp.*5 mentions.*2/i);
+  });
+
+  it("does not fire a competitor alert when the competitor query has fewer mentions than the company queries", async () => {
+    const project = await createProject(db, organizationId, {
+      workspaceId,
+      name: "Competitor Alert Test Project (quiet)",
+    });
+    const companyQuery = await createMonitoringQuery(db, organizationId, {
+      projectId: project.id,
+      name: "Competitor-alert quiet company query",
+      queryAst: { include: ["competitor-alert-quiet-company"], exclude: [], exactPhrases: [] },
+      booleanQuery: "competitor-alert-quiet-company",
+      sourceTypes: ["news"],
+      trackingTarget: "company",
+    });
+    const competitorQuery = await createMonitoringQuery(db, organizationId, {
+      projectId: project.id,
+      name: "Quiet Rival Co",
+      queryAst: { include: ["competitor-alert-quiet-rival"], exclude: [], exactPhrases: [] },
+      booleanQuery: "competitor-alert-quiet-rival",
+      sourceTypes: ["news"],
+      trackingTarget: "competitor",
+    });
+    const quietRule = await createAlertRule(db, organizationId, {
+      projectId: project.id,
+      queryId: competitorQuery.id,
+      createdByUserId: userId,
+      name: "Competitor quiet rule",
+      type: "competitor",
+      channels: ["in_app"],
+      cooldownMinutes: 60,
+    });
+
+    await seedMentions(project.id, companyQuery.id, 10, "competitor-alert-quiet-company-mention");
+    await seedMentions(project.id, competitorQuery.id, 4, "competitor-alert-quiet-rival-mention");
+
+    await evaluateCompetitorAlerts(emailQueue);
+
+    const notifications = await listNotifications(db, organizationId, userId, { limit: 50 });
+    expect(notifications.some((n) => n.title === quietRule.name)).toBe(false);
   });
 });

@@ -97,7 +97,7 @@ generation (excluding soft-deleted organizations).
 | Mentions list + detail drawer | ✅ (assign, tag) | Collaboration (comment) | | |
 | Deduplication / story clustering | Dedup only | Full story clustering | | |
 | Search (Postgres full-text) | ✅ | Meilisearch + facets | Semantic/vector search | |
-| Alerts: keyword, high-relevance, spike | ✅ | Sentiment shift, competitor, engagement spike, emerging topic, crisis | | |
+| Alerts: keyword, high-relevance, spike | ✅ | ✅ Sentiment shift, ✅ emerging topic, ✅ competitor, engagement spike, crisis | | |
 | Alert fatigue controls (grouping/cooldown) | ✅ | | | |
 | Notification center (in-app) | ✅ | ✅ (Slack/Teams/webhook channels) | | |
 | Email daily digest | ✅ | Weekly/monthly/yearly scheduled reports | | |
@@ -111,7 +111,7 @@ generation (excluding soft-deleted organizations).
 | AI Visibility (ChatGPT/Gemini/Claude/Perplexity tracking) | — | — | ✅ | |
 | Admin panel (orgs, jobs, source health, system health) | ✅ (core) | Full observability views | | |
 | Audit log | ✅ | | | |
-| Data retention policy engine | Policy field only | Enforcement worker | | |
+| Data retention policy engine | Policy field only | ✅ Enforcement worker | | |
 | API keys + public API | ✅ (internal, scoped, revocable) | | v1 public API | |
 | Webhooks | — | ✅ | | |
 | SSO/SAML/OIDC | Auth abstraction only | | Enterprise SSO | |

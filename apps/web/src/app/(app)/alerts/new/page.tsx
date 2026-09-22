@@ -15,7 +15,12 @@ export default async function NewAlertPage() {
         </p>
       </div>
       <AlertRuleForm
-        queries={queries.map((q) => ({ id: q.id, name: q.name, projectId: q.projectId }))}
+        queries={queries.map((q) => ({
+          id: q.id,
+          name: q.name,
+          projectId: q.projectId,
+          trackingTarget: q.trackingTarget,
+        }))}
       />
     </div>
   );

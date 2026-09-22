@@ -1,4 +1,4 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, count, eq, gte, isNull, sql } from "drizzle-orm";
 import type { Db } from "../client";
 import { articles, mentions, sources } from "../schema/content";
 import { monitoringQueries } from "../schema/monitoring";
@@ -326,5 +326,60 @@ export async function getQuerySentimentShiftStats(
     baselineClassifiedCount,
     baselineNegativeShare:
       baselineClassifiedCount > 0 ? baselineNegativeCount / baselineClassifiedCount : 0,
+  };
+}
+
+export type CompetitorAlertStats = {
+  competitorQueryName: string;
+  competitorCount: number;
+  companyCount: number;
+};
+
+/**
+ * docs/product/USER_FLOWS.md §4 "competitor" alert type — distinct from
+ * a generic spike (which compares a query against its own history): this
+ * compares a Phase 30 `trackingTarget: "competitor"` query's last-24h
+ * mention volume against the combined volume of every active "company"
+ * query in the same project, i.e. "is a competitor now getting more
+ * attention than you?" rather than "did this query's own volume jump?".
+ * Returns undefined if the query no longer exists (deleted mid-cycle).
+ */
+export async function getCompetitorAlertStats(
+  db: Db,
+  projectId: string,
+  competitorQueryId: string,
+): Promise<CompetitorAlertStats | undefined> {
+  const [competitorQuery] = await db
+    .select({ name: monitoringQueries.name })
+    .from(monitoringQueries)
+    .where(eq(monitoringQueries.id, competitorQueryId))
+    .limit(1);
+  if (!competitorQuery) return undefined;
+
+  const since = sql`now() - interval '24 hours'`;
+
+  const [competitorRow] = await db
+    .select({ count: count(mentions.id) })
+    .from(mentions)
+    .where(and(eq(mentions.queryId, competitorQueryId), gte(mentions.createdAt, since)));
+
+  const [companyRow] = await db
+    .select({ count: count(mentions.id) })
+    .from(mentions)
+    .innerJoin(monitoringQueries, eq(monitoringQueries.id, mentions.queryId))
+    .where(
+      and(
+        eq(monitoringQueries.projectId, projectId),
+        eq(monitoringQueries.trackingTarget, "company"),
+        eq(monitoringQueries.status, "active"),
+        isNull(monitoringQueries.deletedAt),
+        gte(mentions.createdAt, since),
+      ),
+    );
+
+  return {
+    competitorQueryName: competitorQuery.name,
+    competitorCount: Number(competitorRow?.count ?? 0),
+    companyCount: Number(companyRow?.count ?? 0),
   };
 }

@@ -3,6 +3,7 @@ import { Badge, Button, EmptyState } from "@cim/ui";
 import { Radar } from "lucide-react";
 import {
   db,
+  getCompetitorComparison,
   getDashboardSummary,
   getLatestInsightForOrganization,
   getMentionVolumeSeries,
@@ -13,6 +14,7 @@ import { requireOrgContext } from "@/lib/tenant";
 import { KpiRow } from "@/components/kpi-row";
 import { MentionTrendChart } from "@/components/charts/mention-trend-chart";
 import { AiAssistantPanel } from "./ai-assistant-panel";
+import { CompetitorComparisonSection } from "./competitor-comparison-section";
 
 const SENTIMENT_TONE = {
   positive: "success",
@@ -46,12 +48,14 @@ export default async function DashboardPage() {
     );
   }
 
-  const [summary, recentMentions, trend, insight] = await Promise.all([
+  const [summary, recentMentions, trend, insight, competitorComparison] = await Promise.all([
     getDashboardSummary(db, context.organizationId, { sinceDays: 7 }),
     listRecentMentions(db, context.organizationId, { limit: 10 }),
     getMentionVolumeSeries(db, context.organizationId, { sinceDays: 14 }),
     getLatestInsightForOrganization(db, context.organizationId, "whats_changed"),
+    getCompetitorComparison(db, context.organizationId, { sinceDays: 7 }),
   ]);
+  const hasCompetitor = competitorComparison.some((row) => row.trackingTarget === "competitor");
 
   return (
     <div className="flex flex-col gap-8">
@@ -106,6 +110,8 @@ export default async function DashboardPage() {
           </div>
         </section>
       ) : null}
+
+      {hasCompetitor ? <CompetitorComparisonSection rows={competitorComparison} /> : null}
 
       <section>
         <h2 className="text-sm font-semibold text-foreground">Top stories</h2>

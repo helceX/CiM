@@ -2,8 +2,10 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button, Checkbox, Field, Input } from "@cim/ui";
+import { Button, Checkbox, Field, Input, Select } from "@cim/ui";
 import { astToBooleanQuery, parseBooleanQuery, type QueryAst } from "@cim/core";
+import type { TrackingTarget } from "@cim/validation";
+import { TRACKING_TARGET_OPTIONS } from "@/lib/tracking-targets";
 
 type Project = { id: string; name: string };
 
@@ -93,6 +95,7 @@ export function QueryBuilderForm({ projects }: { projects: Project[] }) {
   const router = useRouter();
   const [mode, setMode] = useState<"simple" | "advanced">("simple");
   const [name, setName] = useState("");
+  const [trackingTarget, setTrackingTarget] = useState<TrackingTarget>("company");
   const [projectId, setProjectId] = useState(projects[0]?.id ?? "");
   const [include, setInclude] = useState<string[]>([]);
   const [exclude, setExclude] = useState<string[]>([]);
@@ -159,6 +162,7 @@ export function QueryBuilderForm({ projects }: { projects: Project[] }) {
           exclude: currentAst.exclude,
           exactPhrases: currentAst.exactPhrases,
           sourceTypes: sourceCategories,
+          trackingTarget,
         }),
       });
       const data = await response.json();
@@ -179,6 +183,19 @@ export function QueryBuilderForm({ projects }: { projects: Project[] }) {
     <div className="flex max-w-2xl flex-col gap-6">
       <Field id="name" label="Name" required>
         <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Brand monitoring" />
+      </Field>
+
+      <Field id="tracking-target" label="What does this track?" required>
+        <Select
+          value={trackingTarget}
+          onChange={(e) => setTrackingTarget(e.target.value as TrackingTarget)}
+        >
+          {TRACKING_TARGET_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </Select>
       </Field>
 
       {projects.length > 1 ? (

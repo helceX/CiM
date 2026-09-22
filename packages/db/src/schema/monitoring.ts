@@ -25,6 +25,14 @@ export const monitoringQueries = pgTable(
     queryAst: jsonb("query_ast").$type<QueryAst>().notNull(),
     booleanQuery: text("boolean_query").notNull(),
     sourceTypes: text("source_types").array().notNull().default([]),
+    // docs/product/USER_FLOWS.md onboarding step 1 ("What do you want to
+    // track? company/brand/product/competitor/campaign/topic/person/
+    // industry") — collected since Phase 1 but discarded into an audit-log
+    // metadata blob until now. Powers FEATURE_MATRIX.md P2 "Competitor
+    // tracking": the Dashboard's Competitor Comparison section
+    // (SCREEN_INVENTORY.md "when competitors configured") groups active
+    // queries by this field rather than needing a separate Competitor entity.
+    trackingTarget: text("tracking_target").notNull().default("company"),
     status: text("status").notNull().default("active"), // active | paused
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()

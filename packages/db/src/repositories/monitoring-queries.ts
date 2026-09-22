@@ -31,6 +31,7 @@ export async function createMonitoringQuery(
     queryAst: QueryAst;
     booleanQuery: string;
     sourceTypes: string[];
+    trackingTarget?: string;
   },
 ) {
   const [query] = await db
@@ -42,6 +43,7 @@ export async function createMonitoringQuery(
       queryAst: input.queryAst,
       booleanQuery: input.booleanQuery,
       sourceTypes: input.sourceTypes,
+      trackingTarget: input.trackingTarget,
     })
     .returning();
   if (!query) throw new Error("Failed to create monitoring query");

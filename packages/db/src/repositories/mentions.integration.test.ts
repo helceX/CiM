@@ -8,6 +8,7 @@ import { createProject } from "./projects";
 import { createMonitoringQuery } from "./monitoring-queries";
 import {
   assignMention,
+  getCompetitorComparison,
   getMentionDetail,
   listMentionsFiltered,
   setMentionFeedback,
@@ -411,5 +412,77 @@ describe("mentions repository (integration)", () => {
 
     const detail = await getMentionDetail(db, organizationId, mentionId);
     expect(detail?.tags.some((t) => t.id === tagId)).toBe(true);
+  });
+
+  it("groups mentions by tracking target for competitor comparison, excluding non-company/competitor queries", async () => {
+    const competitorQuery = await createMonitoringQuery(db, organizationId, {
+      projectId,
+      name: "Rival Co monitoring",
+      queryAst: { include: ["rival"], exclude: [], exactPhrases: [] },
+      booleanQuery: "rival",
+      sourceTypes: ["news"],
+      trackingTarget: "competitor",
+    });
+    const topicQuery = await createMonitoringQuery(db, organizationId, {
+      projectId,
+      name: "Industry topic monitoring",
+      queryAst: { include: ["industry"], exclude: [], exactPhrases: [] },
+      booleanQuery: "industry",
+      sourceTypes: ["news"],
+      trackingTarget: "topic",
+    });
+
+    const [rivalArticle] = await db
+      .insert(articles)
+      .values({
+        sourceId,
+        canonicalUrl: "https://mentions-test.example/rival",
+        contentHash: "mentions-test-hash-rival",
+        title: "Rival Co launches new product",
+      })
+      .returning();
+    if (!rivalArticle) throw new Error("failed to create rival test article");
+    await db.insert(mentions).values({
+      organizationId,
+      projectId,
+      queryId: competitorQuery.id,
+      articleId: rivalArticle.id,
+      matchedTerms: ["rival"],
+      sentiment: "negative",
+      priority: "normal",
+    });
+
+    const [topicArticle] = await db
+      .insert(articles)
+      .values({
+        sourceId,
+        canonicalUrl: "https://mentions-test.example/topic",
+        contentHash: "mentions-test-hash-topic",
+        title: "Industry outlook piece",
+      })
+      .returning();
+    if (!topicArticle) throw new Error("failed to create topic test article");
+    await db.insert(mentions).values({
+      organizationId,
+      projectId,
+      queryId: topicQuery.id,
+      articleId: topicArticle.id,
+      matchedTerms: ["industry"],
+      sentiment: "positive",
+      priority: "normal",
+    });
+
+    const comparison = await getCompetitorComparison(db, organizationId, { sinceDays: 7 });
+
+    expect(comparison.some((row) => row.queryId === topicQuery.id)).toBe(false);
+
+    const companyRow = comparison.find((row) => row.queryId === queryId);
+    expect(companyRow?.trackingTarget).toBe("company");
+    expect(companyRow?.totalMentions).toBe(4);
+
+    const competitorRow = comparison.find((row) => row.queryId === competitorQuery.id);
+    expect(competitorRow?.trackingTarget).toBe("competitor");
+    expect(competitorRow?.totalMentions).toBe(1);
+    expect(competitorRow?.negative).toBe(1);
   });
 });

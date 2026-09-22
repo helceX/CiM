@@ -1,4 +1,4 @@
-import { and, count, desc, eq, gte, ilike, isNull, sql } from "drizzle-orm";
+import { and, count, desc, eq, gte, ilike, inArray, isNull, sql } from "drizzle-orm";
 import type { Db } from "../client";
 import { articles, mentions, sources, type Tag } from "../schema/content";
 import { monitoringQueries } from "../schema/monitoring";
@@ -355,4 +355,63 @@ export async function getDashboardSummary(
     unclassified: Number(row?.unclassified ?? 0),
     highPriority: Number(row?.highPriority ?? 0),
   };
+}
+
+export type CompetitorComparisonRow = {
+  queryId: string;
+  queryName: string;
+  trackingTarget: string;
+  totalMentions: number;
+  positive: number;
+  neutral: number;
+  negative: number;
+};
+
+/**
+ * SCREEN_INVENTORY.md's Dashboard "Competitor Comparison (when competitors
+ * configured)" section — groups active queries tagged "company"/"competitor"
+ * (monitoring.ts `trackingTarget`) rather than a separate Competitor entity.
+ */
+export async function getCompetitorComparison(
+  db: Db,
+  organizationId: OrganizationId,
+  options: { sinceDays?: number } = {},
+): Promise<CompetitorComparisonRow[]> {
+  const sinceDays = options.sinceDays ?? 7;
+  const rows = await db
+    .select({
+      queryId: monitoringQueries.id,
+      queryName: monitoringQueries.name,
+      trackingTarget: monitoringQueries.trackingTarget,
+      totalMentions: count(mentions.id),
+      positive: sql<number>`count(*) filter (where ${mentions.sentiment} = 'positive')`,
+      neutral: sql<number>`count(*) filter (where ${mentions.sentiment} = 'neutral')`,
+      negative: sql<number>`count(*) filter (where ${mentions.sentiment} = 'negative')`,
+    })
+    .from(monitoringQueries)
+    .leftJoin(
+      mentions,
+      and(
+        eq(mentions.queryId, monitoringQueries.id),
+        gte(mentions.createdAt, sql`now() - (${sinceDays}::text || ' days')::interval`),
+      ),
+    )
+    .where(
+      and(
+        eq(monitoringQueries.organizationId, organizationId),
+        eq(monitoringQueries.status, "active"),
+        isNull(monitoringQueries.deletedAt),
+        inArray(monitoringQueries.trackingTarget, ["company", "competitor"]),
+      ),
+    )
+    .groupBy(monitoringQueries.id, monitoringQueries.name, monitoringQueries.trackingTarget)
+    .orderBy(monitoringQueries.trackingTarget, monitoringQueries.name);
+
+  return rows.map((row) => ({
+    ...row,
+    totalMentions: Number(row.totalMentions),
+    positive: Number(row.positive),
+    neutral: Number(row.neutral),
+    negative: Number(row.negative),
+  }));
 }

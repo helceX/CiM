@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { sourceTypeSelectionSchema } from "./onboarding";
+import { sourceTypeSelectionSchema, trackingTargetSchema } from "./onboarding";
 
 export const createMonitoringQuerySchema = z.object({
   projectId: z.uuid(),
@@ -8,6 +8,7 @@ export const createMonitoringQuerySchema = z.object({
   exclude: z.array(z.string().trim().min(1).max(120)).max(50).default([]),
   exactPhrases: z.array(z.string().trim().min(1).max(200)).max(20).default([]),
   sourceTypes: z.array(sourceTypeSelectionSchema).min(1, "Choose at least one source"),
+  trackingTarget: trackingTargetSchema.default("company"),
 });
 export type CreateMonitoringQueryInput = z.infer<typeof createMonitoringQuerySchema>;
 

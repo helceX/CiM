@@ -49,6 +49,7 @@ export async function POST(request: Request) {
     queryAst: ast,
     booleanQuery: astToBooleanQuery(ast),
     sourceTypes,
+    trackingTarget: input.trackingTarget,
   });
 
   await recordAuditLog(db, context.organizationId, {

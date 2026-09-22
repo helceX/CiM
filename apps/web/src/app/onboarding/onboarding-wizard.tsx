@@ -9,17 +9,7 @@ import type {
   SourceTypeSelection,
   TrackingTarget,
 } from "@cim/validation";
-
-const TRACKING_TARGETS: { value: TrackingTarget; label: string }[] = [
-  { value: "company", label: "Company" },
-  { value: "brand", label: "Brand" },
-  { value: "product", label: "Product" },
-  { value: "competitor", label: "Competitor" },
-  { value: "campaign", label: "Campaign" },
-  { value: "topic", label: "Topic" },
-  { value: "person", label: "Person" },
-  { value: "industry", label: "Industry" },
-];
+import { TRACKING_TARGET_OPTIONS } from "@/lib/tracking-targets";
 
 const SOURCE_TYPES: { value: SourceTypeSelection; label: string }[] = [
   { value: "news", label: "News" },
@@ -118,7 +108,7 @@ export function OnboardingWizard() {
       {step === 1 ? (
         <StepShell title="What do you want to track?">
           <div className="grid grid-cols-2 gap-2">
-            {TRACKING_TARGETS.map((target) => (
+            {TRACKING_TARGET_OPTIONS.map((target) => (
               <button
                 key={target.value}
                 type="button"

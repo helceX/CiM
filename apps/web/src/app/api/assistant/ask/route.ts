@@ -58,6 +58,7 @@ export async function POST(request: Request) {
     result = await provider.answerQuestion({
       question: parsed.data.question,
       screenContext: parsed.data.screenContext,
+      history: parsed.data.history,
       mentions,
     });
   } catch (error) {

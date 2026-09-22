@@ -246,16 +246,30 @@ export class MockAIProvider implements AIProvider {
   }
 
   async answerQuestion(input: AssistantAnswerInput): Promise<WithMethod<AssistantAnswerOutput>> {
-    const questionWords = new Set(tokenizeWords(input.question));
-    const scored = input.mentions
-      .map((mention) => {
-        const overlap = tokenizeWords(`${mention.title} ${mention.sourceName}`).filter((w) =>
-          questionWords.has(w),
-        ).length;
-        return { mention, overlap };
-      })
-      .filter((s) => s.overlap > 0)
-      .sort((a, b) => b.overlap - a.overlap);
+    const scoreAgainst = (words: Set<string>) =>
+      input.mentions
+        .map((mention) => {
+          const overlap = tokenizeWords(`${mention.title} ${mention.sourceName}`).filter((w) =>
+            words.has(w),
+          ).length;
+          return { mention, overlap };
+        })
+        .filter((s) => s.overlap > 0)
+        .sort((a, b) => b.overlap - a.overlap);
+
+    let scored = scoreAgainst(new Set(tokenizeWords(input.question)));
+
+    // A short follow-up ("what about the negative ones?") often carries no
+    // topic keywords of its own — fall back to the most recent turn's own
+    // question so the conversation's subject carries forward, the same
+    // way a reader re-reads the previous message before answering "what
+    // about X" in a real back-and-forth (brief §97's "context-aware").
+    const lastTurn = input.history.at(-1);
+    if (scored.length === 0 && lastTurn) {
+      scored = scoreAgainst(
+        new Set([...tokenizeWords(input.question), ...tokenizeWords(lastTurn.question)]),
+      );
+    }
 
     if (scored.length === 0) {
       return {

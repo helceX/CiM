@@ -223,6 +223,7 @@ describe("MockAIProvider", () => {
       const result = await provider.answerQuestion({
         question: "What's happening with our product launch?",
         screenContext: "Viewing the Dashboard",
+        history: [],
         mentions,
       });
       expect(result.evidenceMentionIds).toEqual(["m1"]);
@@ -234,6 +235,7 @@ describe("MockAIProvider", () => {
       const result = await provider.answerQuestion({
         question: "What is our competitor's stock price?",
         screenContext: "Viewing the Dashboard",
+        history: [],
         mentions,
       });
       expect(result.evidenceMentionIds).toEqual([]);
@@ -244,10 +246,31 @@ describe("MockAIProvider", () => {
       const result = await provider.answerQuestion({
         question: "Anything new?",
         screenContext: "Viewing the Dashboard",
+        history: [],
         mentions: [],
       });
       expect(result.evidenceMentionIds).toEqual([]);
       expect(result.answer).toMatch(/nothing has been crawled/i);
+    });
+
+    it("falls back to the previous turn's topic when a short follow-up has no keywords of its own", async () => {
+      const result = await provider.answerQuestion({
+        question: "What about that?",
+        screenContext: "Viewing the Dashboard",
+        history: [{ question: "What's happening with our product launch?", answer: "..." }],
+        mentions,
+      });
+      expect(result.evidenceMentionIds).toEqual(["m1"]);
+    });
+
+    it("does not fall back to history when the question alone already matches", async () => {
+      const result = await provider.answerQuestion({
+        question: "Anything about the weather report?",
+        screenContext: "Viewing the Dashboard",
+        history: [{ question: "What's happening with our product launch?", answer: "..." }],
+        mentions,
+      });
+      expect(result.evidenceMentionIds).toEqual(["m2"]);
     });
   });
 

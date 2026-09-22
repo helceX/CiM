@@ -277,6 +277,7 @@ describe("AnthropicAIProvider", () => {
     const result = await provider.answerQuestion({
       question: "How did the launch go?",
       screenContext: "Viewing the Dashboard",
+      history: [],
       mentions: [
         { id: "m1", title: "A", sourceName: "Wire", sentiment: "positive", priority: "normal", publishedAt: null },
       ],
@@ -298,12 +299,44 @@ describe("AnthropicAIProvider", () => {
     const result = await provider.answerQuestion({
       question: "What's our competitor's revenue?",
       screenContext: "Viewing the Dashboard",
+      history: [],
       mentions: [
         { id: "m1", title: "A", sourceName: "Wire", sentiment: null, priority: "normal", publishedAt: null },
       ],
     });
     expect(result.evidenceMentionIds).toEqual([]);
     expect(result.answer).toMatch(/none of your recent mentions/i);
+  });
+
+  it("folds prior conversation turns into answerQuestion's request as trusted context, not SOURCE CONTENT", async () => {
+    let capturedParams: Anthropic.MessageCreateParamsNonStreaming | undefined;
+    const client = fakeClient(async (params) => {
+      capturedParams = params;
+      return toolUseMessage("answer_question", {
+        answer: "The negative one was about a recall.",
+        confidence: 0.7,
+        evidenceMentionIds: [],
+      });
+    });
+    const provider = new AnthropicAIProvider({ client });
+
+    await provider.answerQuestion({
+      question: "Which of those was negative?",
+      screenContext: "Viewing the Dashboard",
+      history: [
+        { question: "What's happening with our product launch?", answer: "Two mentions, both positive." },
+      ],
+      mentions: [],
+    });
+
+    const content = (capturedParams?.messages[0]?.content ?? "") as string;
+    expect(content).toContain("Earlier in this conversation:");
+    expect(content).toContain("Q: What's happening with our product launch?");
+    expect(content).toContain("A: Two mentions, both positive.");
+    // Trusted, not the SOURCE CONTENT block the prompt-injection defense targets.
+    expect(content.indexOf("Earlier in this conversation:")).toBeLessThan(
+      content.indexOf("SOURCE CONTENT"),
+    );
   });
 
   it("structures reviewQuery as a forced tool call and tags the method with the cheap model", async () => {

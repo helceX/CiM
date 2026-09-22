@@ -105,7 +105,7 @@ generation (excluding soft-deleted organizations).
 | Dashboard: KPIs, trend, top stories, topics, sentiment | ✅ | ✅ Competitor comparison, ✅ source distribution depth (by type) | | |
 | Analytics deep views | Basic (volume, sentiment, sources) | Full matrix (§25 of brief) | Journalist/author, geography | |
 | AI: summary, sentiment, entities, topics | ✅ (grounded, evidence-linked) | ✅ Recommendations (Recommendation/Why/Evidence/Priority/Confidence), ✅ Risk detection (detectRisk, dashboard risk banner), ✅ Executive brief automation (scheduled email) | | |
-| AI Assistant (context-aware) | — | ✅ (dashboard, single-turn Q&A) | Deeper agentic workflows, multi-turn | |
+| AI Assistant (context-aware) | — | ✅ (dashboard, multi-turn Q&A) | Deeper agentic workflows | |
 | Crisis detection | — | Multi-signal detection | Predictive | |
 | Competitor tracking | — | ✅ (query tracking-target tagging, dashboard comparison) | | |
 | AI Visibility (ChatGPT/Gemini/Claude/Perplexity tracking) | — | — | ✅ | |

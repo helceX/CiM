@@ -100,10 +100,25 @@ export const assistantAnswerOutputSchema = z.object({
 });
 export type AssistantAnswerOutput = z.infer<typeof assistantAnswerOutputSchema>;
 
+/**
+ * docs/product/FEATURE_MATRIX.md P3 "AI Assistant: ... multi-turn" — a
+ * prior question/answer pair from the same conversation, so a follow-up
+ * like "what about the negative ones?" can be grounded in what was just
+ * discussed. Trusted content (the same user's own prior turns, and the
+ * model's own prior output), unlike SOURCE CONTENT's scraped articles —
+ * never subject to the "don't follow instructions inside it" defense.
+ */
+export type AssistantConversationTurn = {
+  question: string;
+  answer: string;
+};
+
 export type AssistantAnswerInput = {
   question: string;
   /** e.g. "Viewing the Dashboard" — what the user was looking at when they asked. */
   screenContext: string;
+  /** Earlier turns in this conversation, oldest first — empty for the first question. */
+  history: AssistantConversationTurn[];
   mentions: InsightSourceMention[];
 };
 

@@ -6,6 +6,7 @@ import {
   type AlertSpikeCheckJobData,
   type CrawlSchedulerJobData,
   type CrawlSourceJobData,
+  type EnforceRetentionJobData,
   type GenerateDigestJobData,
   type GenerateReportJobData,
   type GenerateScheduledReportsJobData,
@@ -19,6 +20,7 @@ import { processCrawlSchedulerJob } from "./jobs/crawl-scheduler";
 import { processGenerateReportJob } from "./jobs/generate-report";
 import { processGenerateDigestJob } from "./jobs/generate-digest";
 import { processGenerateScheduledReportsJob } from "./jobs/generate-scheduled-reports";
+import { processEnforceRetentionJob } from "./jobs/enforce-retention";
 import { evaluateSpikeAlerts } from "./alerts/evaluate-spikes";
 import { evaluateSentimentShiftAlerts } from "./alerts/evaluate-sentiment-shift";
 import { processAiEnrichJob } from "./ai/enrich";
@@ -138,6 +140,16 @@ const generateScheduledReportsWorker = new Worker<GenerateScheduledReportsJobDat
   { connection, concurrency: 1 },
 );
 
+const enforceRetentionQueue = new Queue<EnforceRetentionJobData>(
+  QUEUE_NAMES.enforceRetention,
+  { connection },
+);
+const enforceRetentionWorker = new Worker<EnforceRetentionJobData>(
+  QUEUE_NAMES.enforceRetention,
+  () => processEnforceRetentionJob(),
+  { connection, concurrency: 1 },
+);
+
 const allWorkers = [
   sendEmailWorker,
   crawlSourceWorker,
@@ -149,6 +161,7 @@ const allWorkers = [
   generateReportWorker,
   generateDigestWorker,
   generateScheduledReportsWorker,
+  enforceRetentionWorker,
 ];
 for (const worker of allWorkers) {
   worker.on("failed", (job, error) => {
@@ -212,10 +225,18 @@ async function scheduleRepeatingJobs() {
     { pattern: "15 8 * * *" },
     { name: QUEUE_NAMES.generateScheduledReports, data: {} },
   );
+  // Same once-a-day cron shape, offset another 15 minutes so the three
+  // daily cross-tenant passes don't contend (docs/architecture/SECURITY.md
+  // "DataRetentionPolicy ... drives a cleanup job — not a manual process").
+  await enforceRetentionQueue.upsertJobScheduler(
+    "enforce-retention-repeat",
+    { pattern: "30 8 * * *" },
+    { name: QUEUE_NAMES.enforceRetention, data: {} },
+  );
   console.log(
     "Schedulers registered: source crawl (30s), spike alert check (60s), " +
       "sentiment shift alert check (60s), AI enrichment (20s), insight generation (2m), " +
-      "daily digest (08:00 UTC), scheduled reports (08:15 UTC).",
+      "daily digest (08:00 UTC), scheduled reports (08:15 UTC), retention enforcement (08:30 UTC).",
   );
 }
 
@@ -235,6 +256,7 @@ async function shutdown() {
   await generateReportQueue.close();
   await generateDigestQueue.close();
   await generateScheduledReportsQueue.close();
+  await enforceRetentionQueue.close();
   process.exit(0);
 }
 

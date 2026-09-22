@@ -12,9 +12,9 @@ import {
   Input,
   Select,
 } from "@cim/ui";
-import type { MemberRow } from "@cim/db";
+import type { CustomRole, MemberRow } from "@cim/db";
 
-const ASSIGNABLE_ROLES = [
+const FIXED_ASSIGNABLE_ROLES = [
   { value: "organization_admin", label: "Organization Admin" },
   { value: "communications_manager", label: "Communications Manager" },
   { value: "analyst", label: "Analyst" },
@@ -22,8 +22,8 @@ const ASSIGNABLE_ROLES = [
   { value: "report_recipient", label: "Report Recipient" },
 ] as const;
 
-function formatRole(role: string): string {
-  const known = ASSIGNABLE_ROLES.find((r) => r.value === role);
+function formatFixedRole(role: string): string {
+  const known = FIXED_ASSIGNABLE_ROLES.find((r) => r.value === role);
   if (known) return known.label;
   return role
     .split("_")
@@ -31,12 +31,27 @@ function formatRole(role: string): string {
     .join(" ");
 }
 
+/**
+ * docs/product/FEATURE_MATRIX.md P2 "RBAC custom roles" — the picker in
+ * both the invite dialog and each member's role dropdown needs the same
+ * fixed-roles-plus-this-org's-custom-roles option list, so it's built
+ * once here rather than duplicated per dropdown.
+ */
+function assignableRoleOptions(customRoles: CustomRole[]) {
+  return [
+    ...FIXED_ASSIGNABLE_ROLES,
+    ...customRoles.map((role) => ({ value: role.id, label: `${role.name} (custom)` })),
+  ];
+}
+
 export function MembersSection({
   members,
+  customRoles,
   canManageMembers,
   currentUserId,
 }: {
   members: MemberRow[];
+  customRoles: CustomRole[];
   canManageMembers: boolean;
   currentUserId: string;
 }) {
@@ -49,13 +64,16 @@ export function MembersSection({
             Who has access to this organization.
           </p>
         </div>
-        {canManageMembers ? <InviteMemberDialog /> : null}
+        {canManageMembers ? <InviteMemberDialog customRoles={customRoles} /> : null}
       </div>
       <div className="mt-3 overflow-hidden rounded-lg border border-border">
         <ul className="divide-y divide-border">
           {members.map((member) => {
             const isOwner = member.role === "organization_owner";
             const isSelf = member.userId === currentUserId;
+            const roleLabel = member.customRoleName
+              ? `${member.customRoleName} (custom)`
+              : formatFixedRole(member.role);
             return (
               <li
                 key={member.membershipId}
@@ -72,9 +90,13 @@ export function MembersSection({
                     <Badge tone="warning">Invited</Badge>
                   ) : null}
                   {canManageMembers && !isOwner ? (
-                    <RoleSelect membershipId={member.membershipId} role={member.role} />
+                    <RoleSelect
+                      membershipId={member.membershipId}
+                      role={member.role}
+                      customRoles={customRoles}
+                    />
                   ) : (
-                    <Badge tone="neutral">{formatRole(member.role)}</Badge>
+                    <Badge tone="neutral">{roleLabel}</Badge>
                   )}
                   {canManageMembers && !isOwner && !isSelf ? (
                     <RevokeMemberDialog
@@ -92,11 +114,12 @@ export function MembersSection({
   );
 }
 
-function InviteMemberDialog() {
+function InviteMemberDialog({ customRoles }: { customRoles: CustomRole[] }) {
   const router = useRouter();
+  const options = assignableRoleOptions(customRoles);
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState<string>(ASSIGNABLE_ROLES[0].value);
+  const [role, setRole] = useState<string>(options[0]!.value);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -148,7 +171,7 @@ function InviteMemberDialog() {
               value={role}
               onChange={(e) => setRole(e.target.value)}
             >
-              {ASSIGNABLE_ROLES.map((r) => (
+              {options.map((r) => (
                 <option key={r.value} value={r.value}>
                   {r.label}
                 </option>
@@ -178,8 +201,17 @@ function InviteMemberDialog() {
   );
 }
 
-function RoleSelect({ membershipId, role }: { membershipId: string; role: string }) {
+function RoleSelect({
+  membershipId,
+  role,
+  customRoles,
+}: {
+  membershipId: string;
+  role: string;
+  customRoles: CustomRole[];
+}) {
   const router = useRouter();
+  const options = assignableRoleOptions(customRoles);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -212,7 +244,7 @@ function RoleSelect({ membershipId, role }: { membershipId: string; role: string
         onChange={(e) => handleChange(e.target.value)}
         className="h-8 text-xs"
       >
-        {ASSIGNABLE_ROLES.map((r) => (
+        {options.map((r) => (
           <option key={r.value} value={r.value}>
             {r.label}
           </option>

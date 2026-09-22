@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { updateMemberRoleSchema } from "@cim/validation";
+import { isOrgRole } from "@cim/core";
 import {
   db,
+  getCustomRole,
   recordAuditLog,
   revokeAllSessionsForUser,
   revokeMembership,
@@ -47,6 +49,15 @@ export async function PATCH(
       { error: "Invalid input", issues: parsed.error.issues },
       { status: 400 },
     );
+  }
+
+  // docs/product/FEATURE_MATRIX.md P2 "RBAC custom roles" — see
+  // invite/route.ts's identical check.
+  if (
+    !isOrgRole(parsed.data.role) &&
+    !(await getCustomRole(db, context.organizationId, parsed.data.role))
+  ) {
+    return NextResponse.json({ error: "That role doesn't exist" }, { status: 400 });
   }
 
   const result = await updateMemberRole(

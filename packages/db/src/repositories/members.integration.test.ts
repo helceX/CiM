@@ -4,6 +4,7 @@ import { generateRawToken, hashToken } from "@cim/core";
 import { db } from "../client";
 import { organizationMemberships, organizations, users } from "../schema/index";
 import { asOrganizationId } from "./tenant-scope";
+import { createCustomRole } from "./custom-roles";
 import {
   acceptInvitation,
   findPendingInvitationByTokenHash,
@@ -130,6 +131,26 @@ describe("members repository (integration)", () => {
     expect(roles).toContain("organization_owner");
     expect(roles).toContain("analyst");
     expect(members.every((m) => m.status !== "revoked")).toBe(true);
+  });
+
+  it("resolves a custom role's name for a member assigned to it, and null for a fixed role", async () => {
+    const customRole = await createCustomRole(db, orgId, {
+      name: "Spokesperson",
+      permissions: ["mentions:read"],
+    });
+    if (!customRole.ok) throw new Error("unreachable");
+    await updateMemberRole(db, orgId, analystMembershipId, customRole.role.id);
+
+    const members = await listMembersForOrganization(db, orgId);
+    const customRoleMember = members.find((m) => m.membershipId === analystMembershipId);
+    expect(customRoleMember?.role).toBe(customRole.role.id);
+    expect(customRoleMember?.customRoleName).toBe("Spokesperson");
+
+    const ownerMember = members.find((m) => m.role === "organization_owner");
+    expect(ownerMember?.customRoleName).toBeNull();
+
+    // Restore for any later test relying on analystMembershipId's fixed role.
+    await updateMemberRole(db, orgId, analystMembershipId, "analyst");
   });
 
   it("blocks demoting the organization's sole active owner", async () => {

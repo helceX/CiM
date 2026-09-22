@@ -1,5 +1,4 @@
 import { notFound } from "next/navigation";
-import { can } from "@cim/core";
 import { Badge } from "@cim/ui";
 import { db, getActiveReportShareLink, getReport, listReportRuns } from "@cim/db";
 import { getReportTemplate } from "@cim/reports/templates";
@@ -33,7 +32,7 @@ export default async function ReportDetailPage({
 
   const runs = await listReportRuns(db, report.id);
   const template = getReportTemplate(report.templateKey);
-  const canManageSchedule = can(context.role, "reports:write");
+  const canManageSchedule = context.permissions.includes("reports:write");
 
   const activeShareLinks = new Map(
     await Promise.all(

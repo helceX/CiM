@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { inviteMemberSchema } from "@cim/validation";
-import { generateRawToken, hashToken } from "@cim/core";
-import { db, findUserByEmail, inviteMember, recordAuditLog } from "@cim/db";
+import { generateRawToken, hashToken, isOrgRole } from "@cim/core";
+import { db, findUserByEmail, getCustomRole, inviteMember, recordAuditLog } from "@cim/db";
 import { getEnv } from "@cim/config";
 import { requirePermission } from "@/lib/tenant";
 import { getCurrentUser } from "@/lib/session";
@@ -70,6 +70,14 @@ export async function POST(request: Request) {
       },
       { status: 409 },
     );
+  }
+
+  // docs/product/FEATURE_MATRIX.md P2 "RBAC custom roles" — a
+  // shape-valid role that isn't one of the six fixed ones must actually
+  // be one of this organization's own custom roles; the zod schema
+  // alone can't check that (it just accepts any uuid).
+  if (!isOrgRole(input.role) && !(await getCustomRole(db, context.organizationId, input.role))) {
+    return NextResponse.json({ error: "That role doesn't exist" }, { status: 400 });
   }
 
   const rawToken = generateRawToken();

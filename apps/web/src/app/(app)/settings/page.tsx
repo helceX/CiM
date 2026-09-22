@@ -1,4 +1,3 @@
-import { can } from "@cim/core";
 import {
   db,
   getLatestFeatureUsage,
@@ -6,6 +5,7 @@ import {
   getRetentionPolicy,
   getSubscription,
   listApiKeys,
+  listCustomRolesForOrganization,
   listMembersForOrganization,
 } from "@cim/db";
 import { requireOrgContext } from "@/lib/tenant";
@@ -14,6 +14,7 @@ import {
   DeleteAccountDialog,
   DeleteOrganizationDialog,
 } from "./danger-zone";
+import { CustomRolesSection } from "./custom-roles-section";
 import { MembersSection } from "./members-section";
 import { RetentionSection } from "./retention-section";
 import { WebhookSection } from "./webhook-section";
@@ -22,17 +23,19 @@ import { UsageSection } from "./usage-section";
 
 export default async function SettingsPage() {
   const context = await requireOrgContext();
-  const [members, retentionPolicy, webhookUrl, apiKeys, subscription, usage] = await Promise.all([
-    listMembersForOrganization(db, context.organizationId),
-    getRetentionPolicy(db, context.organizationId),
-    getOrganizationWebhookUrl(db, context.organizationId),
-    listApiKeys(db, context.organizationId),
-    getSubscription(db, context.organizationId),
-    getLatestFeatureUsage(db, context.organizationId),
-  ]);
-  const canManageMembers = can(context.role, "org:manage_members");
-  const canManageSettings = can(context.role, "org:manage_settings");
-  const canManageApiKeys = can(context.role, "api_keys:manage");
+  const [members, customRoles, retentionPolicy, webhookUrl, apiKeys, subscription, usage] =
+    await Promise.all([
+      listMembersForOrganization(db, context.organizationId),
+      listCustomRolesForOrganization(db, context.organizationId),
+      getRetentionPolicy(db, context.organizationId),
+      getOrganizationWebhookUrl(db, context.organizationId),
+      listApiKeys(db, context.organizationId),
+      getSubscription(db, context.organizationId),
+      getLatestFeatureUsage(db, context.organizationId),
+    ]);
+  const canManageMembers = context.permissions.includes("org:manage_members");
+  const canManageSettings = context.permissions.includes("org:manage_settings");
+  const canManageApiKeys = context.permissions.includes("api_keys:manage");
 
   return (
     <div className="flex max-w-2xl flex-col gap-8">
@@ -50,9 +53,12 @@ export default async function SettingsPage() {
 
       <MembersSection
         members={members}
+        customRoles={customRoles}
         canManageMembers={canManageMembers}
         currentUserId={context.userId}
       />
+
+      {canManageMembers ? <CustomRolesSection customRoles={customRoles} /> : null}
 
       <RetentionSection
         mentionRetentionDays={retentionPolicy.mentionRetentionDays}

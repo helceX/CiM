@@ -14,7 +14,18 @@ const ASSIGNABLE_ROLES = ORG_ROLES.filter(
   (role): role is Exclude<(typeof ORG_ROLES)[number], "organization_owner"> =>
     role !== "organization_owner",
 );
-const assignableRole = z.enum(ASSIGNABLE_ROLES);
+const assignableFixedRole = z.enum(ASSIGNABLE_ROLES);
+
+/**
+ * docs/product/FEATURE_MATRIX.md P2 "RBAC custom roles" — `role` here is
+ * either a fixed OrgRole string (as above) or a custom role's id. A
+ * shape-valid uuid still isn't proof the role exists in this org or
+ * hasn't been deleted since the form loaded — the route itself
+ * (getCustomRole, scoped to the caller's organizationId) is what
+ * actually checks that before this ever reaches inviteMember/
+ * updateMemberRole.
+ */
+export const assignableRole = z.union([assignableFixedRole, z.uuid()]);
 
 export const inviteMemberSchema = z.object({
   email: z.email("Enter a valid email").max(255).toLowerCase(),

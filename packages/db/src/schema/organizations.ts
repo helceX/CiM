@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
   index,
   pgTable,
@@ -60,6 +61,38 @@ export const organizationMemberships = pgTable(
     index("org_memberships_user_idx").on(table.userId),
   ],
 );
+
+/**
+ * docs/product/FEATURE_MATRIX.md P2 "RBAC custom roles" / ADR-005 — the
+ * comment on `organizationMemberships.role` above already named this
+ * exact shape: a custom role is a new row here, not a schema change to
+ * that table. `organizationMemberships.role` stores a custom role's `id`
+ * (as text, same column that already holds a fixed OrgRole string) —
+ * `isOrgRole()` tells the two apart, never a second column. `permissions`
+ * is validated against `@cim/core`'s `PERMISSIONS` at the API layer, the
+ * same boundary the fixed role table's own `Permission` type is checked
+ * against; the column itself stays a plain text array so extending the
+ * permission set later never needs a migration here either.
+ */
+export const customRoles = pgTable(
+  "custom_roles",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    permissions: text("permissions").array().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("custom_roles_org_name_lower_uidx").on(table.organizationId, sql`lower(${table.name})`),
+    index("custom_roles_org_idx").on(table.organizationId),
+  ],
+);
+
+export type CustomRole = typeof customRoles.$inferSelect;
 
 export const workspaces = pgTable(
   "workspaces",

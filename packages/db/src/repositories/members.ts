@@ -1,8 +1,7 @@
-import { and, count, eq, ne } from "drizzle-orm";
-import type { OrgRole } from "@cim/core";
+import { and, count, eq, ne, sql } from "drizzle-orm";
 import type { Db } from "../client";
 import { invitationTokens } from "../schema/auth";
-import { organizationMemberships, organizations } from "../schema/organizations";
+import { customRoles, organizationMemberships, organizations } from "../schema/organizations";
 import { users } from "../schema/users";
 import { asOrganizationId, type OrganizationId } from "./tenant-scope";
 
@@ -21,7 +20,11 @@ export async function inviteMember(
   organizationId: OrganizationId,
   input: {
     email: string;
-    role: OrgRole;
+    // Either a fixed OrgRole string or a custom role's id
+    // (docs/product/FEATURE_MATRIX.md P2 "RBAC custom roles") — the
+    // caller (the API route) has already validated which, and against
+    // this organization's own custom_roles for the latter.
+    role: string;
     invitedByUserId: string;
     tokenHash: string;
     tokenExpiresAt: Date;
@@ -68,6 +71,11 @@ export type MemberRow = {
   firstName: string;
   lastName: string;
   role: string;
+  // Set only when `role` is a custom role's id — the UI shows this
+  // instead of the raw id (docs/product/FEATURE_MATRIX.md P2 "RBAC
+  // custom roles"). Null for a fixed OrgRole, which is already
+  // human-readable on its own.
+  customRoleName: string | null;
   status: string;
   createdAt: Date;
 };
@@ -85,11 +93,17 @@ export async function listMembersForOrganization(
       firstName: users.firstName,
       lastName: users.lastName,
       role: organizationMemberships.role,
+      customRoleName: customRoles.name,
       status: organizationMemberships.status,
       createdAt: organizationMemberships.createdAt,
     })
     .from(organizationMemberships)
     .innerJoin(users, eq(users.id, organizationMemberships.userId))
+    // `organizationMemberships.role` is plain text (a fixed OrgRole
+    // string for most rows), so the join casts the uuid side to text
+    // rather than the other way — casting `role` to uuid would throw
+    // for every non-custom-role row instead of just not matching.
+    .leftJoin(customRoles, sql`${customRoles.id}::text = ${organizationMemberships.role}`)
     .where(
       and(
         eq(organizationMemberships.organizationId, organizationId),
@@ -97,7 +111,7 @@ export async function listMembersForOrganization(
       ),
     )
     .orderBy(organizationMemberships.createdAt);
-  return rows;
+  return rows.map((row) => ({ ...row, customRoleName: row.customRoleName ?? null }));
 }
 
 async function countActiveOwners(
@@ -152,7 +166,9 @@ export async function updateMemberRole(
   db: Db,
   organizationId: OrganizationId,
   membershipId: string,
-  role: OrgRole,
+  // Either a fixed OrgRole string or a custom role's id — see
+  // `inviteMember`'s `role` param above.
+  role: string,
 ): Promise<{ ok: true } | { ok: false; error: MemberMutationError }> {
   const blocked = await assertNotDemotingSoleOwner(db, organizationId, membershipId);
   if (blocked) return { ok: false, error: blocked };

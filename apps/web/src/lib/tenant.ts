@@ -2,19 +2,27 @@ import "server-only";
 import {
   asOrganizationId,
   db,
+  getCustomRole,
   listMembershipsForUser,
   resolveApiKeyByRawKey,
   touchApiKeyLastUsed,
   type OrganizationId,
 } from "@cim/db";
-import { can, isOrgRole, type OrgRole, type Permission } from "@cim/core";
+import { isOrgRole, permissionsForRole, type OrgRole, type Permission } from "@cim/core";
 import { getCurrentUser } from "./session";
 
 export type OrgContext = {
   userId: string;
   organizationId: OrganizationId;
   organizationName: string;
-  role: OrgRole;
+  // Null when the membership's role is a custom role rather than one of
+  // the six fixed ones (docs/product/FEATURE_MATRIX.md P2 "RBAC custom
+  // roles") — `permissions` below is what every permission check
+  // actually reads; `role` stays around for the handful of places that
+  // specifically mean "the owner", never anything a custom role grants.
+  role: OrgRole | null;
+  customRoleName: string | null;
+  permissions: readonly Permission[];
 };
 
 /**
@@ -23,6 +31,18 @@ export type OrgContext = {
  * supplied id. MVP has exactly one organization per user (created at
  * registration), so this picks the sole active membership; the shape
  * already supports multiple memberships for later multi-org switching.
+ *
+ * ADR-005 / FEATURE_MATRIX.md P2 "RBAC custom roles" — a membership's
+ * `role` column is either a fixed OrgRole string or a custom role's id
+ * (packages/db/src/schema/organizations.ts's own comment on that column
+ * named this exact design). Resolving which, and the resulting
+ * permission set, happens once here so every downstream permission
+ * check (`requirePermission`, the UI's own `can()` reads) stays a
+ * simple array-membership test regardless of which kind of role it is.
+ * A custom role that no longer exists (deleted out from under an active
+ * membership — shouldn't happen since deleteCustomRole blocks that, but
+ * never trust a stale read) fails closed the same way an unresolvable
+ * fixed role already did.
  */
 export async function getOrgContext(): Promise<OrgContext | null> {
   const user = await getCurrentUser();
@@ -31,13 +51,31 @@ export async function getOrgContext(): Promise<OrgContext | null> {
   const memberships = await listMembershipsForUser(db, user.id);
   const first = memberships[0];
   if (!first) return null;
-  if (!isOrgRole(first.membership.role)) return null;
+
+  const organizationId = asOrganizationId(first.organization.id);
+  const rawRole = first.membership.role;
+
+  if (isOrgRole(rawRole)) {
+    return {
+      userId: user.id,
+      organizationId,
+      organizationName: first.organization.name,
+      role: rawRole,
+      customRoleName: null,
+      permissions: permissionsForRole(rawRole),
+    };
+  }
+
+  const customRole = await getCustomRole(db, organizationId, rawRole);
+  if (!customRole) return null;
 
   return {
     userId: user.id,
-    organizationId: asOrganizationId(first.organization.id),
+    organizationId,
     organizationName: first.organization.name,
-    role: first.membership.role,
+    role: null,
+    customRoleName: customRole.name,
+    permissions: customRole.permissions as Permission[],
   };
 }
 
@@ -62,7 +100,7 @@ export async function requireOrgContext(): Promise<OrgContext> {
  */
 export async function requirePermission(permission: Permission): Promise<OrgContext> {
   const context = await requireOrgContext();
-  if (!can(context.role, permission)) {
+  if (!context.permissions.includes(permission)) {
     throw new Error("FORBIDDEN");
   }
   return context;

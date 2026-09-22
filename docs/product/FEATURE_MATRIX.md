@@ -88,7 +88,7 @@ generation (excluding soft-deleted organizations).
 | Registration / email verification / login | ✅ | | | |
 | Onboarding wizard | ✅ | | | |
 | Organizations / Workspaces / Projects | ✅ | | | |
-| RBAC (fixed roles) | ✅ | Custom roles | | |
+| RBAC (fixed roles) | ✅ | ✅ Custom roles | | |
 | Monitoring queries (simple builder) | ✅ | | | |
 | Boolean / advanced query mode | ✅ | ✅ Query quality assistant | | |
 | Query preview ("test before save") | ✅ | | | |

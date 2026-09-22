@@ -1,3 +1,5 @@
+import { sql } from "drizzle-orm";
+import { turkishFold } from "@cim/core";
 import { createDb } from "./client";
 import {
   articles,
@@ -155,6 +157,12 @@ async function main() {
           publishedAt,
           fetchedAt: publishedAt,
           authorName: null,
+          // docs/architecture/ADR-002-SEARCH.md MVP tier — insertArticle
+          // populates this on every real write path; this bulk seed
+          // insert bypasses that helper for batch-insert efficiency, so
+          // it has to compute the same value inline or every seeded
+          // article would be permanently unsearchable via full-text match.
+          searchVector: sql`to_tsvector('simple', ${turkishFold(title)})`,
         };
       }),
     )

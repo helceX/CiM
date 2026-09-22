@@ -172,11 +172,12 @@ export async function listMentionsFiltered(
 ): Promise<MentionsPage> {
   let searchArticleIds: string[] | undefined;
   if (filters.search) {
+    // No limit — this repository needs the true match set to paginate
+    // and count correctly (see PostgresSearchIndex.search's own note); a
+    // capped preview would silently under-report totalCount and make
+    // results beyond the cap unreachable.
     const searchIndex = new PostgresSearchIndex(db);
-    const result = await searchIndex.search(
-      { text: filters.search, limit: 500 },
-      { organizationId },
-    );
+    const result = await searchIndex.search({ text: filters.search }, { organizationId });
     searchArticleIds = result.items.map((item) => item.articleId);
   }
 

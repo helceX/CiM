@@ -50,7 +50,6 @@ export class PostgresSearchIndex implements SearchIndex {
   async search(query: SearchQuery, scope: TenantScope): Promise<SearchResult> {
     const folded = turkishFold(query.text);
     if (!folded.trim()) return { items: [] };
-    const limit = query.limit ?? 50;
 
     const rank = sql`ts_rank(${articles.searchVector}, plainto_tsquery('simple', ${folded}))`;
     // word_similarity, not similarity — the query is one or two words and
@@ -61,7 +60,7 @@ export class PostgresSearchIndex implements SearchIndex {
     // typo-tolerance actually needs (SEARCH.md's unaccent/pg_trgm tier).
     const similarity = sql`word_similarity(unaccent(lower(${query.text})), unaccent(lower(${articles.title})))`;
 
-    const rows = await this.db
+    const baseQuery = this.db
       .select({
         articleId: articles.id,
         rank: sql<number>`${rank}`,
@@ -79,8 +78,15 @@ export class PostgresSearchIndex implements SearchIndex {
           or ${similarity} > 0.3
         )`,
       )
-      .orderBy(sql`greatest(${rank}, ${similarity}) desc`)
-      .limit(limit);
+      .orderBy(sql`greatest(${rank}, ${similarity}) desc`);
+
+    // No limit means "every match" — a caller like listMentionsFiltered
+    // needs the true match set to paginate/count correctly, not a
+    // ranked top-N preview; a capped default here would silently
+    // under-report totalCount and make results beyond the cap
+    // unreachable, the same class of bug brief §90 rules out for
+    // client-side pagination.
+    const rows = query.limit !== undefined ? await baseQuery.limit(query.limit) : await baseQuery;
 
     return {
       items: rows.map((row) => ({

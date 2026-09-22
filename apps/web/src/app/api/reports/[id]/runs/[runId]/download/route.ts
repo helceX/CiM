@@ -2,7 +2,11 @@ import { NextResponse } from "next/server";
 import { db, getReport, getReportFile, getReportRun } from "@cim/db";
 import { requireOrgContext } from "@/lib/tenant";
 
-const EXTENSION: Record<"pdf" | "csv", string> = { pdf: "pdf", csv: "csv" };
+const EXTENSION: Record<"pdf" | "csv" | "xlsx", string> = {
+  pdf: "pdf",
+  csv: "csv",
+  xlsx: "xlsx",
+};
 
 export async function GET(
   request: Request,
@@ -17,8 +21,11 @@ export async function GET(
 
   const { id, runId } = await params;
   const format = new URL(request.url).searchParams.get("format");
-  if (format !== "pdf" && format !== "csv") {
-    return NextResponse.json({ error: "format must be pdf or csv" }, { status: 400 });
+  if (format !== "pdf" && format !== "csv" && format !== "xlsx") {
+    return NextResponse.json(
+      { error: "format must be pdf, csv, or xlsx" },
+      { status: 400 },
+    );
   }
 
   // Ownership is checked on both the Report and the Run — never trust a
@@ -31,7 +38,10 @@ export async function GET(
     return NextResponse.json({ error: "Report run not found" }, { status: 404 });
   }
   if (run.status !== "completed") {
-    return NextResponse.json({ error: `Report run is ${run.status}, not completed` }, { status: 409 });
+    return NextResponse.json(
+      { error: `Report run is ${run.status}, not completed` },
+      { status: 409 },
+    );
   }
 
   const file = await getReportFile(db, runId, format);

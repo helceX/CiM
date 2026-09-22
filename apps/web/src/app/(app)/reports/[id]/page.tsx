@@ -95,6 +95,12 @@ export default async function ReportDetailPage({
                         >
                           CSV
                         </a>
+                        <a
+                          className="text-primary underline underline-offset-2"
+                          href={`/api/reports/${report.id}/runs/${run.id}/download?format=xlsx`}
+                        >
+                          XLSX
+                        </a>
                       </div>
                     ) : (
                       <span className="text-muted-foreground">Not available</span>

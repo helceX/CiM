@@ -11,7 +11,13 @@ import {
   markReportRunFailed,
   markReportRunRunning,
 } from "@cim/db";
-import { gatherReportData, renderHtmlToPdf, renderReportCsv, renderReportHtml } from "@cim/reports";
+import {
+  gatherReportData,
+  renderHtmlToPdf,
+  renderReportCsv,
+  renderReportHtml,
+  renderReportXlsx,
+} from "@cim/reports";
 
 /**
  * On-demand (not scheduled) — enqueued once per "Generate report" click,
@@ -19,7 +25,9 @@ import { gatherReportData, renderHtmlToPdf, renderReportCsv, renderReportHtml } 
  * run `failed` with its error, then notifies the requester — never a
  * silently missing report (docs/product/USER_FLOWS.md §5).
  */
-export async function processGenerateReportJob(job: Job<GenerateReportJobData>): Promise<void> {
+export async function processGenerateReportJob(
+  job: Job<GenerateReportJobData>,
+): Promise<void> {
   const found = await getReportRunForWorker(db, job.data.reportRunId);
   if (!found) {
     throw new Error(`Report run not found: ${job.data.reportRunId}`);
@@ -39,7 +47,10 @@ export async function processGenerateReportJob(job: Job<GenerateReportJobData>):
 
     const html = renderReportHtml(data);
     const csv = renderReportCsv(data);
-    const pdf = await renderHtmlToPdf(html, { executablePath: getEnv().PLAYWRIGHT_CHROMIUM_PATH });
+    const [pdf, xlsx] = await Promise.all([
+      renderHtmlToPdf(html, { executablePath: getEnv().PLAYWRIGHT_CHROMIUM_PATH }),
+      renderReportXlsx(data),
+    ]);
 
     await createReportFile(db, {
       reportRunId: run.id,
@@ -52,6 +63,12 @@ export async function processGenerateReportJob(job: Job<GenerateReportJobData>):
       format: "csv",
       mimeType: "text/csv",
       data: Buffer.from(csv, "utf-8"),
+    });
+    await createReportFile(db, {
+      reportRunId: run.id,
+      format: "xlsx",
+      mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      data: xlsx,
     });
 
     await markReportRunCompleted(db, run.id);

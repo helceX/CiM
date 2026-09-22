@@ -213,7 +213,12 @@ export async function markReportRunFailed(
 
 export async function createReportFile(
   db: Db,
-  input: { reportRunId: string; format: "pdf" | "csv"; mimeType: string; data: Buffer },
+  input: {
+    reportRunId: string;
+    format: "pdf" | "csv" | "xlsx";
+    mimeType: string;
+    data: Buffer;
+  },
 ): Promise<void> {
   await db.insert(reportFiles).values({
     reportRunId: input.reportRunId,
@@ -227,7 +232,7 @@ export async function createReportFile(
 export async function getReportFile(
   db: Db,
   reportRunId: string,
-  format: "pdf" | "csv",
+  format: "pdf" | "csv" | "xlsx",
 ) {
   const [row] = await db
     .select()

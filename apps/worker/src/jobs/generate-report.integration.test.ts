@@ -115,7 +115,9 @@ describe("processGenerateReportJob (integration)", () => {
   });
 
   afterAll(async () => {
-    await db.delete(schema.organizations).where(eq(schema.organizations.id, organizationId));
+    await db
+      .delete(schema.organizations)
+      .where(eq(schema.organizations.id, organizationId));
     await db.delete(schema.sources).where(eq(schema.sources.id, sourceId));
   });
 
@@ -145,9 +147,20 @@ describe("processGenerateReportJob (integration)", () => {
 
     const csvFile = await getReportFile(db, run.id, "csv");
     expect(csvFile).toBeDefined();
-    expect(csvFile?.data.toString("utf-8")).toContain("Northwind Atlas quarterly results");
+    expect(csvFile?.data.toString("utf-8")).toContain(
+      "Northwind Atlas quarterly results",
+    );
 
-    const notifications = await listNotifications(db, organizationId, userId, { limit: 10 });
+    const xlsxFile = await getReportFile(db, run.id, "xlsx");
+    expect(xlsxFile).toBeDefined();
+    // The xlsx format's zip container starts with the "PK" local-file-
+    // header signature — a lightweight proof this is a real workbook,
+    // not an empty or truncated buffer.
+    expect(xlsxFile?.data.subarray(0, 2).toString("ascii")).toBe("PK");
+
+    const notifications = await listNotifications(db, organizationId, userId, {
+      limit: 10,
+    });
     expect(notifications.some((n) => n.body.includes("ready to download"))).toBe(true);
   }, 30_000);
 

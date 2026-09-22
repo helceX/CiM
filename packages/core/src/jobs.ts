@@ -20,6 +20,7 @@ export const QUEUE_NAMES = {
   generateScheduledReports: "generate_scheduled_reports",
   enforceRetention: "enforce_retention",
   captureFeatureUsage: "capture_feature_usage",
+  sendExecutiveBrief: "send_executive_brief",
 } as const;
 
 export type SendEmailJobData = {
@@ -55,3 +56,5 @@ export type GenerateScheduledReportsJobData = Record<string, never>;
 export type EnforceRetentionJobData = Record<string, never>;
 
 export type CaptureFeatureUsageJobData = Record<string, never>;
+
+export type SendExecutiveBriefJobData = Record<string, never>;

@@ -15,6 +15,7 @@ import {
   type GenerateScheduledReportsJobData,
   type InsightGenerateJobData,
   type SendEmailJobData,
+  type SendExecutiveBriefJobData,
 } from "@cim/core";
 import { getRedisConnection } from "./redis";
 import { processSendEmailJob } from "./jobs/send-email";
@@ -25,6 +26,7 @@ import { processGenerateDigestJob } from "./jobs/generate-digest";
 import { processGenerateScheduledReportsJob } from "./jobs/generate-scheduled-reports";
 import { processEnforceRetentionJob } from "./jobs/enforce-retention";
 import { processCaptureFeatureUsageJob } from "./jobs/capture-feature-usage";
+import { processSendExecutiveBriefJob } from "./jobs/send-executive-brief";
 import { evaluateSpikeAlerts } from "./alerts/evaluate-spikes";
 import { evaluateSentimentShiftAlerts } from "./alerts/evaluate-sentiment-shift";
 import { evaluateEmergingTopicAlerts } from "./alerts/evaluate-emerging-topics";
@@ -186,6 +188,16 @@ const captureFeatureUsageWorker = new Worker<CaptureFeatureUsageJobData>(
   { connection, concurrency: 1 },
 );
 
+const sendExecutiveBriefQueue = new Queue<SendExecutiveBriefJobData>(
+  QUEUE_NAMES.sendExecutiveBrief,
+  { connection },
+);
+const sendExecutiveBriefWorker = new Worker<SendExecutiveBriefJobData>(
+  QUEUE_NAMES.sendExecutiveBrief,
+  () => processSendExecutiveBriefJob(sendEmailQueue),
+  { connection, concurrency: 1 },
+);
+
 const allWorkers = [
   sendEmailWorker,
   crawlSourceWorker,
@@ -201,6 +213,7 @@ const allWorkers = [
   generateScheduledReportsWorker,
   enforceRetentionWorker,
   captureFeatureUsageWorker,
+  sendExecutiveBriefWorker,
 ];
 for (const worker of allWorkers) {
   worker.on("failed", (job, error) => {
@@ -291,12 +304,20 @@ async function scheduleRepeatingJobs() {
     { pattern: "45 8 * * *" },
     { name: QUEUE_NAMES.captureFeatureUsage, data: {} },
   );
+  // Same once-a-day cron shape, offset another 15 minutes so the five
+  // daily cross-tenant passes don't contend (docs/product/FEATURE_MATRIX.md
+  // P2 "AI: ... executive brief automation").
+  await sendExecutiveBriefQueue.upsertJobScheduler(
+    "send-executive-brief-repeat",
+    { pattern: "0 9 * * *" },
+    { name: QUEUE_NAMES.sendExecutiveBrief, data: {} },
+  );
   console.log(
     "Schedulers registered: source crawl (30s), spike alert check (60s), " +
       "sentiment shift alert check (60s), emerging topic alert check (60s), " +
       "AI enrichment (20s), insight generation (2m), " +
       "daily digest (08:00 UTC), scheduled reports (08:15 UTC), retention enforcement (08:30 UTC), " +
-      "feature usage capture (08:45 UTC).",
+      "feature usage capture (08:45 UTC), executive brief delivery (09:00 UTC).",
   );
 }
 
@@ -319,6 +340,8 @@ async function shutdown() {
   await generateDigestQueue.close();
   await generateScheduledReportsQueue.close();
   await enforceRetentionQueue.close();
+  await captureFeatureUsageQueue.close();
+  await sendExecutiveBriefQueue.close();
   process.exit(0);
 }
 

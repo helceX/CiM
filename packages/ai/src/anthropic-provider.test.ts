@@ -137,6 +137,52 @@ describe("AnthropicAIProvider", () => {
     ).rejects.toBeInstanceOf(AIProviderValidationError);
   });
 
+  it("filters generateRecommendations evidence per item, dropping a recommendation left with no real evidence", async () => {
+    const client = fakeClient(async () =>
+      toolUseMessage("generate_recommendations", {
+        recommendations: [
+          {
+            recommendation: "Respond to the negative coverage.",
+            why: "Two mentions were negative.",
+            priority: "high",
+            confidence: 0.7,
+            evidenceMentionIds: ["m1", "hallucinated-id"],
+          },
+          {
+            recommendation: "Do something unsupported.",
+            why: "Made up.",
+            priority: "low",
+            confidence: 0.4,
+            evidenceMentionIds: ["hallucinated-only"],
+          },
+        ],
+      }),
+    );
+    const provider = new AnthropicAIProvider({ client });
+
+    const result = await provider.generateRecommendations({
+      periodLabel: "today",
+      mentions: [
+        { id: "m1", title: "A", sourceName: "Wire", sentiment: "negative", priority: "normal", publishedAt: null },
+      ],
+    });
+
+    expect(result.recommendations).toHaveLength(1);
+    expect(result.recommendations[0]?.evidenceMentionIds).toEqual(["m1"]);
+    expect(result.method).toMatch(/^anthropic:/);
+  });
+
+  it("returns no recommendations for an empty mention list without calling the model", async () => {
+    const create = vi.fn(async () =>
+      toolUseMessage("generate_recommendations", { recommendations: [] }),
+    );
+    const provider = new AnthropicAIProvider({ client: { messages: { create } } });
+
+    const result = await provider.generateRecommendations({ periodLabel: "today", mentions: [] });
+    expect(result.recommendations).toEqual([]);
+    expect(create).not.toHaveBeenCalled();
+  });
+
   it("uses vi to confirm the client is called exactly once per attempt", async () => {
     const create = vi.fn(async () =>
       toolUseMessage("classify_sentiment", { sentiment: "neutral", confidence: 0.5 }),

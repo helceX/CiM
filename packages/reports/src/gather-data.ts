@@ -6,10 +6,12 @@ import {
   getSentimentTrendSeries,
   getSourceDistribution,
   getTopicBreakdown,
+  listLatestRecommendationsForOrganization,
   listRecentMentions,
   type CompetitorComparisonRow,
   type Db,
   type DashboardSummary,
+  type InsightWithEvidence,
   type InsightWithEvidenceAndProject,
   type MentionListItem,
   type MentionVolumePoint,
@@ -36,6 +38,7 @@ export type ReportData = {
   topicBreakdown: TopicRow[];
   competitorComparison: CompetitorComparisonRow[];
   insight: InsightWithEvidenceAndProject | undefined;
+  recommendations: InsightWithEvidence[];
 };
 
 /**
@@ -69,17 +72,27 @@ export async function gatherReportData(
   const periodEnd = new Date();
   const periodStart = new Date(periodEnd.getTime() - sinceDays * 24 * 60 * 60 * 1000);
 
-  const [summary, volumeSeries, sentimentSeries, sourceDistribution, topStories, topicBreakdown, competitorComparison, insight] =
-    await Promise.all([
-      getDashboardSummary(db, organizationId, { projectId: input.projectId, sinceDays }),
-      getMentionVolumeSeries(db, organizationId, scope),
-      getSentimentTrendSeries(db, organizationId, scope),
-      getSourceDistribution(db, organizationId, scope, 10),
-      listRecentMentions(db, organizationId, { projectId: input.projectId, limit: 20 }),
-      getTopicBreakdown(db, organizationId, scope),
-      getCompetitorComparison(db, organizationId, { sinceDays }),
-      getLatestInsightForOrganization(db, organizationId, "whats_changed", { projectId: input.projectId }),
-    ]);
+  const [
+    summary,
+    volumeSeries,
+    sentimentSeries,
+    sourceDistribution,
+    topStories,
+    topicBreakdown,
+    competitorComparison,
+    insight,
+    recommendations,
+  ] = await Promise.all([
+    getDashboardSummary(db, organizationId, { projectId: input.projectId, sinceDays }),
+    getMentionVolumeSeries(db, organizationId, scope),
+    getSentimentTrendSeries(db, organizationId, scope),
+    getSourceDistribution(db, organizationId, scope, 10),
+    listRecentMentions(db, organizationId, { projectId: input.projectId, limit: 20 }),
+    getTopicBreakdown(db, organizationId, scope),
+    getCompetitorComparison(db, organizationId, { sinceDays }),
+    getLatestInsightForOrganization(db, organizationId, "whats_changed", { projectId: input.projectId }),
+    listLatestRecommendationsForOrganization(db, organizationId, { projectId: input.projectId }),
+  ]);
 
   return {
     templateKey: input.templateKey,
@@ -96,5 +109,6 @@ export async function gatherReportData(
     topicBreakdown,
     competitorComparison,
     insight,
+    recommendations,
   };
 }

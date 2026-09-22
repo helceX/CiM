@@ -8,10 +8,13 @@ import type {
   EntityType,
   ExtractEntitiesInput,
   GenerateInsightInput,
+  GenerateRecommendationsInput,
   GenerateSummaryInput,
   InsightOutput,
   QueryReviewInput,
   QueryReviewOutput,
+  RecommendationItem,
+  RecommendationsOutput,
   SentimentOutput,
   SummaryOutput,
   TopicOutput,
@@ -175,6 +178,38 @@ export class MockAIProvider implements AIProvider {
       evidenceMentionIds: input.mentions.slice(0, 50).map((m) => m.id),
       method: METHOD,
     };
+  }
+
+  async generateRecommendations(
+    input: GenerateRecommendationsInput,
+  ): Promise<WithMethod<RecommendationsOutput>> {
+    const negative = input.mentions.filter((m) => m.sentiment === "negative");
+    const highPriority = input.mentions.filter(
+      (m) => m.priority === "high" || m.priority === "critical",
+    );
+    const recommendations: RecommendationItem[] = [];
+
+    if (negative.length >= 2) {
+      recommendations.push({
+        recommendation: "Prepare a response to the recent negative coverage.",
+        why: `${negative.length} of the ${input.mentions.length} mentions in ${input.periodLabel} carried negative sentiment.`,
+        priority: negative.length >= 4 ? "high" : "medium",
+        confidence: 0.7,
+        evidenceMentionIds: negative.slice(0, 10).map((m) => m.id),
+      });
+    }
+
+    if (highPriority.length >= 1) {
+      recommendations.push({
+        recommendation: "Review the high-priority mentions before they age out of the news cycle.",
+        why: `${highPriority.length} mention${highPriority.length === 1 ? "" : "s"} matched a high-relevance rule in ${input.periodLabel}.`,
+        priority: highPriority.length >= 3 ? "high" : "medium",
+        confidence: 0.65,
+        evidenceMentionIds: highPriority.slice(0, 10).map((m) => m.id),
+      });
+    }
+
+    return { recommendations, method: METHOD };
   }
 
   async answerQuestion(input: AssistantAnswerInput): Promise<WithMethod<AssistantAnswerOutput>> {

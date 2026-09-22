@@ -6,6 +6,7 @@ import {
   entityOutputSchema,
   insightOutputSchema,
   queryReviewOutputSchema,
+  recommendationsOutputSchema,
   sentimentOutputSchema,
   summaryOutputSchema,
   topicOutputSchema,
@@ -16,10 +17,12 @@ import {
   type EntityOutput,
   type ExtractEntitiesInput,
   type GenerateInsightInput,
+  type GenerateRecommendationsInput,
   type GenerateSummaryInput,
   type InsightOutput,
   type QueryReviewInput,
   type QueryReviewOutput,
+  type RecommendationsOutput,
   type SentimentOutput,
   type SummaryOutput,
   type TopicOutput,
@@ -299,6 +302,74 @@ export class AnthropicAIProvider implements AIProvider {
     }
 
     return { ...result, evidenceMentionIds, method: `anthropic:${this.synthesisModel}` };
+  }
+
+  async generateRecommendations(
+    input: GenerateRecommendationsInput,
+  ): Promise<WithMethod<RecommendationsOutput>> {
+    if (input.mentions.length === 0) {
+      return { recommendations: [], method: `anthropic:${this.synthesisModel}` };
+    }
+    const mentionList = input.mentions
+      .map(
+        (m) =>
+          `- id=${m.id} | ${m.sourceName} | "${m.title}" | sentiment=${m.sentiment ?? "unclassified"} | priority=${m.priority} | published=${m.publishedAt ?? "unknown"}`,
+      )
+      .join("\n");
+
+    const result = await this.callTool({
+      model: this.synthesisModel,
+      maxTokens: 1000,
+      toolName: "generate_recommendations",
+      toolDescription:
+        "Generate concrete, actionable recommendations grounded in the mentions provided.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          recommendations: {
+            type: "array",
+            maxItems: 5,
+            items: {
+              type: "object",
+              properties: {
+                recommendation: { type: "string", maxLength: 300 },
+                why: { type: "string", maxLength: 800 },
+                priority: { type: "string", enum: ["low", "medium", "high"] },
+                confidence: { type: "number", minimum: 0, maximum: 1 },
+                evidenceMentionIds: {
+                  type: "array",
+                  items: { type: "string" },
+                  minItems: 1,
+                  maxItems: 50,
+                },
+              },
+              required: ["recommendation", "why", "priority", "confidence", "evidenceMentionIds"],
+            },
+          },
+        },
+        required: ["recommendations"],
+      },
+      userQuery: [
+        `Based only on the mentions listed below from ${input.periodLabel}, recommend up to 5 concrete actions a communications team could take.`,
+        "Only recommend something if the mentions actually support it — if nothing stands out, return an empty recommendations array rather than inventing one.",
+        "Each recommendation needs a short action, a `why` explaining the evidence behind it, a priority, your confidence, and evidenceMentionIds set to the id values (from the list below) that support it — never an id not listed.",
+      ].join(" "),
+      sourceContent: mentionList,
+      outputSchema: recommendationsOutputSchema,
+    });
+
+    const knownIds = new Set(input.mentions.map((m) => m.id));
+    const recommendations = result.recommendations
+      .map((item) => ({
+        ...item,
+        evidenceMentionIds: item.evidenceMentionIds.filter((id) => knownIds.has(id)),
+      }))
+      // A recommendation whose cited evidence didn't actually match any
+      // mention we provided is no longer grounded — drop it rather than
+      // render an unsupported claim (same rule generateInsight enforces).
+      .filter((item) => item.evidenceMentionIds.length > 0);
+
+    return { recommendations, method: `anthropic:${this.synthesisModel}` };
   }
 
   async answerQuestion(input: AssistantAnswerInput): Promise<WithMethod<AssistantAnswerOutput>> {

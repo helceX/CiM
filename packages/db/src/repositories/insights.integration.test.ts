@@ -9,6 +9,7 @@ import { createMentionIfNotExists } from "./mentions";
 import {
   createInsight,
   getLatestInsight,
+  listLatestRecommendationsForOrganization,
   listMentionsForInsightPeriod,
   listRecentMentionsForAssistant,
 } from "./insights";
@@ -136,5 +137,64 @@ describe("insights repository (integration)", () => {
     const otherOrgId = asOrganizationId("00000000-0000-0000-0000-000000000000");
     const rows = await listRecentMentionsForAssistant(db, otherOrgId);
     expect(rows.some((r) => r.id === mentionId)).toBe(false);
+  });
+
+  it("returns every recommendation from the latest batch, with why/priority, and never an older batch", async () => {
+    const olderPeriodEnd = new Date(Date.now() - 2 * 60 * 60 * 1000);
+    await createInsight(db, organizationId, {
+      projectId,
+      kind: "recommendation",
+      summary: "Stale recommendation from an earlier run.",
+      why: "Old evidence.",
+      priority: "low",
+      confidence: 0.5,
+      method: "mock-heuristic-v1",
+      periodStart: new Date(olderPeriodEnd.getTime() - 24 * 60 * 60 * 1000),
+      periodEnd: olderPeriodEnd,
+      evidenceMentionIds: [mentionId],
+    });
+
+    const latestPeriodEnd = new Date();
+    const latestPeriodStart = new Date(latestPeriodEnd.getTime() - 24 * 60 * 60 * 1000);
+    await createInsight(db, organizationId, {
+      projectId,
+      kind: "recommendation",
+      summary: "Prepare a response to the recent negative coverage.",
+      why: "2 of the 3 mentions carried negative sentiment.",
+      priority: "high",
+      confidence: 0.7,
+      method: "mock-heuristic-v1",
+      periodStart: latestPeriodStart,
+      periodEnd: latestPeriodEnd,
+      evidenceMentionIds: [mentionId],
+    });
+    await createInsight(db, organizationId, {
+      projectId,
+      kind: "recommendation",
+      summary: "Review the high-priority mentions.",
+      why: "1 mention matched a high-relevance rule.",
+      priority: "medium",
+      confidence: 0.65,
+      method: "mock-heuristic-v1",
+      periodStart: latestPeriodStart,
+      periodEnd: latestPeriodEnd,
+      evidenceMentionIds: [mentionId],
+    });
+
+    const latestBatch = await listLatestRecommendationsForOrganization(db, organizationId, {
+      projectId,
+    });
+    expect(latestBatch).toHaveLength(2);
+    expect(latestBatch.some((r) => r.summary.includes("Stale"))).toBe(false);
+    const highPriority = latestBatch.find((r) => r.priority === "high");
+    expect(highPriority?.why).toBe("2 of the 3 mentions carried negative sentiment.");
+    expect(highPriority?.evidence).toHaveLength(1);
+    expect(highPriority?.evidence[0]?.mentionId).toBe(mentionId);
+  });
+
+  it("returns an empty list when no recommendation has ever been generated, never a fabricated placeholder", async () => {
+    const otherOrgId = asOrganizationId("00000000-0000-0000-0000-000000000000");
+    const rows = await listLatestRecommendationsForOrganization(db, otherOrgId);
+    expect(rows).toEqual([]);
   });
 });

@@ -129,6 +129,22 @@ function aiInsightSection(data: ReportData): string {
   `;
 }
 
+function recommendationsSection(data: ReportData): string {
+  if (data.recommendations.length === 0) {
+    return `<p class="empty">Not available — no recommendations generated for this project yet.</p>`;
+  }
+  return data.recommendations
+    .map(
+      (item) => `
+    <div style="margin-bottom: 12px;">
+      <p><strong>${escapeHtml(item.summary)}</strong>${item.priority ? ` <span class="badge" style="background:oklch(94% 0.005 260);color:oklch(25% 0.01 260);">${escapeHtml(item.priority)} priority</span>` : ""}</p>
+      ${item.why ? `<p>${escapeHtml(item.why)}</p>` : ""}
+      <p class="chart-axis">Confidence ${Math.round(Number(item.confidence) * 100)}% · Method: ${escapeHtml(item.method)} · Based on ${item.evidence.length} mention${item.evidence.length === 1 ? "" : "s"}</p>
+    </div>`,
+    )
+    .join("");
+}
+
 const CUSTOM_SECTION_RENDERERS: Record<ReportSectionKey, (data: ReportData) => string> = {
   trend: (data) => volumeBarChart(data.volumeSeries),
   sentiment: sentimentSection,
@@ -137,6 +153,7 @@ const CUSTOM_SECTION_RENDERERS: Record<ReportSectionKey, (data: ReportData) => s
   top_stories: topStoriesSection,
   competitors: competitorsSection,
   ai_insight: aiInsightSection,
+  recommendations: recommendationsSection,
 };
 
 function customSections(data: ReportData): string {

@@ -127,6 +127,13 @@
       "when": 1790067333991,
       "tag": "0017_futuristic_sister_grimm",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1790073855100,
+      "tag": "0018_perpetual_sage",
+      "breakpoints": true
     }
   ]
 }

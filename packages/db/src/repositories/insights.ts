@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNull, sql } from "drizzle-orm";
 import type { Db } from "../client";
 import { articles, mentions, sources } from "../schema/content";
 import { insightEvidence, insights } from "../schema/ai";
@@ -147,6 +147,8 @@ export async function createInsight(
     periodStart: Date;
     periodEnd: Date;
     evidenceMentionIds: string[];
+    why?: string;
+    priority?: string;
   },
 ): Promise<string> {
   return db.transaction(async (tx) => {
@@ -159,6 +161,8 @@ export async function createInsight(
         summary: input.summary,
         confidence: String(input.confidence),
         method: input.method,
+        why: input.why,
+        priority: input.priority,
         periodStart: input.periodStart,
         periodEnd: input.periodEnd,
       })
@@ -187,6 +191,8 @@ export type InsightWithEvidence = {
   summary: string;
   confidence: string;
   method: string;
+  why: string | null;
+  priority: string | null;
   periodStart: Date;
   periodEnd: Date;
   createdAt: Date;
@@ -264,4 +270,61 @@ export async function getLatestInsightForOrganization(
     .where(eq(insightEvidence.insightId, row.insight.id));
 
   return { ...row.insight, projectName: row.projectName, evidence };
+}
+
+/**
+ * A single `generateRecommendations` call can return several items
+ * (RecommendationItem[]), each stored as its own `kind: "recommendation"`
+ * insights row (createInsight) sharing one `periodEnd` — so "the latest
+ * batch" is every row matching that most recent periodEnd, not just the
+ * single newest row `getLatestInsight` would return. `projectId` is
+ * optional, same convention as `getLatestInsightForOrganization`: the
+ * Dashboard shows the org's latest batch across every project, a report
+ * passes `projectId` to stay scoped to the one it's for.
+ */
+export async function listLatestRecommendationsForOrganization(
+  db: Db,
+  organizationId: OrganizationId,
+  options: { projectId?: string } = {},
+): Promise<InsightWithEvidence[]> {
+  const scope = and(
+    eq(insights.organizationId, organizationId),
+    eq(insights.kind, "recommendation"),
+    options.projectId ? eq(insights.projectId, options.projectId) : undefined,
+  );
+
+  const [latest] = await db
+    .select({ periodEnd: insights.periodEnd })
+    .from(insights)
+    .where(scope)
+    .orderBy(desc(insights.periodEnd))
+    .limit(1);
+  if (!latest) return [];
+
+  const rows = await db
+    .select()
+    .from(insights)
+    .where(and(scope, eq(insights.periodEnd, latest.periodEnd)))
+    .orderBy(desc(insights.priority), desc(insights.confidence));
+  if (rows.length === 0) return [];
+
+  const evidence = await db
+    .select({
+      insightId: insightEvidence.insightId,
+      mentionId: mentions.id,
+      title: articles.title,
+      sourceName: sources.name,
+    })
+    .from(insightEvidence)
+    .innerJoin(mentions, eq(mentions.id, insightEvidence.mentionId))
+    .innerJoin(articles, eq(articles.id, mentions.articleId))
+    .innerJoin(sources, eq(sources.id, articles.sourceId))
+    .where(inArray(insightEvidence.insightId, rows.map((r) => r.id)));
+
+  return rows.map((row) => ({
+    ...row,
+    evidence: evidence
+      .filter((e) => e.insightId === row.id)
+      .map((e) => ({ mentionId: e.mentionId, title: e.title, sourceName: e.sourceName })),
+  }));
 }

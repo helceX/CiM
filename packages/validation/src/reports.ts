@@ -17,6 +17,7 @@ export const reportSectionKeySchema = z.enum([
   "top_stories",
   "competitors",
   "ai_insight",
+  "recommendations",
 ]);
 export const reportScheduleFrequencySchema = z.enum([
   "none",

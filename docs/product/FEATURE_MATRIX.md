@@ -104,7 +104,7 @@ generation (excluding soft-deleted organizations).
 | Reports: fixed templates, PDF/CSV export | ✅ | ✅ Report builder (custom, reorderable sections), XLSX, sharing links | | |
 | Dashboard: KPIs, trend, top stories, topics, sentiment | ✅ | ✅ Competitor comparison, source distribution depth | | |
 | Analytics deep views | Basic (volume, sentiment, sources) | Full matrix (§25 of brief) | Journalist/author, geography | |
-| AI: summary, sentiment, entities, topics | ✅ (grounded, evidence-linked) | Recommendations, executive brief automation | | |
+| AI: summary, sentiment, entities, topics | ✅ (grounded, evidence-linked) | ✅ Recommendations (Recommendation/Why/Evidence/Priority/Confidence), executive brief automation | | |
 | AI Assistant (context-aware) | — | ✅ (dashboard, single-turn Q&A) | Deeper agentic workflows, multi-turn | |
 | Crisis detection | — | Multi-signal detection | Predictive | |
 | Competitor tracking | — | ✅ (query tracking-target tagging, dashboard comparison) | | |

@@ -128,3 +128,36 @@ export type QueryReviewInput = {
   matchCount: number;
   sample: { title: string; sourceName: string }[];
 };
+
+export const recommendationPrioritySchema = z.enum(["low", "medium", "high"]);
+export type RecommendationPriority = z.infer<typeof recommendationPrioritySchema>;
+
+/**
+ * docs/architecture/AI_ARCHITECTURE.md "Recommendations are never
+ * auto-applied" (brief §44) — every item carries the same
+ * Recommendation/Why/Evidence/Priority/Confidence shape that section
+ * names, for a human to read and act on, never a system-taken action.
+ */
+export const recommendationItemSchema = z.object({
+  recommendation: z.string().min(1).max(300),
+  why: z.string().min(1).max(800),
+  priority: recommendationPrioritySchema,
+  confidence: z.number().min(0).max(1),
+  evidenceMentionIds: z.array(z.string()).min(1).max(50),
+});
+export type RecommendationItem = z.infer<typeof recommendationItemSchema>;
+
+/**
+ * No `.min(1)` on the array itself — a period with nothing actionable
+ * standing out yields zero recommendations, never a manufactured one
+ * (the same "Not available" discipline as an Insight requiring evidence).
+ */
+export const recommendationsOutputSchema = z.object({
+  recommendations: z.array(recommendationItemSchema).max(5),
+});
+export type RecommendationsOutput = z.infer<typeof recommendationsOutputSchema>;
+
+export type GenerateRecommendationsInput = {
+  periodLabel: string;
+  mentions: InsightSourceMention[];
+};

@@ -100,6 +100,47 @@ describe("MockAIProvider", () => {
     ).rejects.toThrow();
   });
 
+  describe("generateRecommendations", () => {
+    it("recommends addressing negative coverage when enough of it appears, grounded in exactly those mentions", async () => {
+      const result = await provider.generateRecommendations({
+        periodLabel: "the last 24 hours",
+        mentions: [
+          { id: "m1", title: "A", sourceName: "Wire", sentiment: "negative", priority: "normal", publishedAt: null },
+          { id: "m2", title: "B", sourceName: "Wire", sentiment: "negative", priority: "normal", publishedAt: null },
+          { id: "m3", title: "C", sourceName: "Wire", sentiment: "positive", priority: "normal", publishedAt: null },
+        ],
+      });
+      expect(result.method).toBe("mock-heuristic-v1");
+      const negativeRec = result.recommendations.find((r) => r.recommendation.includes("negative"));
+      expect(negativeRec).toBeDefined();
+      expect(negativeRec?.evidenceMentionIds.sort()).toEqual(["m1", "m2"]);
+      expect(negativeRec?.why).toMatch(/2 of the 3 mentions/);
+    });
+
+    it("recommends reviewing high-priority mentions when any appear", async () => {
+      const result = await provider.generateRecommendations({
+        periodLabel: "the last 24 hours",
+        mentions: [
+          { id: "m1", title: "A", sourceName: "Wire", sentiment: "neutral", priority: "critical", publishedAt: null },
+        ],
+      });
+      const highPriorityRec = result.recommendations.find((r) => r.evidenceMentionIds.includes("m1"));
+      expect(highPriorityRec).toBeDefined();
+      expect(highPriorityRec?.priority).toBe("medium");
+    });
+
+    it("returns no recommendations rather than fabricate one when nothing stands out", async () => {
+      const result = await provider.generateRecommendations({
+        periodLabel: "the last 24 hours",
+        mentions: [
+          { id: "m1", title: "A", sourceName: "Wire", sentiment: "positive", priority: "normal", publishedAt: null },
+          { id: "m2", title: "B", sourceName: "Wire", sentiment: "neutral", priority: "normal", publishedAt: null },
+        ],
+      });
+      expect(result.recommendations).toEqual([]);
+    });
+  });
+
   describe("answerQuestion", () => {
     const mentions = [
       {

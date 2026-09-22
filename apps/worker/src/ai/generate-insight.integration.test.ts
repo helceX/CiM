@@ -8,6 +8,7 @@ import {
   createMonitoringQuery,
   db,
   getLatestInsight,
+  listLatestRecommendationsForOrganization,
   schema,
 } from "@cim/db";
 import { processInsightGenerateJob } from "./generate-insight";
@@ -103,6 +104,58 @@ describe("processInsightGenerateJob (integration)", () => {
     expect(latest).toBeDefined();
     expect(latest?.evidence.some((e) => e.mentionId === mentionId)).toBe(true);
     expect(latest?.method).toBe("mock-heuristic-v1");
+  });
+
+  it("also generates a recommendation when the mock provider's heuristic finds one, sharing the insight's mention window", async () => {
+    const recProject = await createProject(db, organizationId, {
+      workspaceId,
+      name: "Recommendation Job Test Project",
+    });
+    const recQuery = await createMonitoringQuery(db, organizationId, {
+      projectId: recProject.id,
+      name: "Recommendation job test query",
+      queryAst: { include: ["Southgate"], exclude: [], exactPhrases: [] },
+      booleanQuery: "Southgate",
+      sourceTypes: ["news"],
+    });
+
+    // Two negative mentions clears MockAIProvider.generateRecommendations's
+    // "negative.length >= 2" floor (packages/ai/src/mock-provider.ts).
+    for (const i of [0, 1]) {
+      const [article] = await db
+        .insert(schema.articles)
+        .values({
+          sourceId,
+          canonicalUrl: `https://insight-job-test.example/negative-${Date.now()}-${i}`,
+          contentHash: `insight-job-negative-${Date.now()}-${i}`,
+          title: `Southgate recall item ${i}`,
+        })
+        .returning();
+      if (!article) throw new Error("failed to create test article");
+      // createMentionIfNotExists has no sentiment param (real classification
+      // happens later, via ai_enrich) — set it directly, same as the alert
+      // engine's sentiment-shift integration test does.
+      await db.insert(schema.mentions).values({
+        organizationId,
+        projectId: recProject.id,
+        queryId: recQuery.id,
+        articleId: article.id,
+        matchedTerms: ["Southgate"],
+        sentiment: "negative",
+      });
+    }
+
+    await processInsightGenerateJob();
+
+    const recommendations = await listLatestRecommendationsForOrganization(db, organizationId, {
+      projectId: recProject.id,
+    });
+    expect(recommendations.length).toBeGreaterThan(0);
+    const negativeRec = recommendations.find((r) => r.summary.includes("negative coverage"));
+    expect(negativeRec).toBeDefined();
+    expect(negativeRec?.why).toMatch(/2 of the 2 mentions/);
+    expect(negativeRec?.priority).toBe("medium");
+    expect(negativeRec?.evidence.length).toBe(2);
   });
 
   it("generates nothing for a project with no mentions in the period, never a fabricated summary", async () => {

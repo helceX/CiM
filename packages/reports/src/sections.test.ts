@@ -10,6 +10,7 @@ describe("sections", () => {
 
   it("recognizes a valid key and rejects an unknown one", () => {
     expect(isReportSectionKey("competitors")).toBe(true);
-    expect(isReportSectionKey("recommendations")).toBe(false);
+    expect(isReportSectionKey("recommendations")).toBe(true);
+    expect(isReportSectionKey("not-a-real-section")).toBe(false);
   });
 });

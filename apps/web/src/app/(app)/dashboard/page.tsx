@@ -7,6 +7,7 @@ import {
   getDashboardSummary,
   getLatestInsightForOrganization,
   getMentionVolumeSeries,
+  listLatestRecommendationsForOrganization,
   listProjects,
   listRecentMentions,
 } from "@cim/db";
@@ -15,6 +16,7 @@ import { KpiRow } from "@/components/kpi-row";
 import { MentionTrendChart } from "@/components/charts/mention-trend-chart";
 import { AiAssistantPanel } from "./ai-assistant-panel";
 import { CompetitorComparisonSection } from "./competitor-comparison-section";
+import { RecommendationsSection } from "./recommendations-section";
 
 const SENTIMENT_TONE = {
   positive: "success",
@@ -48,13 +50,15 @@ export default async function DashboardPage() {
     );
   }
 
-  const [summary, recentMentions, trend, insight, competitorComparison] = await Promise.all([
-    getDashboardSummary(db, context.organizationId, { sinceDays: 7 }),
-    listRecentMentions(db, context.organizationId, { limit: 10 }),
-    getMentionVolumeSeries(db, context.organizationId, { sinceDays: 14 }),
-    getLatestInsightForOrganization(db, context.organizationId, "whats_changed"),
-    getCompetitorComparison(db, context.organizationId, { sinceDays: 7 }),
-  ]);
+  const [summary, recentMentions, trend, insight, competitorComparison, recommendations] =
+    await Promise.all([
+      getDashboardSummary(db, context.organizationId, { sinceDays: 7 }),
+      listRecentMentions(db, context.organizationId, { limit: 10 }),
+      getMentionVolumeSeries(db, context.organizationId, { sinceDays: 14 }),
+      getLatestInsightForOrganization(db, context.organizationId, "whats_changed"),
+      getCompetitorComparison(db, context.organizationId, { sinceDays: 7 }),
+      listLatestRecommendationsForOrganization(db, context.organizationId),
+    ]);
   const hasCompetitor = competitorComparison.some((row) => row.trackingTarget === "competitor");
 
   return (
@@ -93,6 +97,8 @@ export default async function DashboardPage() {
           </div>
         </section>
       ) : null}
+
+      {recommendations.length > 0 ? <RecommendationsSection items={recommendations} /> : null}
 
       <AiAssistantPanel />
 

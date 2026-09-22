@@ -127,6 +127,7 @@ export function fakeReportData(overrides: Partial<ReportData> = {}): ReportData 
       },
     ],
     insight: undefined,
+    recommendations: [],
     ...overrides,
   };
 }

@@ -109,7 +109,7 @@ generation (excluding soft-deleted organizations).
 | Crisis detection | — | Multi-signal detection | Predictive | |
 | Competitor tracking | — | ✅ (query tracking-target tagging, dashboard comparison) | | |
 | AI Visibility (ChatGPT/Gemini/Claude/Perplexity tracking) | — | — | ✅ | |
-| Admin panel (orgs, jobs, source health, system health) | ✅ (core) | Full observability views | | |
+| Admin panel (orgs, jobs, source health, system health) | ✅ (core) | ✅ Full observability views (per-job failure drill-down) | | |
 | Audit log | ✅ | | | |
 | Data retention policy engine | Policy field only | ✅ Enforcement worker | | |
 | API keys + public API | ✅ (internal, scoped, revocable) | | v1 public API | |

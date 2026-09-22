@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Badge } from "@cim/ui";
 import {
   checkDatabaseHealth,
@@ -93,7 +94,13 @@ export default async function AdminOverviewPage() {
                   <td className="px-4 py-3 text-muted-foreground">{q.active}</td>
                   <td className="px-4 py-3 text-muted-foreground">{q.completed}</td>
                   <td className="px-4 py-3">
-                    {q.failed > 0 ? <Badge tone="danger">{q.failed}</Badge> : q.failed}
+                    {q.failed > 0 ? (
+                      <Link href={`/admin/jobs/${q.queueName}`}>
+                        <Badge tone="danger">{q.failed}</Badge>
+                      </Link>
+                    ) : (
+                      q.failed
+                    )}
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">{q.delayed}</td>
                 </tr>

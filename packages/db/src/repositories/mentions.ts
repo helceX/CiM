@@ -1,9 +1,10 @@
-import { and, count, desc, eq, gte, ilike, inArray, isNull, sql } from "drizzle-orm";
+import { and, count, desc, eq, gte, inArray, isNull, sql } from "drizzle-orm";
 import type { Db } from "../client";
 import { articles, mentions, sources, type Tag } from "../schema/content";
 import { monitoringQueries } from "../schema/monitoring";
 import { organizationMemberships } from "../schema/organizations";
 import { users } from "../schema/users";
+import { PostgresSearchIndex } from "../search/postgres-search-index";
 import type { OrganizationId } from "./tenant-scope";
 import {
   listMentionEntities,
@@ -116,6 +117,11 @@ export type MentionsPage = {
 function mentionFiltersToWhere(
   organizationId: OrganizationId,
   filters: MentionFilters,
+  // Resolved by listMentionsFiltered via PostgresSearchIndex before this
+  // runs — undefined means "no search filter", [] means "search ran and
+  // matched nothing" (must exclude everything, never fall through to no
+  // filter at all).
+  searchArticleIds?: string[],
 ) {
   return and(
     eq(mentions.organizationId, organizationId),
@@ -136,9 +142,9 @@ function mentionFiltersToWhere(
           sql`now() - (${filters.sinceDays}::text || ' days')::interval`,
         )
       : undefined,
-    // Substring match on title — the MVP baseline ahead of the tsvector/
-    // Meilisearch tiers in docs/architecture/SEARCH.md (ADR-002).
-    filters.search ? ilike(articles.title, `%${filters.search}%`) : undefined,
+    // docs/architecture/ADR-002-SEARCH.md MVP tier — tsvector + pg_trgm via
+    // PostgresSearchIndex, resolved by the caller before this runs.
+    filters.search ? inArray(articles.id, searchArticleIds ?? []) : undefined,
     filters.assignedToUserId
       ? eq(mentions.assignedToUserId, filters.assignedToUserId)
       : undefined,
@@ -164,7 +170,17 @@ export async function listMentionsFiltered(
   filters: MentionFilters,
   pagination: { page: number; pageSize: number },
 ): Promise<MentionsPage> {
-  const where = mentionFiltersToWhere(organizationId, filters);
+  let searchArticleIds: string[] | undefined;
+  if (filters.search) {
+    const searchIndex = new PostgresSearchIndex(db);
+    const result = await searchIndex.search(
+      { text: filters.search, limit: 500 },
+      { organizationId },
+    );
+    searchArticleIds = result.items.map((item) => item.articleId);
+  }
+
+  const where = mentionFiltersToWhere(organizationId, filters, searchArticleIds);
   const offset = (pagination.page - 1) * pagination.pageSize;
 
   const [items, [countRow]] = await Promise.all([

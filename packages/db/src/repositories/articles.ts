@@ -1,4 +1,5 @@
 import { desc, eq, gte, or, sql } from "drizzle-orm";
+import { turkishFold } from "@cim/core";
 import type { Db } from "../client";
 import { articles, sources } from "../schema/content";
 
@@ -34,7 +35,15 @@ export async function insertArticle(
     authorName: string | null;
   },
 ) {
-  const [article] = await db.insert(articles).values(input).returning();
+  // docs/architecture/ADR-002-SEARCH.md MVP tier — folded here (JS, not a
+  // Postgres GENERATED column: turkishFold must run before to_tsvector
+  // ever sees the text) so every new article is searchable immediately,
+  // not just after a later backfill.
+  const folded = turkishFold(`${input.title} ${input.storedExcerpt ?? ""}`);
+  const [article] = await db
+    .insert(articles)
+    .values({ ...input, searchVector: sql`to_tsvector('simple', ${folded})` })
+    .returning();
   if (!article) throw new Error("Failed to insert article");
   return article;
 }

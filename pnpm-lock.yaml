@@ -247,6 +247,9 @@ importers:
       '@cim/core':
         specifier: workspace:*
         version: link:../core
+      '@cim/search':
+        specifier: workspace:*
+        version: link:../search
       drizzle-orm:
         specifier: 0.45.2
         version: 0.45.2(@types/pg@8.23.1)(pg@8.23.0)
@@ -319,6 +322,15 @@ importers:
       vitest:
         specifier: 5.0.1
         version: 5.0.1(@types/node@22.15.0)(vite@8.3.0(@types/node@22.15.0)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15))
+
+  packages/search:
+    devDependencies:
+      '@types/node':
+        specifier: 22.15.0
+        version: 22.15.0
+      typescript:
+        specifier: 6.0.3
+        version: 6.0.3
 
   packages/ui:
     dependencies:

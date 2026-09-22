@@ -18,6 +18,7 @@
   "dependencies": {
     "@cim/config": "workspace:*",
     "@cim/core": "workspace:*",
+    "@cim/search": "workspace:*",
     "drizzle-orm": "0.45.2",
     "pg": "8.23.0"
   },

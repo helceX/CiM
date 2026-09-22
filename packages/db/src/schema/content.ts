@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
   boolean,
+  customType,
   index,
   integer,
   numeric,
@@ -14,6 +15,21 @@ import {
 import { organizations, projects } from "./organizations";
 import { monitoringQueries } from "./monitoring";
 import { users } from "./users";
+
+/**
+ * docs/architecture/ADR-002-SEARCH.md / SEARCH.md — no built-in drizzle-orm
+ * column type for Postgres's `tsvector`, so this is the minimal wrapper
+ * `articles.searchVector` needs. Populated by application code
+ * (packages/db/src/repositories/articles.ts), never a Postgres
+ * GENERATED column — the Turkish-aware folding (`@cim/core`'s
+ * `turkishFold`) has to run in JS before `to_tsvector()` ever sees the
+ * text, and a generated column can only call IMMUTABLE SQL functions.
+ */
+const tsvector = customType<{ data: string }>({
+  dataType() {
+    return "tsvector";
+  },
+});
 
 /**
  * Global/reference data — NOT tenant-scoped (ADR-001, DATA_MODEL.md).
@@ -72,11 +88,20 @@ export const articles = pgTable(
     authorName: text("author_name"),
     storyClusterId: uuid("story_cluster_id"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    // docs/architecture/ADR-002-SEARCH.md MVP tier — title + storedExcerpt,
+    // Turkish-folded then tokenized with the 'simple' (no-stemming)
+    // config, since Postgres ships no Turkish stemming dictionary
+    // (SEARCH.md's own acknowledged limitation). Null until
+    // insertArticle populates it; a null-vector row simply never
+    // matches a full-text query, never a crash.
+    searchVector: tsvector("search_vector"),
   },
   (table) => [
     index("articles_source_idx").on(table.sourceId),
     index("articles_content_hash_idx").on(table.contentHash),
     index("articles_canonical_url_idx").on(table.canonicalUrl),
+    index("articles_search_vector_idx").using("gin", table.searchVector),
+    index("articles_title_trgm_idx").using("gin", sql`${table.title} gin_trgm_ops`),
   ],
 );
 

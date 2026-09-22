@@ -6,6 +6,7 @@ import { organizations, organizationMemberships, workspaces } from "../schema/in
 import { users } from "../schema/users";
 import { createProject } from "./projects";
 import { createMonitoringQuery } from "./monitoring-queries";
+import { insertArticle } from "./articles";
 import {
   assignMention,
   getCompetitorComparison,
@@ -98,17 +99,16 @@ describe("mentions repository (integration)", () => {
     ];
 
     for (const [i, def] of seedArticles.entries()) {
-      const [article] = await db
-        .insert(articles)
-        .values({
-          sourceId,
-          canonicalUrl: `https://mentions-test.example/${i}`,
-          contentHash: `mentions-test-hash-${i}`,
-          title: def.title,
-          publishedAt: new Date(Date.now() - i * 1000),
-        })
-        .returning();
-      if (!article) throw new Error("failed to create test article");
+      const article = await insertArticle(db, {
+        sourceId,
+        canonicalUrl: `https://mentions-test.example/${i}`,
+        contentHash: `mentions-test-hash-${i}`,
+        title: def.title,
+        storedExcerpt: null,
+        language: null,
+        publishedAt: new Date(Date.now() - i * 1000),
+        authorName: null,
+      });
 
       const [mention] = await db
         .insert(mentions)
@@ -207,6 +207,62 @@ describe("mentions repository (integration)", () => {
     );
     expect(result.totalCount).toBe(1);
     expect(result.items[0]?.article.title).toContain("brand");
+  });
+
+  it("tolerates a small typo via pg_trgm word_similarity", async () => {
+    const result = await listMentionsFiltered(
+      db,
+      organizationId,
+      { search: "brnad" },
+      { page: 1, pageSize: 10 },
+    );
+    expect(result.items.some((item) => item.article.title.includes("brand"))).toBe(true);
+  });
+
+  it("folds Turkish casing so a dotless-ı search matches a dotted-İ title", async () => {
+    const unique = Date.now();
+    const article = await insertArticle(db, {
+      sourceId,
+      canonicalUrl: `https://mentions-test.example/turkish-${unique}`,
+      contentHash: `mentions-test-hash-turkish-${unique}`,
+      title: "İstanbul haberleri bu hafta artıyor",
+      storedExcerpt: null,
+      language: "tr",
+      publishedAt: new Date(),
+      authorName: null,
+    });
+    const [mention] = await db
+      .insert(mentions)
+      .values({
+        organizationId,
+        projectId,
+        queryId,
+        articleId: article.id,
+        matchedTerms: ["istanbul"],
+        priority: "normal",
+      })
+      .returning();
+    if (!mention) throw new Error("failed to create Turkish-title test mention");
+
+    try {
+      // A naive `.toLowerCase()` on "İstanbul" corrupts to "i̇stanbul" (a
+      // combining dot above "i"), which a plain "istanbul" search would
+      // never match — this only passes if turkishFold's explicit İ->i
+      // mapping is actually wired into both the write path (insertArticle)
+      // and the read path (PostgresSearchIndex.search).
+      const result = await listMentionsFiltered(
+        db,
+        organizationId,
+        { search: "istanbul" },
+        { page: 1, pageSize: 10 },
+      );
+      expect(result.items.some((item) => item.article.id === article.id)).toBe(true);
+    } finally {
+      // Self-cleaning — other tests in this file assert exact totalCount
+      // values against the shared four-mention fixture above.
+      await db.delete(mentions).where(eq(mentions.id, mention.id));
+      await db.delete(articles).where(eq(articles.id, article.id));
+    }
   });
 
   it("paginates results", async () => {

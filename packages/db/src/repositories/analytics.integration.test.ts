@@ -9,12 +9,14 @@ import {
   getMentionVolumeSeries,
   getSentimentTrendSeries,
   getSourceDistribution,
+  getSourceTypeDistribution,
   getTopicBreakdown,
 } from "./analytics";
 import { asOrganizationId } from "./tenant-scope";
 
 describe("analytics repository (integration)", () => {
   let organizationId: ReturnType<typeof asOrganizationId>;
+  let projectId: string;
   let queryId: string;
   let sourceAId: string;
   let sourceBId: string;
@@ -37,6 +39,7 @@ describe("analytics repository (integration)", () => {
       workspaceId: workspace.id,
       name: "Analytics Test Project",
     });
+    projectId = project.id;
 
     const query = await createMonitoringQuery(db, organizationId, {
       projectId: project.id,
@@ -119,6 +122,43 @@ describe("analytics repository (integration)", () => {
     expect(distribution[1]).toEqual({ sourceName: "Source B", count: 1 });
   });
 
+  it("ranks source distribution by type, using the source's own type rather than its name", async () => {
+    const [blogSource] = await db
+      .insert(sources)
+      .values({ name: "Source C", domain: `source-c-${Date.now()}.example`, type: "blog", connector: "mock" })
+      .returning();
+    if (!blogSource) throw new Error("failed to create test blog source");
+
+    const [article] = await db
+      .insert(articles)
+      .values({
+        sourceId: blogSource.id,
+        canonicalUrl: "https://analytics-test.example/blog-item",
+        contentHash: "analytics-test-hash-blog",
+        title: "Analytics test blog article",
+      })
+      .returning();
+    if (!article) throw new Error("failed to create test blog article");
+    await db.insert(mentions).values({
+      organizationId,
+      projectId,
+      queryId,
+      articleId: article.id,
+      matchedTerms: ["test"],
+      sentiment: null,
+    });
+
+    const distribution = await getSourceTypeDistribution(db, organizationId, { sinceDays: 7 });
+    expect(distribution).toEqual(
+      expect.arrayContaining([
+        { sourceType: "news", count: 3 },
+        { sourceType: "blog", count: 1 },
+      ]),
+    );
+
+    await db.delete(sources).where(eq(sources.id, blogSource.id));
+  });
+
   it("reports topic (monitoring query) breakdown with a previous-period bucket", async () => {
     const topics = await getTopicBreakdown(db, organizationId, { sinceDays: 7 });
     const topic = topics.find((t) => t.queryId === queryId);
@@ -128,13 +168,15 @@ describe("analytics repository (integration)", () => {
 
   it("never mixes another organization's data into any analytics query", async () => {
     const otherOrgId = asOrganizationId("00000000-0000-0000-0000-000000000000");
-    const [volume, distribution, topics] = await Promise.all([
+    const [volume, distribution, typeDistribution, topics] = await Promise.all([
       getMentionVolumeSeries(db, otherOrgId, { sinceDays: 7 }),
       getSourceDistribution(db, otherOrgId, { sinceDays: 7 }),
+      getSourceTypeDistribution(db, otherOrgId, { sinceDays: 7 }),
       getTopicBreakdown(db, otherOrgId, { sinceDays: 7 }),
     ]);
     expect(volume.every((point) => point.count === 0)).toBe(true);
     expect(distribution).toHaveLength(0);
+    expect(typeDistribution).toHaveLength(0);
     expect(topics).toHaveLength(0);
   });
 });

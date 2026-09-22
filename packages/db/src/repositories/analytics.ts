@@ -100,6 +100,32 @@ export async function getSourceDistribution(
     .limit(limit);
 }
 
+export type SourceTypeDistributionRow = { sourceType: string; count: number };
+
+/**
+ * docs/product/FEATURE_MATRIX.md P2 "Dashboard: ... source distribution
+ * depth" — `sources.type` (news/blog/tv/social/podcast/…) has existed
+ * since Phase 1's schema and is populated on every source, but until now
+ * nothing read it back; `getSourceDistribution` above only ever grouped
+ * by name. This is the same mention-count aggregation, grouped by the
+ * source's type instead, so "which kinds of outlets are covering us" is
+ * answerable alongside "which specific outlets."
+ */
+export async function getSourceTypeDistribution(
+  db: Db,
+  organizationId: OrganizationId,
+  scope: AnalyticsScope,
+): Promise<SourceTypeDistributionRow[]> {
+  return db
+    .select({ sourceType: sources.type, count: sql<number>`count(*)::int` })
+    .from(mentions)
+    .innerJoin(articles, eq(articles.id, mentions.articleId))
+    .innerJoin(sources, eq(sources.id, articles.sourceId))
+    .where(scopeWhere(organizationId, scope))
+    .groupBy(sources.type)
+    .orderBy(sql`count(*) desc`);
+}
+
 export type TopicRow = {
   queryId: string;
   queryName: string;

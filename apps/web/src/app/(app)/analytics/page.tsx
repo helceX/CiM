@@ -5,6 +5,7 @@ import {
   getMentionVolumeSeries,
   getSentimentTrendSeries,
   getSourceDistribution,
+  getSourceTypeDistribution,
   getTopicBreakdown,
 } from "@cim/db";
 import { requireOrgContext } from "@/lib/tenant";
@@ -25,12 +26,14 @@ export default async function AnalyticsPage({
   const sinceDaysRaw = Number(resolved.since ?? "30");
   const sinceDays = VALID_RANGES.includes(sinceDaysRaw) ? sinceDaysRaw : 30;
 
-  const [volume, sentimentTrend, sourceDistribution, topics] = await Promise.all([
-    getMentionVolumeSeries(db, context.organizationId, { sinceDays }),
-    getSentimentTrendSeries(db, context.organizationId, { sinceDays }),
-    getSourceDistribution(db, context.organizationId, { sinceDays }),
-    getTopicBreakdown(db, context.organizationId, { sinceDays }),
-  ]);
+  const [volume, sentimentTrend, sourceDistribution, sourceTypeDistribution, topics] =
+    await Promise.all([
+      getMentionVolumeSeries(db, context.organizationId, { sinceDays }),
+      getSentimentTrendSeries(db, context.organizationId, { sinceDays }),
+      getSourceDistribution(db, context.organizationId, { sinceDays }),
+      getSourceTypeDistribution(db, context.organizationId, { sinceDays }),
+      getTopicBreakdown(db, context.organizationId, { sinceDays }),
+    ]);
 
   const totalMentions = volume.reduce((sum, point) => sum + point.count, 0);
 
@@ -99,6 +102,22 @@ export default async function AnalyticsPage({
                   />
                 )}
               </div>
+              {sourceTypeDistribution.length > 0 ? (
+                <div className="mt-4 border-t border-border pt-3">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    By type
+                  </p>
+                  <ul className="mt-2 flex flex-wrap gap-2">
+                    {sourceTypeDistribution.map((row) => (
+                      <li key={row.sourceType}>
+                        <Badge tone="neutral">
+                          {row.sourceType} · {row.count}
+                        </Badge>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
             </section>
 
             <section className="rounded-lg border border-border p-4">

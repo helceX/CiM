@@ -8,6 +8,8 @@ import type {
   GenerateInsightInput,
   GenerateSummaryInput,
   InsightOutput,
+  QueryReviewInput,
+  QueryReviewOutput,
   SentimentOutput,
   SummaryOutput,
   TopicOutput,
@@ -32,4 +34,5 @@ export interface AIProvider {
   generateSummary(input: GenerateSummaryInput): Promise<WithMethod<SummaryOutput>>;
   generateInsight(input: GenerateInsightInput): Promise<WithMethod<InsightOutput>>;
   answerQuestion(input: AssistantAnswerInput): Promise<WithMethod<AssistantAnswerOutput>>;
+  reviewQuery(input: QueryReviewInput): Promise<WithMethod<QueryReviewOutput>>;
 }

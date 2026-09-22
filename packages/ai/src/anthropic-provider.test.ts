@@ -188,4 +188,27 @@ describe("AnthropicAIProvider", () => {
     expect(result.evidenceMentionIds).toEqual([]);
     expect(result.answer).toMatch(/none of your recent mentions/i);
   });
+
+  it("structures reviewQuery as a forced tool call and tags the method with the cheap model", async () => {
+    let capturedParams: Anthropic.MessageCreateParamsNonStreaming | undefined;
+    const client = fakeClient(async (params) => {
+      capturedParams = params;
+      return toolUseMessage("review_query", {
+        assessment: "This looks reasonably scoped.",
+        confidence: 0.6,
+      });
+    });
+    const provider = new AnthropicAIProvider({ client });
+
+    const result = await provider.reviewQuery({
+      booleanQuery: "Northwind Atlas",
+      windowDays: 30,
+      matchCount: 3,
+      sample: [{ title: "Northwind Atlas launches product", sourceName: "Daily Tech Wire" }],
+    });
+
+    expect(capturedParams?.tool_choice).toEqual({ type: "tool", name: "review_query" });
+    expect(result.assessment).toBe("This looks reasonably scoped.");
+    expect(result.method).toBe("anthropic:claude-haiku-4-5");
+  });
 });

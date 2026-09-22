@@ -90,7 +90,7 @@ generation (excluding soft-deleted organizations).
 | Organizations / Workspaces / Projects | ✅ | | | |
 | RBAC (fixed roles) | ✅ | Custom roles | | |
 | Monitoring queries (simple builder) | ✅ | | | |
-| Boolean / advanced query mode | ✅ | Query quality assistant | | |
+| Boolean / advanced query mode | ✅ | ✅ Query quality assistant | | |
 | Query preview ("test before save") | ✅ | | | |
 | Source connectors: Mock, RSS, Sitemap, Web, API | ✅ | | Social/YouTube/Podcast/Broadcast | |
 | Ingestion pipeline (fetch→normalize→dedupe→index) | ✅ | | | |

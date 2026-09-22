@@ -5,6 +5,7 @@ import {
   assistantAnswerOutputSchema,
   entityOutputSchema,
   insightOutputSchema,
+  queryReviewOutputSchema,
   sentimentOutputSchema,
   summaryOutputSchema,
   topicOutputSchema,
@@ -17,6 +18,8 @@ import {
   type GenerateInsightInput,
   type GenerateSummaryInput,
   type InsightOutput,
+  type QueryReviewInput,
+  type QueryReviewOutput,
   type SentimentOutput,
   type SummaryOutput,
   type TopicOutput,
@@ -341,5 +344,36 @@ export class AnthropicAIProvider implements AIProvider {
     const evidenceMentionIds = result.evidenceMentionIds.filter((id) => knownIds.has(id));
 
     return { ...result, evidenceMentionIds, method: `anthropic:${this.synthesisModel}` };
+  }
+
+  async reviewQuery(input: QueryReviewInput): Promise<WithMethod<QueryReviewOutput>> {
+    const sampleList =
+      input.sample.length === 0
+        ? "(no results matched)"
+        : input.sample.map((s) => `- "${s.title}" | ${s.sourceName}`).join("\n");
+
+    const result = await this.callTool({
+      model: this.cheapModel,
+      maxTokens: 400,
+      toolName: "review_query",
+      toolDescription: "Assess a monitoring query's breadth and precision from its sample results.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          assessment: { type: "string" },
+          confidence: { type: "number", minimum: 0, maximum: 1 },
+        },
+        required: ["assessment", "confidence"],
+      },
+      userQuery: [
+        `A user is building a monitoring query: "${input.booleanQuery}".`,
+        `It matched ${input.matchCount} article(s) in the last ${input.windowDays} days; the sample titles below are what it actually matched.`,
+        "In 1-3 sentences, assess whether this looks too broad (matching unrelated topics), too narrow (near-zero matches), or reasonable — and suggest one concrete improvement if it needs one. Base this only on the sample shown, never on assumptions about the query's subject.",
+      ].join(" "),
+      sourceContent: sampleList,
+      outputSchema: queryReviewOutputSchema,
+    });
+
+    return { ...result, method: `anthropic:${this.cheapModel}` };
   }
 }

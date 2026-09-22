@@ -106,3 +106,25 @@ export type AssistantAnswerInput = {
   screenContext: string;
   mentions: InsightSourceMention[];
 };
+
+/**
+ * docs/product/FEATURE_MATRIX.md P2 "Query quality assistant" — the
+ * upgrade tier above `queryQualityWarning`'s instant, free heuristic
+ * (packages/core/query-ast.ts, brief §101): a real critique of what the
+ * query actually matched, grounded in its own sample results rather than
+ * pattern-matched off the query text alone. No `evidenceMentionIds`
+ * here — a query review has nothing to cite back to a Mention, it's
+ * assessing the query's own breadth/precision.
+ */
+export const queryReviewOutputSchema = z.object({
+  assessment: z.string().min(1).max(600),
+  confidence: z.number().min(0).max(1),
+});
+export type QueryReviewOutput = z.infer<typeof queryReviewOutputSchema>;
+
+export type QueryReviewInput = {
+  booleanQuery: string;
+  windowDays: number;
+  matchCount: number;
+  sample: { title: string; sourceName: string }[];
+};

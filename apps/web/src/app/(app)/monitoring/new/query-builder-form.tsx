@@ -22,6 +22,7 @@ type PreviewResult = {
   windowDays: number;
   sample: { title: string; sourceName: string; publishedAt: string | null }[];
   warning: string | null;
+  aiAssessment: { text: string; confidence: number; method: string } | null;
 };
 
 function ChipInput({
@@ -274,6 +275,15 @@ export function QueryBuilderForm({ projects }: { projects: Project[] }) {
               last {preview.windowDays} days.
             </p>
             {preview.warning ? <p className="text-warning">{preview.warning}</p> : null}
+            {preview.aiAssessment ? (
+              <div className="rounded-md bg-surface-muted p-2">
+                <p className="text-foreground">{preview.aiAssessment.text}</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  AI assessment · Confidence {Math.round(preview.aiAssessment.confidence * 100)}% ·
+                  Method: {preview.aiAssessment.method}
+                </p>
+              </div>
+            ) : null}
             {preview.sample.length > 0 ? (
               <ul className="flex flex-col gap-1 text-muted-foreground">
                 {preview.sample.map((item, i) => (

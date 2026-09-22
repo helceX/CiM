@@ -10,6 +10,8 @@ import type {
   GenerateInsightInput,
   GenerateSummaryInput,
   InsightOutput,
+  QueryReviewInput,
+  QueryReviewOutput,
   SentimentOutput,
   SummaryOutput,
   TopicOutput,
@@ -211,6 +213,31 @@ export class MockAIProvider implements AIProvider {
       answer,
       confidence: Math.min(0.8, 0.4 + top[0]!.overlap * 0.1),
       evidenceMentionIds: top.map((s) => s.mention.id),
+      method: METHOD,
+    };
+  }
+
+  async reviewQuery(input: QueryReviewInput): Promise<WithMethod<QueryReviewOutput>> {
+    const perDay = input.matchCount / Math.max(1, input.windowDays);
+    if (input.matchCount === 0) {
+      return {
+        assessment:
+          "This query matched nothing in the preview window — it may be too narrow, or use wording that doesn't appear in your sources. Try a broader term or check for typos.",
+        confidence: 0.6,
+        method: METHOD,
+      };
+    }
+    if (perDay > 5) {
+      return {
+        assessment: `This is matching a high volume (about ${Math.round(perDay)} per day) — it may be too broad to be useful as a focused alert. Consider an exact phrase or adding exclude terms for unrelated topics that share this wording.`,
+        confidence: 0.55,
+        method: METHOD,
+      };
+    }
+    const sourceNames = new Set(input.sample.map((s) => s.sourceName));
+    return {
+      assessment: `Matched ${input.matchCount} result${input.matchCount === 1 ? "" : "s"} across ${sourceNames.size} source${sourceNames.size === 1 ? "" : "s"} in the preview window — a reasonable volume. Skim the sample titles below to confirm they're actually on-topic before saving.`,
+      confidence: 0.5,
       method: METHOD,
     };
   }

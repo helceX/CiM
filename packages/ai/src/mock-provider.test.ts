@@ -151,4 +151,40 @@ describe("MockAIProvider", () => {
       expect(result.answer).toMatch(/nothing has been crawled/i);
     });
   });
+
+  describe("reviewQuery", () => {
+    it("flags a zero-match query as possibly too narrow", async () => {
+      const result = await provider.reviewQuery({
+        booleanQuery: "\"a very specific phrase\"",
+        windowDays: 30,
+        matchCount: 0,
+        sample: [],
+      });
+      expect(result.assessment).toMatch(/too narrow|nothing/i);
+      expect(result.method).toBe("mock-heuristic-v1");
+    });
+
+    it("flags a high-volume query as possibly too broad", async () => {
+      const result = await provider.reviewQuery({
+        booleanQuery: "news",
+        windowDays: 7,
+        matchCount: 200,
+        sample: [{ title: "Something", sourceName: "Wire" }],
+      });
+      expect(result.assessment).toMatch(/broad/i);
+    });
+
+    it("gives a neutral assessment for a reasonable match volume", async () => {
+      const result = await provider.reviewQuery({
+        booleanQuery: "Northwind Atlas",
+        windowDays: 30,
+        matchCount: 4,
+        sample: [
+          { title: "Northwind Atlas launches product", sourceName: "Daily Tech Wire" },
+          { title: "Northwind Atlas quarterly results", sourceName: "Business Times" },
+        ],
+      });
+      expect(result.assessment).toMatch(/matched 4 results?/i);
+    });
+  });
 });

@@ -20,7 +20,8 @@ test("generate a report and download the real PDF and CSV", async ({ page }) => 
   // defaults — matches what a user creating their first report clicks
   // through.
   const createResponse = page.waitForResponse(
-    (response) => response.url().endsWith("/api/reports") && response.request().method() === "POST",
+    (response) =>
+      response.url().endsWith("/api/reports") && response.request().method() === "POST",
   );
   await page.getByRole("button", { name: "Generate report" }).click();
   const response = await createResponse;
@@ -53,4 +54,63 @@ test("generate a report and download the real PDF and CSV", async ({ page }) => 
   const csvResponse = await page.request.get(csvHref);
   expect(csvResponse.ok()).toBe(true);
   expect(csvResponse.headers()["content-type"]).toContain("text/csv");
+});
+
+/**
+ * docs/product/FEATURE_MATRIX.md P2 "sharing links" — proves the public,
+ * unauthenticated side of the feature actually works from a browser
+ * with no session: the created link's file is fetchable, and once
+ * revoked it stops resolving. The authenticated create/revoke API calls
+ * and the token/expiry logic itself are already covered by
+ * packages/db/src/repositories/reports.integration.test.ts's "share
+ * links" suite — this is the one place that proves the link an owner
+ * copies out of the browser genuinely works with zero cookies attached.
+ */
+test("create a report share link, fetch it with no session, then revoke it", async ({
+  page,
+  browser,
+}) => {
+  await registerAndOnboard(page);
+
+  await page.goto("/reports/new");
+  await page.getByLabel("Name").fill("E2E share-link report");
+  const createResponse = page.waitForResponse(
+    (response) =>
+      response.url().endsWith("/api/reports") && response.request().method() === "POST",
+  );
+  await page.getByRole("button", { name: "Generate report" }).click();
+  const { reportRunId } = await (await createResponse).json();
+
+  await simulateReportGeneration(reportRunId);
+  await page.reload();
+  await expect(page.getByText("completed")).toBeVisible();
+
+  const shareResponse = page.waitForResponse(
+    (response) =>
+      response.url().includes("/share") && response.request().method() === "POST",
+  );
+  await page.getByRole("button", { name: "Share", exact: true }).click();
+  const shareData = await (await shareResponse).json();
+  expect(shareData.url).toContain("/api/shared-reports/");
+
+  // A fresh, cookie-less context — the whole point of the link.
+  const anonContext = await browser.newContext();
+  const anonPage = await anonContext.newPage();
+  const publicResponse = await anonPage.request.get(`${shareData.url}?format=pdf`);
+  expect(publicResponse.ok()).toBe(true);
+  expect(publicResponse.headers()["content-type"]).toContain("application/pdf");
+  const publicBody = await publicResponse.body();
+  expect(publicBody.subarray(0, 5).toString("ascii")).toBe("%PDF-");
+
+  const revokeResponse = page.waitForResponse(
+    (response) =>
+      response.url().includes("/share") && response.request().method() === "DELETE",
+  );
+  await page.getByRole("button", { name: "Revoke" }).click();
+  expect((await revokeResponse).ok()).toBe(true);
+
+  const afterRevoke = await anonPage.request.get(`${shareData.url}?format=pdf`);
+  expect(afterRevoke.status()).toBe(404);
+
+  await anonContext.close();
 });

@@ -1,7 +1,7 @@
 import { and, desc, eq, isNull, ne, sql } from "drizzle-orm";
 import type { Db } from "../client";
 import { organizations, projects } from "../schema/organizations";
-import { reportFiles, reportRuns, reports } from "../schema/reports";
+import { reportFiles, reportRuns, reportShareLinks, reports } from "../schema/reports";
 import { asOrganizationId, type OrganizationId } from "./tenant-scope";
 
 export type ReportListItem = {
@@ -242,6 +242,125 @@ export async function getReportFile(
     )
     .limit(1);
   return row;
+}
+
+export type CreateReportShareLinkResult = "ok" | "run_not_completed" | "not_found";
+
+/**
+ * docs/product/FEATURE_MATRIX.md P2 "sharing links" — a run must be
+ * `completed` before it can be shared (there is nothing to serve
+ * otherwise), the same guard the authenticated download route already
+ * enforces. `tokenHash`/`expiresAt` come from the caller (the API route,
+ * via packages/core's generateRawToken/hashToken) — this layer never
+ * sees the raw token, matching inviteMember's convention.
+ */
+export async function createReportShareLink(
+  db: Db,
+  organizationId: OrganizationId,
+  reportRunId: string,
+  input: { tokenHash: string; expiresAt: Date; createdByUserId: string },
+): Promise<CreateReportShareLinkResult> {
+  const run = await getReportRun(db, organizationId, reportRunId);
+  if (!run) return "not_found";
+  if (run.status !== "completed") return "run_not_completed";
+
+  await db.insert(reportShareLinks).values({
+    reportRunId,
+    tokenHash: input.tokenHash,
+    createdByUserId: input.createdByUserId,
+    expiresAt: input.expiresAt,
+  });
+  return "ok";
+}
+
+/** Revokes every currently-active link for this run — never lets a stale, still-valid link outlive an owner's "revoke" click. */
+export async function revokeReportShareLinks(
+  db: Db,
+  organizationId: OrganizationId,
+  reportRunId: string,
+): Promise<boolean> {
+  const run = await getReportRun(db, organizationId, reportRunId);
+  if (!run) return false;
+
+  const result = await db
+    .update(reportShareLinks)
+    .set({ revokedAt: new Date() })
+    .where(
+      and(
+        eq(reportShareLinks.reportRunId, reportRunId),
+        isNull(reportShareLinks.revokedAt),
+      ),
+    )
+    .returning({ id: reportShareLinks.id });
+  return result.length > 0;
+}
+
+export type ActiveReportShareLink = { id: string; expiresAt: Date; createdAt: Date };
+
+export async function getActiveReportShareLink(
+  db: Db,
+  organizationId: OrganizationId,
+  reportRunId: string,
+): Promise<ActiveReportShareLink | undefined> {
+  const run = await getReportRun(db, organizationId, reportRunId);
+  if (!run) return undefined;
+
+  const [row] = await db
+    .select({
+      id: reportShareLinks.id,
+      expiresAt: reportShareLinks.expiresAt,
+      createdAt: reportShareLinks.createdAt,
+    })
+    .from(reportShareLinks)
+    .where(
+      and(
+        eq(reportShareLinks.reportRunId, reportRunId),
+        isNull(reportShareLinks.revokedAt),
+      ),
+    )
+    .orderBy(desc(reportShareLinks.createdAt))
+    .limit(1);
+  if (!row) return undefined;
+  if (row.expiresAt.getTime() < Date.now()) return undefined;
+  return row;
+}
+
+export type PublicSharedReport = { reportRunId: string; reportName: string };
+
+/**
+ * The one deliberately NOT tenant-scoped lookup in this file — ADR-001's
+ * exception shape for a genuinely public, by-design entry point (same
+ * category as members.ts's findPendingInvitationByTokenHash). The token
+ * itself — unguessable, hashed at rest — IS the authorization; there is
+ * no organizationId to check against because the caller (an anonymous
+ * recipient of a shared link) was never authenticated in the first
+ * place. Never returns a revoked/expired link, and never anything beyond
+ * the one report run the link was created for.
+ */
+export async function getReportShareLinkByToken(
+  db: Db,
+  tokenHash: string,
+): Promise<PublicSharedReport | undefined> {
+  const [row] = await db
+    .select({
+      reportRunId: reportShareLinks.reportRunId,
+      reportName: reports.name,
+      runStatus: reportRuns.status,
+      expiresAt: reportShareLinks.expiresAt,
+      revokedAt: reportShareLinks.revokedAt,
+    })
+    .from(reportShareLinks)
+    .innerJoin(reportRuns, eq(reportRuns.id, reportShareLinks.reportRunId))
+    .innerJoin(reports, eq(reports.id, reportRuns.reportId))
+    .where(eq(reportShareLinks.tokenHash, tokenHash))
+    .limit(1);
+
+  if (!row) return undefined;
+  if (row.revokedAt) return undefined;
+  if (row.expiresAt.getTime() < Date.now()) return undefined;
+  if (row.runStatus !== "completed") return undefined;
+
+  return { reportRunId: row.reportRunId, reportName: row.reportName };
 }
 
 export type DueScheduledReport = {

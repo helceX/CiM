@@ -1,11 +1,12 @@
 import { notFound } from "next/navigation";
 import { can } from "@cim/core";
 import { Badge } from "@cim/ui";
-import { db, getReport, listReportRuns } from "@cim/db";
+import { db, getActiveReportShareLink, getReport, listReportRuns } from "@cim/db";
 import { getReportTemplate } from "@cim/reports/templates";
 import { requireOrgContext } from "@/lib/tenant";
 import { RunAgainButton } from "./run-again-button";
 import { ScheduleSection } from "./schedule-section";
+import { ShareLinkControl } from "./share-link-control";
 
 const STATUS_TONE: Record<string, "neutral" | "warning" | "success" | "danger"> = {
   queued: "neutral",
@@ -33,6 +34,24 @@ export default async function ReportDetailPage({
   const runs = await listReportRuns(db, report.id);
   const template = getReportTemplate(report.templateKey);
   const canManageSchedule = can(context.role, "reports:write");
+
+  const activeShareLinks = new Map(
+    await Promise.all(
+      runs
+        .filter((run) => run.status === "completed")
+        .map(async (run) => {
+          const link = await getActiveReportShareLink(
+            db,
+            context.organizationId,
+            run.id,
+          );
+          return [
+            run.id,
+            link ? { expiresAt: link.expiresAt.toISOString() } : null,
+          ] as const;
+        }),
+    ),
+  );
 
   return (
     <div className="flex flex-col gap-6">
@@ -62,6 +81,7 @@ export default async function ReportDetailPage({
                 <th className="px-4 py-2 font-medium">Requested</th>
                 <th className="px-4 py-2 font-medium">Status</th>
                 <th className="px-4 py-2 font-medium">Downloads</th>
+                <th className="px-4 py-2 font-medium">Share</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -104,6 +124,17 @@ export default async function ReportDetailPage({
                       </div>
                     ) : (
                       <span className="text-muted-foreground">Not available</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    {run.status === "completed" && canManageSchedule ? (
+                      <ShareLinkControl
+                        reportId={report.id}
+                        runId={run.id}
+                        initialActiveLink={activeShareLinks.get(run.id) ?? null}
+                      />
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
                     )}
                   </td>
                 </tr>

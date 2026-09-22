@@ -1,12 +1,19 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
+import { hashToken } from "@cim/core";
 import {
   asOrganizationId,
   createProject,
   createReport,
+  createReportRun,
+  createReportShareLink,
   db,
+  getActiveReportShareLink,
+  getReportShareLinkByToken,
   getReportsDueForScheduledRun,
+  markReportRunCompleted,
   markReportScheduledRun,
+  revokeReportShareLinks,
   schema,
   updateReportSchedule,
 } from "@cim/db";
@@ -142,5 +149,107 @@ describe("reports repository — scheduling (integration)", () => {
       "weekly",
     );
     expect(updated).toBe(false);
+  });
+
+  describe("share links", () => {
+    async function makeCompletedRun() {
+      const report = await makeReport();
+      const run = await createReportRun(db, organizationId, {
+        reportId: report.id,
+        requestedByUserId: userId,
+        periodStart: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+        periodEnd: new Date(),
+      });
+      await markReportRunCompleted(db, run.id);
+      return { report, run };
+    }
+
+    it("creates a share link for a completed run, retrievable by its token hash", async () => {
+      const { run } = await makeCompletedRun();
+      const tokenHash = hashToken("test-raw-token-1");
+      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+      const result = await createReportShareLink(db, organizationId, run.id, {
+        tokenHash,
+        expiresAt,
+        createdByUserId: userId,
+      });
+      expect(result).toBe("ok");
+
+      const shared = await getReportShareLinkByToken(db, tokenHash);
+      expect(shared?.reportRunId).toBe(run.id);
+
+      const active = await getActiveReportShareLink(db, organizationId, run.id);
+      expect(active?.expiresAt.getTime()).toBe(expiresAt.getTime());
+    });
+
+    it("rejects creating a share link for a run that isn't completed", async () => {
+      const report = await makeReport();
+      const run = await createReportRun(db, organizationId, {
+        reportId: report.id,
+        requestedByUserId: userId,
+        periodStart: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+        periodEnd: new Date(),
+      });
+
+      const result = await createReportShareLink(db, organizationId, run.id, {
+        tokenHash: hashToken("test-raw-token-2"),
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        createdByUserId: userId,
+      });
+      expect(result).toBe("run_not_completed");
+    });
+
+    it("rejects creating a share link for a run outside the organization", async () => {
+      const { run } = await makeCompletedRun();
+      const otherOrgId = asOrganizationId("00000000-0000-0000-0000-000000000000");
+
+      const result = await createReportShareLink(db, otherOrgId, run.id, {
+        tokenHash: hashToken("test-raw-token-3"),
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        createdByUserId: userId,
+      });
+      expect(result).toBe("not_found");
+    });
+
+    it("never resolves an expired link, even though it was never revoked", async () => {
+      const { run } = await makeCompletedRun();
+      const tokenHash = hashToken("test-raw-token-4");
+      await createReportShareLink(db, organizationId, run.id, {
+        tokenHash,
+        expiresAt: new Date(Date.now() - 60 * 1000), // already expired
+        createdByUserId: userId,
+      });
+
+      expect(await getReportShareLinkByToken(db, tokenHash)).toBeUndefined();
+      expect(
+        await getActiveReportShareLink(db, organizationId, run.id),
+      ).toBeUndefined();
+    });
+
+    it("revokeReportShareLinks makes an active link stop resolving", async () => {
+      const { run } = await makeCompletedRun();
+      const tokenHash = hashToken("test-raw-token-5");
+      await createReportShareLink(db, organizationId, run.id, {
+        tokenHash,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        createdByUserId: userId,
+      });
+      expect(await getReportShareLinkByToken(db, tokenHash)).toBeDefined();
+
+      const revoked = await revokeReportShareLinks(db, organizationId, run.id);
+      expect(revoked).toBe(true);
+
+      expect(await getReportShareLinkByToken(db, tokenHash)).toBeUndefined();
+      expect(
+        await getActiveReportShareLink(db, organizationId, run.id),
+      ).toBeUndefined();
+    });
+
+    it("an unknown token resolves to nothing, never a fabricated fallback", async () => {
+      expect(
+        await getReportShareLinkByToken(db, hashToken("never-issued-token")),
+      ).toBeUndefined();
+    });
   });
 });

@@ -24,3 +24,14 @@ export const createReportSchema = z.object({
   periodType: reportPeriodTypeSchema,
 });
 export type CreateReportInput = z.infer<typeof createReportSchema>;
+
+/**
+ * docs/product/FEATURE_MATRIX.md P2 "sharing links" — no "forever"
+ * option (packages/db/src/schema/reports.ts's reportShareLinks
+ * comment); 7 days is a sensible default for "send this to a colleague
+ * or client", 90 days a generous ceiling.
+ */
+export const createReportShareLinkSchema = z.object({
+  expiresInDays: z.int().min(1).max(90).default(7),
+});
+export type CreateReportShareLinkInput = z.infer<typeof createReportShareLinkSchema>;

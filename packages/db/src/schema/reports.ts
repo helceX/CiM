@@ -99,7 +99,7 @@ export const reportFiles = pgTable(
     reportRunId: uuid("report_run_id")
       .notNull()
       .references(() => reportRuns.id, { onDelete: "cascade" }),
-    format: text("format").notNull(), // pdf | csv
+    format: text("format").notNull(), // pdf | csv | xlsx
     mimeType: text("mime_type").notNull(),
     sizeBytes: integer("size_bytes").notNull(),
     data: bytea("data").notNull(),
@@ -108,6 +108,35 @@ export const reportFiles = pgTable(
   (table) => [index("report_files_run_idx").on(table.reportRunId)],
 );
 
+/**
+ * docs/product/FEATURE_MATRIX.md P2 "Report builder (custom sections),
+ * XLSX, sharing links" — the sharing-links slice. The same signed-token
+ * pattern as email verification/password reset/invitations
+ * (`packages/core/tokens.ts` — only `tokenHash` is ever stored, the raw
+ * token is returned to the creator exactly once and lives only in the
+ * link itself). Always has a real `expiresAt` — there is no "forever"
+ * option, unlike an invitation's one-time-use token this is a standing
+ * bearer credential for as long as it's valid, so it must lapse on its
+ * own even if nobody remembers to revoke it. `revokedAt` lets an owner
+ * kill a link early without waiting for expiry.
+ */
+export const reportShareLinks = pgTable(
+  "report_share_links",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    reportRunId: uuid("report_run_id")
+      .notNull()
+      .references(() => reportRuns.id, { onDelete: "cascade" }),
+    tokenHash: text("token_hash").notNull().unique(),
+    createdByUserId: uuid("created_by_user_id").references(() => users.id),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("report_share_links_run_idx").on(table.reportRunId)],
+);
+
 export type Report = typeof reports.$inferSelect;
 export type ReportRun = typeof reportRuns.$inferSelect;
 export type ReportFile = typeof reportFiles.$inferSelect;
+export type ReportShareLink = typeof reportShareLinks.$inferSelect;

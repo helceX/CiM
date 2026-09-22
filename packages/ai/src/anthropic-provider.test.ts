@@ -183,6 +183,77 @@ describe("AnthropicAIProvider", () => {
     expect(create).not.toHaveBeenCalled();
   });
 
+  it("filters detectRisk evidence and returns a grounded risk assessment", async () => {
+    const client = fakeClient(async () =>
+      toolUseMessage("detect_risk", {
+        risk: {
+          level: "high",
+          summary: "A cluster of negative coverage appeared today.",
+          confidence: 0.7,
+          evidenceMentionIds: ["m1", "hallucinated-id"],
+        },
+      }),
+    );
+    const provider = new AnthropicAIProvider({ client });
+
+    const result = await provider.detectRisk({
+      periodLabel: "today",
+      mentions: [
+        { id: "m1", title: "A", sourceName: "Wire", sentiment: "negative", priority: "normal", publishedAt: null },
+      ],
+    });
+
+    expect(result.risk?.level).toBe("high");
+    expect(result.risk?.evidenceMentionIds).toEqual(["m1"]);
+    expect(result.method).toMatch(/^anthropic:/);
+  });
+
+  it("falls back to no risk when every returned evidence id is hallucinated, rather than fail the whole job", async () => {
+    const client = fakeClient(async () =>
+      toolUseMessage("detect_risk", {
+        risk: {
+          level: "critical",
+          summary: "Made up.",
+          confidence: 0.9,
+          evidenceMentionIds: ["hallucinated-only"],
+        },
+      }),
+    );
+    const provider = new AnthropicAIProvider({ client });
+
+    const result = await provider.detectRisk({
+      periodLabel: "today",
+      mentions: [
+        { id: "m1", title: "A", sourceName: "Wire", sentiment: "negative", priority: "normal", publishedAt: null },
+      ],
+    });
+
+    expect(result.risk).toBeNull();
+  });
+
+  it("passes through a null risk from the model as-is", async () => {
+    const client = fakeClient(async () => toolUseMessage("detect_risk", { risk: null }));
+    const provider = new AnthropicAIProvider({ client });
+
+    const result = await provider.detectRisk({
+      periodLabel: "today",
+      mentions: [
+        { id: "m1", title: "A", sourceName: "Wire", sentiment: "positive", priority: "normal", publishedAt: null },
+      ],
+    });
+
+    expect(result.risk).toBeNull();
+  });
+
+  it("returns no risk for an empty mention list without calling the model", async () => {
+    const create = vi.fn(async () => toolUseMessage("detect_risk", { risk: null }));
+    const provider = new AnthropicAIProvider({ client: { messages: { create } } });
+
+    const result = await provider.detectRisk({ periodLabel: "today", mentions: [] });
+    expect(result.risk).toBeNull();
+    expect(create).not.toHaveBeenCalled();
+  });
+
   it("uses vi to confirm the client is called exactly once per attempt", async () => {
     const create = vi.fn(async () =>
       toolUseMessage("classify_sentiment", { sentiment: "neutral", confidence: 0.5 }),

@@ -7,6 +7,7 @@ import {
   insightOutputSchema,
   queryReviewOutputSchema,
   recommendationsOutputSchema,
+  riskOutputSchema,
   sentimentOutputSchema,
   summaryOutputSchema,
   topicOutputSchema,
@@ -18,11 +19,13 @@ import {
   type ExtractEntitiesInput,
   type GenerateInsightInput,
   type GenerateRecommendationsInput,
+  type GenerateRiskInput,
   type GenerateSummaryInput,
   type InsightOutput,
   type QueryReviewInput,
   type QueryReviewOutput,
   type RecommendationsOutput,
+  type RiskOutput,
   type SentimentOutput,
   type SummaryOutput,
   type TopicOutput,
@@ -370,6 +373,73 @@ export class AnthropicAIProvider implements AIProvider {
       .filter((item) => item.evidenceMentionIds.length > 0);
 
     return { recommendations, method: `anthropic:${this.synthesisModel}` };
+  }
+
+  async detectRisk(input: GenerateRiskInput): Promise<WithMethod<RiskOutput>> {
+    if (input.mentions.length === 0) {
+      return { risk: null, method: `anthropic:${this.synthesisModel}` };
+    }
+    const mentionList = input.mentions
+      .map(
+        (m) =>
+          `- id=${m.id} | ${m.sourceName} | "${m.title}" | sentiment=${m.sentiment ?? "unclassified"} | priority=${m.priority} | published=${m.publishedAt ?? "unknown"}`,
+      )
+      .join("\n");
+
+    const result = await this.callTool({
+      model: this.synthesisModel,
+      maxTokens: 800,
+      toolName: "detect_risk",
+      toolDescription:
+        "Assess whether the mentions from this period indicate a reputational or operational risk worth flagging.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          risk: {
+            type: ["object", "null"],
+            properties: {
+              level: { type: "string", enum: ["low", "medium", "high", "critical"] },
+              summary: { type: "string", maxLength: 600 },
+              confidence: { type: "number", minimum: 0, maximum: 1 },
+              evidenceMentionIds: {
+                type: "array",
+                items: { type: "string" },
+                minItems: 1,
+                maxItems: 50,
+              },
+            },
+            required: ["level", "summary", "confidence", "evidenceMentionIds"],
+          },
+        },
+        required: ["risk"],
+      },
+      userQuery: [
+        `Based only on the mentions listed below from ${input.periodLabel}, decide whether coverage indicates a real reputational or operational risk worth flagging to a communications team.`,
+        "Most periods have nothing risk-worthy — set risk to null rather than inventing one. Only flag a real, evidenced pattern (e.g. a cluster of negative or critical-priority coverage), never a single ordinary mention.",
+        "If you do flag a risk, set level (low/medium/high/critical), a summary explaining why, your confidence, and evidenceMentionIds set to the id values (from the list below) that support it — never an id not listed.",
+      ].join(" "),
+      sourceContent: mentionList,
+      outputSchema: riskOutputSchema,
+    });
+
+    if (!result.risk) {
+      return { risk: null, method: `anthropic:${this.synthesisModel}` };
+    }
+
+    const knownIds = new Set(input.mentions.map((m) => m.id));
+    const evidenceMentionIds = result.risk.evidenceMentionIds.filter((id) => knownIds.has(id));
+    // A risk whose cited evidence didn't actually match any mention we
+    // provided is no longer grounded — fall back to "no risk flagged"
+    // rather than render an unsupported claim (same rule generateInsight
+    // and generateRecommendations enforce).
+    if (evidenceMentionIds.length === 0) {
+      return { risk: null, method: `anthropic:${this.synthesisModel}` };
+    }
+
+    return {
+      risk: { ...result.risk, evidenceMentionIds },
+      method: `anthropic:${this.synthesisModel}`,
+    };
   }
 
   async answerQuestion(input: AssistantAnswerInput): Promise<WithMethod<AssistantAnswerOutput>> {

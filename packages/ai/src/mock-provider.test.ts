@@ -141,6 +141,64 @@ describe("MockAIProvider", () => {
     });
   });
 
+  describe("detectRisk", () => {
+    it("flags critical risk when a critical-priority mention appears alongside a majority-negative period", async () => {
+      const result = await provider.detectRisk({
+        periodLabel: "the last 24 hours",
+        mentions: [
+          { id: "m1", title: "A", sourceName: "Wire", sentiment: "negative", priority: "critical", publishedAt: null },
+          { id: "m2", title: "B", sourceName: "Wire", sentiment: "negative", priority: "normal", publishedAt: null },
+          { id: "m3", title: "C", sourceName: "Wire", sentiment: "positive", priority: "normal", publishedAt: null },
+        ],
+      });
+      expect(result.method).toBe("mock-heuristic-v1");
+      expect(result.risk?.level).toBe("critical");
+      expect(result.risk?.evidenceMentionIds).toEqual(["m1"]);
+    });
+
+    it("flags high risk from a strong negative majority without a critical-priority mention", async () => {
+      const result = await provider.detectRisk({
+        periodLabel: "the last 24 hours",
+        mentions: [
+          { id: "m1", title: "A", sourceName: "Wire", sentiment: "negative", priority: "normal", publishedAt: null },
+          { id: "m2", title: "B", sourceName: "Wire", sentiment: "negative", priority: "normal", publishedAt: null },
+          { id: "m3", title: "C", sourceName: "Wire", sentiment: "negative", priority: "normal", publishedAt: null },
+          { id: "m4", title: "D", sourceName: "Wire", sentiment: "positive", priority: "normal", publishedAt: null },
+        ],
+      });
+      expect(result.risk?.level).toBe("high");
+      expect(result.risk?.evidenceMentionIds.sort()).toEqual(["m1", "m2", "m3"]);
+    });
+
+    it("flags medium risk from a moderate negative share", async () => {
+      const result = await provider.detectRisk({
+        periodLabel: "the last 24 hours",
+        mentions: [
+          { id: "m1", title: "A", sourceName: "Wire", sentiment: "negative", priority: "normal", publishedAt: null },
+          { id: "m2", title: "B", sourceName: "Wire", sentiment: "negative", priority: "normal", publishedAt: null },
+          { id: "m3", title: "C", sourceName: "Wire", sentiment: "neutral", priority: "normal", publishedAt: null },
+          { id: "m4", title: "D", sourceName: "Wire", sentiment: "positive", priority: "normal", publishedAt: null },
+          { id: "m5", title: "E", sourceName: "Wire", sentiment: "positive", priority: "normal", publishedAt: null },
+        ],
+      });
+      expect(result.risk?.level).toBe("medium");
+    });
+
+    it("flags no risk rather than fabricate a 'low risk, all clear' claim when coverage is mostly positive", async () => {
+      const result = await provider.detectRisk({
+        periodLabel: "the last 24 hours",
+        mentions: [
+          { id: "m1", title: "A", sourceName: "Wire", sentiment: "negative", priority: "normal", publishedAt: null },
+          { id: "m2", title: "B", sourceName: "Wire", sentiment: "positive", priority: "normal", publishedAt: null },
+          { id: "m3", title: "C", sourceName: "Wire", sentiment: "positive", priority: "normal", publishedAt: null },
+          { id: "m4", title: "D", sourceName: "Wire", sentiment: "positive", priority: "normal", publishedAt: null },
+          { id: "m5", title: "E", sourceName: "Wire", sentiment: "neutral", priority: "normal", publishedAt: null },
+        ],
+      });
+      expect(result.risk).toBeNull();
+    });
+  });
+
   describe("answerQuestion", () => {
     const mentions = [
       {

@@ -13,15 +13,15 @@ const PERIOD_LABEL = "the last 24 hours";
 /**
  * docs/product/PRODUCT_VISION.md dashboard flow — "Since yesterday"
  * executive brief, plus docs/product/FEATURE_MATRIX.md P2 "AI:
- * recommendations" (AI_ARCHITECTURE.md "Recommendations are never
- * auto-applied", brief §44). Reserved-synthesis tier of the cost-tiered
- * pipeline (AI_ARCHITECTURE.md §Cost control): one call per project per
- * period, never per mention, reusing the same mention window for both.
- * Silently produces nothing when a project has no new mentions in the
- * period, or when nothing in that period actually warrants a
- * recommendation — brief §95's "Not available" rule means no insight/no
- * recommendations, never a fabricated "nothing changed" claim or an
- * invented action item.
+ * recommendations" and "AI risk detection" (AI_ARCHITECTURE.md
+ * "Recommendations are never auto-applied", brief §44). Reserved-synthesis
+ * tier of the cost-tiered pipeline (AI_ARCHITECTURE.md §Cost control): one
+ * call per project per period, never per mention, reusing the same
+ * mention window for all three. Silently produces nothing when a project
+ * has no new mentions in the period, or when nothing in that period
+ * actually warrants an insight/recommendation/risk flag — brief §95's
+ * "Not available" rule means none of those, never a fabricated "nothing
+ * changed"/"all clear" claim or an invented action item.
  */
 export async function processInsightGenerateJob(): Promise<{ generated: number; skipped: string }> {
   const provider = getAIProvider(getEnv());
@@ -83,6 +83,33 @@ export async function processInsightGenerateJob(): Promise<{ generated: number; 
     } catch (error) {
       console.error(
         `[worker] recommendation generation failed for org ${organizationId} project ${projectId}:`,
+        error,
+      );
+    }
+
+    // docs/product/FEATURE_MATRIX.md P2 "AI risk detection" — same
+    // reserved-synthesis tier and mention window as the two calls above,
+    // in its own try/catch so one failure doesn't block the others. Most
+    // periods yield no risk (`result.risk === null`) and nothing is
+    // created, per detectRisk's "don't fabricate a low-risk claim" rule.
+    try {
+      const riskResult = await provider.detectRisk({ periodLabel: PERIOD_LABEL, mentions });
+      if (riskResult.risk) {
+        await createInsight(db, organizationId, {
+          projectId,
+          kind: "risk",
+          summary: riskResult.risk.summary,
+          priority: riskResult.risk.level,
+          confidence: riskResult.risk.confidence,
+          method: riskResult.method,
+          periodStart,
+          periodEnd,
+          evidenceMentionIds: riskResult.risk.evidenceMentionIds,
+        });
+      }
+    } catch (error) {
+      console.error(
+        `[worker] risk detection failed for org ${organizationId} project ${projectId}:`,
         error,
       );
     }

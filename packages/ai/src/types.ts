@@ -161,3 +161,31 @@ export type GenerateRecommendationsInput = {
   periodLabel: string;
   mentions: InsightSourceMention[];
 };
+
+export const riskLevelSchema = z.enum(["low", "medium", "high", "critical"]);
+export type RiskLevel = z.infer<typeof riskLevelSchema>;
+
+/**
+ * docs/architecture/AI_ARCHITECTURE.md `detectRisk(input: RiskInput):
+ * Promise<RiskOutput>` — one assessment per period per project (unlike
+ * `RecommendationsOutput`'s list), so `risk` is nullable rather than an
+ * empty array: most periods have nothing risk-worthy, and `null` says so
+ * without fabricating a "low risk, all clear" claim nobody asked to see.
+ */
+export const riskAssessmentSchema = z.object({
+  level: riskLevelSchema,
+  summary: z.string().min(1).max(600),
+  confidence: z.number().min(0).max(1),
+  evidenceMentionIds: z.array(z.string()).min(1).max(50),
+});
+export type RiskAssessment = z.infer<typeof riskAssessmentSchema>;
+
+export const riskOutputSchema = z.object({
+  risk: riskAssessmentSchema.nullable(),
+});
+export type RiskOutput = z.infer<typeof riskOutputSchema>;
+
+export type GenerateRiskInput = {
+  periodLabel: string;
+  mentions: InsightSourceMention[];
+};

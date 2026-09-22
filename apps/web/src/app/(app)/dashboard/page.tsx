@@ -17,6 +17,7 @@ import { MentionTrendChart } from "@/components/charts/mention-trend-chart";
 import { AiAssistantPanel } from "./ai-assistant-panel";
 import { CompetitorComparisonSection } from "./competitor-comparison-section";
 import { RecommendationsSection } from "./recommendations-section";
+import { RiskBanner } from "./risk-banner";
 
 const SENTIMENT_TONE = {
   positive: "success",
@@ -50,7 +51,7 @@ export default async function DashboardPage() {
     );
   }
 
-  const [summary, recentMentions, trend, insight, competitorComparison, recommendations] =
+  const [summary, recentMentions, trend, insight, competitorComparison, recommendations, risk] =
     await Promise.all([
       getDashboardSummary(db, context.organizationId, { sinceDays: 7 }),
       listRecentMentions(db, context.organizationId, { limit: 10 }),
@@ -58,6 +59,7 @@ export default async function DashboardPage() {
       getLatestInsightForOrganization(db, context.organizationId, "whats_changed"),
       getCompetitorComparison(db, context.organizationId, { sinceDays: 7 }),
       listLatestRecommendationsForOrganization(db, context.organizationId),
+      getLatestInsightForOrganization(db, context.organizationId, "risk"),
     ]);
   const hasCompetitor = competitorComparison.some((row) => row.trackingTarget === "competitor");
 
@@ -80,6 +82,8 @@ export default async function DashboardPage() {
           },
         ]}
       />
+
+      {risk ? <RiskBanner risk={risk} /> : null}
 
       {insight ? (
         <section className="rounded-lg border border-border p-4">

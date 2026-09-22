@@ -9,12 +9,15 @@ import type {
   ExtractEntitiesInput,
   GenerateInsightInput,
   GenerateRecommendationsInput,
+  GenerateRiskInput,
   GenerateSummaryInput,
   InsightOutput,
   QueryReviewInput,
   QueryReviewOutput,
   RecommendationItem,
   RecommendationsOutput,
+  RiskLevel,
+  RiskOutput,
   SentimentOutput,
   SummaryOutput,
   TopicOutput,
@@ -210,6 +213,36 @@ export class MockAIProvider implements AIProvider {
     }
 
     return { recommendations, method: METHOD };
+  }
+
+  async detectRisk(input: GenerateRiskInput): Promise<WithMethod<RiskOutput>> {
+    const negative = input.mentions.filter((m) => m.sentiment === "negative");
+    const critical = input.mentions.filter((m) => m.priority === "critical");
+    const ratio = input.mentions.length > 0 ? negative.length / input.mentions.length : 0;
+
+    let level: RiskLevel;
+    if (critical.length >= 1 && ratio >= 0.5) level = "critical";
+    else if (ratio >= 0.6 && negative.length >= 3) level = "high";
+    else if (ratio >= 0.4 && negative.length >= 2) level = "medium";
+    else {
+      return { risk: null, method: METHOD };
+    }
+
+    const evidence = critical.length > 0 ? critical.slice(0, 10) : negative.slice(0, 10);
+    const criticalNote =
+      critical.length > 0
+        ? `, including ${critical.length} critical-priority match${critical.length === 1 ? "" : "es"}`
+        : "";
+
+    return {
+      risk: {
+        level,
+        summary: `${negative.length} of ${input.mentions.length} mentions in ${input.periodLabel} carried negative sentiment${criticalNote}.`,
+        confidence: 0.65,
+        evidenceMentionIds: evidence.map((m) => m.id),
+      },
+      method: METHOD,
+    };
   }
 
   async answerQuestion(input: AssistantAnswerInput): Promise<WithMethod<AssistantAnswerOutput>> {

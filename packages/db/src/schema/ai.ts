@@ -86,11 +86,14 @@ export const mentionTopics = pgTable(
 /**
  * Tenant-scoped AI-generated insight (docs/architecture/AI_ARCHITECTURE.md
  * Trust Layer). `kind` is `whats_changed` for the MVP dashboard insight,
- * or `recommendation` (P2 — one row per RecommendationItem a single
+ * `recommendation` (P2 — one row per RecommendationItem a single
  * generateRecommendations call returns, `why`/`priority` populated only
- * for that kind); executive_summary/risk/opportunity remain unbuilt P2
- * kinds. The column stays text so adding a kind is a data change, not a
- * migration (same convention as alertRules.type).
+ * for that kind), or `risk` (P2 — at most one row per detectRisk call,
+ * `priority` reused to hold the RiskLevel — low/medium/high/critical —
+ * and `why` left null since `summary` already carries the reasoning);
+ * executive_summary/opportunity remain unbuilt P2 kinds. The column stays
+ * text so adding a kind is a data change, not a migration (same
+ * convention as alertRules.type).
  */
 export const insights = pgTable(
   "insights",
@@ -111,7 +114,7 @@ export const insights = pgTable(
     // Confidence" shape (`summary` above holds the Recommendation text,
     // `confidence` the Confidence). Null for every other kind.
     why: text("why"),
-    priority: text("priority"), // low | medium | high
+    priority: text("priority"), // recommendation: low|medium|high — risk: low|medium|high|critical
     periodStart: timestamp("period_start", { withTimezone: true }).notNull(),
     periodEnd: timestamp("period_end", { withTimezone: true }).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

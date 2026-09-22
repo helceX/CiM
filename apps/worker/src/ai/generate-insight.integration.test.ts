@@ -8,6 +8,7 @@ import {
   createMonitoringQuery,
   db,
   getLatestInsight,
+  getLatestInsightForOrganization,
   listLatestRecommendationsForOrganization,
   schema,
 } from "@cim/db";
@@ -156,6 +157,54 @@ describe("processInsightGenerateJob (integration)", () => {
     expect(negativeRec?.why).toMatch(/2 of the 2 mentions/);
     expect(negativeRec?.priority).toBe("medium");
     expect(negativeRec?.evidence.length).toBe(2);
+  });
+
+  it("also generates a risk insight when the mock provider's heuristic flags one, storing the level in priority", async () => {
+    const riskProject = await createProject(db, organizationId, {
+      workspaceId,
+      name: "Risk Job Test Project",
+    });
+    const riskQuery = await createMonitoringQuery(db, organizationId, {
+      projectId: riskProject.id,
+      name: "Risk job test query",
+      queryAst: { include: ["Eastfield"], exclude: [], exactPhrases: [] },
+      booleanQuery: "Eastfield",
+      sourceTypes: ["news"],
+    });
+
+    // 3 of 4 negative clears MockAIProvider.detectRisk's "high" threshold
+    // (ratio >= 0.6 && negative.length >= 3, packages/ai/src/mock-provider.ts).
+    const sentiments: ("negative" | "positive")[] = ["negative", "negative", "negative", "positive"];
+    for (const [i, sentiment] of sentiments.entries()) {
+      const [article] = await db
+        .insert(schema.articles)
+        .values({
+          sourceId,
+          canonicalUrl: `https://insight-job-test.example/risk-${Date.now()}-${i}`,
+          contentHash: `insight-job-risk-${Date.now()}-${i}`,
+          title: `Eastfield coverage item ${i}`,
+        })
+        .returning();
+      if (!article) throw new Error("failed to create test article");
+      await db.insert(schema.mentions).values({
+        organizationId,
+        projectId: riskProject.id,
+        queryId: riskQuery.id,
+        articleId: article.id,
+        matchedTerms: ["Eastfield"],
+        sentiment,
+      });
+    }
+
+    await processInsightGenerateJob();
+
+    const risk = await getLatestInsightForOrganization(db, organizationId, "risk", {
+      projectId: riskProject.id,
+    });
+    expect(risk).toBeDefined();
+    expect(risk?.priority).toBe("high");
+    expect(risk?.evidence.length).toBe(3);
+    expect(risk?.method).toBe("mock-heuristic-v1");
   });
 
   it("generates nothing for a project with no mentions in the period, never a fabricated summary", async () => {

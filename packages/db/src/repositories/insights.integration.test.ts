@@ -128,6 +128,28 @@ describe("insights repository (integration)", () => {
     expect(latest).toBeUndefined();
   });
 
+  it("round-trips a risk-kind insight's level through the reused priority column, with why left null", async () => {
+    const periodStart = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const periodEnd = new Date();
+
+    await createInsight(db, organizationId, {
+      projectId,
+      kind: "risk",
+      summary: "3 of 4 mentions carried negative sentiment.",
+      priority: "high",
+      confidence: 0.65,
+      method: "mock-heuristic-v1",
+      periodStart,
+      periodEnd,
+      evidenceMentionIds: [mentionId],
+    });
+
+    const latest = await getLatestInsight(db, organizationId, projectId, "risk");
+    expect(latest?.priority).toBe("high");
+    expect(latest?.why).toBeNull();
+    expect(latest?.evidence).toHaveLength(1);
+  });
+
   it("grounds the AI Assistant with the org's recent mentions regardless of age", async () => {
     const rows = await listRecentMentionsForAssistant(db, organizationId);
     expect(rows.some((r) => r.id === mentionId)).toBe(true);

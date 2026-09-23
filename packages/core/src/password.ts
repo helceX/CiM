@@ -64,12 +64,21 @@ export async function verifyPassword(
   const expected = Buffer.from(keyHex ?? "", "hex");
   if (salt.length === 0 || expected.length === 0) return false;
 
-  const derivedKey = await scrypt(password.normalize("NFKC"), salt, expected.length, {
-    N: params.N,
-    r: params.r,
-    p: params.p,
-    maxmem,
-  });
+  let derivedKey: Buffer;
+  try {
+    derivedKey = await scrypt(password.normalize("NFKC"), salt, expected.length, {
+      N: params.N,
+      r: params.r,
+      p: params.p,
+      maxmem,
+    });
+  } catch {
+    // N/r/p parsed as finite numbers but aren't valid scrypt params (e.g.
+    // N not a power of two, r*p too large) — node:crypto throws
+    // synchronously rather than yielding a comparable key. A corrupted
+    // stored hash must fail closed here, not 500 the caller.
+    return false;
+  }
 
   return derivedKey.length === expected.length && timingSafeEqual(derivedKey, expected);
 }

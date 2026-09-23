@@ -22,6 +22,16 @@ describe("password hashing", () => {
     await expect(verifyPassword("anything", "not-a-real-hash")).resolves.toBe(false);
   });
 
+  it("rejects a stored hash with numerically-parseable but invalid scrypt params (N=1) instead of throwing", async () => {
+    // node:crypto's scrypt throws synchronously on out-of-range N/r/p
+    // (e.g. N not a power of two >= 2) even though `Number.isFinite`
+    // happily accepts "1" — a corrupted hash must fail closed here, not
+    // reject the caller's login route with an unhandled 500.
+    await expect(
+      verifyPassword("anything", "scrypt$1$8$1$aabbccdd$aabbccdd"),
+    ).resolves.toBe(false);
+  });
+
   it("handles Turkish characters correctly via NFKC normalization", async () => {
     const hash = await hashPassword("İstanbul123!şğüöç");
     await expect(verifyPassword("İstanbul123!şğüöç", hash)).resolves.toBe(true);

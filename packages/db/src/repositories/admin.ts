@@ -36,6 +36,7 @@ export async function listOrganizationsForAdmin(db: Db): Promise<AdminOrganizati
       (select count(*)::int from projects p where p.organization_id = o.id and p.deleted_at is null) as "projectCount",
       (select count(*)::int from mentions me where me.organization_id = o.id) as "mentionCount"
     from organizations o
+    where o.deleted_at is null
     order by o.created_at desc
   `);
   // The raw driver returns timestamptz as a string here, not a Date —
@@ -78,10 +79,14 @@ export type PlatformTotals = {
 };
 
 export async function getPlatformTotals(db: Db): Promise<PlatformTotals> {
+  // Same soft-delete convention every tenant-scoped repository already
+  // applies (isNull(organizations.deletedAt) in billing.ts, etc.) — a
+  // deleted org/user must not inflate the Platform Super Admin's KPI
+  // totals, same as listOrganizationsForAdmin below must not list it.
   const result = await db.execute<PlatformTotals>(sql`
     select
-      (select count(*)::int from organizations) as "totalOrganizations",
-      (select count(*)::int from users) as "totalUsers",
+      (select count(*)::int from organizations where deleted_at is null) as "totalOrganizations",
+      (select count(*)::int from users where deleted_at is null) as "totalUsers",
       (select count(*)::int from sources) as "totalSources",
       (select count(*)::int from mentions) as "totalMentions",
       (select count(*)::int from mentions where created_at >= now() - interval '24 hours') as "mentionsLast24h"

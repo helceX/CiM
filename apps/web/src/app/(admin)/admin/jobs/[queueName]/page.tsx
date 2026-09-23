@@ -63,7 +63,7 @@ export default async function AdminQueueJobsPage({
                     <div className="text-muted-foreground">{job.id}</div>
                   </td>
                   <td className="px-4 py-3 align-top text-muted-foreground">
-                    {new Date(job.timestamp).toLocaleString()}
+                    {new Date(job.failedAt).toLocaleString()}
                   </td>
                   <td className="px-4 py-3 align-top text-muted-foreground">{job.attemptsMade}</td>
                   <td className="px-4 py-3 align-top text-foreground">

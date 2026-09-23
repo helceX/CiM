@@ -28,7 +28,14 @@ describe("getFailedJobsForQueue (integration)", () => {
     );
 
     try {
-      const job = await queue.add("test-job", {}, { attempts: 1 });
+      // A delay between the job being created and actually processed —
+      // regression coverage for failedAt being job.timestamp (creation)
+      // instead of job.finishedOn (when it actually failed): without a
+      // gap between the two, a fast synchronous test can't tell them
+      // apart, since they'd be only milliseconds different either way.
+      const delayMs = 1500;
+      const createdAt = Date.now();
+      const job = await queue.add("test-job", {}, { attempts: 1, delay: delayMs });
       await new Promise<void>((resolve, reject) => {
         worker.on("failed", (failedJob) => {
           if (failedJob?.id === job.id) resolve();
@@ -41,6 +48,9 @@ describe("getFailedJobsForQueue (integration)", () => {
       expect(rows[0]?.name).toBe("test-job");
       expect(rows[0]?.failedReason).toContain("boom - deliberate test failure");
       expect(rows[0]?.attemptsMade).toBe(1);
+      // failedAt must reflect when it actually failed (after the delay),
+      // not job.timestamp (createdAt, before the delay).
+      expect(rows[0]?.failedAt).toBeGreaterThanOrEqual(createdAt + delayMs);
     } finally {
       await worker.close();
       await workerConnection.quit();

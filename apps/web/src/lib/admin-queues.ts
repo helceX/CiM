@@ -54,7 +54,7 @@ export type FailedJobRow = {
   name: string;
   failedReason: string;
   attemptsMade: number;
-  timestamp: number;
+  failedAt: number;
 };
 
 /**
@@ -78,7 +78,12 @@ export async function getFailedJobsForQueue(
       name: job.name,
       failedReason: job.failedReason ?? "Unknown error",
       attemptsMade: job.attemptsMade,
-      timestamp: job.timestamp,
+      // job.timestamp is when the job was *created* — for a job retried
+      // several times before finally failing, that's not when it failed.
+      // finishedOn is set once the job settles (BullMQ's Job class); a
+      // still-active job never reaches this list (queue.getJobs(["failed"])),
+      // so it's always populated here.
+      failedAt: job.finishedOn ?? job.timestamp,
     }));
   } finally {
     await queue.close();

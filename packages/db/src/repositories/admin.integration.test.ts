@@ -63,6 +63,33 @@ describe("admin repository (integration)", () => {
     expect(row?.createdAt).toBeInstanceOf(Date);
   });
 
+  it("excludes a soft-deleted organization from the list and platform totals", async () => {
+    const baseline = await getPlatformTotals(db);
+
+    const [deletedOrg] = await db
+      .insert(organizations)
+      .values({
+        name: "Deleted Admin Test Co",
+        slug: `admin-test-deleted-${Date.now()}`,
+        deletedAt: new Date(),
+      })
+      .returning();
+    if (!deletedOrg) throw new Error("failed to create soft-deleted test organization");
+
+    try {
+      const rows = await listOrganizationsForAdmin(db);
+      expect(rows.some((r) => r.id === deletedOrg.id)).toBe(false);
+
+      // The count itself must not move either — not just that this one
+      // row is absent from the list, which listOrganizationsForAdmin's
+      // own query could satisfy without getPlatformTotals also excluding it.
+      const after = await getPlatformTotals(db);
+      expect(after.totalOrganizations).toBe(baseline.totalOrganizations);
+    } finally {
+      await db.delete(organizations).where(eq(organizations.id, deletedOrg.id));
+    }
+  });
+
   it("lists source health across every tenant, including a real status", async () => {
     const rows = await listSourcesForAdmin(db);
     const row = rows.find((r) => r.id === sourceId);

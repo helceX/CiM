@@ -29,14 +29,23 @@ const SOURCE_STATUS_TONE: Record<string, "success" | "warning" | "danger" | "neu
 export default async function AdminOverviewPage() {
   await requireSuperAdmin();
 
+  // checkDatabaseHealth already catches internally and resolves to false
+  // rather than throwing — but that's pointless if a real Postgres outage
+  // just makes one of its Promise.all siblings reject instead, aborting
+  // the whole page (and the "Database unreachable" badge along with it)
+  // before it ever gets to render. Each DB-dependent call below falls
+  // back the same way getQueueHealth's Redis call already does, so the
+  // page still renders — with empty/zeroed sections — when Postgres is
+  // the thing that's actually down.
+  const emptyTotals = { totalOrganizations: 0, totalUsers: 0, totalSources: 0, totalMentions: 0, mentionsLast24h: 0 };
   const [totals, dbHealthy, queueResult, organizations, sources] = await Promise.all([
-    getPlatformTotals(db),
+    getPlatformTotals(db).catch(() => emptyTotals),
     checkDatabaseHealth(db),
     getQueueHealth()
       .then((rows) => ({ ok: true as const, rows }))
       .catch(() => ({ ok: false as const, rows: [] })),
-    listOrganizationsForAdmin(db),
-    listSourcesForAdmin(db),
+    listOrganizationsForAdmin(db).catch(() => []),
+    listSourcesForAdmin(db).catch(() => []),
   ]);
   const redisHealthy = queueResult.ok;
   const queues = queueResult.rows;

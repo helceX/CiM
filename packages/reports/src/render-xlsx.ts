@@ -30,7 +30,7 @@ export async function renderReportXlsx(data: ReportData): Promise<Buffer> {
   ];
   styleHeaderRow(summarySheet.getRow(1));
   summarySheet.addRows([
-    { metric: "Project", value: data.projectName },
+    { metric: "Project", value: sanitizeCellValue(data.projectName) },
     {
       metric: "Period",
       value: `${formatDate(data.periodStart)} to ${formatDate(data.periodEnd)}`,

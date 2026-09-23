@@ -91,4 +91,20 @@ describe("renderReportXlsx", () => {
     expect(titleCell.startsWith("=")).toBe(false);
     expect(titleCell).toBe("'=cmd|' /C calc'!A0");
   });
+
+  it("neutralizes a formula-injection payload in the project name on the Summary sheet (CWE-1236)", async () => {
+    // The one user-controlled string on this sheet that the original
+    // CWE-1236 fix (packages/reports/src/sanitize-cell.ts) missed —
+    // every other user-controlled cell in this file already goes
+    // through sanitizeCellValue.
+    const buffer = await renderReportXlsx(
+      fakeReportData({ projectName: "=cmd|' /C calc'!A0" }),
+    );
+    const workbook = await loadWorkbook(buffer);
+
+    const summarySheet = workbook.getWorksheet("Summary")!;
+    const projectCell = String(summarySheet.getRow(2).getCell(2).value);
+    expect(projectCell.startsWith("=")).toBe(false);
+    expect(projectCell).toBe("'=cmd|' /C calc'!A0");
+  });
 });

@@ -217,21 +217,28 @@ export class MockAIProvider implements AIProvider {
 
   async detectRisk(input: GenerateRiskInput): Promise<WithMethod<RiskOutput>> {
     const negative = input.mentions.filter((m) => m.sentiment === "negative");
-    const critical = input.mentions.filter((m) => m.priority === "critical");
+    // Critical-priority AND negative-sentiment — not just critical-priority
+    // on its own, which could be a positive-sentiment mention that has no
+    // business being cited as evidence for a claim about negative coverage
+    // (the summary text below is entirely about negative sentiment).
+    const criticalNegative = negative.filter((m) => m.priority === "critical");
     const ratio = input.mentions.length > 0 ? negative.length / input.mentions.length : 0;
 
     let level: RiskLevel;
-    if (critical.length >= 1 && ratio >= 0.5) level = "critical";
+    // negative.length >= 2 (medium's own floor) so a single critical+negative
+    // mention can't alone trigger the highest risk level while medium/high
+    // both require more supporting evidence than that.
+    if (criticalNegative.length >= 1 && ratio >= 0.5 && negative.length >= 2) level = "critical";
     else if (ratio >= 0.6 && negative.length >= 3) level = "high";
     else if (ratio >= 0.4 && negative.length >= 2) level = "medium";
     else {
       return { risk: null, method: METHOD };
     }
 
-    const evidence = critical.length > 0 ? critical.slice(0, 10) : negative.slice(0, 10);
+    const evidence = criticalNegative.length > 0 ? criticalNegative.slice(0, 10) : negative.slice(0, 10);
     const criticalNote =
-      critical.length > 0
-        ? `, including ${critical.length} critical-priority match${critical.length === 1 ? "" : "es"}`
+      criticalNegative.length > 0
+        ? `, including ${criticalNegative.length} critical-priority match${criticalNegative.length === 1 ? "" : "es"}`
         : "";
 
     return {

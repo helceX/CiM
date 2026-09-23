@@ -184,6 +184,37 @@ describe("MockAIProvider", () => {
       expect(result.risk?.level).toBe("medium");
     });
 
+    it("never cites a critical-priority positive mention as evidence for a claim that's entirely about negative coverage", async () => {
+      // Regression: evidence previously came from *any* critical-priority
+      // mention regardless of sentiment, so a critical-priority positive
+      // article could be cited as "evidence" for a summary that's
+      // exclusively about negative sentiment.
+      const result = await provider.detectRisk({
+        periodLabel: "the last 24 hours",
+        mentions: [
+          { id: "m1", title: "Positive but critical-priority", sourceName: "Wire", sentiment: "positive", priority: "critical", publishedAt: null },
+          { id: "m2", title: "Negative, normal priority", sourceName: "Wire", sentiment: "negative", priority: "normal", publishedAt: null },
+          { id: "m3", title: "Negative, critical priority", sourceName: "Wire", sentiment: "negative", priority: "critical", publishedAt: null },
+          { id: "m4", title: "Positive, normal priority", sourceName: "Wire", sentiment: "positive", priority: "normal", publishedAt: null },
+        ],
+      });
+      expect(result.risk?.level).toBe("critical");
+      expect(result.risk?.evidenceMentionIds).toEqual(["m3"]);
+    });
+
+    it("does not flag critical risk from a single critical-priority negative mention alone", async () => {
+      // Regression: the "critical" branch had no minimum negative-mention
+      // count, so one data point could trigger the highest risk level
+      // while "medium" required 2 and "high" required 3.
+      const result = await provider.detectRisk({
+        periodLabel: "the last 24 hours",
+        mentions: [
+          { id: "m1", title: "A", sourceName: "Wire", sentiment: "negative", priority: "critical", publishedAt: null },
+        ],
+      });
+      expect(result.risk).toBeNull();
+    });
+
     it("flags no risk rather than fabricate a 'low risk, all clear' claim when coverage is mostly positive", async () => {
       const result = await provider.detectRisk({
         periodLabel: "the last 24 hours",

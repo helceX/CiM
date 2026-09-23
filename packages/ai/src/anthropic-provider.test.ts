@@ -286,11 +286,17 @@ describe("AnthropicAIProvider", () => {
     expect(result.method).toBe("anthropic:claude-sonnet-5");
   });
 
-  it("does not throw when answerQuestion's evidence is entirely hallucinated — an empty citation list is a valid answer", async () => {
+  it("discards the narrative answer when every cited evidence id is hallucinated, instead of keeping an unsupported claim", async () => {
+    // Regression: this previously kept the model's answer/confidence
+    // unchanged even when every id it cited as evidence matched no real
+    // mention — a hallucinated claim reaching the user looking exactly
+    // as trustworthy as a grounded one. detectRisk/generateInsight/
+    // generateRecommendations already discard the claim in this case;
+    // answerQuestion must too.
     const client = fakeClient(async () =>
       toolUseMessage("answer_question", {
-        answer: "None of your recent mentions relate to that.",
-        confidence: 0.4,
+        answer: "Coverage shows revenue grew 20% this quarter.",
+        confidence: 0.75,
         evidenceMentionIds: ["hallucinated-id"],
       }),
     );
@@ -305,7 +311,31 @@ describe("AnthropicAIProvider", () => {
       ],
     });
     expect(result.evidenceMentionIds).toEqual([]);
+    expect(result.confidence).toBe(0);
+    expect(result.answer).not.toMatch(/revenue grew 20%/i);
+  });
+
+  it("keeps a legitimately evidence-free answer as-is — the model citing nothing is not the same as citing only hallucinated ids", async () => {
+    const client = fakeClient(async () =>
+      toolUseMessage("answer_question", {
+        answer: "None of your recent mentions relate to that.",
+        confidence: 0.4,
+        evidenceMentionIds: [],
+      }),
+    );
+    const provider = new AnthropicAIProvider({ client });
+
+    const result = await provider.answerQuestion({
+      question: "What's our competitor's revenue?",
+      screenContext: "Viewing the Dashboard",
+      history: [],
+      mentions: [
+        { id: "m1", title: "A", sourceName: "Wire", sentiment: null, priority: "normal", publishedAt: null },
+      ],
+    });
+    expect(result.evidenceMentionIds).toEqual([]);
     expect(result.answer).toMatch(/none of your recent mentions/i);
+    expect(result.confidence).toBe(0.4);
   });
 
   it("folds prior conversation turns into answerQuestion's request as trusted context, not SOURCE CONTENT", async () => {

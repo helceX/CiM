@@ -503,6 +503,23 @@ export class AnthropicAIProvider implements AIProvider {
     const knownIds = new Set(input.mentions.map((m) => m.id));
     const evidenceMentionIds = result.evidenceMentionIds.filter((id) => knownIds.has(id));
 
+    // evidenceMentionIds may legitimately be empty (a question with no
+    // specific-mention answer, per this schema's own doc comment) — but
+    // if the model *did* cite evidence and every single id turned out to
+    // be hallucinated (matched none of the mentions we gave it), the
+    // narrative answer built on that evidence is no longer grounded.
+    // Same rule detectRisk/generateInsight/generateRecommendations
+    // enforce: discard the claim rather than render an unsupported one.
+    if (result.evidenceMentionIds.length > 0 && evidenceMentionIds.length === 0) {
+      return {
+        answer:
+          "I couldn't verify that answer against your actual mentions — the evidence it cited didn't match anything in your data.",
+        confidence: 0,
+        evidenceMentionIds: [],
+        method: `anthropic:${this.synthesisModel}`,
+      };
+    }
+
     return { ...result, evidenceMentionIds, method: `anthropic:${this.synthesisModel}` };
   }
 

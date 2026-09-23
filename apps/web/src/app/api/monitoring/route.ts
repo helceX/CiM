@@ -2,8 +2,7 @@ import { NextResponse } from "next/server";
 import { createMonitoringQuerySchema } from "@cim/validation";
 import { astToBooleanQuery, expandSourceCategoriesToTypes } from "@cim/core";
 import {
-  checkMonitoringQueryLimit,
-  createMonitoringQuery,
+  createMonitoringQueryWithPlanLimit,
   getProject,
   recordAuditLog,
   db,
@@ -40,17 +39,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Add at least one include, exclude, or exact-phrase term" }, { status: 400 });
   }
 
-  const limitCheck = await checkMonitoringQueryLimit(db, context.organizationId);
-  if (!limitCheck.ok) {
-    return NextResponse.json(
-      {
-        error: `Your plan allows up to ${limitCheck.limit} monitoring quer${limitCheck.limit === 1 ? "y" : "ies"}. Upgrade to add more.`,
-      },
-      { status: 409 },
-    );
-  }
-
-  const query = await createMonitoringQuery(db, context.organizationId, {
+  const result = await createMonitoringQueryWithPlanLimit(db, context.organizationId, {
     projectId: project.id,
     name: input.name,
     queryAst: ast,
@@ -58,6 +47,15 @@ export async function POST(request: Request) {
     sourceTypes: expandSourceCategoriesToTypes(input.sourceTypes),
     trackingTarget: input.trackingTarget,
   });
+  if (!result.ok) {
+    return NextResponse.json(
+      {
+        error: `Your plan allows up to ${result.limit} monitoring quer${result.limit === 1 ? "y" : "ies"}. Upgrade to add more.`,
+      },
+      { status: 409 },
+    );
+  }
+  const query = result.query;
 
   await recordAuditLog(db, context.organizationId, {
     actorUserId: context.userId,

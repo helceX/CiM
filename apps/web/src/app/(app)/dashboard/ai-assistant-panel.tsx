@@ -11,6 +11,13 @@ type ConversationTurn = {
   evidence: { id: string; title: string; sourceName: string }[];
 };
 
+// assistantAskSchema caps `history` at 10 turns; sending fewer, most-recent
+// ones keeps every question answerable indefinitely (an ever-growing
+// full-thread payload would eventually fail that cap with no way to
+// recover short of a reload) and keeps the synthesis-tier AI call's
+// context bounded as a conversation runs long.
+const MAX_HISTORY_TURNS_SENT = 6;
+
 /**
  * docs/architecture/AI_ARCHITECTURE.md "Grounded, contextual assistant"
  * (FEATURE_MATRIX.md P2 "AI Assistant (context-aware)", P3 "... multi-turn").
@@ -44,7 +51,9 @@ export function AiAssistantPanel() {
         body: JSON.stringify({
           question: trimmed,
           screenContext: "Viewing the Dashboard",
-          history: turns.map((turn) => ({ question: turn.question, answer: turn.answer })),
+          history: turns
+            .slice(-MAX_HISTORY_TURNS_SENT)
+            .map((turn) => ({ question: turn.question, answer: turn.answer })),
         }),
       });
       const data = await response.json();

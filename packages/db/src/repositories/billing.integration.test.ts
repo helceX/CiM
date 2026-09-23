@@ -12,6 +12,7 @@ import { createMentionIfNotExists } from "./mentions";
 import {
   captureFeatureUsageSnapshot,
   checkMonitoringQueryLimit,
+  createMonitoringQueryWithPlanLimit,
   getLatestFeatureUsage,
   getSubscription,
   listActiveOrganizationsForUsageCapture,
@@ -224,5 +225,64 @@ describe("checkMonitoringQueryLimit (integration)", () => {
 
     const check = await checkMonitoringQueryLimit(db, organizationId);
     expect(check).toEqual({ ok: true });
+  });
+});
+
+/**
+ * checkMonitoringQueryLimit alone is a check-then-act race — a code
+ * review of the plain check-then-insert version this replaces flagged
+ * that two concurrent creates for a brand-new free-plan org could both
+ * read current=0 before either insert lands. createMonitoringQueryWithPlanLimit
+ * serializes concurrent callers with a per-organization Postgres
+ * advisory lock; this proves it holds under real concurrency, not just
+ * sequential calls.
+ */
+describe("createMonitoringQueryWithPlanLimit (integration)", () => {
+  let organizationId: ReturnType<typeof asOrganizationId>;
+  let projectId: string;
+
+  beforeAll(async () => {
+    const [org] = await db
+      .insert(organizations)
+      .values({ name: "Plan Limit Race Test Co", slug: `plan-limit-race-test-${Date.now()}` })
+      .returning();
+    if (!org) throw new Error("failed to create test organization");
+    organizationId = asOrganizationId(org.id);
+
+    const [workspace] = await db
+      .insert(workspaces)
+      .values({ organizationId, name: "Default" })
+      .returning();
+    if (!workspace) throw new Error("failed to create test workspace");
+
+    const project = await createProject(db, organizationId, {
+      workspaceId: workspace.id,
+      name: "Plan Limit Race Test Project",
+    });
+    projectId = project.id;
+  });
+
+  afterAll(async () => {
+    await db.delete(organizations).where(eq(organizations.id, organizationId));
+  });
+
+  it("lets exactly one of several concurrent requests through for a brand-new free-plan org", async () => {
+    const attempts = await Promise.all(
+      Array.from({ length: 5 }, (_, i) =>
+        createMonitoringQueryWithPlanLimit(db, organizationId, {
+          projectId,
+          name: `Concurrent query ${i}`,
+          queryAst: { include: ["Acme"], exclude: [], exactPhrases: [] },
+          booleanQuery: "Acme",
+          sourceTypes: ["news"],
+        }),
+      ),
+    );
+
+    const succeeded = attempts.filter((a) => a.ok);
+    const blocked = attempts.filter((a) => !a.ok);
+    expect(succeeded).toHaveLength(1);
+    expect(blocked).toHaveLength(4);
+    expect(blocked.every((a) => !a.ok && a.limit === 1)).toBe(true);
   });
 });

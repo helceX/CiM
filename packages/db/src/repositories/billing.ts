@@ -3,9 +3,10 @@ import { getMonitoringQueryLimit } from "@cim/core";
 import type { Db } from "../client";
 import { featureUsageSnapshots, subscriptions } from "../schema/billing";
 import { organizationMemberships, organizations } from "../schema/organizations";
-import { monitoringQueries } from "../schema/monitoring";
+import { monitoringQueries, type QueryAst } from "../schema/monitoring";
 import { articles, mentions } from "../schema/content";
 import { reports } from "../schema/reports";
+import { createMonitoringQuery } from "./monitoring-queries";
 import { asOrganizationId, type OrganizationId } from "./tenant-scope";
 
 export type Subscription = { plan: string };
@@ -51,6 +52,45 @@ export async function checkMonitoringQueryLimit(
     );
   const current = Number(row?.value ?? 0);
   return current >= limit ? { ok: false, limit } : { ok: true };
+}
+
+export type CreateMonitoringQueryWithPlanLimitResult =
+  | { ok: true; query: Awaited<ReturnType<typeof createMonitoringQuery>> }
+  | { ok: false; limit: number };
+
+/**
+ * checkMonitoringQueryLimit followed by createMonitoringQuery, alone,
+ * is a check-then-act race: two concurrent requests for the same
+ * just-created free-plan org (the "Save monitoring" button only blocks
+ * a double-click within one tab, not two tabs or a duplicated retry)
+ * can both read current=0 before either insert lands, creating two
+ * queries for a plan capped at one. A Postgres advisory lock scoped to
+ * the organization id serializes concurrent callers for the duration
+ * of the transaction — cheaper than a real schema constraint for a
+ * limit that's plan-dependent, not a fixed invariant the table itself
+ * could express.
+ */
+export async function createMonitoringQueryWithPlanLimit(
+  db: Db,
+  organizationId: OrganizationId,
+  input: {
+    projectId: string;
+    name: string;
+    queryAst: QueryAst;
+    booleanQuery: string;
+    sourceTypes: string[];
+    trackingTarget?: string;
+  },
+): Promise<CreateMonitoringQueryWithPlanLimitResult> {
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${organizationId}))`);
+
+    const check = await checkMonitoringQueryLimit(tx as unknown as Db, organizationId);
+    if (!check.ok) return check;
+
+    const query = await createMonitoringQuery(tx as unknown as Db, organizationId, input);
+    return { ok: true, query };
+  });
 }
 
 export type OrgRef = { organizationId: OrganizationId };

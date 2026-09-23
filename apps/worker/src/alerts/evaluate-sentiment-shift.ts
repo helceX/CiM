@@ -29,12 +29,27 @@ export async function evaluateSentimentShiftAlerts(
     const shift = stats.currentNegativeShare - stats.baselineNegativeShare;
     if (shift < SHIFT_THRESHOLD) continue;
 
-    await fireAlert(emailQueue, rule, {
-      triggerSummary:
-        `Negative sentiment for "${rule.name}" is up to ${Math.round(stats.currentNegativeShare * 100)}% ` +
-        `of the last 24 hours' classified mentions, vs. ~${Math.round(stats.baselineNegativeShare * 100)}% ` +
-        `over the trailing week.`,
-      mentionIds: [],
-    });
+    const baselineComparison =
+      stats.baselineClassifiedCount > 0
+        ? `vs. ~${Math.round(stats.baselineNegativeShare * 100)}% over the trailing week`
+        : `with no classified baseline over the trailing week`;
+
+    // Same per-rule isolation as generate-insight.ts's cross-tenant
+    // fan-out — this loop spans every organization's active rules in
+    // one tick, so one rule's failure must not skip every other
+    // organization's rule still left in this tick.
+    try {
+      await fireAlert(emailQueue, rule, {
+        triggerSummary:
+          `Negative sentiment for "${rule.name}" is up to ${Math.round(stats.currentNegativeShare * 100)}% ` +
+          `of the last 24 hours' classified mentions, ${baselineComparison}.`,
+        mentionIds: [],
+      });
+    } catch (error) {
+      console.error(
+        `[worker] fireAlert failed for sentiment-shift rule ${rule.id} ("${rule.name}"):`,
+        error,
+      );
+    }
   }
 }

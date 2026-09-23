@@ -48,17 +48,29 @@ export async function fireAlert(
     const recipients = await listActiveMemberEmails(db, organizationId);
     const link = `${getEnv().APP_URL}/alerts`;
     for (const toEmail of recipients) {
-      const outboxEntry = await enqueueEmail(db, {
-        toEmail,
-        subject: `[Alert] ${rule.name}`,
-        bodyText: `${input.triggerSummary}\n\nOpen alerts: ${link}`,
-        kind: "alert",
-      });
-      await emailQueue.add(
-        QUEUE_NAMES.sendEmail,
-        { emailOutboxId: outboxEntry.id },
-        { attempts: 5, backoff: { type: "exponential", delay: 2000 } },
-      );
+      // Same isolation principle as deliverWebhook below: the AlertEvent
+      // above already committed, so a failure here (e.g. a transient
+      // Redis blip enqueueing the job) must not throw out of fireAlert —
+      // that would both skip every recipient after this one and abort
+      // the caller's rule-evaluation loop for every rule still to come.
+      try {
+        const outboxEntry = await enqueueEmail(db, {
+          toEmail,
+          subject: `[Alert] ${rule.name}`,
+          bodyText: `${input.triggerSummary}\n\nOpen alerts: ${link}`,
+          kind: "alert",
+        });
+        await emailQueue.add(
+          QUEUE_NAMES.sendEmail,
+          { emailOutboxId: outboxEntry.id },
+          { attempts: 5, backoff: { type: "exponential", delay: 2000 } },
+        );
+      } catch (error) {
+        console.error(
+          `[worker] failed to queue alert email for "${rule.name}" to ${toEmail}:`,
+          error,
+        );
+      }
     }
   }
 

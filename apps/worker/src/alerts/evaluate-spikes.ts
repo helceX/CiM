@@ -31,9 +31,18 @@ export async function evaluateSpikeAlerts(emailQueue: Queue<SendEmailJobData>): 
         ? `${multiplier.toFixed(1)}x the trailing 24-hour baseline (~${stats.baselineAvg.toFixed(1)}/hr)`
         : `a baseline of ~0/hr over the trailing 24 hours`;
 
-    await fireAlert(emailQueue, rule, {
-      triggerSummary: `Mention volume for "${rule.name}" spiked to ${stats.currentHourCount} in the last hour — ${comparison}.`,
-      mentionIds: [],
-    });
+    // Same per-rule isolation as generate-insight.ts's cross-tenant
+    // fan-out — this loop spans every organization's active spike
+    // rules in one tick, so one rule's failure (e.g. queuing its alert
+    // email) must not skip every other organization's rule still left
+    // in this tick.
+    try {
+      await fireAlert(emailQueue, rule, {
+        triggerSummary: `Mention volume for "${rule.name}" spiked to ${stats.currentHourCount} in the last hour — ${comparison}.`,
+        mentionIds: [],
+      });
+    } catch (error) {
+      console.error(`[worker] fireAlert failed for spike rule ${rule.id} ("${rule.name}"):`, error);
+    }
   }
 }

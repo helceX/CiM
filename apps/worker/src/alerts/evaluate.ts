@@ -24,18 +24,25 @@ export async function evaluateNewMentionAlerts(
   for (const [queryId, records] of byQuery) {
     const rules = await getActiveAlertRulesForQuery(db, queryId);
     for (const rule of rules) {
-      if (rule.type === "keyword") {
-        await fireAlert(emailQueue, rule, {
-          triggerSummary: `${records.length} new mention${records.length === 1 ? "" : "s"} matched "${rule.name}"`,
-          mentionIds: records.map((r) => r.mentionId),
-        });
-      } else if (rule.type === "high_relevance") {
-        const highPriority = records.filter((r) => r.priority === "high");
-        if (highPriority.length === 0) continue;
-        await fireAlert(emailQueue, rule, {
-          triggerSummary: `${highPriority.length} high-relevance mention${highPriority.length === 1 ? "" : "s"} matched "${rule.name}"`,
-          mentionIds: highPriority.map((r) => r.mentionId),
-        });
+      // Same per-unit isolation as generate-insight.ts's cross-tenant
+      // fan-out: one rule's fireAlert failure must not skip every other
+      // rule still left in this batch.
+      try {
+        if (rule.type === "keyword") {
+          await fireAlert(emailQueue, rule, {
+            triggerSummary: `${records.length} new mention${records.length === 1 ? "" : "s"} matched "${rule.name}"`,
+            mentionIds: records.map((r) => r.mentionId),
+          });
+        } else if (rule.type === "high_relevance") {
+          const highPriority = records.filter((r) => r.priority === "high");
+          if (highPriority.length === 0) continue;
+          await fireAlert(emailQueue, rule, {
+            triggerSummary: `${highPriority.length} high-relevance mention${highPriority.length === 1 ? "" : "s"} matched "${rule.name}"`,
+            mentionIds: highPriority.map((r) => r.mentionId),
+          });
+        }
+      } catch (error) {
+        console.error(`[worker] fireAlert failed for rule ${rule.id} ("${rule.name}"):`, error);
       }
     }
   }

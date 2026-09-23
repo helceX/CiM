@@ -23,11 +23,22 @@ export async function evaluateCompetitorAlerts(
     if (stats.competitorCount < MIN_ABSOLUTE_COUNT) continue;
     if (stats.competitorCount <= stats.companyCount) continue;
 
-    await fireAlert(emailQueue, rule, {
-      triggerSummary:
-        `Competitor "${stats.competitorQueryName}" had ${stats.competitorCount} mention${stats.competitorCount === 1 ? "" : "s"} ` +
-        `in the last 24 hours, vs. ${stats.companyCount} for your tracked company ${stats.companyCount === 1 ? "query" : "queries"} in this project.`,
-      mentionIds: [],
-    });
+    // Same per-rule isolation as generate-insight.ts's cross-tenant
+    // fan-out — this loop spans every organization's active rules in
+    // one tick, so one rule's failure must not skip every other
+    // organization's rule still left in this tick.
+    try {
+      await fireAlert(emailQueue, rule, {
+        triggerSummary:
+          `Competitor "${stats.competitorQueryName}" had ${stats.competitorCount} mention${stats.competitorCount === 1 ? "" : "s"} ` +
+          `in the last 24 hours, vs. ${stats.companyCount} for your tracked company ${stats.companyCount === 1 ? "query" : "queries"} in this project.`,
+        mentionIds: [],
+      });
+    } catch (error) {
+      console.error(
+        `[worker] fireAlert failed for competitor rule ${rule.id} ("${rule.name}"):`,
+        error,
+      );
+    }
   }
 }

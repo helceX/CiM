@@ -195,4 +195,58 @@ describe("fireAlert — webhook channel (integration)", () => {
     });
     expect(notifications.some((n) => n.title === rule.name)).toBe(true);
   });
+
+  it("queues every other recipient's email even when one recipient's queuing fails", async () => {
+    const [secondUser] = await db
+      .insert(schema.users)
+      .values({
+        email: `webhook-test-second-${Date.now()}@example.com`,
+        passwordHash: "unused-in-this-test",
+        firstName: "Second",
+        lastName: "Member",
+        emailVerifiedAt: new Date(),
+      })
+      .returning();
+    if (!secondUser) throw new Error("failed to create second test user");
+    await db.insert(schema.organizationMemberships).values({
+      organizationId,
+      userId: secondUser.id,
+      role: "member",
+      status: "active",
+    });
+
+    // The AlertEvent this commits must not be wasted on a partial send:
+    // one recipient's queue.add() throwing must not prevent the other
+    // recipient from being queued, and must not throw out of fireAlert
+    // itself (which would abort the caller's whole rule-evaluation loop
+    // for every rule still left to evaluate).
+    let calls = 0;
+    const flakyEmailQueue = {
+      add: async () => {
+        calls += 1;
+        if (calls === 1) throw new Error("transient Redis blip");
+        return undefined;
+      },
+    } as unknown as Queue<SendEmailJobData>;
+
+    const rule = await createAlertRule(db, organizationId, {
+      projectId,
+      queryId,
+      createdByUserId: userId,
+      name: "Email rule with a flaky first recipient",
+      type: "keyword",
+      channels: ["email"],
+      cooldownMinutes: 60,
+    });
+
+    const fired = await fireAlert(flakyEmailQueue, rule, {
+      triggerSummary: "one recipient's queue.add() will throw",
+      mentionIds: [],
+    });
+
+    expect(fired).toBe(true);
+    // Both org members (owner + second member) are attempted, not just
+    // however many came before the failing one.
+    expect(calls).toBe(2);
+  });
 });

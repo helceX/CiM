@@ -38,12 +38,23 @@ export async function evaluateEmergingTopicAlerts(
         ? `~${emerging.baselineAvgPerDay.toFixed(1)}/day over the trailing week`
         : `no mentions of it over the trailing week`;
 
-    await fireAlert(emailQueue, rule, {
-      triggerSummary:
-        `Emerging topic for "${rule.name}": "${emerging.topicName}" is up to ` +
-        `${emerging.currentCount} mention${emerging.currentCount === 1 ? "" : "s"} ` +
-        `in the last 24 hours, vs ${comparison}.`,
-      mentionIds: [],
-    });
+    // Same per-rule isolation as generate-insight.ts's cross-tenant
+    // fan-out — this loop spans every organization's active rules in
+    // one tick, so one rule's failure must not skip every other
+    // organization's rule still left in this tick.
+    try {
+      await fireAlert(emailQueue, rule, {
+        triggerSummary:
+          `Emerging topic for "${rule.name}": "${emerging.topicName}" is up to ` +
+          `${emerging.currentCount} mention${emerging.currentCount === 1 ? "" : "s"} ` +
+          `in the last 24 hours, vs ${comparison}.`,
+        mentionIds: [],
+      });
+    } catch (error) {
+      console.error(
+        `[worker] fireAlert failed for emerging-topic rule ${rule.id} ("${rule.name}"):`,
+        error,
+      );
+    }
   }
 }

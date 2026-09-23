@@ -352,6 +352,59 @@ describe("alert engine (integration)", () => {
     expect(sentimentNotification?.body).toMatch(/negative sentiment/i);
   });
 
+  it("labels a fired sentiment-shift alert as having no baseline, not a misleading '~0%', when there's no classified history at all", async () => {
+    const freshQuery = await createMonitoringQuery(db, organizationId, {
+      projectId,
+      name: "Fresh sentiment query, no baseline yet",
+      queryAst: { include: ["fresh-sentiment-marker"], exclude: [], exactPhrases: [] },
+      booleanQuery: "fresh-sentiment-marker",
+      sourceTypes: ["news"],
+    });
+    const freshRule = await createAlertRule(db, organizationId, {
+      projectId,
+      queryId: freshQuery.id,
+      createdByUserId: userId,
+      name: "Fresh sentiment rule",
+      type: "sentiment_shift",
+      channels: ["in_app"],
+      cooldownMinutes: 60,
+    });
+
+    // No baseline mentions at all — only a current window, all negative.
+    // baselineNegativeShare defaults to 0 with zero classified history,
+    // which is a different fact from "we checked and it was 0% negative"
+    // and must be worded differently in the fired alert.
+    for (let i = 0; i < 3; i++) {
+      const [article] = await db
+        .insert(schema.articles)
+        .values({
+          sourceId,
+          canonicalUrl: `https://sentiment-test.example/fresh-${i}`,
+          contentHash: `sentiment-fresh-${i}`,
+          title: `fresh-sentiment-marker current item ${i}`,
+        })
+        .returning();
+      if (!article) throw new Error("failed to create fresh article");
+      await db.insert(schema.mentions).values({
+        organizationId,
+        projectId,
+        queryId: freshQuery.id,
+        articleId: article.id,
+        matchedTerms: ["fresh-sentiment-marker"],
+        sentiment: "negative",
+        createdAt: new Date(Date.now() - i * 60 * 60 * 1000),
+      });
+    }
+
+    await evaluateSentimentShiftAlerts(emailQueue);
+
+    const notifications = await listNotifications(db, organizationId, userId, { limit: 50 });
+    const notification = notifications.find((n) => n.title === freshRule.name);
+    expect(notification).toBeDefined();
+    expect(notification?.body).toMatch(/no classified baseline/i);
+    expect(notification?.body).not.toMatch(/vs\. ~0%/i);
+  });
+
   it("does not fire a sentiment-shift alert without enough classified mentions in the current window", async () => {
     const quietQuery = await createMonitoringQuery(db, organizationId, {
       projectId,

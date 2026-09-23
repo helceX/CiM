@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { db } from "../client";
 import { articles, mentions, sources } from "../schema/content";
 import { organizations, organizationMemberships, workspaces } from "../schema/index";
@@ -282,6 +282,112 @@ describe("mentions repository (integration)", () => {
     expect(page2.items).toHaveLength(2);
     expect(page1.totalCount).toBe(4);
     expect(page1.items[0]?.mention.id).not.toEqual(page2.items[0]?.mention.id);
+  });
+
+  it("applies the sinceDays filter even when sinceDays is 0, instead of falsy-skipping it", async () => {
+    const unique = Date.now();
+    const oldArticle = await insertArticle(db, {
+      sourceId,
+      canonicalUrl: `https://mentions-test.example/old-${unique}`,
+      contentHash: `mentions-test-hash-old-${unique}`,
+      title: "Old mention from last month",
+      storedExcerpt: null,
+      language: null,
+      publishedAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+      authorName: null,
+    });
+    const [oldMention] = await db
+      .insert(mentions)
+      .values({
+        organizationId,
+        projectId,
+        queryId,
+        articleId: oldArticle.id,
+        matchedTerms: ["test"],
+        priority: "normal",
+        createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+      })
+      .returning();
+    if (!oldMention) throw new Error("failed to create old test mention");
+
+    try {
+      // sinceDays: 0 is falsy in JS — a naive `filters.sinceDays ? ... :
+      // undefined` check would silently skip the date filter entirely
+      // and return every mention ever created, including one 30 days
+      // old, instead of none from 0 days back.
+      const result = await listMentionsFiltered(
+        db,
+        organizationId,
+        { sinceDays: 0 },
+        { page: 1, pageSize: 50 },
+      );
+      expect(result.items.some((item) => item.mention.id === oldMention.id)).toBe(false);
+    } finally {
+      await db.delete(mentions).where(eq(mentions.id, oldMention.id));
+      await db.delete(articles).where(eq(articles.id, oldArticle.id));
+    }
+  });
+
+  it("breaks a created_at tie by id, not Postgres's unstable default row order", async () => {
+    // Eight rows, not two: with only a couple of ties, an unpinned
+    // Postgres row order can coincidentally match the id-descending
+    // order we assert on (a real failure mode seen while writing this
+    // test — a 2-row version passed even with the tiebreak reverted).
+    // With 8 randomly-generated UUIDs, the odds of an unordered result
+    // coincidentally coming back fully sorted by id are ~1-in-40320,
+    // so this only passes when the query actually orders by id.
+    const unique = Date.now();
+    const sameInstant = new Date();
+    const tiedArticles = await Promise.all(
+      Array.from({ length: 8 }, (_, i) =>
+        insertArticle(db, {
+          sourceId,
+          canonicalUrl: `https://mentions-test.example/tied-${unique}-${i}`,
+          contentHash: `mentions-test-hash-tied-${unique}-${i}`,
+          title: `Tied mention ${i}`,
+          storedExcerpt: null,
+          language: null,
+          publishedAt: sameInstant,
+          authorName: null,
+        }),
+      ),
+    );
+    const tiedMentions = await db
+      .insert(mentions)
+      .values(
+        tiedArticles.map((article) => ({
+          organizationId,
+          projectId,
+          queryId,
+          articleId: article.id,
+          matchedTerms: ["test"],
+          priority: "normal" as const,
+          createdAt: sameInstant,
+        })),
+      )
+      .returning();
+
+    try {
+      const expectedOrder = [...tiedMentions].map((m) => m.id).sort().reverse();
+
+      const result = await listMentionsFiltered(
+        db,
+        organizationId,
+        {},
+        { page: 1, pageSize: 50 },
+      );
+      const tiedInResult = result.items
+        .filter((item) => tiedMentions.some((m) => m.id === item.mention.id))
+        .map((item) => item.mention.id);
+      expect(tiedInResult).toEqual(expectedOrder);
+    } finally {
+      await db.delete(mentions).where(
+        inArray(mentions.id, tiedMentions.map((m) => m.id)),
+      );
+      await db.delete(articles).where(
+        inArray(articles.id, tiedArticles.map((a) => a.id)),
+      );
+    }
   });
 
   it("never returns another organization's mentions", async () => {

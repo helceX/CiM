@@ -136,7 +136,7 @@ function mentionFiltersToWhere(
       : filters.sentiment
         ? eq(mentions.sentiment, filters.sentiment)
         : undefined,
-    filters.sinceDays
+    filters.sinceDays != null
       ? gte(
           mentions.createdAt,
           sql`now() - (${filters.sinceDays}::text || ' days')::interval`,
@@ -197,7 +197,12 @@ export async function listMentionsFiltered(
       .innerJoin(sources, eq(sources.id, articles.sourceId))
       .leftJoin(users, eq(users.id, mentions.assignedToUserId))
       .where(where)
-      .orderBy(desc(mentions.createdAt))
+      // A secondary tiebreaker on id: two mentions can share the same
+      // created_at (e.g. a bulk/transactional ingest), and without one
+      // Postgres doesn't guarantee the tied rows stay in the same order
+      // across the page-1 and page-2 queries — a mention could appear on
+      // both pages, or be skipped entirely, purely from ordering drift.
+      .orderBy(desc(mentions.createdAt), desc(mentions.id))
       .limit(pagination.pageSize)
       .offset(offset),
     db

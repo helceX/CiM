@@ -32,27 +32,34 @@ export async function processSendExecutiveBriefJob(
   const freshSince = new Date(Date.now() - BRIEF_FRESHNESS_HOURS * 60 * 60 * 1000);
 
   for (const organizationId of organizationIds) {
-    const brief = await getLatestInsightForOrganization(db, organizationId, "whats_changed");
-    if (!brief || brief.createdAt < freshSince || brief.evidence.length === 0) continue;
+    // Isolated per org (the established fan-out pattern, generate-insight.ts)
+    // — this job runs once daily with attempts:1, so one org's failure
+    // must not silently skip every org ordered after it until tomorrow.
+    try {
+      const brief = await getLatestInsightForOrganization(db, organizationId, "whats_changed");
+      if (!brief || brief.createdAt < freshSince || brief.evidence.length === 0) continue;
 
-    const recipients = await listActiveMemberEmails(db, organizationId);
-    if (recipients.length === 0) continue;
+      const recipients = await listActiveMemberEmails(db, organizationId);
+      if (recipients.length === 0) continue;
 
-    const bodyText = renderExecutiveBriefEmailBody(brief);
-    const subject = `Executive brief: ${brief.projectName}`;
+      const bodyText = renderExecutiveBriefEmailBody(brief);
+      const subject = `Executive brief: ${brief.projectName}`;
 
-    for (const toEmail of recipients) {
-      const outboxEntry = await enqueueEmail(db, {
-        toEmail,
-        subject,
-        bodyText,
-        kind: "executive_brief",
-      });
-      await emailQueue.add(
-        QUEUE_NAMES.sendEmail,
-        { emailOutboxId: outboxEntry.id },
-        { attempts: 5, backoff: { type: "exponential", delay: 2000 } },
-      );
+      for (const toEmail of recipients) {
+        const outboxEntry = await enqueueEmail(db, {
+          toEmail,
+          subject,
+          bodyText,
+          kind: "executive_brief",
+        });
+        await emailQueue.add(
+          QUEUE_NAMES.sendEmail,
+          { emailOutboxId: outboxEntry.id },
+          { attempts: 5, backoff: { type: "exponential", delay: 2000 } },
+        );
+      }
+    } catch (error) {
+      console.error(`[worker] send_executive_brief failed for org ${organizationId}:`, error);
     }
   }
 }

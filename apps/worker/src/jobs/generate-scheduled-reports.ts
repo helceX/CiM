@@ -27,23 +27,30 @@ export async function processGenerateScheduledReportsJob(
   const dueReports = await getReportsDueForScheduledRun(db);
 
   for (const report of dueReports) {
-    const sinceDays = periodTypeToSinceDays(report.periodType);
-    const periodEnd = new Date();
-    const periodStart = new Date(periodEnd.getTime() - sinceDays * 24 * 60 * 60 * 1000);
+    // Isolated per report (the established fan-out pattern, generate-insight.ts)
+    // — this job runs once daily with attempts:1, so one report's failure
+    // must not silently skip every report ordered after it until tomorrow.
+    try {
+      const sinceDays = periodTypeToSinceDays(report.periodType);
+      const periodEnd = new Date();
+      const periodStart = new Date(periodEnd.getTime() - sinceDays * 24 * 60 * 60 * 1000);
 
-    const run = await createReportRun(db, report.organizationId, {
-      reportId: report.id,
-      requestedByUserId: report.createdByUserId,
-      periodStart,
-      periodEnd,
-    });
+      const run = await createReportRun(db, report.organizationId, {
+        reportId: report.id,
+        requestedByUserId: report.createdByUserId,
+        periodStart,
+        periodEnd,
+      });
 
-    await generateReportQueue.add(
-      QUEUE_NAMES.generateReport,
-      { reportRunId: run.id },
-      { attempts: 2, backoff: { type: "exponential", delay: 5000 } },
-    );
+      await generateReportQueue.add(
+        QUEUE_NAMES.generateReport,
+        { reportRunId: run.id },
+        { attempts: 2, backoff: { type: "exponential", delay: 5000 } },
+      );
 
-    await markReportScheduledRun(db, report.id);
+      await markReportScheduledRun(db, report.id);
+    } catch (error) {
+      console.error(`[worker] generate_scheduled_reports failed for report ${report.id}:`, error);
+    }
   }
 }

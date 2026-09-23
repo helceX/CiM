@@ -17,6 +17,13 @@ import {
 export async function processCaptureFeatureUsageJob(): Promise<void> {
   const orgs = await listActiveOrganizationsForUsageCapture(db);
   for (const { organizationId } of orgs) {
-    await captureFeatureUsageSnapshot(db, organizationId);
+    // Isolated per org (the established fan-out pattern, generate-insight.ts)
+    // — this job runs once daily with attempts:1, so one org's failure
+    // must not silently skip every org ordered after it until tomorrow.
+    try {
+      await captureFeatureUsageSnapshot(db, organizationId);
+    } catch (error) {
+      console.error(`[worker] capture_feature_usage failed for org ${organizationId}:`, error);
+    }
   }
 }

@@ -18,15 +18,22 @@ export async function processEnforceRetentionJob(): Promise<void> {
   const policies = await getOrganizationsWithRetentionPolicy(db);
 
   for (const { organizationId, mentionRetentionDays } of policies) {
-    const deletedCount = await deleteExpiredMentions(
-      db,
-      organizationId,
-      mentionRetentionDays,
-    );
-    if (deletedCount > 0) {
-      console.log(
-        `[enforce-retention] org ${organizationId}: deleted ${deletedCount} mention(s) past its ${mentionRetentionDays}-day retention window`,
+    // Isolated per org (the established fan-out pattern, generate-insight.ts)
+    // — this job runs once daily with attempts:1, so one org's failure
+    // must not silently skip every org ordered after it until tomorrow.
+    try {
+      const deletedCount = await deleteExpiredMentions(
+        db,
+        organizationId,
+        mentionRetentionDays,
       );
+      if (deletedCount > 0) {
+        console.log(
+          `[enforce-retention] org ${organizationId}: deleted ${deletedCount} mention(s) past its ${mentionRetentionDays}-day retention window`,
+        );
+      }
+    } catch (error) {
+      console.error(`[worker] enforce_retention failed for org ${organizationId}:`, error);
     }
   }
 }

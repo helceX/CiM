@@ -57,16 +57,30 @@ export function htmlToPlainText(html: string): string {
   text = text.replace(/<\/(p|div|li|h[1-6]|tr)>/gi, "\n");
   text = text.replace(/<[^>]+>/g, " ");
   text = decodeHtmlEntities(text);
+  // An entity-encoded tag (`&lt;script&gt;`) isn't a `<...>` token yet
+  // when the strip pass above runs, so it survives decoding as literal
+  // tag-shaped text — this second, narrower pass catches exactly that,
+  // so nothing tag-shaped is left in the output regardless of how it
+  // was encoded in the source, matching this module's own contract.
+  text = text.replace(/<[^>]+>/g, " ");
   text = text.replace(/[ \t]+/g, " ");
   text = text.replace(/\n[ \t]*/g, "\n");
   text = text.replace(/\n{3,}/g, "\n\n");
   return text.trim();
 }
 
+/** Same decode-then-strip discipline as htmlToPlainText, for the short strings extractTitle captures. */
+function sanitizeExtractedText(raw: string): string {
+  return decodeHtmlEntities(raw)
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 export function extractTitle(html: string): string | null {
   const ogTitle = html.match(/<meta\s+property=["']og:title["']\s+content=["']([^"']*)["']/i);
-  if (ogTitle?.[1]) return decodeHtmlEntities(ogTitle[1]).trim();
+  if (ogTitle?.[1]) return sanitizeExtractedText(ogTitle[1]);
   const titleTag = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
-  if (titleTag?.[1]) return decodeHtmlEntities(titleTag[1]).trim();
+  if (titleTag?.[1]) return sanitizeExtractedText(titleTag[1]);
   return null;
 }

@@ -38,6 +38,15 @@ describe("htmlToPlainText", () => {
       "<body><p>Visible body.</p></body></html>";
     expect(htmlToPlainText(html)).toBe("Visible body.");
   });
+
+  it("never leaves a tag-shaped literal in the output, even when the source entity-encoded it", () => {
+    // <script>/&lt;script&gt; wouldn't be present as a real <...> token
+    // until after entities are decoded — this proves the decode step
+    // doesn't reintroduce what the earlier strip passes just removed.
+    const text = htmlToPlainText("<p>Hello &lt;script&gt;alert(1)&lt;/script&gt; world</p>");
+    expect(text).not.toMatch(/<[a-z][^>]*>/i);
+    expect(text).toBe("Hello alert(1) world");
+  });
 });
 
 describe("decodeHtmlEntities", () => {
@@ -58,5 +67,11 @@ describe("extractTitle", () => {
 
   it("returns null when neither is present", () => {
     expect(extractTitle("<body>No title here</body>")).toBeNull();
+  });
+
+  it("never returns a tag-shaped literal, even when the source entity-encoded it", () => {
+    const title = extractTitle("<head><title>Breaking: &lt;script&gt;alert(1)&lt;/script&gt;</title></head>");
+    expect(title).not.toMatch(/<[a-z][^>]*>/i);
+    expect(title).toBe("Breaking: alert(1)");
   });
 });

@@ -90,6 +90,16 @@ describe("safeFetch — SSRF rejection (real DNS, no mocking)", () => {
     );
   });
 
+  it("rejects a literal bracketed IPv6 loopback URL through the real SSRF classifier, not a generic DNS failure", async () => {
+    // URL#hostname keeps the brackets ("[::1]") for an IPv6 literal;
+    // dns.lookup doesn't accept them. Unless safeFetch strips them
+    // before resolving, this fails with a plain ENOTFOUND instead of
+    // ever reaching ssrf-guard's IPv6 blocklist — this proves it's
+    // actually classified and blocked, not just failing for the wrong
+    // reason.
+    await expect(safeFetch("http://[::1]:1/")).rejects.toThrow(SsrfBlockedError);
+  });
+
   it("rejects a non-HTTP(S) protocol", async () => {
     await expect(safeFetch("file:///etc/passwd")).rejects.toThrow(SsrfBlockedError);
   });
@@ -165,6 +175,49 @@ describe("safeFetch — fetch machinery (via injected resolver)", () => {
       }),
     ).rejects.toThrow(SsrfBlockedError);
   });
+
+  /**
+   * A regression test for a real hang: undici's Agent#close() waits for
+   * any in-flight request to drain, and a response body stream that's
+   * still delivering bytes counts as in-flight even after fetch()
+   * itself has resolved (which only means headers arrived). Every
+   * fixture above is small enough (≤1000 bytes) to arrive in a single
+   * TCP segment before any read() call, so none of them ever exercised
+   * real backpressure — this uses a body large enough that it can't
+   * possibly still be fully buffered by the time the first chunk is
+   * read, which is what actually reproduces the hang if the body isn't
+   * drained (via a full read, or reader.cancel()) before the agent
+   * closes. Bounded by the test's own timeout below: this test failing
+   * by timing out, not by a thrown error, is exactly what a regression
+   * here would look like.
+   */
+  it("reads a large streamed response without hanging on agent close", async () => {
+    const bigBody = Buffer.alloc(8 * 1024 * 1024, "a"); // 8 MB
+    const { port } = await listen((_req, res) => {
+      res.writeHead(200, { "content-type": "text/plain" });
+      res.end(bigBody);
+    });
+    const result = await safeFetch(`http://example-cim-test.invalid:${port}/`, {
+      resolveHostname: loopbackResolver(),
+      maxResponseBytes: bigBody.length + 1,
+    });
+    expect(result.status).toBe(200);
+    expect(result.body.length).toBe(bigBody.length);
+  }, 8000);
+
+  it("aborts a large streamed response that exceeds the byte cap without hanging", async () => {
+    const bigBody = Buffer.alloc(8 * 1024 * 1024, "a"); // 8 MB, cap trips mid-stream
+    const { port } = await listen((_req, res) => {
+      res.writeHead(200, { "content-type": "text/plain" });
+      res.end(bigBody);
+    });
+    await expect(
+      safeFetch(`http://example-cim-test.invalid:${port}/`, {
+        resolveHostname: loopbackResolver(),
+        maxResponseBytes: 1024 * 1024,
+      }),
+    ).rejects.toThrow(SsrfBlockedError);
+  }, 8000);
 
   it("sends a POST with a body through the same SSRF-guarded path (webhook delivery)", async () => {
     let receivedMethod: string | undefined;

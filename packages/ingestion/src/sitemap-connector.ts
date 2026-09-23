@@ -1,7 +1,7 @@
 import type { Source } from "@cim/db/schema";
 import type { RawFetchResult, SourceConnector, SourceHealth } from "./connector";
 import { extractTitle, htmlToPlainText } from "./html-text";
-import { isAllowedByRobotsTxt } from "./robots";
+import { createRobotsChecker } from "./robots";
 import { safeFetch, SsrfBlockedError } from "./safe-fetch";
 import { parseSitemap, type SitemapUrl } from "./sitemap-parse";
 
@@ -30,6 +30,10 @@ export class SitemapConnector implements SourceConnector {
     const candidates = newestFirst.slice(0, MAX_PAGES_PER_CRAWL);
 
     const results: RawFetchResult[] = [];
+    // Candidates are typically all on the source's own domain — one
+    // checker instance means one robots.txt fetch per host for this
+    // whole crawl tick, not once per candidate.
+    const isAllowed = createRobotsChecker();
     for (const entry of candidates) {
       if (!entry.loc) continue;
       // One page's failure (robots-blocked, unreachable, unparseable)
@@ -37,7 +41,7 @@ export class SitemapConnector implements SourceConnector {
       // is isolated" principle INGESTION.md applies across sources,
       // applied here across this source's own pages.
       try {
-        const allowed = await isAllowedByRobotsTxt(entry.loc);
+        const allowed = await isAllowed(entry.loc);
         if (!allowed) continue;
         const { body } = await safeFetch(entry.loc);
         results.push({

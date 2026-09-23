@@ -73,23 +73,51 @@ export function isPathAllowedByRobots(robotsTxt: string, userAgent: string, path
 const USER_AGENT = "CiM-Bot";
 
 /**
- * Fetches and checks robots.txt for one URL. Fails OPEN (allowed) when
- * robots.txt itself is unreachable or absent — that mirrors every real
- * crawler's behavior (no robots.txt means no restriction, not "assume
- * blocked") and is a politeness/compliance check, not the SSRF security
- * boundary (`safeFetch`, used to fetch it, still enforces that
- * regardless of the outcome here).
+ * Fails OPEN (`null` = "no restriction") when robots.txt itself is
+ * unreachable or absent — that mirrors every real crawler's behavior
+ * and is a politeness/compliance check, not the SSRF security boundary
+ * (`safeFetch`, used to fetch it, still enforces that regardless of the
+ * outcome here).
  */
-export async function isAllowedByRobotsTxt(targetUrl: string): Promise<boolean> {
-  const parsed = new URL(targetUrl);
-  const robotsUrl = `${parsed.protocol}//${parsed.host}/robots.txt`;
-  let body: string;
+async function fetchRobotsTxt(protocol: string, host: string): Promise<string | null> {
+  const robotsUrl = `${protocol}//${host}/robots.txt`;
   try {
     const result = await safeFetch(robotsUrl, { timeoutMs: 5000 });
-    if (result.status >= 400) return true;
-    body = result.body;
+    if (result.status >= 400) return null;
+    return result.body;
   } catch {
-    return true;
+    return null;
   }
+}
+
+/** Fetches and checks robots.txt for one URL. */
+export async function isAllowedByRobotsTxt(targetUrl: string): Promise<boolean> {
+  const parsed = new URL(targetUrl);
+  const body = await fetchRobotsTxt(parsed.protocol, parsed.host);
+  if (body === null) return true;
   return isPathAllowedByRobots(body, USER_AGENT, parsed.pathname || "/");
+}
+
+/**
+ * For a caller checking many candidate URLs that often share a host in
+ * one pass (SitemapConnector — up to MAX_PAGES_PER_CRAWL candidates,
+ * usually all on the source's own domain) — fetches each host's
+ * robots.txt at most once per checker instance instead of once per URL.
+ * A fresh checker (and so a fresh fetch) per crawl tick is intentional:
+ * robots.txt can legitimately change between ticks.
+ */
+export function createRobotsChecker(): (targetUrl: string) => Promise<boolean> {
+  const cache = new Map<string, Promise<string | null>>();
+  return async (targetUrl: string) => {
+    const parsed = new URL(targetUrl);
+    const key = `${parsed.protocol}//${parsed.host}`;
+    let bodyPromise = cache.get(key);
+    if (!bodyPromise) {
+      bodyPromise = fetchRobotsTxt(parsed.protocol, parsed.host);
+      cache.set(key, bodyPromise);
+    }
+    const body = await bodyPromise;
+    if (body === null) return true;
+    return isPathAllowedByRobots(body, USER_AGENT, parsed.pathname || "/");
+  };
 }

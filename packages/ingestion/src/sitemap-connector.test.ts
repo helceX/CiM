@@ -13,13 +13,13 @@ vi.mock("./safe-fetch", async (importOriginal) => {
   };
 });
 
+/** Same layering rationale as the safeFetch mock above — stubs createRobotsChecker's returned function so it never calls the real (mocked) safeFetch and desyncs the queued page-fetch responses. */
 const robotsMock = vi.fn<(url: string) => Promise<boolean>>();
 vi.mock("./robots", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./robots")>();
   return {
     ...actual,
-    isAllowedByRobotsTxt: (...args: Parameters<typeof robotsMock>) =>
-      robotsMock(...args),
+    createRobotsChecker: () => (...args: Parameters<typeof robotsMock>) => robotsMock(...args),
   };
 });
 

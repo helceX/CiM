@@ -18,8 +18,14 @@ type ResolvedAddress = { address: string; family: number };
  * unsafe one.
  */
 async function resolveValidatedIp(hostname: string): Promise<ResolvedAddress> {
+  // `URL#hostname` keeps the brackets for an IPv6 literal (`"[::1]"`),
+  // but `dns.lookup` doesn't accept them — passing them straight
+  // through fails every such literal with a generic ENOTFOUND, never
+  // reaching (or exercising) ssrf-guard's IPv6 classification at all.
+  const dnsHostname =
+    hostname.startsWith("[") && hostname.endsWith("]") ? hostname.slice(1, -1) : hostname;
   const results = await new Promise<dns.LookupAddress[]>((resolve, reject) => {
-    dns.lookup(hostname, { all: true, verbatim: true }, (err, addresses) => {
+    dns.lookup(dnsHostname, { all: true, verbatim: true }, (err, addresses) => {
       if (err) reject(err);
       else resolve(addresses);
     });
@@ -92,10 +98,17 @@ async function readBodyWithCap(
       }
       chunks.push(value);
     }
+    return Buffer.concat(chunks).toString("utf-8");
   } finally {
-    reader.releaseLock();
+    // A no-op once the stream is already fully drained (the normal
+    // case), but on an early throw (the cap above) this is what
+    // actually releases the connection — undici's Agent#close() waits
+    // for any in-flight request to finish, and an unconsumed body
+    // stream counts as in-flight until it's cancelled, not merely
+    // unlocked. Without this, the caller's agent.close() hangs for the
+    // full connect timeout instead of failing fast.
+    await reader.cancel().catch(() => {});
   }
-  return Buffer.concat(chunks).toString("utf-8");
 }
 
 export type SafeFetchOptions = {
@@ -141,9 +154,15 @@ export async function safeFetch(
       connect: { lookup: pinnedLookup(resolved), timeout: timeoutMs },
     });
 
-    let response: Awaited<ReturnType<typeof undiciFetch>>;
+    // agent.close() must not run until the response body has been fully
+    // read or explicitly cancelled — undici's Agent#close() waits for
+    // in-flight requests to drain, and a response whose body stream is
+    // still open (never touched, as a redirect's is) counts as
+    // in-flight, so closing too early hangs for the connect timeout
+    // instead of resolving. Everything that touches `response` lives
+    // inside this try so the one `finally` below always runs last.
     try {
-      response = await undiciFetch(currentUrl, {
+      const response = await undiciFetch(currentUrl, {
         method: options.method ?? "GET",
         body: options.body,
         redirect: "manual",
@@ -151,30 +170,31 @@ export async function safeFetch(
         dispatcher: agent,
         signal: AbortSignal.timeout(timeoutMs),
       });
+
+      if (response.status >= 300 && response.status < 400) {
+        const location = response.headers.get("location");
+        await response.body?.cancel().catch(() => {});
+        if (!location) {
+          throw new SsrfBlockedError(
+            `Redirect response (${response.status}) with no Location header`,
+          );
+        }
+        if (hop >= maxRedirects) {
+          throw new SsrfBlockedError(`Too many redirects (max ${maxRedirects})`);
+        }
+        currentUrl = new URL(location, currentUrl);
+        continue;
+      }
+
+      const body = await readBodyWithCap(response, maxResponseBytes);
+      return {
+        status: response.status,
+        headers: response.headers,
+        body,
+        finalUrl: currentUrl.toString(),
+      };
     } finally {
       await agent.close();
     }
-
-    if (response.status >= 300 && response.status < 400) {
-      const location = response.headers.get("location");
-      if (!location) {
-        throw new SsrfBlockedError(
-          `Redirect response (${response.status}) with no Location header`,
-        );
-      }
-      if (hop >= maxRedirects) {
-        throw new SsrfBlockedError(`Too many redirects (max ${maxRedirects})`);
-      }
-      currentUrl = new URL(location, currentUrl);
-      continue;
-    }
-
-    const body = await readBodyWithCap(response, maxResponseBytes);
-    return {
-      status: response.status,
-      headers: response.headers,
-      body,
-      finalUrl: currentUrl.toString(),
-    };
   }
 }

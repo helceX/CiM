@@ -25,6 +25,26 @@ export async function getSubscription(db: Db, organizationId: OrganizationId): P
 export type PlanLimitCheck = { ok: true } | { ok: false; limit: number };
 
 /**
+ * The "active, non-deleted monitoring queries" count — shared by
+ * checkMonitoringQueryLimit (the plan-limit gate) and
+ * captureFeatureUsageSnapshot's keywordsCount, so the two can't drift
+ * apart on what counts as an active query.
+ */
+async function countActiveMonitoringQueries(db: Db, organizationId: OrganizationId): Promise<number> {
+  const [row] = await db
+    .select({ value: count() })
+    .from(monitoringQueries)
+    .where(
+      and(
+        eq(monitoringQueries.organizationId, organizationId),
+        eq(monitoringQueries.status, "active"),
+        isNull(monitoringQueries.deletedAt),
+      ),
+    );
+  return Number(row?.value ?? 0);
+}
+
+/**
  * docs/product/FEATURE_MATRIX.md P3 "Billing: Plan enforcement" — the
  * one plan limit this codebase actually enforces (@cim/core's
  * plan-limits.ts). Counts live, never from the daily
@@ -40,17 +60,7 @@ export async function checkMonitoringQueryLimit(
   const limit = getMonitoringQueryLimit(plan);
   if (limit === null) return { ok: true };
 
-  const [row] = await db
-    .select({ value: count() })
-    .from(monitoringQueries)
-    .where(
-      and(
-        eq(monitoringQueries.organizationId, organizationId),
-        eq(monitoringQueries.status, "active"),
-        isNull(monitoringQueries.deletedAt),
-      ),
-    );
-  const current = Number(row?.value ?? 0);
+  const current = await countActiveMonitoringQueries(db, organizationId);
   return current >= limit ? { ok: false, limit } : { ok: true };
 }
 
@@ -117,46 +127,44 @@ export async function listActiveOrganizationsForUsageCapture(db: Db): Promise<Or
  * affect one.
  */
 export async function captureFeatureUsageSnapshot(db: Db, organizationId: OrganizationId): Promise<void> {
-  const [keywordsRow] = await db
-    .select({ value: count() })
-    .from(monitoringQueries)
-    .where(
-      and(
-        eq(monitoringQueries.organizationId, organizationId),
-        eq(monitoringQueries.status, "active"),
-        isNull(monitoringQueries.deletedAt),
-      ),
-    );
-  const [sourcesRow] = await db
-    .select({ value: sql<number>`count(distinct ${articles.sourceId})` })
-    .from(mentions)
-    .innerJoin(articles, eq(articles.id, mentions.articleId))
-    .where(eq(mentions.organizationId, organizationId));
-  const [mentionsRow] = await db
-    .select({ value: count() })
-    .from(mentions)
-    .where(eq(mentions.organizationId, organizationId));
-  const [aiCreditsRow] = await db
-    .select({ value: count() })
-    .from(mentions)
-    .where(and(eq(mentions.organizationId, organizationId), eq(mentions.aiStatus, "completed")));
-  const [reportsRow] = await db
-    .select({ value: count() })
-    .from(reports)
-    .where(eq(reports.organizationId, organizationId));
-  const [usersRow] = await db
-    .select({ value: count() })
-    .from(organizationMemberships)
-    .where(
-      and(
-        eq(organizationMemberships.organizationId, organizationId),
-        eq(organizationMemberships.status, "active"),
-      ),
-    );
+  const [keywordsCount, sourcesRow, mentionsRow, aiCreditsRow, reportsRow, usersRow] = await Promise.all([
+    countActiveMonitoringQueries(db, organizationId),
+    db
+      .select({ value: sql<number>`count(distinct ${articles.sourceId})` })
+      .from(mentions)
+      .innerJoin(articles, eq(articles.id, mentions.articleId))
+      .where(eq(mentions.organizationId, organizationId))
+      .then(([row]) => row),
+    db
+      .select({ value: count() })
+      .from(mentions)
+      .where(eq(mentions.organizationId, organizationId))
+      .then(([row]) => row),
+    db
+      .select({ value: count() })
+      .from(mentions)
+      .where(and(eq(mentions.organizationId, organizationId), eq(mentions.aiStatus, "completed")))
+      .then(([row]) => row),
+    db
+      .select({ value: count() })
+      .from(reports)
+      .where(eq(reports.organizationId, organizationId))
+      .then(([row]) => row),
+    db
+      .select({ value: count() })
+      .from(organizationMemberships)
+      .where(
+        and(
+          eq(organizationMemberships.organizationId, organizationId),
+          eq(organizationMemberships.status, "active"),
+        ),
+      )
+      .then(([row]) => row),
+  ]);
 
   await db.insert(featureUsageSnapshots).values({
     organizationId,
-    keywordsCount: Number(keywordsRow?.value ?? 0),
+    keywordsCount,
     sourcesCount: Number(sourcesRow?.value ?? 0),
     mentionsCount: Number(mentionsRow?.value ?? 0),
     aiCreditsCount: Number(aiCreditsRow?.value ?? 0),

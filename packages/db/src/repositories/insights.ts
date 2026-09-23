@@ -4,6 +4,7 @@ import { articles, mentions, sources } from "../schema/content";
 import { insightEvidence, insights } from "../schema/ai";
 import { monitoringQueries } from "../schema/monitoring";
 import { organizations, projects } from "../schema/organizations";
+import { insightPriorityRank, mentionPriorityRank } from "./priority-rank";
 import { asOrganizationId, type OrganizationId } from "./tenant-scope";
 
 export type ActiveProjectRef = { organizationId: OrganizationId; projectId: string };
@@ -77,7 +78,11 @@ export async function listMentionsForInsightPeriod(
         gte(mentions.createdAt, sql`now() - (${sinceHours}::text || ' hours')::interval`),
       ),
     )
-    .orderBy(desc(mentions.priority), desc(mentions.createdAt))
+    // Plain `desc(mentions.priority)` sorts alphabetically ("normal"
+    // before "critical", the same trap digest.ts's "top stories" query
+    // hit first) — rank explicitly so the LIMIT below caps to the
+    // highest-severity mentions, not the highest in the alphabet.
+    .orderBy(desc(mentionPriorityRank()), desc(mentions.createdAt))
     .limit(limit);
 
   return rows.map((row) => ({
@@ -305,7 +310,9 @@ export async function listLatestRecommendationsForOrganization(
     .select()
     .from(insights)
     .where(and(scope, eq(insights.periodEnd, latest.periodEnd)))
-    .orderBy(desc(insights.priority), desc(insights.confidence));
+    // Same alphabetical-sort trap as mentions.priority — rank explicitly
+    // so "high" recommendations/risks actually outrank "medium"/"low".
+    .orderBy(desc(insightPriorityRank()), desc(insights.confidence));
   if (rows.length === 0) return [];
 
   const evidence = await db

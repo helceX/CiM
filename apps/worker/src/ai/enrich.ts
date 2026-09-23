@@ -64,21 +64,31 @@ export async function processAiEnrichJob(): Promise<{ processed: number; skipped
         provider.generateSummary(input),
       ]);
 
+      // Marking "completed" runs last, only once every write below has
+      // actually succeeded — otherwise a failure partway through (e.g. a
+      // transient DB error on the 2nd of several entities) would leave
+      // the mention flagged 'completed' with entities/topics missing,
+      // and — since findCompletedEnrichmentForArticle's cache requires
+      // ai_status='completed' — silently poison every other mention on
+      // the same article into reusing this incomplete result instead of
+      // hitting the catch below and being retried.
+      await Promise.all([
+        ...entityResult.entities.map(async (entity) => {
+          const entityId = await findOrCreateEntity(db, entity.name, entity.type);
+          await addMentionEntity(db, candidate.mentionId, entityId, entity.salience);
+        }),
+        ...topicResult.topics.map(async (topic) => {
+          const topicId = await findOrCreateTopic(db, topic.name);
+          await addMentionTopic(db, candidate.mentionId, topicId, topic.confidence);
+        }),
+      ]);
+
       await markMentionEnrichmentCompleted(db, candidate.mentionId, {
         sentiment: sentiment.sentiment,
         sentimentConfidence: sentiment.confidence,
         aiSummary: summary.summary,
         aiMethod: sentiment.method,
       });
-
-      for (const entity of entityResult.entities) {
-        const entityId = await findOrCreateEntity(db, entity.name, entity.type);
-        await addMentionEntity(db, candidate.mentionId, entityId, entity.salience);
-      }
-      for (const topic of topicResult.topics) {
-        const topicId = await findOrCreateTopic(db, topic.name);
-        await addMentionTopic(db, candidate.mentionId, topicId, topic.confidence);
-      }
       processed += 1;
     } catch (error) {
       console.error(`[worker] ai_enrich failed for mention ${candidate.mentionId}:`, error);

@@ -2,6 +2,7 @@ import { and, count, desc, eq, gte, isNull, sql } from "drizzle-orm";
 import type { Db } from "../client";
 import { articles, mentions, sources } from "../schema/content";
 import { organizations } from "../schema/organizations";
+import { mentionPriorityRank } from "./priority-rank";
 import { asOrganizationId, type OrganizationId } from "./tenant-scope";
 
 /**
@@ -65,12 +66,6 @@ export async function getDigestSummaryForOrganization(
     else sentimentCounts.unclassified += Number(row.total);
   }
 
-  // Plain `desc(mentions.priority)` would sort alphabetically ("normal"
-  // before "critical") — rank explicitly so "top stories" actually means
-  // highest severity first, not highest in the alphabet.
-  const priorityRank = sql<number>`case ${mentions.priority}
-    when 'critical' then 4 when 'high' then 3 when 'normal' then 2 when 'low' then 1 else 0 end`;
-
   const topMentions = await db
     .select({
       title: articles.title,
@@ -83,7 +78,7 @@ export async function getDigestSummaryForOrganization(
     .innerJoin(articles, eq(articles.id, mentions.articleId))
     .innerJoin(sources, eq(sources.id, articles.sourceId))
     .where(scope)
-    .orderBy(desc(priorityRank), desc(mentions.createdAt))
+    .orderBy(desc(mentionPriorityRank()), desc(mentions.createdAt))
     .limit(topLimit);
 
   return { totalNewMentions: Number(totalRow?.total ?? 0), sentimentCounts, topMentions };

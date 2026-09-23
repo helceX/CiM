@@ -102,6 +102,54 @@ describe("insights repository (integration)", () => {
     expect(rows.some((r) => r.id === mentionId)).toBe(false);
   });
 
+  it("caps to the highest-severity mentions under a tight limit, not alphabetical order", async () => {
+    // "normal" sorts after "critical" alphabetically, so a plain text
+    // DESC sort would rank it first and drop the critical mention under
+    // a limit of 1 — exactly backwards from the "expensive synthesis
+    // reserved for what will actually surface" cost-control intent this
+    // limit exists for.
+    const [normalArticle] = await db
+      .insert(articles)
+      .values({
+        sourceId,
+        canonicalUrl: `https://insight-test.example/normal-${Date.now()}`,
+        contentHash: `insight-normal-${Date.now()}`,
+        title: "Northwind Atlas routine update",
+      })
+      .returning();
+    if (!normalArticle) throw new Error("failed to create normal-priority article");
+    await createMentionIfNotExists(db, organizationId, {
+      projectId,
+      queryId,
+      articleId: normalArticle.id,
+      matchedTerms: ["Northwind"],
+      priority: "normal",
+    });
+
+    const [criticalArticle] = await db
+      .insert(articles)
+      .values({
+        sourceId,
+        canonicalUrl: `https://insight-test.example/critical-${Date.now()}`,
+        contentHash: `insight-critical-${Date.now()}`,
+        title: "Northwind Atlas facing a real crisis",
+      })
+      .returning();
+    if (!criticalArticle) throw new Error("failed to create critical-priority article");
+    const criticalMentionId = await createMentionIfNotExists(db, organizationId, {
+      projectId,
+      queryId,
+      articleId: criticalArticle.id,
+      matchedTerms: ["Northwind"],
+      priority: "critical",
+    });
+
+    const rows = await listMentionsForInsightPeriod(db, organizationId, projectId, 24, 1);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.id).toBe(criticalMentionId);
+    expect(rows[0]?.priority).toBe("critical");
+  });
+
   it("creates a grounded insight with evidence and reads it back as the latest for its kind", async () => {
     const periodStart = new Date(Date.now() - 24 * 60 * 60 * 1000);
     const periodEnd = new Date();
@@ -208,6 +256,11 @@ describe("insights repository (integration)", () => {
     });
     expect(latestBatch).toHaveLength(2);
     expect(latestBatch.some((r) => r.summary.includes("Stale"))).toBe(false);
+    // Ordering must be by actual severity ("high" before "medium"), not
+    // alphabetical — "medium" sorts before "high" alphabetically, which
+    // is exactly backwards.
+    expect(latestBatch[0]?.priority).toBe("high");
+    expect(latestBatch[1]?.priority).toBe("medium");
     const highPriority = latestBatch.find((r) => r.priority === "high");
     expect(highPriority?.why).toBe("2 of the 3 mentions carried negative sentiment.");
     expect(highPriority?.evidence).toHaveLength(1);

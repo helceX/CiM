@@ -20,7 +20,7 @@ export async function DELETE(
   }
 
   const { id, commentId } = await params;
-  const removed = await deleteMentionComment(db, context.organizationId, commentId, context.userId);
+  const removed = await deleteMentionComment(db, context.organizationId, id, commentId, context.userId);
   if (!removed) {
     return NextResponse.json(
       { error: "Comment not found, or you can only delete your own comments" },

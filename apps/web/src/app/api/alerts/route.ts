@@ -33,6 +33,16 @@ export async function POST(request: Request) {
   if (!query) {
     return NextResponse.json({ error: "Monitoring query not found" }, { status: 404 });
   }
+  // Each belongs to this org independently, but not necessarily to each
+  // other — a client sending a valid projectId from Project A alongside a
+  // valid queryId that actually belongs to Project B must be rejected,
+  // not create a rule filed under A that actually fires on B's activity.
+  if (query.projectId !== project.id) {
+    return NextResponse.json(
+      { error: "Monitoring query does not belong to this project" },
+      { status: 400 },
+    );
+  }
   // A "competitor" alert compares this query's volume against the
   // project's "company" queries (getCompetitorAlertStats) — meaningless,
   // and confusing to read, against a query not tagged that way.

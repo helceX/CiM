@@ -604,10 +604,10 @@ describe("mentions repository (integration)", () => {
     expect(detail?.comments.map((c) => c.id)).toEqual(comments.map((c) => c.id));
 
     // The outsider cannot delete the member's comment...
-    const wrongAuthor = await deleteMentionComment(db, organizationId, first.comment.id, outsiderUserId);
+    const wrongAuthor = await deleteMentionComment(db, organizationId, mentionId, first.comment.id, outsiderUserId);
     expect(wrongAuthor).toBe(false);
     // ...but can delete their own.
-    const ownComment = await deleteMentionComment(db, organizationId, second.comment.id, outsiderUserId);
+    const ownComment = await deleteMentionComment(db, organizationId, mentionId, second.comment.id, outsiderUserId);
     expect(ownComment).toBe(true);
 
     const remaining = await listCommentsForMention(db, mentionId);
@@ -621,6 +621,30 @@ describe("mentions repository (integration)", () => {
 
     const result = await addCommentToMention(db, otherOrgId, mentionId, memberUserId, "Cross-tenant");
     expect(result).toEqual({ ok: false, reason: "mention_not_found" });
+  });
+
+  it("does not delete a comment when the mentionId in the request doesn't match the comment's own mention", async () => {
+    // Regression: the delete route names both the mention (URL segment)
+    // and the comment id — deleteMentionComment previously only checked
+    // org + author, so a comment on mention B was deletable through a
+    // request naming mention A, and the caller's audit log would then
+    // misattribute the deletion to the wrong mention.
+    const mentionA = mentionIds[0];
+    const mentionB = mentionIds[2];
+    if (!mentionA || !mentionB) throw new Error("no seeded mentions");
+
+    const comment = await addCommentToMention(db, organizationId, mentionB, memberUserId, "Belongs to B");
+    expect(comment.ok).toBe(true);
+    if (!comment.ok) throw new Error("unreachable");
+
+    const mismatched = await deleteMentionComment(db, organizationId, mentionA, comment.comment.id, memberUserId);
+    expect(mismatched).toBe(false);
+
+    const stillThere = await listCommentsForMention(db, mentionB);
+    expect(stillThere.some((c) => c.id === comment.comment.id)).toBe(true);
+
+    const correct = await deleteMentionComment(db, organizationId, mentionB, comment.comment.id, memberUserId);
+    expect(correct).toBe(true);
   });
 
   it("groups mentions by tracking target for competitor comparison, excluding non-company/competitor queries", async () => {

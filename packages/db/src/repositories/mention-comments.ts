@@ -75,11 +75,16 @@ export async function addCommentToMention(
  * left to the caller's UI, the same defense-in-depth every tenant-scoped
  * mutation in this codebase applies (ADR-001). A crafted request naming
  * another member's comment id is rejected rather than silently deleting
- * someone else's note.
+ * someone else's note. Also requires the comment to belong to `mentionId`
+ * — otherwise a DELETE against /mentions/{A}/comments/{commentId}, where
+ * commentId is actually the caller's own comment on mention B, would
+ * still succeed and the caller's audit-log entry would misattribute the
+ * deletion to mention A.
  */
 export async function deleteMentionComment(
   db: Db,
   organizationId: OrganizationId,
+  mentionId: string,
   commentId: string,
   requestingUserId: string,
 ): Promise<boolean> {
@@ -87,6 +92,7 @@ export async function deleteMentionComment(
     .delete(mentionComments)
     .where(
       sql`${mentionComments.id} = ${commentId}
+        and ${mentionComments.mentionId} = ${mentionId}
         and ${mentionComments.organizationId} = ${organizationId}
         and ${mentionComments.authorUserId} = ${requestingUserId}`,
     )

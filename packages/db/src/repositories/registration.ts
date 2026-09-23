@@ -17,6 +17,7 @@ export async function registerOrganizationOwner(
     firstName: string;
     lastName: string;
     companyName: string;
+    jobTitle: string;
   },
 ) {
   return db.transaction(async (tx) => {
@@ -27,6 +28,7 @@ export async function registerOrganizationOwner(
         passwordHash: input.passwordHash,
         firstName: input.firstName,
         lastName: input.lastName,
+        jobTitle: input.jobTitle,
       })
       .returning();
     if (!user) throw new Error("Failed to create user");

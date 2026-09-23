@@ -45,6 +45,7 @@ export async function POST(request: Request) {
     firstName: input.firstName,
     lastName: input.lastName,
     companyName: input.companyName,
+    jobTitle: input.jobTitle,
   });
 
   const rawToken = generateRawToken();

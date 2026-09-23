@@ -92,6 +92,7 @@ export async function anonymizeUser(db: Db, userId: string): Promise<void> {
       email: `deleted-${userId}@deleted.invalid`,
       firstName: "Deleted",
       lastName: "User",
+      jobTitle: null,
       passwordHash: "deleted-account-no-login",
       deletedAt: new Date(),
       updatedAt: new Date(),
@@ -105,6 +106,7 @@ export type AccountExport = {
     email: string;
     firstName: string;
     lastName: string;
+    jobTitle: string | null;
     timezone: string;
     locale: string;
     createdAt: Date;
@@ -137,6 +139,7 @@ export async function exportAccountData(db: Db, userId: string): Promise<Account
       email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,
+      jobTitle: user.jobTitle,
       timezone: user.timezone,
       locale: user.locale,
       createdAt: user.createdAt,

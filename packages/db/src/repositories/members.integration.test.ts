@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { generateRawToken, hashToken } from "@cim/core";
 import { db } from "../client";
 import { organizationMemberships, organizations, users } from "../schema/index";
+import { softDeleteOrganization } from "./privacy";
 import { asOrganizationId } from "./tenant-scope";
 import { createCustomRole } from "./custom-roles";
 import {
@@ -258,5 +259,34 @@ describe("members repository (integration)", () => {
     expect(
       await findPendingInvitationByTokenHash(db, hashToken("nonexistent-token")),
     ).toBeUndefined();
+  });
+
+  it("rejects an invitation to an organization that's since been soft-deleted", async () => {
+    // Regression: accepting into a deleted org previously succeeded, then
+    // left the invitee "logged in but nothing works" since every
+    // org-scoped query filters isNull(organizations.deletedAt) — this
+    // must fail clearly at the invitation step instead.
+    const [orgToDelete] = await db
+      .insert(organizations)
+      .values({ name: "Soon Deleted Org", slug: `soon-deleted-${Date.now()}` })
+      .returning();
+    if (!orgToDelete) throw new Error("failed to create org-to-delete");
+    const orgToDeleteId = asOrganizationId(orgToDelete.id);
+
+    const rawToken = generateRawToken();
+    const tokenHash = hashToken(rawToken);
+    await inviteMember(db, orgToDeleteId, {
+      email: `invited-to-deleted-org-${Date.now()}@example.com`,
+      role: "viewer",
+      invitedByUserId: ownerUserId,
+      tokenHash,
+      tokenExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+    });
+
+    await softDeleteOrganization(db, orgToDeleteId);
+
+    expect(await findPendingInvitationByTokenHash(db, tokenHash)).toBeUndefined();
+
+    await db.delete(organizations).where(eq(organizations.id, orgToDeleteId));
   });
 });

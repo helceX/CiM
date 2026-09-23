@@ -10,6 +10,9 @@ export const users = pgTable("users", {
   passwordHash: text("password_hash").notNull(),
   firstName: text("first_name").notNull(),
   lastName: text("last_name").notNull(),
+  // Collected as a required field at registration (register-form.tsx,
+  // registerSchema) but nullable here — existing rows predate the column.
+  jobTitle: text("job_title"),
   emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
   isPlatformSuperAdmin: boolean("is_platform_super_admin")
     .notNull()

@@ -32,14 +32,18 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Organization name doesn't match" }, { status: 400 });
   }
 
+  await softDeleteOrganization(db, context.organizationId);
+
+  // Logged after softDeleteOrganization actually commits, same as every
+  // other mutating route in this directory — a failure in between must
+  // not leave a false "organization.deleted" entry for an org that's
+  // still fully live.
   await recordAuditLog(db, context.organizationId, {
     actorUserId: context.userId,
     action: "organization.deleted",
     targetType: "organization",
     targetId: context.organizationId,
   });
-
-  await softDeleteOrganization(db, context.organizationId);
 
   return NextResponse.json({ ok: true });
 }

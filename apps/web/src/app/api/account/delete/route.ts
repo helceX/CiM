@@ -65,6 +65,12 @@ export async function POST(request: Request) {
   }
 
   const organizationIds = await listMembershipOrganizationIdsForAudit(db, user.id);
+
+  await anonymizeUser(db, user.id);
+
+  // Logged after anonymizeUser actually commits — a failure in between
+  // must not leave a false "account.deleted" audit entry for an account
+  // that's still fully live.
   for (const organizationId of organizationIds) {
     await recordAuditLog(db, organizationId, {
       actorUserId: user.id,
@@ -74,7 +80,6 @@ export async function POST(request: Request) {
     });
   }
 
-  await anonymizeUser(db, user.id);
   await revokeAllSessionsForUser(db, user.id);
   await destroyCurrentSession();
 

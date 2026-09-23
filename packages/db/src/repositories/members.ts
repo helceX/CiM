@@ -230,6 +230,7 @@ export async function findPendingInvitationByTokenHash(
       email: users.email,
       expiresAt: invitationTokens.expiresAt,
       consumedAt: invitationTokens.consumedAt,
+      organizationDeletedAt: organizations.deletedAt,
     })
     .from(invitationTokens)
     .innerJoin(
@@ -248,6 +249,11 @@ export async function findPendingInvitationByTokenHash(
   if (row.consumedAt) return undefined;
   if (row.expiresAt.getTime() < Date.now()) return undefined;
   if (row.status !== "invited") return undefined;
+  // A since-deleted organization must reject the invite outright, not let
+  // it accept into a membership every org-scoped query then filters back
+  // out — that would silently leave the invitee "logged in but nothing
+  // works" instead of a clear "this invitation is invalid" error.
+  if (row.organizationDeletedAt) return undefined;
 
   return {
     membershipId: row.membershipId,

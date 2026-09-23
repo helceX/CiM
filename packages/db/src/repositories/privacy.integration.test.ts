@@ -46,6 +46,7 @@ describe("privacy repository (integration)", () => {
         passwordHash: "unused-in-this-test",
         firstName: "Sole",
         lastName: "Owner",
+        jobTitle: "Founder",
         emailVerifiedAt: new Date(),
       })
       .returning();
@@ -66,6 +67,7 @@ describe("privacy repository (integration)", () => {
         passwordHash: "real-hash-before-anonymization",
         firstName: "Real",
         lastName: "Name",
+        jobTitle: "VP of Marketing",
         emailVerifiedAt: new Date(),
       })
       .returning();
@@ -133,6 +135,7 @@ describe("privacy repository (integration)", () => {
     expect(row?.email).toBe(`deleted-${anonymizeTargetUserId}@deleted.invalid`);
     expect(row?.firstName).toBe("Deleted");
     expect(row?.lastName).toBe("User");
+    expect(row?.jobTitle).toBeNull();
     expect(row?.passwordHash).not.toBe("real-hash-before-anonymization");
     expect(row?.deletedAt).toBeInstanceOf(Date);
   });
@@ -140,6 +143,7 @@ describe("privacy repository (integration)", () => {
   it("exports only identity + membership data, never tenant content", async () => {
     const exported = await exportAccountData(db, soleOwnerUserId);
     expect(exported?.account.id).toBe(soleOwnerUserId);
+    expect(exported?.account.jobTitle).toBe("Founder");
     const orgNames = exported?.memberships.map((m) => m.organizationName).sort();
     expect(orgNames).toEqual(["Shared Org", "Sole Owned Org"]);
   });

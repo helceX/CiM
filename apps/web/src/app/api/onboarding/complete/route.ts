@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { completeOnboardingSchema } from "@cim/validation";
 import { astToBooleanQuery, emptyQueryAst, expandSourceCategoriesToTypes } from "@cim/core";
-import { createProject, createMonitoringQuery, recordAuditLog, db, schema } from "@cim/db";
+import { createProject, createMonitoringQueryWithPlanLimit, recordAuditLog, db, schema } from "@cim/db";
 import { requireOrgContext } from "@/lib/tenant";
 
 export async function POST(request: Request) {
@@ -43,7 +43,12 @@ export async function POST(request: Request) {
   // packages/core/source-categories.ts.
   const sourceTypes = expandSourceCategoriesToTypes(input.sourceTypes);
 
-  await createMonitoringQuery(db, context.organizationId, {
+  // Routes through the same plan-limit-checked wrapper as
+  // api/monitoring/route.ts (packages/db/src/repositories/billing.ts) —
+  // this is always a brand-new org's first query today, but a second
+  // enforcement choke point here means the cap holds even if onboarding
+  // ever creates more than one, or races a concurrent create.
+  const result = await createMonitoringQueryWithPlanLimit(db, context.organizationId, {
     projectId: project.id,
     name: `${input.projectName} monitoring`,
     queryAst: ast,
@@ -51,6 +56,14 @@ export async function POST(request: Request) {
     sourceTypes,
     trackingTarget: input.trackingTarget,
   });
+  if (!result.ok) {
+    return NextResponse.json(
+      {
+        error: `Your plan allows up to ${result.limit} monitoring quer${result.limit === 1 ? "y" : "ies"}. Upgrade to add more.`,
+      },
+      { status: 409 },
+    );
+  }
 
   await recordAuditLog(db, context.organizationId, {
     actorUserId: context.userId,

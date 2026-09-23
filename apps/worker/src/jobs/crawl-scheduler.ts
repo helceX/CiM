@@ -12,17 +12,25 @@ export async function processCrawlSchedulerJob(crawlSourceQueue: Queue<CrawlSour
   const sources = await listActiveSources(db);
   const tickBucket = Math.floor(Date.now() / 30_000);
 
+  // Isolated per source (the established fan-out pattern, generate-insight.ts)
+  // — Promise.all would abort the whole tick on the first queue.add()
+  // rejection, leaving every source ordered after it unenqueued for this
+  // tick even though most sources' adds would have succeeded.
   await Promise.all(
-    sources.map((source) =>
-      crawlSourceQueue.add(
-        QUEUE_NAMES.crawlSource,
-        { sourceId: source.id },
-        {
-          jobId: `${source.id}-${tickBucket}`,
-          attempts: 3,
-          backoff: { type: "exponential", delay: 5_000 },
-        },
-      ),
-    ),
+    sources.map(async (source) => {
+      try {
+        await crawlSourceQueue.add(
+          QUEUE_NAMES.crawlSource,
+          { sourceId: source.id },
+          {
+            jobId: `${source.id}-${tickBucket}`,
+            attempts: 3,
+            backoff: { type: "exponential", delay: 5_000 },
+          },
+        );
+      } catch (error) {
+        console.error(`[worker] crawl_scheduler failed to enqueue source ${source.id}:`, error);
+      }
+    }),
   );
 }

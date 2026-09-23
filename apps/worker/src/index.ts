@@ -42,8 +42,19 @@ import { processInsightGenerateJob } from "./ai/generate-insight";
  */
 const connection = getRedisConnection();
 
+// BullMQ's own default is to keep every completed/failed job forever
+// (https://docs.bullmq.io/guide/queues/auto-removal-of-jobs). With the
+// fastest queue here firing every 20-30s indefinitely, that's unbounded
+// Redis growth over weeks of uptime — every Queue below caps how much
+// job history it retains instead.
+const DEFAULT_JOB_OPTIONS = {
+  removeOnComplete: { count: 1000 },
+  removeOnFail: { count: 5000 },
+};
+
 const sendEmailQueue = new Queue<SendEmailJobData>(QUEUE_NAMES.sendEmail, {
   connection,
+  defaultJobOptions: DEFAULT_JOB_OPTIONS,
 });
 const sendEmailWorker = new Worker<SendEmailJobData>(
   QUEUE_NAMES.sendEmail,
@@ -53,6 +64,7 @@ const sendEmailWorker = new Worker<SendEmailJobData>(
 
 const crawlSourceQueue = new Queue<CrawlSourceJobData>(QUEUE_NAMES.crawlSource, {
   connection,
+  defaultJobOptions: DEFAULT_JOB_OPTIONS,
 });
 const crawlSourceWorker = new Worker<CrawlSourceJobData>(
   QUEUE_NAMES.crawlSource,
@@ -64,6 +76,7 @@ const crawlSchedulerQueue = new Queue<CrawlSchedulerJobData>(
   QUEUE_NAMES.crawlScheduler,
   {
     connection,
+    defaultJobOptions: DEFAULT_JOB_OPTIONS,
   },
 );
 const crawlSchedulerWorker = new Worker<CrawlSchedulerJobData>(
@@ -76,6 +89,7 @@ const alertSpikeCheckQueue = new Queue<AlertSpikeCheckJobData>(
   QUEUE_NAMES.alertSpikeCheck,
   {
     connection,
+    defaultJobOptions: DEFAULT_JOB_OPTIONS,
   },
 );
 const alertSpikeCheckWorker = new Worker<AlertSpikeCheckJobData>(
@@ -86,7 +100,7 @@ const alertSpikeCheckWorker = new Worker<AlertSpikeCheckJobData>(
 
 const alertSentimentShiftCheckQueue = new Queue<AlertSentimentShiftCheckJobData>(
   QUEUE_NAMES.alertSentimentShiftCheck,
-  { connection },
+  { connection, defaultJobOptions: DEFAULT_JOB_OPTIONS },
 );
 const alertSentimentShiftCheckWorker = new Worker<AlertSentimentShiftCheckJobData>(
   QUEUE_NAMES.alertSentimentShiftCheck,
@@ -96,7 +110,7 @@ const alertSentimentShiftCheckWorker = new Worker<AlertSentimentShiftCheckJobDat
 
 const alertEmergingTopicCheckQueue = new Queue<AlertEmergingTopicCheckJobData>(
   QUEUE_NAMES.alertEmergingTopicCheck,
-  { connection },
+  { connection, defaultJobOptions: DEFAULT_JOB_OPTIONS },
 );
 const alertEmergingTopicCheckWorker = new Worker<AlertEmergingTopicCheckJobData>(
   QUEUE_NAMES.alertEmergingTopicCheck,
@@ -106,7 +120,7 @@ const alertEmergingTopicCheckWorker = new Worker<AlertEmergingTopicCheckJobData>
 
 const alertCompetitorCheckQueue = new Queue<AlertCompetitorCheckJobData>(
   QUEUE_NAMES.alertCompetitorCheck,
-  { connection },
+  { connection, defaultJobOptions: DEFAULT_JOB_OPTIONS },
 );
 const alertCompetitorCheckWorker = new Worker<AlertCompetitorCheckJobData>(
   QUEUE_NAMES.alertCompetitorCheck,
@@ -114,7 +128,10 @@ const alertCompetitorCheckWorker = new Worker<AlertCompetitorCheckJobData>(
   { connection, concurrency: 1 },
 );
 
-const aiEnrichQueue = new Queue<AiEnrichJobData>(QUEUE_NAMES.aiEnrich, { connection });
+const aiEnrichQueue = new Queue<AiEnrichJobData>(QUEUE_NAMES.aiEnrich, {
+  connection,
+  defaultJobOptions: DEFAULT_JOB_OPTIONS,
+});
 const aiEnrichWorker = new Worker<AiEnrichJobData>(
   QUEUE_NAMES.aiEnrich,
   () => processAiEnrichJob(),
@@ -125,6 +142,7 @@ const insightGenerateQueue = new Queue<InsightGenerateJobData>(
   QUEUE_NAMES.insightGenerate,
   {
     connection,
+    defaultJobOptions: DEFAULT_JOB_OPTIONS,
   },
 );
 const insightGenerateWorker = new Worker<InsightGenerateJobData>(
@@ -137,6 +155,7 @@ const generateReportQueue = new Queue<GenerateReportJobData>(
   QUEUE_NAMES.generateReport,
   {
     connection,
+    defaultJobOptions: DEFAULT_JOB_OPTIONS,
   },
 );
 const generateReportWorker = new Worker<GenerateReportJobData>(
@@ -150,7 +169,7 @@ const generateReportWorker = new Worker<GenerateReportJobData>(
 
 const generateDigestQueue = new Queue<GenerateDigestJobData>(
   QUEUE_NAMES.generateDigest,
-  { connection },
+  { connection, defaultJobOptions: DEFAULT_JOB_OPTIONS },
 );
 const generateDigestWorker = new Worker<GenerateDigestJobData>(
   QUEUE_NAMES.generateDigest,
@@ -160,7 +179,7 @@ const generateDigestWorker = new Worker<GenerateDigestJobData>(
 
 const generateScheduledReportsQueue = new Queue<GenerateScheduledReportsJobData>(
   QUEUE_NAMES.generateScheduledReports,
-  { connection },
+  { connection, defaultJobOptions: DEFAULT_JOB_OPTIONS },
 );
 const generateScheduledReportsWorker = new Worker<GenerateScheduledReportsJobData>(
   QUEUE_NAMES.generateScheduledReports,
@@ -170,7 +189,7 @@ const generateScheduledReportsWorker = new Worker<GenerateScheduledReportsJobDat
 
 const enforceRetentionQueue = new Queue<EnforceRetentionJobData>(
   QUEUE_NAMES.enforceRetention,
-  { connection },
+  { connection, defaultJobOptions: DEFAULT_JOB_OPTIONS },
 );
 const enforceRetentionWorker = new Worker<EnforceRetentionJobData>(
   QUEUE_NAMES.enforceRetention,
@@ -180,7 +199,7 @@ const enforceRetentionWorker = new Worker<EnforceRetentionJobData>(
 
 const captureFeatureUsageQueue = new Queue<CaptureFeatureUsageJobData>(
   QUEUE_NAMES.captureFeatureUsage,
-  { connection },
+  { connection, defaultJobOptions: DEFAULT_JOB_OPTIONS },
 );
 const captureFeatureUsageWorker = new Worker<CaptureFeatureUsageJobData>(
   QUEUE_NAMES.captureFeatureUsage,
@@ -190,7 +209,7 @@ const captureFeatureUsageWorker = new Worker<CaptureFeatureUsageJobData>(
 
 const sendExecutiveBriefQueue = new Queue<SendExecutiveBriefJobData>(
   QUEUE_NAMES.sendExecutiveBrief,
-  { connection },
+  { connection, defaultJobOptions: DEFAULT_JOB_OPTIONS },
 );
 const sendExecutiveBriefWorker = new Worker<SendExecutiveBriefJobData>(
   QUEUE_NAMES.sendExecutiveBrief,
@@ -322,7 +341,13 @@ async function scheduleRepeatingJobs() {
 }
 
 console.log("Worker started. Listening for queued jobs…");
-void scheduleRepeatingJobs();
+// Never `void` a bare async call at module scope: an unhandled rejection
+// here (e.g. Redis not yet reachable at boot) would otherwise crash the
+// whole process — every already-started Worker along with it — over
+// what should be a recoverable, logged scheduler-registration failure.
+scheduleRepeatingJobs().catch((error) => {
+  console.error("[worker] failed to register repeating job schedulers:", error);
+});
 
 async function shutdown() {
   console.log("Worker shutting down…");

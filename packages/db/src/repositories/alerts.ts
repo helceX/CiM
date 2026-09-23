@@ -170,6 +170,6 @@ export async function listAlertEventsForRule(db: Db, alertRuleId: string, limit 
     .select()
     .from(alertEvents)
     .where(eq(alertEvents.alertRuleId, alertRuleId))
-    .orderBy(alertEvents.createdAt)
+    .orderBy(desc(alertEvents.createdAt))
     .limit(limit);
 }

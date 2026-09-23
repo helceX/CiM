@@ -2,16 +2,8 @@ import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { completeOnboardingSchema } from "@cim/validation";
 import { astToBooleanQuery, emptyQueryAst, expandSourceCategoriesToTypes } from "@cim/core";
-import type { Db } from "@cim/db";
-import { createProject, createMonitoringQueryWithPlanLimit, recordAuditLog, db, schema } from "@cim/db";
+import { createProjectWithMonitoringQuery, recordAuditLog, db, schema } from "@cim/db";
 import { requireOrgContext } from "@/lib/tenant";
-
-/** Thrown inside the transaction below to roll back createProject when the plan-limit check rejects the query — never surfaced past this file. */
-class PlanLimitRejected extends Error {
-  constructor(public readonly limit: number) {
-    super("plan limit rejected");
-  }
-}
 
 export async function POST(request: Request) {
   let context;
@@ -46,45 +38,23 @@ export async function POST(request: Request) {
   // packages/core/source-categories.ts.
   const sourceTypes = expandSourceCategoriesToTypes(input.sourceTypes);
 
-  // createProject and the plan-limit-checked query creation share one
-  // transaction (nested inside createMonitoringQueryWithPlanLimit's own
-  // via a Postgres SAVEPOINT — drizzle-orm/node-postgres supports this
-  // natively) so a plan-limit rejection rolls back the project too,
-  // instead of leaving an orphaned, query-less project behind on retry
-  // (e.g. a dropped response after a first successful submit).
-  let projectId: string;
-  try {
-    projectId = await db.transaction(async (tx) => {
-      const project = await createProject(tx as unknown as Db, context.organizationId, {
-        workspaceId: workspace.id,
-        name: input.projectName,
-      });
-
-      const result = await createMonitoringQueryWithPlanLimit(tx as unknown as Db, context.organizationId, {
-        projectId: project.id,
-        name: `${input.projectName} monitoring`,
-        queryAst: ast,
-        booleanQuery: astToBooleanQuery(ast),
-        sourceTypes,
-        trackingTarget: input.trackingTarget,
-      });
-      if (!result.ok) {
-        throw new PlanLimitRejected(result.limit);
-      }
-
-      return project.id;
-    });
-  } catch (err) {
-    if (err instanceof PlanLimitRejected) {
-      return NextResponse.json(
-        {
-          error: `Your plan allows up to ${err.limit} monitoring quer${err.limit === 1 ? "y" : "ies"}. Upgrade to add more.`,
-        },
-        { status: 409 },
-      );
-    }
-    throw err;
+  const result = await createProjectWithMonitoringQuery(db, context.organizationId, {
+    workspaceId: workspace.id,
+    projectName: input.projectName,
+    queryAst: ast,
+    booleanQuery: astToBooleanQuery(ast),
+    sourceTypes,
+    trackingTarget: input.trackingTarget,
+  });
+  if (!result.ok) {
+    return NextResponse.json(
+      {
+        error: `Your plan allows up to ${result.limit} monitoring quer${result.limit === 1 ? "y" : "ies"}. Upgrade to add more.`,
+      },
+      { status: 409 },
+    );
   }
+  const { projectId } = result;
 
   await recordAuditLog(db, context.organizationId, {
     actorUserId: context.userId,

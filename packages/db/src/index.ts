@@ -28,4 +28,5 @@ export * from "./repositories/tags";
 export * from "./repositories/mention-comments";
 export * from "./repositories/api-keys";
 export * from "./repositories/billing";
+export * from "./repositories/onboarding";
 export * from "./search/postgres-search-index";

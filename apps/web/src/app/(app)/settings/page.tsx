@@ -70,12 +70,21 @@ export default async function SettingsPage() {
       <UsageSection plan={subscription.plan} usage={usage} />
 
       <ApiKeysSection
-        apiKeys={apiKeys.map((key) => ({
-          ...key,
-          lastUsedAt: key.lastUsedAt ? key.lastUsedAt.toISOString() : null,
-          revokedAt: key.revokedAt ? key.revokedAt.toISOString() : null,
-          createdAt: key.createdAt.toISOString(),
-        }))}
+        // Only ever sent to the browser when the viewer can manage keys —
+        // a "use client" component's props all reach the RSC payload
+        // regardless of what it renders, so a member without
+        // api_keys:manage must never receive the real list.
+        apiKeys={
+          canManageApiKeys
+            ? apiKeys.map((key) => ({
+                ...key,
+                lastUsedAt: key.lastUsedAt ? key.lastUsedAt.toISOString() : null,
+                revokedAt: key.revokedAt ? key.revokedAt.toISOString() : null,
+                createdAt: key.createdAt.toISOString(),
+              }))
+            : []
+        }
+        apiKeyCount={apiKeys.length}
         canManageApiKeys={canManageApiKeys}
       />
 

@@ -44,6 +44,21 @@ export async function POST(request: Request) {
     );
   }
 
+  // packages/validation/src/api-keys.ts's schema only checks that each
+  // requested scope is a real Permission, not that *this user's own
+  // role* actually holds it — without this, a role granted nothing but
+  // api_keys:manage could mint a key scoped to org:manage_billing or any
+  // other permission it doesn't itself have (privilege escalation).
+  const disallowedScopes = parsed.data.scopes.filter(
+    (scope) => !context.permissions.includes(scope),
+  );
+  if (disallowedScopes.length > 0) {
+    return NextResponse.json(
+      { error: `You can't grant scopes you don't have: ${disallowedScopes.join(", ")}` },
+      { status: 403 },
+    );
+  }
+
   const { rawKey, summary } = await createApiKey(db, context.organizationId, {
     name: parsed.data.name,
     scopes: parsed.data.scopes,

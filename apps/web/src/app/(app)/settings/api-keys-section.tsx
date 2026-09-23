@@ -32,9 +32,17 @@ const SCOPE_OPTIONS: { value: Permission; label: string }[] = [
  */
 export function ApiKeysSection({
   apiKeys,
+  apiKeyCount,
   canManageApiKeys,
 }: {
+  // Only ever populated when canManageApiKeys is true — a "use client"
+  // component's props are serialized into the page's RSC payload
+  // regardless of what it renders, so the full key list (names, scopes,
+  // who created each one) must never reach the browser for a member who
+  // can't manage keys. apiKeyCount alone covers what the read-only view
+  // below actually shows.
   apiKeys: ApiKeySummary[];
+  apiKeyCount: number;
   canManageApiKeys: boolean;
 }) {
   const router = useRouter();
@@ -57,7 +65,7 @@ export function ApiKeysSection({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, scopes }),
       });
-      const data = await response.json();
+      const data = await response.json().catch(() => ({}));
       if (!response.ok) {
         setError(data.error ?? "Something went wrong. Please try again.");
         return;
@@ -72,7 +80,13 @@ export function ApiKeysSection({
   }
 
   async function handleRevoke(id: string) {
-    await fetch(`/api/organizations/api-keys/${id}`, { method: "DELETE" });
+    setError(null);
+    const response = await fetch(`/api/organizations/api-keys/${id}`, { method: "DELETE" });
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      setError(data.error ?? "Something went wrong. Please try again.");
+      return;
+    }
     router.refresh();
   }
 
@@ -81,7 +95,7 @@ export function ApiKeysSection({
       <section>
         <h2 className="text-sm font-semibold text-foreground">API keys</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          {apiKeys.length} key{apiKeys.length === 1 ? "" : "s"} configured.
+          {apiKeyCount} key{apiKeyCount === 1 ? "" : "s"} configured.
         </p>
       </section>
     );

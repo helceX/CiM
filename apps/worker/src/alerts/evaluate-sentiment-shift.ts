@@ -23,22 +23,23 @@ export async function evaluateSentimentShiftAlerts(
   const rules = await getActiveSentimentShiftAlertRules(db);
 
   for (const rule of rules) {
-    const stats = await getQuerySentimentShiftStats(db, rule.queryId);
-    if (stats.currentClassifiedCount < MIN_CLASSIFIED_COUNT) continue;
-
-    const shift = stats.currentNegativeShare - stats.baselineNegativeShare;
-    if (shift < SHIFT_THRESHOLD) continue;
-
-    const baselineComparison =
-      stats.baselineClassifiedCount > 0
-        ? `vs. ~${Math.round(stats.baselineNegativeShare * 100)}% over the trailing week`
-        : `with no classified baseline over the trailing week`;
-
     // Same per-rule isolation as generate-insight.ts's cross-tenant
     // fan-out — this loop spans every organization's active rules in
-    // one tick, so one rule's failure must not skip every other
+    // one tick, so one rule's failure (including the stats lookup
+    // itself, not just fireAlert) must not skip every other
     // organization's rule still left in this tick.
     try {
+      const stats = await getQuerySentimentShiftStats(db, rule.queryId);
+      if (stats.currentClassifiedCount < MIN_CLASSIFIED_COUNT) continue;
+
+      const shift = stats.currentNegativeShare - stats.baselineNegativeShare;
+      if (shift < SHIFT_THRESHOLD) continue;
+
+      const baselineComparison =
+        stats.baselineClassifiedCount > 0
+          ? `vs. ~${Math.round(stats.baselineNegativeShare * 100)}% over the trailing week`
+          : `with no classified baseline over the trailing week`;
+
       await fireAlert(emailQueue, rule, {
         triggerSummary:
           `Negative sentiment for "${rule.name}" is up to ${Math.round(stats.currentNegativeShare * 100)}% ` +
@@ -47,7 +48,7 @@ export async function evaluateSentimentShiftAlerts(
       });
     } catch (error) {
       console.error(
-        `[worker] fireAlert failed for sentiment-shift rule ${rule.id} ("${rule.name}"):`,
+        `[worker] evaluateSentimentShiftAlerts failed for rule ${rule.id} ("${rule.name}"):`,
         error,
       );
     }

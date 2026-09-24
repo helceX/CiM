@@ -18,16 +18,17 @@ export async function evaluateCompetitorAlerts(
   const rules = await getActiveCompetitorAlertRules(db);
 
   for (const rule of rules) {
-    const stats = await getCompetitorAlertStats(db, rule.projectId, rule.queryId);
-    if (!stats) continue;
-    if (stats.competitorCount < MIN_ABSOLUTE_COUNT) continue;
-    if (stats.competitorCount <= stats.companyCount) continue;
-
     // Same per-rule isolation as generate-insight.ts's cross-tenant
     // fan-out — this loop spans every organization's active rules in
-    // one tick, so one rule's failure must not skip every other
+    // one tick, so one rule's failure (including the stats lookup
+    // itself, not just fireAlert) must not skip every other
     // organization's rule still left in this tick.
     try {
+      const stats = await getCompetitorAlertStats(db, rule.projectId, rule.queryId);
+      if (!stats) continue;
+      if (stats.competitorCount < MIN_ABSOLUTE_COUNT) continue;
+      if (stats.competitorCount <= stats.companyCount) continue;
+
       await fireAlert(emailQueue, rule, {
         triggerSummary:
           `Competitor "${stats.competitorQueryName}" had ${stats.competitorCount} mention${stats.competitorCount === 1 ? "" : "s"} ` +
@@ -36,7 +37,7 @@ export async function evaluateCompetitorAlerts(
       });
     } catch (error) {
       console.error(
-        `[worker] fireAlert failed for competitor rule ${rule.id} ("${rule.name}"):`,
+        `[worker] evaluateCompetitorAlerts failed for rule ${rule.id} ("${rule.name}"):`,
         error,
       );
     }

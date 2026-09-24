@@ -384,24 +384,25 @@ export async function getCompetitorAlertStats(
 
   const since = sql`now() - interval '24 hours'`;
 
-  const [competitorRow] = await db
-    .select({ count: count(mentions.id) })
-    .from(mentions)
-    .where(and(eq(mentions.queryId, competitorQueryId), gte(mentions.createdAt, since)));
-
-  const [companyRow] = await db
-    .select({ count: count(mentions.id) })
-    .from(mentions)
-    .innerJoin(monitoringQueries, eq(monitoringQueries.id, mentions.queryId))
-    .where(
-      and(
-        eq(monitoringQueries.projectId, projectId),
-        eq(monitoringQueries.trackingTarget, "company"),
-        eq(monitoringQueries.status, "active"),
-        isNull(monitoringQueries.deletedAt),
-        gte(mentions.createdAt, since),
+  const [[competitorRow], [companyRow]] = await Promise.all([
+    db
+      .select({ count: count(mentions.id) })
+      .from(mentions)
+      .where(and(eq(mentions.queryId, competitorQueryId), gte(mentions.createdAt, since))),
+    db
+      .select({ count: count(mentions.id) })
+      .from(mentions)
+      .innerJoin(monitoringQueries, eq(monitoringQueries.id, mentions.queryId))
+      .where(
+        and(
+          eq(monitoringQueries.projectId, projectId),
+          eq(monitoringQueries.trackingTarget, "company"),
+          eq(monitoringQueries.status, "active"),
+          isNull(monitoringQueries.deletedAt),
+          gte(mentions.createdAt, since),
+        ),
       ),
-    );
+  ]);
 
   return {
     competitorQueryName: competitorQuery.name,

@@ -24,25 +24,26 @@ export async function evaluateEmergingTopicAlerts(
   const rules = await getActiveEmergingTopicAlertRules(db);
 
   for (const rule of rules) {
-    const stats = await getEmergingTopicStats(db, rule.queryId);
-
-    const emerging = stats.find(
-      (stat) =>
-        stat.currentCount >= MIN_ABSOLUTE_COUNT &&
-        stat.currentCount > stat.baselineAvgPerDay * BASELINE_MULTIPLIER,
-    );
-    if (!emerging) continue;
-
-    const comparison =
-      emerging.baselineAvgPerDay > 0
-        ? `~${emerging.baselineAvgPerDay.toFixed(1)}/day over the trailing week`
-        : `no mentions of it over the trailing week`;
-
     // Same per-rule isolation as generate-insight.ts's cross-tenant
     // fan-out — this loop spans every organization's active rules in
-    // one tick, so one rule's failure must not skip every other
+    // one tick, so one rule's failure (including the stats lookup
+    // itself, not just fireAlert) must not skip every other
     // organization's rule still left in this tick.
     try {
+      const stats = await getEmergingTopicStats(db, rule.queryId);
+
+      const emerging = stats.find(
+        (stat) =>
+          stat.currentCount >= MIN_ABSOLUTE_COUNT &&
+          stat.currentCount > stat.baselineAvgPerDay * BASELINE_MULTIPLIER,
+      );
+      if (!emerging) continue;
+
+      const comparison =
+        emerging.baselineAvgPerDay > 0
+          ? `~${emerging.baselineAvgPerDay.toFixed(1)}/day over the trailing week`
+          : `no mentions of it over the trailing week`;
+
       await fireAlert(emailQueue, rule, {
         triggerSummary:
           `Emerging topic for "${rule.name}": "${emerging.topicName}" is up to ` +
@@ -52,7 +53,7 @@ export async function evaluateEmergingTopicAlerts(
       });
     } catch (error) {
       console.error(
-        `[worker] fireAlert failed for emerging-topic rule ${rule.id} ("${rule.name}"):`,
+        `[worker] evaluateEmergingTopicAlerts failed for rule ${rule.id} ("${rule.name}"):`,
         error,
       );
     }

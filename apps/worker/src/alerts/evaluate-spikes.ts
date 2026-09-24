@@ -16,33 +16,33 @@ export async function evaluateSpikeAlerts(emailQueue: Queue<SendEmailJobData>): 
   const rules = await getActiveSpikeAlertRules(db);
 
   for (const rule of rules) {
-    const stats = await getQuerySpikeStats(db, rule.queryId);
-    if (stats.currentHourCount < MIN_ABSOLUTE_COUNT) continue;
-
-    const threshold = Math.max(
-      stats.baselineAvg + STDDEV_MULTIPLIER * stats.baselineStdDev,
-      stats.baselineAvg * 3,
-    );
-    if (stats.currentHourCount <= threshold) continue;
-
-    const multiplier = stats.baselineAvg > 0 ? stats.currentHourCount / stats.baselineAvg : null;
-    const comparison =
-      multiplier !== null
-        ? `${multiplier.toFixed(1)}x the trailing 24-hour baseline (~${stats.baselineAvg.toFixed(1)}/hr)`
-        : `a baseline of ~0/hr over the trailing 24 hours`;
-
     // Same per-rule isolation as generate-insight.ts's cross-tenant
     // fan-out — this loop spans every organization's active spike
-    // rules in one tick, so one rule's failure (e.g. queuing its alert
-    // email) must not skip every other organization's rule still left
-    // in this tick.
+    // rules in one tick, so one rule's failure (including the stats
+    // lookup itself, not just queuing its alert email) must not skip
+    // every other organization's rule still left in this tick.
     try {
+      const stats = await getQuerySpikeStats(db, rule.queryId);
+      if (stats.currentHourCount < MIN_ABSOLUTE_COUNT) continue;
+
+      const threshold = Math.max(
+        stats.baselineAvg + STDDEV_MULTIPLIER * stats.baselineStdDev,
+        stats.baselineAvg * 3,
+      );
+      if (stats.currentHourCount <= threshold) continue;
+
+      const multiplier = stats.baselineAvg > 0 ? stats.currentHourCount / stats.baselineAvg : null;
+      const comparison =
+        multiplier !== null
+          ? `${multiplier.toFixed(1)}x the trailing 24-hour baseline (~${stats.baselineAvg.toFixed(1)}/hr)`
+          : `a baseline of ~0/hr over the trailing 24 hours`;
+
       await fireAlert(emailQueue, rule, {
         triggerSummary: `Mention volume for "${rule.name}" spiked to ${stats.currentHourCount} in the last hour — ${comparison}.`,
         mentionIds: [],
       });
     } catch (error) {
-      console.error(`[worker] fireAlert failed for spike rule ${rule.id} ("${rule.name}"):`, error);
+      console.error(`[worker] evaluateSpikeAlerts failed for rule ${rule.id} ("${rule.name}"):`, error);
     }
   }
 }

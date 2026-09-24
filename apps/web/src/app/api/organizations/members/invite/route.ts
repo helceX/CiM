@@ -3,7 +3,7 @@ import { inviteMemberSchema } from "@cim/validation";
 import { generateRawToken, hashToken } from "@cim/core";
 import { db, findUserByEmail, inviteMember, recordAuditLog } from "@cim/db";
 import { getEnv } from "@cim/config";
-import { requirePermission, resolvePermissionsForRoleString } from "@/lib/tenant";
+import { permissionsBeyondCeiling, requirePermission, resolvePermissionsForRoleString } from "@/lib/tenant";
 import { getCurrentUser } from "@/lib/session";
 import { invitationEmailBody, sendEmail } from "@/lib/email";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -84,9 +84,12 @@ export async function POST(request: Request) {
   if (!rolePermissions) {
     return NextResponse.json({ error: "That role doesn't exist" }, { status: 400 });
   }
-  if (!rolePermissions.every((permission) => context.permissions.includes(permission))) {
+  const disallowedPermissions = permissionsBeyondCeiling(context.permissions, rolePermissions);
+  if (disallowedPermissions.length > 0) {
     return NextResponse.json(
-      { error: "You can't invite someone to a role with permissions you don't have" },
+      {
+        error: `You can't invite someone to a role with permissions you don't have: ${disallowedPermissions.join(", ")}`,
+      },
       { status: 403 },
     );
   }

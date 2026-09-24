@@ -21,6 +21,8 @@ const sendEmail = vi.fn();
 vi.mock("@/lib/tenant", () => ({
   requirePermission: (...args: unknown[]) => requirePermission(...args),
   resolvePermissionsForRoleString: (...args: unknown[]) => resolvePermissionsForRoleString(...args),
+  permissionsBeyondCeiling: (caller: string[], requested: string[]) =>
+    requested.filter((permission) => !caller.includes(permission)),
 }));
 vi.mock("@/lib/session", () => ({
   getCurrentUser: (...args: unknown[]) => getCurrentUser(...args),

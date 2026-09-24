@@ -125,6 +125,22 @@ export async function resolvePermissionsForRoleString(
 }
 
 /**
+ * The "you can't grant/modify a permission you don't hold yourself"
+ * ceiling invariant — every place a caller can shape another actor's
+ * permission set (create/edit a custom role, invite a member to a role,
+ * re-role a member) enforces this same check; centralized so it can't
+ * drift or be left out of a future call site. Returns the permissions in
+ * `requested` that `callerPermissions` doesn't include — empty means the
+ * ceiling holds.
+ */
+export function permissionsBeyondCeiling(
+  callerPermissions: readonly Permission[],
+  requested: readonly Permission[],
+): Permission[] {
+  return requested.filter((permission) => !callerPermissions.includes(permission));
+}
+
+/**
  * docs/architecture/SECURITY.md §83 "same authorization path as
  * session-based requests" — an API key's scope is checked against the
  * exact same `Permission` enum a session role is checked against

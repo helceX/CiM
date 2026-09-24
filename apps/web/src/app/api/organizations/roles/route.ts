@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createCustomRoleSchema } from "@cim/validation";
 import { createCustomRole, db, listCustomRolesForOrganization, recordAuditLog } from "@cim/db";
-import { requirePermission } from "@/lib/tenant";
+import { permissionsBeyondCeiling, requirePermission } from "@/lib/tenant";
 
 function forbiddenOrUnauthenticated(error: unknown) {
   if (error instanceof Error && error.message === "FORBIDDEN") {
@@ -47,9 +47,7 @@ export async function POST(request: Request) {
   // beyond their own, or the assignment step (re-role/invite, which
   // enforce the same ceiling) is the only thing standing between
   // org:manage_members alone and a role that grants everything.
-  const disallowedPermissions = parsed.data.permissions.filter(
-    (permission) => !context.permissions.includes(permission),
-  );
+  const disallowedPermissions = permissionsBeyondCeiling(context.permissions, parsed.data.permissions);
   if (disallowedPermissions.length > 0) {
     return NextResponse.json(
       { error: `You can't grant permissions you don't have: ${disallowedPermissions.join(", ")}` },

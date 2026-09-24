@@ -16,6 +16,8 @@ const recordAuditLog = vi.fn();
 
 vi.mock("@/lib/tenant", () => ({
   requirePermission: (...args: unknown[]) => requirePermission(...args),
+  permissionsBeyondCeiling: (caller: string[], requested: string[]) =>
+    requested.filter((permission) => !caller.includes(permission)),
 }));
 vi.mock("@cim/db", () => ({
   db: {},

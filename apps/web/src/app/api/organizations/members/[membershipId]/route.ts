@@ -7,7 +7,7 @@ import {
   revokeMembership,
   updateMemberRole,
 } from "@cim/db";
-import { requirePermission, resolvePermissionsForRoleString } from "@/lib/tenant";
+import { permissionsBeyondCeiling, requirePermission, resolvePermissionsForRoleString } from "@/lib/tenant";
 
 function forbiddenOrUnauthenticated(error: unknown) {
   if (error instanceof Error && error.message === "FORBIDDEN") {
@@ -62,9 +62,10 @@ export async function PATCH(
   if (!rolePermissions) {
     return NextResponse.json({ error: "That role doesn't exist" }, { status: 400 });
   }
-  if (!rolePermissions.every((permission) => context.permissions.includes(permission))) {
+  const disallowedPermissions = permissionsBeyondCeiling(context.permissions, rolePermissions);
+  if (disallowedPermissions.length > 0) {
     return NextResponse.json(
-      { error: "You can't grant a role with permissions you don't have" },
+      { error: `You can't grant a role with permissions you don't have: ${disallowedPermissions.join(", ")}` },
       { status: 403 },
     );
   }

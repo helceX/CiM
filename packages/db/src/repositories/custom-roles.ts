@@ -66,17 +66,39 @@ export async function createCustomRole(
     .limit(1);
   if (existing) return { ok: false, reason: "name_taken" };
 
+  // The SELECT above only rules out a name that was already taken —
+  // two requests racing the same new name both pass it, so the actual
+  // guarantee is `custom_roles_org_name_lower_uidx`. Same
+  // check-then-onConflictDoNothing shape as tags.ts's findOrCreateTag,
+  // so the loser gets the intended `name_taken` result instead of an
+  // unhandled unique-violation 500.
   const [role] = await db
     .insert(customRoles)
     .values({ organizationId, name: input.name, permissions: input.permissions })
+    .onConflictDoNothing()
     .returning();
-  if (!role) throw new Error("failed to create custom role");
+  if (!role) return { ok: false, reason: "name_taken" };
   return { ok: true, role };
 }
 
 export type UpdateCustomRoleResult =
   | { ok: true; role: CustomRole }
   | { ok: false; reason: "not_found" | "name_taken" };
+
+/** node-postgres surfaces a unique-violation as an error with this `code` (PostgreSQL error class 23). */
+const POSTGRES_UNIQUE_VIOLATION = "23505";
+
+/**
+ * drizzle-orm wraps the raw node-postgres error in its own
+ * DrizzleQueryError, so the `code` node-postgres set is one level down
+ * at `.cause`, not on the error thrown from `await db.update(...)`
+ * itself — checking only the top-level error would never match.
+ */
+function isPostgresUniqueViolation(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  if ("code" in error && error.code === POSTGRES_UNIQUE_VIOLATION) return true;
+  return "cause" in error && isPostgresUniqueViolation(error.cause);
+}
 
 export async function updateCustomRole(
   db: Db,
@@ -95,13 +117,23 @@ export async function updateCustomRole(
     .limit(1);
   if (existing) return { ok: false, reason: "name_taken" };
 
-  const [role] = await db
-    .update(customRoles)
-    .set({ name: input.name, permissions: input.permissions, updatedAt: new Date() })
-    .where(and(eq(customRoles.id, roleId), eq(customRoles.organizationId, organizationId)))
-    .returning();
-  if (!role) return { ok: false, reason: "not_found" };
-  return { ok: true, role };
+  // Same race as createCustomRole above, but an UPDATE has no
+  // onConflictDoNothing to fall back on — two renames racing to the
+  // same new name both pass the SELECT, so the loser must catch
+  // `custom_roles_org_name_lower_uidx`'s violation directly rather than
+  // let it surface as an unhandled 500.
+  try {
+    const [role] = await db
+      .update(customRoles)
+      .set({ name: input.name, permissions: input.permissions, updatedAt: new Date() })
+      .where(and(eq(customRoles.id, roleId), eq(customRoles.organizationId, organizationId)))
+      .returning();
+    if (!role) return { ok: false, reason: "not_found" };
+    return { ok: true, role };
+  } catch (error) {
+    if (isPostgresUniqueViolation(error)) return { ok: false, reason: "name_taken" };
+    throw error;
+  }
 }
 
 export type DeleteCustomRoleResult = "ok" | "not_found" | "in_use";

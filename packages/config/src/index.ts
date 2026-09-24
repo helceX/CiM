@@ -43,6 +43,22 @@ const envSchema = z.object({
   // (packages/reports PDF rendering). Unset lets Playwright resolve it
   // the normal way; some environments pin a specific revision path.
   PLAYWRIGHT_CHROMIUM_PATH: z.string().optional(),
+}).check((ctx) => {
+  // getAIProvider (packages/ai) throws synchronously when AI_PROVIDER is
+  // "anthropic" without AI_API_KEY — most callers (apps/web/src/app/api/
+  // monitoring/preview, .../assistant/ask) don't wrap that call in
+  // try/catch, since it's meant to be a startup-time misconfiguration,
+  // not a per-request failure mode. Catching it here means every process
+  // fails loudly at boot instead of only the first request that happens
+  // to touch an AI-backed route.
+  if (ctx.value.AI_PROVIDER === "anthropic" && !ctx.value.AI_API_KEY) {
+    ctx.issues.push({
+      code: "custom",
+      message: "AI_API_KEY is required when AI_PROVIDER is \"anthropic\"",
+      path: ["AI_API_KEY"],
+      input: ctx.value.AI_API_KEY,
+    });
+  }
 });
 
 export type Env = z.infer<typeof envSchema>;

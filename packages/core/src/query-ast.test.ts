@@ -23,6 +23,43 @@ describe("query AST", () => {
     expect(parsed.exclude).toContain("job posting");
   });
 
+  it("round-trips a phrase containing a literal double-quote without corrupting the AST", () => {
+    const ast = {
+      include: [],
+      exclude: [],
+      exactPhrases: ['Say "no" to spam'],
+    };
+    const boolean = astToBooleanQuery(ast);
+    const parsed = parseBooleanQuery(boolean);
+    expect(parsed).toEqual(ast);
+  });
+
+  it("round-trips a multi-word exclude term containing a literal double-quote and backslash", () => {
+    const ast = {
+      include: [],
+      exclude: ['C:\\Users\\"quoted"\\path spam'],
+      exactPhrases: [],
+    };
+    const boolean = astToBooleanQuery(ast);
+    const parsed = parseBooleanQuery(boolean);
+    expect(parsed).toEqual(ast);
+  });
+
+  it("does not let a leading-quote include term swallow a later term while parsing", () => {
+    const ast = {
+      include: ['"leading-quote term', "Startup"],
+      exclude: [],
+      exactPhrases: ["a real exact phrase"],
+    };
+    const boolean = astToBooleanQuery(ast);
+    const parsed = parseBooleanQuery(boolean);
+    // The leading-quote term is forced into exactPhrases on reparse (the
+    // one case quoteIfNeeded must force-quote), but it must not consume
+    // any other term's text along the way.
+    expect(parsed.include).toContain("Startup");
+    expect(parsed.exactPhrases).toContain("a real exact phrase");
+  });
+
   it("matches include terms case-insensitively with Turkish folding", () => {
     const ast = { include: ["İstanbul"], exclude: [], exactPhrases: [] };
     expect(matchesText(ast, "the news mentions istanbul today")).toBe(true);

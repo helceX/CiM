@@ -98,8 +98,15 @@ export const articles = pgTable(
   },
   (table) => [
     index("articles_source_idx").on(table.sourceId),
-    index("articles_content_hash_idx").on(table.contentHash),
-    index("articles_canonical_url_idx").on(table.canonicalUrl),
+    // Unique, not a plain index — findExistingArticle/insertArticle's
+    // select-then-insert dedup check (packages/ingestion/src/pipeline.ts's
+    // "never creates a duplicate Mention" claim) had no DB-level
+    // enforcement behind it, only this application-level check, leaving a
+    // TOCTOU race under concurrent crawl-job execution (crawlSource runs
+    // at concurrency:5, and a stalled-job requeue can dispatch the same
+    // source's job twice). insertArticle now backs its upsert with these.
+    uniqueIndex("articles_content_hash_uidx").on(table.contentHash),
+    uniqueIndex("articles_canonical_url_uidx").on(table.canonicalUrl),
     index("articles_search_vector_idx").using("gin", table.searchVector),
     index("articles_title_trgm_idx").using("gin", sql`${table.title} gin_trgm_ops`),
   ],

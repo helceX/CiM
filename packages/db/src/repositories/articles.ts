@@ -1,4 +1,4 @@
-import { desc, eq, gte, or, sql } from "drizzle-orm";
+import { eq, or, sql } from "drizzle-orm";
 import { turkishFold } from "@cim/core";
 import type { Db } from "../client";
 import { articles, sources } from "../schema/content";
@@ -43,9 +43,25 @@ export async function insertArticle(
   const [article] = await db
     .insert(articles)
     .values({ ...input, searchVector: sql`to_tsvector('simple', ${folded})` })
+    .onConflictDoNothing()
     .returning();
-  if (!article) throw new Error("Failed to insert article");
-  return article;
+  if (article) return article;
+
+  // Race: findExistingArticle (the caller, pipeline.ts's ingestSource)
+  // found nothing, but another concurrent crawl of the same source
+  // (crawlSource runs at concurrency:5; a stalled-job requeue can also
+  // dispatch the same source's job twice) inserted this exact
+  // canonicalUrl/contentHash first — articles_content_hash_uidx/
+  // articles_canonical_url_uidx caught it. Return that row rather than
+  // throwing, so this stays the upsert pipeline.ts's own docstring
+  // promises ("re-running over the same fetched item upserts the same
+  // Article ... never creates a duplicate Mention").
+  const existing = await findExistingArticle(db, {
+    canonicalUrl: input.canonicalUrl,
+    contentHash: input.contentHash,
+  });
+  if (!existing) throw new Error("Failed to insert article");
+  return existing;
 }
 
 /**
@@ -56,6 +72,16 @@ export async function insertArticle(
  * ADR-002) that a saved query will actually run against at scale.
  */
 export async function listRecentArticlesForPreview(db: Db, days = 30, limit = 500) {
+  // WebConnector always sets publishedAt: null (no reliable publish date
+  // on a scraped page), and ApiConnector does too whenever the upstream
+  // item omits one — a plain `gte(publishedAt, ...)` treats those as
+  // unknown/false and excludes them from every preview permanently,
+  // regardless of the days window, even though the real ingestion
+  // pipeline (pipeline.ts) doesn't filter on publishedAt at all and
+  // would happily turn the same article into a real Mention. Falling
+  // back to createdAt (ingestion time, never null) keeps "recent" from
+  // silently meaning "recent AND from a source that reports dates."
+  const recency = sql`coalesce(${articles.publishedAt}, ${articles.createdAt})`;
   return db
     .select({
       id: articles.id,
@@ -66,7 +92,7 @@ export async function listRecentArticlesForPreview(db: Db, days = 30, limit = 50
     })
     .from(articles)
     .innerJoin(sources, eq(sources.id, articles.sourceId))
-    .where(gte(articles.publishedAt, sql`now() - (${days}::text || ' days')::interval`))
-    .orderBy(desc(articles.publishedAt))
+    .where(sql`${recency} >= now() - (${days}::text || ' days')::interval`)
+    .orderBy(sql`${recency} desc`)
     .limit(limit);
 }

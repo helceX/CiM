@@ -169,6 +169,13 @@
       "when": 1790194196749,
       "tag": "0023_curved_wendigo",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1790260175825,
+      "tag": "0024_dear_marrow",
+      "breakpoints": true
     }
   ]
 }

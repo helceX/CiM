@@ -45,9 +45,22 @@ describe("checkRateLimit (integration)", () => {
 });
 
 describe("clientIpFrom", () => {
-  it("takes the first hop from X-Forwarded-For, trimmed", () => {
+  it("takes the last hop from X-Forwarded-For, trimmed — the one the trusted CDN/LB appended", () => {
+    // docs/deployment/DEPLOYMENT.md: exactly one trusted proxy (CDN/LB)
+    // sits in front of apps/web. That hop appends the connecting IP it
+    // actually saw to the *end* of the header; everything before it is
+    // whatever the client itself already sent, which is attacker-
+    // controlled — trusting the first hop instead let an attacker rotate
+    // X-Forwarded-For per request to dodge rate limiting entirely.
     const request = new Request("https://example.test", {
-      headers: { "x-forwarded-for": " 203.0.113.5 , 10.0.0.1" },
+      headers: { "x-forwarded-for": " 203.0.113.5 , 10.0.0.1 " },
+    });
+    expect(clientIpFrom(request)).toBe("10.0.0.1");
+  });
+
+  it("returns the only hop when there's no proxy chain to spoof", () => {
+    const request = new Request("https://example.test", {
+      headers: { "x-forwarded-for": "203.0.113.5" },
     });
     expect(clientIpFrom(request)).toBe("203.0.113.5");
   });

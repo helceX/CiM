@@ -26,7 +26,20 @@ export async function checkRateLimit(
   }
 }
 
+/**
+ * docs/deployment/DEPLOYMENT.md's topology puts exactly one trusted hop
+ * (the CDN/LB) directly in front of apps/web — that hop appends the
+ * connecting IP it actually saw to the *end* of X-Forwarded-For, so the
+ * last entry is the one hop nothing upstream of it could have forged.
+ * The first entry is whatever the original request already carried,
+ * which any raw HTTP client controls — trusting it (the previous
+ * behavior here) let an attacker rotate X-Forwarded-For per request to
+ * get a fresh rate-limit bucket every time on login/register/password
+ * reset, defeating the whole point of rate-limiting those endpoints.
+ */
 export function clientIpFrom(request: Request): string {
   const forwardedFor = request.headers.get("x-forwarded-for");
-  return forwardedFor?.split(",")[0]?.trim() ?? "unknown";
+  if (!forwardedFor) return "unknown";
+  const hops = forwardedFor.split(",").map((hop) => hop.trim());
+  return hops[hops.length - 1] || "unknown";
 }

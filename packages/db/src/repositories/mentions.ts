@@ -136,7 +136,14 @@ function mentionFiltersToWhere(
       : filters.sentiment
         ? eq(mentions.sentiment, filters.sentiment)
         : undefined,
-    filters.sinceDays != null
+    // Number.isFinite, not just != null — sinceDays reaches here straight
+    // from a URL query param (apps/web mentions/analytics/dashboard pages
+    // all do `Number(param)` with no validation of the result), so a
+    // non-numeric value like ?since=abc produces NaN, which is `!= null`
+    // and would otherwise interpolate as `('NaN days')::interval` — a
+    // string Postgres rejects, crashing the whole page instead of just
+    // ignoring the bad filter.
+    filters.sinceDays != null && Number.isFinite(filters.sinceDays)
       ? gte(
           mentions.createdAt,
           sql`now() - (${filters.sinceDays}::text || ' days')::interval`,

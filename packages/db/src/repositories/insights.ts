@@ -125,6 +125,11 @@ export async function listRecentMentionsForAssistant(
       and(
         eq(mentions.organizationId, organizationId),
         options.projectId ? eq(mentions.projectId, options.projectId) : undefined,
+        // Same "already triaged, don't resurface it" exclusion
+        // mentionFiltersToWhere applies by default — a mention the user
+        // marked irrelevant/duplicate must never come back as evidence in
+        // an assistant answer, contradicting the feedback they just gave.
+        sql`${mentions.status} != 'archived'`,
       ),
     )
     .orderBy(desc(mentions.createdAt))

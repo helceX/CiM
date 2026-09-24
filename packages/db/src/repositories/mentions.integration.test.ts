@@ -328,6 +328,20 @@ describe("mentions repository (integration)", () => {
     }
   });
 
+  it("ignores a non-numeric sinceDays instead of crashing on an invalid SQL interval", async () => {
+    // Regression: apps/web/(app)/mentions/page.tsx builds sinceDays via
+    // `Number(param)` with no validation, so ?since=abc reaches this
+    // filter as NaN — `!= null` is true for NaN, so a naive check would
+    // interpolate `('NaN days')::interval`, which Postgres rejects.
+    const result = await listMentionsFiltered(
+      db,
+      organizationId,
+      { sinceDays: Number("not-a-number") },
+      { page: 1, pageSize: 50 },
+    );
+    expect(result.items).toBeDefined();
+  });
+
   it("breaks a created_at tie by id, not Postgres's unstable default row order", async () => {
     // Eight rows, not two: with only a couple of ties, an unpinned
     // Postgres row order can coincidentally match the id-descending

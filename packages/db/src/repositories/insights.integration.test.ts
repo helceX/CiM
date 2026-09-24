@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { db } from "../client";
-import { articles, sources } from "../schema/content";
+import { articles, mentions, sources } from "../schema/content";
 import { organizations, workspaces } from "../schema/index";
 import { createProject } from "./projects";
 import { createMonitoringQuery } from "./monitoring-queries";
@@ -207,6 +207,20 @@ describe("insights repository (integration)", () => {
     const otherOrgId = asOrganizationId("00000000-0000-0000-0000-000000000000");
     const rows = await listRecentMentionsForAssistant(db, otherOrgId);
     expect(rows.some((r) => r.id === mentionId)).toBe(false);
+  });
+
+  it("never grounds the AI Assistant with a mention the user already dismissed as irrelevant/duplicate", async () => {
+    // Regression: a mention the user marked irrelevant/duplicate
+    // (setMentionFeedback -> status "archived") must not come back as
+    // evidence in an assistant answer — the same default exclusion
+    // mentionFiltersToWhere already applies for the Mentions table.
+    await db.update(mentions).set({ status: "archived" }).where(eq(mentions.id, mentionId));
+    try {
+      const rows = await listRecentMentionsForAssistant(db, organizationId);
+      expect(rows.some((r) => r.id === mentionId)).toBe(false);
+    } finally {
+      await db.update(mentions).set({ status: "new" }).where(eq(mentions.id, mentionId));
+    }
   });
 
   it("returns every recommendation from the latest batch, with why/priority, and never an older batch", async () => {

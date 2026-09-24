@@ -44,6 +44,8 @@ export async function processGenerateReportJob(
       projectName,
       templateKey: report.templateKey as "weekly_summary" | "monitoring_overview" | "custom",
       periodType: report.periodType,
+      periodStart: run.periodStart,
+      periodEnd: run.periodEnd,
       sections: report.sections as ReportSectionKey[] | null,
     });
 

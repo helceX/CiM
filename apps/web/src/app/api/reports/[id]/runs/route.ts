@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createReportRun, db, getReport, recordAuditLog } from "@cim/db";
-import { periodTypeToSinceDays } from "@cim/reports/templates";
+import { periodTypeToRange } from "@cim/reports/templates";
 import { requirePermission } from "@/lib/tenant";
 import { enqueueReportGeneration } from "@/lib/reports";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -39,9 +39,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
     return NextResponse.json({ error: "Report not found" }, { status: 404 });
   }
 
-  const sinceDays = periodTypeToSinceDays(report.periodType);
-  const periodEnd = new Date();
-  const periodStart = new Date(periodEnd.getTime() - sinceDays * 24 * 60 * 60 * 1000);
+  const { periodStart, periodEnd } = periodTypeToRange(report.periodType);
   const run = await createReportRun(db, context.organizationId, {
     reportId: report.id,
     requestedByUserId: context.userId,

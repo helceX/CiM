@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createReportSchema } from "@cim/validation";
 import { createReport, createReportRun, db, getProject, recordAuditLog } from "@cim/db";
-import { periodTypeToSinceDays } from "@cim/reports/templates";
+import { periodTypeToRange } from "@cim/reports/templates";
 import { requirePermission } from "@/lib/tenant";
 import { enqueueReportGeneration } from "@/lib/reports";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -59,9 +59,7 @@ export async function POST(request: Request) {
     periodType: input.periodType,
   });
 
-  const sinceDays = periodTypeToSinceDays(input.periodType);
-  const periodEnd = new Date();
-  const periodStart = new Date(periodEnd.getTime() - sinceDays * 24 * 60 * 60 * 1000);
+  const { periodStart, periodEnd } = periodTypeToRange(input.periodType);
   const run = await createReportRun(db, context.organizationId, {
     reportId: report.id,
     requestedByUserId: context.userId,

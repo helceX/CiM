@@ -6,7 +6,7 @@ import {
   getReportsDueForScheduledRun,
   markReportScheduledRun,
 } from "@cim/db";
-import { periodTypeToSinceDays } from "@cim/reports/templates";
+import { periodTypeToRange } from "@cim/reports/templates";
 
 /**
  * docs/product/FEATURE_MATRIX.md P2 "Weekly/monthly/yearly scheduled
@@ -31,9 +31,7 @@ export async function processGenerateScheduledReportsJob(
     // — this job runs once daily with attempts:1, so one report's failure
     // must not silently skip every report ordered after it until tomorrow.
     try {
-      const sinceDays = periodTypeToSinceDays(report.periodType);
-      const periodEnd = new Date();
-      const periodStart = new Date(periodEnd.getTime() - sinceDays * 24 * 60 * 60 * 1000);
+      const { periodStart, periodEnd } = periodTypeToRange(report.periodType);
 
       const run = await createReportRun(db, report.organizationId, {
         reportId: report.id,

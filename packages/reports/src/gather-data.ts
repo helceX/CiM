@@ -58,6 +58,14 @@ export async function gatherReportData(
     projectName: string;
     templateKey: ReportTemplateKey;
     periodType: string;
+    // The ReportRun's own periodStart/periodEnd (createReportRun, computed
+    // once at enqueue time via periodTypeToRange) — reusing it here instead
+    // of recomputing from `new Date()` keeps the report's displayed period
+    // truthful about what was actually requested, rather than drifting to
+    // whenever the worker happened to pick the job up (queue backlog,
+    // retries, a restart).
+    periodStart: Date;
+    periodEnd: Date;
     sections?: ReportSectionKey[] | null;
   },
 ): Promise<ReportData> {
@@ -69,8 +77,7 @@ export async function gatherReportData(
   }
   const sinceDays = periodTypeToSinceDays(input.periodType);
   const scope = { projectId: input.projectId, sinceDays };
-  const periodEnd = new Date();
-  const periodStart = new Date(periodEnd.getTime() - sinceDays * 24 * 60 * 60 * 1000);
+  const { periodStart, periodEnd } = input;
 
   const [
     summary,
@@ -87,7 +94,7 @@ export async function gatherReportData(
     getMentionVolumeSeries(db, organizationId, scope),
     getSentimentTrendSeries(db, organizationId, scope),
     getSourceDistribution(db, organizationId, scope, 10),
-    listRecentMentions(db, organizationId, { projectId: input.projectId, limit: 20 }),
+    listRecentMentions(db, organizationId, { projectId: input.projectId, limit: 20, sinceDays }),
     getTopicBreakdown(db, organizationId, scope),
     getCompetitorComparison(db, organizationId, { sinceDays, projectId: input.projectId }),
     getLatestInsightForOrganization(db, organizationId, "whats_changed", { projectId: input.projectId }),

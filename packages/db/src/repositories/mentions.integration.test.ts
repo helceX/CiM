@@ -12,6 +12,7 @@ import {
   getCompetitorComparison,
   getMentionDetail,
   listMentionsFiltered,
+  listRecentMentions,
   setMentionFeedback,
 } from "./mentions";
 import { addTagToMention, findOrCreateTag, listTagsForOrganization, removeTagFromMention } from "./tags";
@@ -765,5 +766,74 @@ describe("mentions repository (integration)", () => {
 
     expect(scoped.some((row) => row.queryId === otherProjectQuery.id)).toBe(false);
     expect(scoped.some((row) => row.queryId === queryId)).toBe(true);
+  });
+
+  it("with no sinceDays, includes a mention regardless of age (Dashboard's unbounded recent-activity feed)", async () => {
+    const oldArticle = await insertArticle(db, {
+      sourceId,
+      canonicalUrl: `https://mentions-test.example/old-${Date.now()}`,
+      contentHash: `mentions-test-hash-old-${Date.now()}`,
+      title: "An old story from months ago",
+      storedExcerpt: null,
+      language: null,
+      publishedAt: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000),
+      authorName: null,
+    });
+    const [oldMention] = await db
+      .insert(mentions)
+      .values({
+        organizationId,
+        projectId,
+        queryId,
+        articleId: oldArticle.id,
+        matchedTerms: ["test"],
+        priority: "normal",
+        createdAt: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000),
+      })
+      .returning();
+    if (!oldMention) throw new Error("failed to create old test mention");
+
+    const rows = await listRecentMentions(db, organizationId, { projectId, limit: 100 });
+    expect(rows.some((r) => r.mention.id === oldMention.id)).toBe(true);
+  });
+
+  it("with sinceDays, excludes a mention older than the window (a report's Top Stories must stay inside its stated period)", async () => {
+    // Regression: gather-data.ts's "Top Stories" section calls this with no
+    // date bound at all, so it silently ignored the report's own period
+    // (rolling_7d/rolling_30d) and could show mentions from months earlier
+    // even though the report header states a specific periodStart/periodEnd.
+    const oldArticle = await insertArticle(db, {
+      sourceId,
+      canonicalUrl: `https://mentions-test.example/old2-${Date.now()}`,
+      contentHash: `mentions-test-hash-old2-${Date.now()}`,
+      title: "Another old story outside the report period",
+      storedExcerpt: null,
+      language: null,
+      publishedAt: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000),
+      authorName: null,
+    });
+    const [oldMention] = await db
+      .insert(mentions)
+      .values({
+        organizationId,
+        projectId,
+        queryId,
+        articleId: oldArticle.id,
+        matchedTerms: ["test"],
+        priority: "normal",
+        createdAt: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000),
+      })
+      .returning();
+    if (!oldMention) throw new Error("failed to create old test mention");
+
+    const rows = await listRecentMentions(db, organizationId, {
+      projectId,
+      limit: 100,
+      sinceDays: 7,
+    });
+    expect(rows.some((r) => r.mention.id === oldMention.id)).toBe(false);
+    // A mention from the seeded fixtures (created "now" in beforeAll) must
+    // still come through — this isn't a filter that drops everything.
+    expect(rows.some((r) => r.mention.id === mentionIds[0])).toBe(true);
   });
 });

@@ -37,7 +37,7 @@ const assigneeNameColumn = sql<
 export async function listRecentMentions(
   db: Db,
   organizationId: OrganizationId,
-  options: { projectId?: string; limit?: number } = {},
+  options: { projectId?: string; limit?: number; sinceDays?: number } = {},
 ): Promise<MentionListItem[]> {
   const limit = options.limit ?? 20;
   return db
@@ -55,6 +55,14 @@ export async function listRecentMentions(
       and(
         eq(mentions.organizationId, organizationId),
         options.projectId ? eq(mentions.projectId, options.projectId) : undefined,
+        // Optional — the Dashboard's "recent activity" feed (Phase 4) wants
+        // no bound at all, but a report's "Top Stories" section (gather-data.ts)
+        // has an explicit periodStart/periodEnd on the page and must not show
+        // stories from outside it, so it passes this to stay consistent with
+        // the period the report itself claims to cover.
+        options.sinceDays !== undefined
+          ? gte(mentions.createdAt, sql`now() - (${options.sinceDays}::text || ' days')::interval`)
+          : undefined,
       ),
     )
     .orderBy(desc(mentions.createdAt))

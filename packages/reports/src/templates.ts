@@ -43,3 +43,22 @@ export function getReportTemplate(key: string): ReportTemplate | undefined {
 export function periodTypeToSinceDays(periodType: string): number {
   return periodType === "rolling_30d" ? 30 : 7;
 }
+
+/**
+ * The single place "sinceDays -> {periodStart, periodEnd}" is computed —
+ * every call site that creates a ReportRun (POST /api/reports, "run again",
+ * the scheduled-reports job) needs the exact same computation, since a
+ * ReportRun's stored periodStart/periodEnd is read back later (the report
+ * header, gatherReportData) and must reflect what was actually requested at
+ * enqueue time, not a second, possibly-different "now" computed elsewhere.
+ */
+export function periodTypeToRange(periodType: string): {
+  sinceDays: number;
+  periodStart: Date;
+  periodEnd: Date;
+} {
+  const sinceDays = periodTypeToSinceDays(periodType);
+  const periodEnd = new Date();
+  const periodStart = new Date(periodEnd.getTime() - sinceDays * 24 * 60 * 60 * 1000);
+  return { sinceDays, periodStart, periodEnd };
+}

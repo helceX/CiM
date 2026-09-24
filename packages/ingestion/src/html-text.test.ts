@@ -47,6 +47,20 @@ describe("htmlToPlainText", () => {
     expect(text).not.toMatch(/<[a-z][^>]*>/i);
     expect(text).toBe("Hello alert(1) world");
   });
+
+  it("preserves entity-encoded comparison text instead of swallowing everything between it as a fake tag", () => {
+    // Regression: the entity-decode pass turns "&lt;"/"&gt;" into literal
+    // "<"/">" — common in financial/media text ("EPS < $0.50"), not just
+    // in fake tags. The tag-shaped strip that runs after decoding used to
+    // be a bare `<[^>]+>`, which matched from that unrelated "<" all the
+    // way to the next unrelated ">" anywhere later in the string, deleting
+    // everything in between instead of leaving the comparison text alone.
+    const html =
+      "<p>Analysts expect EPS &lt; $0.50 while revenue is projected to exceed $2B this quarter, beating &gt;consensus.</p>";
+    expect(htmlToPlainText(html)).toBe(
+      "Analysts expect EPS < $0.50 while revenue is projected to exceed $2B this quarter, beating >consensus.",
+    );
+  });
 });
 
 describe("decodeHtmlEntities", () => {
@@ -73,5 +87,10 @@ describe("extractTitle", () => {
     const title = extractTitle("<head><title>Breaking: &lt;script&gt;alert(1)&lt;/script&gt;</title></head>");
     expect(title).not.toMatch(/<[a-z][^>]*>/i);
     expect(title).toBe("Breaking: alert(1)");
+  });
+
+  it("preserves entity-encoded comparison text in a title instead of swallowing it", () => {
+    const title = extractTitle("<head><title>Q1 EPS &lt; $0.50, revenue &gt; $2B</title></head>");
+    expect(title).toBe("Q1 EPS < $0.50, revenue > $2B");
   });
 });

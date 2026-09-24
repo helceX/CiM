@@ -47,6 +47,18 @@ export function decodeHtmlEntities(text: string): string {
  * and collapses whitespace. Never preserves markup, so there is nothing
  * left for a stored/rendered excerpt to execute.
  */
+// Matches only tag-*shaped* spans — `<` or `</` immediately followed by a
+// letter (a real or fake tag name) — not any arbitrary text bracketed by
+// unrelated `<`/`>` characters. The plain `<[^>]+>` this used to be
+// matches from ANY `<` to the NEXT `>` anywhere later in the string, so on
+// text like "EPS < $0.50 while revenue ... beating >consensus" (the kind
+// of `<`/`>` comparison text this pipeline's financial/media content
+// actually contains) it silently swallows everything in between as if it
+// were one giant tag. Requiring a letter right after `<`/`</` rules that
+// out while still catching every real tag shape, including a decoded fake
+// one like `<script>`.
+const TAG_SHAPED = /<\/?[a-zA-Z][^<>]*>/g;
+
 export function htmlToPlainText(html: string): string {
   let text = html;
   text = text.replace(/<!--[\s\S]*?-->/g, " ");
@@ -55,14 +67,14 @@ export function htmlToPlainText(html: string): string {
   text = text.replace(/<[a-z][^>]*\son[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)[^>]*>/gi, " ");
   text = text.replace(/<br\s*\/?>/gi, "\n");
   text = text.replace(/<\/(p|div|li|h[1-6]|tr)>/gi, "\n");
-  text = text.replace(/<[^>]+>/g, " ");
+  text = text.replace(TAG_SHAPED, " ");
   text = decodeHtmlEntities(text);
   // An entity-encoded tag (`&lt;script&gt;`) isn't a `<...>` token yet
   // when the strip pass above runs, so it survives decoding as literal
   // tag-shaped text — this second, narrower pass catches exactly that,
   // so nothing tag-shaped is left in the output regardless of how it
   // was encoded in the source, matching this module's own contract.
-  text = text.replace(/<[^>]+>/g, " ");
+  text = text.replace(TAG_SHAPED, " ");
   text = text.replace(/[ \t]+/g, " ");
   text = text.replace(/\n[ \t]*/g, "\n");
   text = text.replace(/\n{3,}/g, "\n\n");
@@ -72,7 +84,7 @@ export function htmlToPlainText(html: string): string {
 /** Same decode-then-strip discipline as htmlToPlainText, for the short strings extractTitle captures. */
 function sanitizeExtractedText(raw: string): string {
   return decodeHtmlEntities(raw)
-    .replace(/<[^>]+>/g, " ")
+    .replace(TAG_SHAPED, " ")
     .replace(/\s+/g, " ")
     .trim();
 }

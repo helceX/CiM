@@ -2,12 +2,11 @@ import { describe, expect, it, vi } from "vitest";
 
 /**
  * A pure unit test (full mocks of @cim/core, @cim/db, and the route's own
- * lib dependencies) rather than an integration test — proving a specific
- * ordering invariant (audit log written only after anonymizeUser actually
- * commits) needs forcing anonymizeUser to fail on demand, which a real
- * Postgres call can't do on cue. Same approach as apps/worker/src/ai/
- * enrich.test.ts for the analogous "no false-success record on partial
- * failure" invariant.
+ * lib dependencies) rather than an integration test — proving the route
+ * never clears the session cookie on a failed deletion needs forcing
+ * deleteUserAccount to fail on demand, which a real Postgres call can't do
+ * on cue. Same approach as apps/worker/src/ai/enrich.test.ts for the
+ * analogous "no false-success record on partial failure" invariant.
  */
 const getCurrentUser = vi.fn();
 const destroyCurrentSession = vi.fn();
@@ -16,9 +15,7 @@ const verifyPassword = vi.fn();
 const findUserById = vi.fn();
 const listSoleOwnedOrganizations = vi.fn();
 const listMembershipOrganizationIdsForAudit = vi.fn();
-const anonymizeUser = vi.fn();
-const recordAuditLog = vi.fn();
-const revokeAllSessionsForUser = vi.fn();
+const deleteUserAccount = vi.fn();
 
 vi.mock("@/lib/session", () => ({
   getCurrentUser: (...args: unknown[]) => getCurrentUser(...args),
@@ -37,9 +34,7 @@ vi.mock("@cim/db", () => ({
   listSoleOwnedOrganizations: (...args: unknown[]) => listSoleOwnedOrganizations(...args),
   listMembershipOrganizationIdsForAudit: (...args: unknown[]) =>
     listMembershipOrganizationIdsForAudit(...args),
-  anonymizeUser: (...args: unknown[]) => anonymizeUser(...args),
-  recordAuditLog: (...args: unknown[]) => recordAuditLog(...args),
-  revokeAllSessionsForUser: (...args: unknown[]) => revokeAllSessionsForUser(...args),
+  deleteUserAccount: (...args: unknown[]) => deleteUserAccount(...args),
 }));
 
 const { POST } = await import("./route");
@@ -52,42 +47,37 @@ function makeRequest(password: string): Request {
   });
 }
 
-describe("POST /api/account/delete — audit-log ordering", () => {
-  it("does not record account.deleted when anonymizeUser fails", async () => {
+describe("POST /api/account/delete", () => {
+  it("does not clear the session when deleteUserAccount fails", async () => {
     getCurrentUser.mockResolvedValueOnce({ id: "user-1" });
     checkRateLimit.mockResolvedValueOnce({ allowed: true });
     findUserById.mockResolvedValueOnce({ id: "user-1", passwordHash: "hash" });
     verifyPassword.mockResolvedValueOnce(true);
     listSoleOwnedOrganizations.mockResolvedValueOnce([]);
     listMembershipOrganizationIdsForAudit.mockResolvedValueOnce(["org-1"]);
-    anonymizeUser.mockRejectedValueOnce(new Error("transient DB error"));
+    deleteUserAccount.mockRejectedValueOnce(new Error("transient DB error"));
 
     await expect(POST(makeRequest("correct-password"))).rejects.toThrow("transient DB error");
 
-    expect(recordAuditLog).not.toHaveBeenCalled();
+    expect(destroyCurrentSession).not.toHaveBeenCalled();
   });
 
-  it("records account.deleted only after anonymizeUser has actually succeeded", async () => {
+  it("deletes the account and clears the session on success", async () => {
     getCurrentUser.mockResolvedValueOnce({ id: "user-2" });
     checkRateLimit.mockResolvedValueOnce({ allowed: true });
     findUserById.mockResolvedValueOnce({ id: "user-2", passwordHash: "hash" });
     verifyPassword.mockResolvedValueOnce(true);
     listSoleOwnedOrganizations.mockResolvedValueOnce([]);
     listMembershipOrganizationIdsForAudit.mockResolvedValueOnce(["org-2"]);
-    anonymizeUser.mockResolvedValueOnce(undefined);
-    revokeAllSessionsForUser.mockResolvedValueOnce(undefined);
+    deleteUserAccount.mockResolvedValueOnce(undefined);
     destroyCurrentSession.mockResolvedValueOnce(undefined);
 
     const response = await POST(makeRequest("correct-password"));
     expect(response.status).toBe(200);
 
-    expect(recordAuditLog).toHaveBeenCalledWith(
-      expect.anything(),
-      "org-2",
-      expect.objectContaining({ action: "account.deleted" }),
-    );
-    const anonymizeCallOrder = anonymizeUser.mock.invocationCallOrder[0]!;
-    const auditCallOrder = recordAuditLog.mock.invocationCallOrder[0]!;
-    expect(auditCallOrder).toBeGreaterThan(anonymizeCallOrder);
+    expect(deleteUserAccount).toHaveBeenCalledWith(expect.anything(), "user-2", ["org-2"]);
+    const deleteCallOrder = deleteUserAccount.mock.invocationCallOrder[0]!;
+    const destroyCallOrder = destroyCurrentSession.mock.invocationCallOrder[0]!;
+    expect(destroyCallOrder).toBeGreaterThan(deleteCallOrder);
   });
 });

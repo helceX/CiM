@@ -1,10 +1,12 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "../client";
+import { auditLogs } from "../schema/audit";
 import { organizationMemberships, organizations, users } from "../schema/index";
 import { asOrganizationId } from "./tenant-scope";
 import {
   anonymizeUser,
+  deleteUserAccount,
   exportAccountData,
   listMembershipOrganizationIdsForAudit,
   listSoleOwnedOrganizations,
@@ -163,5 +165,45 @@ describe("privacy repository (integration)", () => {
 
     const after = await listMembershipOrganizationIdsForAudit(db, soleOwnerUserId);
     expect(after).toContain(soleOwnedOrgId);
+  });
+
+  it("rolls back the whole deletion, including anonymization, if any audit-log write fails", async () => {
+    // Regression: deleteUserAccount wraps anonymize + the per-org audit-log
+    // loop + session revocation in one transaction specifically so a
+    // failure partway through the loop (here, one bogus/nonexistent
+    // organization id among several) can't leave the account anonymized
+    // with only a partial audit trail — before this, each step was its own
+    // statement and a mid-loop failure did exactly that.
+    const [target] = await db
+      .insert(users)
+      .values({
+        email: `atomic-delete-target-${Date.now()}@example.com`,
+        passwordHash: "real-hash-before-anonymization",
+        firstName: "Still",
+        lastName: "Real",
+        emailVerifiedAt: new Date(),
+      })
+      .returning();
+    if (!target) throw new Error("failed to create test user");
+
+    const bogusOrgId = asOrganizationId("00000000-0000-0000-0000-000000000000");
+
+    try {
+      await expect(
+        deleteUserAccount(db, target.id, [sharedOrgId, bogusOrgId]),
+      ).rejects.toThrow();
+
+      const [row] = await db.select().from(users).where(eq(users.id, target.id));
+      expect(row?.deletedAt).toBeNull();
+      expect(row?.email).toBe(target.email);
+
+      const logs = await db
+        .select()
+        .from(auditLogs)
+        .where(and(eq(auditLogs.organizationId, sharedOrgId), eq(auditLogs.targetId, target.id)));
+      expect(logs).toEqual([]);
+    } finally {
+      await db.delete(users).where(eq(users.id, target.id));
+    }
   });
 });

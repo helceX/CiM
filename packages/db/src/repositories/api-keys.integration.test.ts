@@ -111,6 +111,42 @@ describe("api-keys repository (integration)", () => {
     expect(list.find((k) => k.id === summary.id)?.revokedAt).toBeNull();
   });
 
+  it("stops resolving a key belonging to a soft-deleted organization", async () => {
+    // Regression: softDeleteOrganization (packages/db/src/repositories/
+    // privacy.ts) only stamps organizations.deletedAt — nothing revokes
+    // the organization's own API keys. Every other read path checks
+    // isNull(organizations.deletedAt) (listMembershipsForUser, monitoring
+    // queries, alert rules); resolveApiKeyByRawKey didn't, so a key
+    // issued before deletion kept working forever.
+    const [deletableOrg] = await db
+      .insert(organizations)
+      .values({ name: "Deletable Org", slug: `api-key-repo-test-deletable-${Date.now()}` })
+      .returning();
+    if (!deletableOrg) throw new Error("failed to create deletable test organization");
+    const deletableOrgId = asOrganizationId(deletableOrg.id);
+
+    try {
+      const { rawKey } = await createApiKey(db, deletableOrgId, {
+        name: "Key from a soon-to-be-deleted org",
+        scopes: ["mentions:read"],
+        createdByUserId: userId,
+      });
+      expect(await resolveApiKeyByRawKey(db, rawKey)).not.toBeNull();
+
+      await db
+        .update(organizations)
+        .set({ deletedAt: new Date() })
+        .where(eq(organizations.id, deletableOrgId));
+
+      expect(await resolveApiKeyByRawKey(db, rawKey)).toBeNull();
+    } finally {
+      // Must run even if an assertion above fails, or this org's API key
+      // row (referencing userId) outlives this test and breaks the outer
+      // describe's afterAll (deleting `users` while still referenced).
+      await db.delete(organizations).where(eq(organizations.id, deletableOrgId));
+    }
+  });
+
   it("records when a key was last used", async () => {
     const { summary } = await createApiKey(db, organizationId, {
       name: "Last-used test key",

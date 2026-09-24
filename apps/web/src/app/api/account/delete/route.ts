@@ -2,13 +2,11 @@ import { NextResponse } from "next/server";
 import { deleteAccountSchema } from "@cim/validation";
 import { verifyPassword } from "@cim/core";
 import {
-  anonymizeUser,
   db,
+  deleteUserAccount,
   findUserById,
   listMembershipOrganizationIdsForAudit,
   listSoleOwnedOrganizations,
-  recordAuditLog,
-  revokeAllSessionsForUser,
 } from "@cim/db";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { destroyCurrentSession, getCurrentUser } from "@/lib/session";
@@ -66,21 +64,10 @@ export async function POST(request: Request) {
 
   const organizationIds = await listMembershipOrganizationIdsForAudit(db, user.id);
 
-  await anonymizeUser(db, user.id);
+  // Anonymize + every organization's audit entry + session revocation
+  // commit together or not at all — see deleteUserAccount's own docstring.
+  await deleteUserAccount(db, user.id, organizationIds);
 
-  // Logged after anonymizeUser actually commits — a failure in between
-  // must not leave a false "account.deleted" audit entry for an account
-  // that's still fully live.
-  for (const organizationId of organizationIds) {
-    await recordAuditLog(db, organizationId, {
-      actorUserId: user.id,
-      action: "account.deleted",
-      targetType: "user",
-      targetId: user.id,
-    });
-  }
-
-  await revokeAllSessionsForUser(db, user.id);
   await destroyCurrentSession();
 
   return NextResponse.json({ ok: true });

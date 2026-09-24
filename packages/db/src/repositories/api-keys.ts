@@ -1,7 +1,7 @@
 import { and, desc, eq, isNull } from "drizzle-orm";
 import { generateRawToken, hashToken } from "@cim/core";
 import type { Db } from "../client";
-import { apiKeys } from "../schema/organizations";
+import { apiKeys, organizations } from "../schema/organizations";
 import type { OrganizationId } from "./tenant-scope";
 
 /** A short, greppable prefix on the raw secret — same idea as Stripe's `sk_live_...`. */
@@ -94,7 +94,13 @@ export type ResolvedApiKey = {
  * The auth path (apps/web/src/lib/tenant.ts) calls this on every
  * API-key-authenticated request — a revoked key must stop working
  * immediately, not just disappear from the management list, so revocation
- * is checked here rather than left to callers to remember.
+ * is checked here rather than left to callers to remember. Same for a
+ * deleted organization: softDeleteOrganization never touches its keys
+ * (nothing revokes them), so this must check organizations.deletedAt
+ * itself — the same isNull(organizations.deletedAt) check every other
+ * read path already applies (listMembershipsForUser, monitoring-query/
+ * alert-rule lookups) — or a key issued before deletion keeps working
+ * forever, bypassing the whole point of deleting the organization.
  */
 export async function resolveApiKeyByRawKey(
   db: Db,
@@ -103,7 +109,14 @@ export async function resolveApiKeyByRawKey(
   const [row] = await db
     .select({ id: apiKeys.id, organizationId: apiKeys.organizationId, scopes: apiKeys.scopes })
     .from(apiKeys)
-    .where(and(eq(apiKeys.hashedSecret, hashToken(rawKey)), isNull(apiKeys.revokedAt)))
+    .innerJoin(organizations, eq(organizations.id, apiKeys.organizationId))
+    .where(
+      and(
+        eq(apiKeys.hashedSecret, hashToken(rawKey)),
+        isNull(apiKeys.revokedAt),
+        isNull(organizations.deletedAt),
+      ),
+    )
     .limit(1);
   if (!row) return null;
   return { ...row, organizationId: row.organizationId as OrganizationId };

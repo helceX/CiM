@@ -2,6 +2,8 @@ import { and, count, eq, isNull } from "drizzle-orm";
 import type { Db } from "../client";
 import { organizationMemberships, organizations } from "../schema/organizations";
 import { users } from "../schema/users";
+import { revokeAllSessionsForUser } from "./auth";
+import { recordAuditLog } from "./audit-log";
 import { asOrganizationId, type OrganizationId } from "./tenant-scope";
 
 /**
@@ -98,6 +100,40 @@ export async function anonymizeUser(db: Db, userId: string): Promise<void> {
       updatedAt: new Date(),
     })
     .where(eq(users.id, userId));
+}
+
+/**
+ * Anonymize + write every organization's "account.deleted" audit entry +
+ * revoke sessions as one atomic unit. Before this, the route ran each step
+ * as its own statement (anonymize, then a per-org audit-log loop, then
+ * session revocation) specifically so a failure *before* anonymizeUser
+ * committed couldn't leave a false audit entry — but that left the
+ * opposite gap: a failure partway through the audit-log loop (e.g. one
+ * organization among several) left the account anonymized with only a
+ * partial audit trail and sessions never revoked. Wrapping all of it in
+ * one transaction (the same pattern registerOrganizationOwner and
+ * acceptInvitation already use for their own multi-step invariants) gets
+ * both guarantees at once: either everything commits together, or the
+ * account is left fully untouched.
+ */
+export async function deleteUserAccount(
+  db: Db,
+  userId: string,
+  organizationIdsForAudit: OrganizationId[],
+): Promise<void> {
+  await db.transaction(async (tx) => {
+    const txDb = tx as unknown as Db;
+    await anonymizeUser(txDb, userId);
+    for (const organizationId of organizationIdsForAudit) {
+      await recordAuditLog(txDb, organizationId, {
+        actorUserId: userId,
+        action: "account.deleted",
+        targetType: "user",
+        targetId: userId,
+      });
+    }
+    await revokeAllSessionsForUser(txDb, userId);
+  });
 }
 
 export type AccountExport = {

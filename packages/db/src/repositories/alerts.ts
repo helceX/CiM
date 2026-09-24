@@ -1,4 +1,4 @@
-import { and, desc, eq, gt, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, getTableColumns, gt, isNull, sql } from "drizzle-orm";
 import type { Db } from "../client";
 import { alertEvents, alertRules } from "../schema/alerts";
 import { monitoringQueries } from "../schema/monitoring";
@@ -53,20 +53,27 @@ export async function listAlertRules(db: Db, organizationId: OrganizationId) {
     .orderBy(desc(alertRules.createdAt));
 }
 
-/** Called right after the ingestion pipeline creates mentions for a query. */
+/**
+ * Called right after the ingestion pipeline creates mentions for a query.
+ * A soft-deleted organization must stop firing alerts — same invariant
+ * getActiveAlertRulesOfType below already enforces for the scheduler-
+ * driven alert types; this immediate-trigger path was missing it.
+ */
 export async function getActiveAlertRulesForQuery(
   db: Db,
   queryId: string,
   type?: AlertRuleType,
 ) {
   return db
-    .select()
+    .select(getTableColumns(alertRules))
     .from(alertRules)
+    .innerJoin(organizations, eq(organizations.id, alertRules.organizationId))
     .where(
       and(
         eq(alertRules.queryId, queryId),
         eq(alertRules.status, "active"),
         type ? eq(alertRules.type, type) : undefined,
+        isNull(organizations.deletedAt),
       ),
     );
 }

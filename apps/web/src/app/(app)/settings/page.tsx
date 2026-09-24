@@ -65,7 +65,13 @@ export default async function SettingsPage() {
         canManageSettings={canManageSettings}
       />
 
-      <WebhookSection webhookUrl={webhookUrl} canManageSettings={canManageSettings} />
+      <WebhookSection
+        // Only ever sent to the browser when the viewer can manage it —
+        // see ApiKeysSection's comment below for why.
+        webhookUrl={canManageSettings ? webhookUrl : null}
+        hasWebhookUrl={webhookUrl !== null}
+        canManageSettings={canManageSettings}
+      />
 
       <UsageSection plan={subscription.plan} usage={usage} />
 

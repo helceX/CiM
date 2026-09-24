@@ -11,9 +11,17 @@ import { Button, Field, Input } from "@cim/ui";
  */
 export function WebhookSection({
   webhookUrl,
+  hasWebhookUrl,
   canManageSettings,
 }: {
+  // Null for a caller without canManageSettings — the page never sends
+  // the real URL to the browser for a member who can't manage it (a
+  // "use client" component's props all reach the RSC payload regardless
+  // of what it renders, the same reasoning ApiKeysSection's own comment
+  // documents in settings/page.tsx). hasWebhookUrl carries the one bit
+  // that view still needs ("Configured" vs "Not configured").
   webhookUrl: string | null;
+  hasWebhookUrl: boolean;
   canManageSettings: boolean;
 }) {
   return (
@@ -28,7 +36,7 @@ export function WebhookSection({
           <WebhookForm webhookUrl={webhookUrl} />
         ) : (
           <p className="text-sm text-foreground">
-            {webhookUrl ? "Configured" : "Not configured"}
+            {hasWebhookUrl ? "Configured" : "Not configured"}
           </p>
         )}
       </div>

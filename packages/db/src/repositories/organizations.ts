@@ -1,8 +1,15 @@
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import type { Db } from "../client";
 import { organizations } from "../schema/organizations";
 import type { OrganizationId } from "./tenant-scope";
 
+/**
+ * softDeleteOrganization never clears webhookUrl — without the
+ * isNull(deletedAt) check every other org-scoped read already applies
+ * (listMembershipsForUser, getActiveAlertRulesOfType, resolveApiKeyByRawKey),
+ * a deleted organization's external Slack/Teams/custom webhook would keep
+ * receiving alert POSTs forever.
+ */
 export async function getOrganizationWebhookUrl(
   db: Db,
   organizationId: OrganizationId,
@@ -10,7 +17,7 @@ export async function getOrganizationWebhookUrl(
   const [row] = await db
     .select({ webhookUrl: organizations.webhookUrl })
     .from(organizations)
-    .where(eq(organizations.id, organizationId))
+    .where(and(eq(organizations.id, organizationId), isNull(organizations.deletedAt)))
     .limit(1);
   return row?.webhookUrl ?? null;
 }

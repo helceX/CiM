@@ -400,7 +400,7 @@ export type CompetitorComparisonRow = {
 export async function getCompetitorComparison(
   db: Db,
   organizationId: OrganizationId,
-  options: { sinceDays?: number } = {},
+  options: { sinceDays?: number; projectId?: string } = {},
 ): Promise<CompetitorComparisonRow[]> {
   const sinceDays = options.sinceDays ?? 7;
   const rows = await db
@@ -427,6 +427,7 @@ export async function getCompetitorComparison(
         eq(monitoringQueries.status, "active"),
         isNull(monitoringQueries.deletedAt),
         inArray(monitoringQueries.trackingTarget, ["company", "competitor"]),
+        options.projectId ? eq(monitoringQueries.projectId, options.projectId) : undefined,
       ),
     )
     .groupBy(monitoringQueries.id, monitoringQueries.name, monitoringQueries.trackingTarget)

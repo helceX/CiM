@@ -89,7 +89,7 @@ export async function gatherReportData(
     getSourceDistribution(db, organizationId, scope, 10),
     listRecentMentions(db, organizationId, { projectId: input.projectId, limit: 20 }),
     getTopicBreakdown(db, organizationId, scope),
-    getCompetitorComparison(db, organizationId, { sinceDays }),
+    getCompetitorComparison(db, organizationId, { sinceDays, projectId: input.projectId }),
     getLatestInsightForOrganization(db, organizationId, "whats_changed", { projectId: input.projectId }),
     listLatestRecommendationsForOrganization(db, organizationId, { projectId: input.projectId }),
   ]);

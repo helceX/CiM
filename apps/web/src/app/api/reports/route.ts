@@ -2,15 +2,26 @@ import { NextResponse } from "next/server";
 import { createReportSchema } from "@cim/validation";
 import { createReport, createReportRun, db, getProject, recordAuditLog } from "@cim/db";
 import { periodTypeToSinceDays } from "@cim/reports/templates";
-import { requireOrgContext } from "@/lib/tenant";
+import { requirePermission } from "@/lib/tenant";
 import { enqueueReportGeneration } from "@/lib/reports";
 import { checkRateLimit } from "@/lib/rate-limit";
 
 export async function POST(request: Request) {
   let context;
   try {
-    context = await requireOrgContext();
-  } catch {
+    // Same permission every other report-mutation route in this feature
+    // requires (schedule/route.ts, runs/[runId]/share/route.ts) — a
+    // report_recipient role is explicitly read-only (reports:read only,
+    // packages/core/src/authz.ts) and must not be able to trigger a real
+    // headless-Chromium render.
+    context = await requirePermission("reports:write");
+  } catch (error) {
+    if (error instanceof Error && error.message === "FORBIDDEN") {
+      return NextResponse.json(
+        { error: "You don't have permission to create reports" },
+        { status: 403 },
+      );
+    }
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 

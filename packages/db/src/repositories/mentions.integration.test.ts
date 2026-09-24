@@ -718,4 +718,38 @@ describe("mentions repository (integration)", () => {
     expect(competitorRow?.totalMentions).toBe(1);
     expect(competitorRow?.negative).toBe(1);
   });
+
+  it("excludes another project's company/competitor queries when scoped to a projectId", async () => {
+    // Regression: getCompetitorComparison only filtered by organizationId,
+    // so a report for Project A (packages/reports/src/gather-data.ts,
+    // which is per-project) pulled in every OTHER project's competitor-
+    // tracking data in the same org too — a cross-project data leak
+    // inside a report that's supposed to be scoped to one project.
+    const [otherWorkspace] = await db
+      .insert(workspaces)
+      .values({ organizationId, name: "Other Workspace" })
+      .returning();
+    if (!otherWorkspace) throw new Error("failed to create other test workspace");
+    const otherProject = await createProject(db, organizationId, {
+      workspaceId: otherWorkspace.id,
+      name: "Other Project",
+    });
+
+    const otherProjectQuery = await createMonitoringQuery(db, organizationId, {
+      projectId: otherProject.id,
+      name: "Other project's company query",
+      queryAst: { include: ["other"], exclude: [], exactPhrases: [] },
+      booleanQuery: "other",
+      sourceTypes: ["news"],
+      trackingTarget: "company",
+    });
+
+    const scoped = await getCompetitorComparison(db, organizationId, {
+      sinceDays: 7,
+      projectId,
+    });
+
+    expect(scoped.some((row) => row.queryId === otherProjectQuery.id)).toBe(false);
+    expect(scoped.some((row) => row.queryId === queryId)).toBe(true);
+  });
 });

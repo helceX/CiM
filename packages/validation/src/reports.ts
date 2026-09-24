@@ -42,6 +42,13 @@ export const createReportSchema = z
   .refine(
     (input) => input.templateKey !== "custom" || (input.sections?.length ?? 0) > 0,
     { message: "Choose at least one section", path: ["sections"] },
+  )
+  .refine(
+    // packages/reports/src/render-html.ts's customSections() maps each
+    // key straight to a rendered block with no dedup of its own, so a
+    // repeated key would render the same section multiple times.
+    (input) => new Set(input.sections ?? []).size === (input.sections ?? []).length,
+    { message: "Each section can only be added once", path: ["sections"] },
   );
 export type CreateReportInput = z.infer<typeof createReportSchema>;
 

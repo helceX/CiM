@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createReportRun, db, getReport, recordAuditLog } from "@cim/db";
 import { periodTypeToSinceDays } from "@cim/reports/templates";
-import { requireOrgContext } from "@/lib/tenant";
+import { requirePermission } from "@/lib/tenant";
 import { enqueueReportGeneration } from "@/lib/reports";
 import { checkRateLimit } from "@/lib/rate-limit";
 
@@ -9,8 +9,17 @@ import { checkRateLimit } from "@/lib/rate-limit";
 export async function POST(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   let context;
   try {
-    context = await requireOrgContext();
-  } catch {
+    // Same permission POST /api/reports requires — "run again" is still
+    // triggering a real render, not a read, and must not be reachable by
+    // a read-only reports:read role (report_recipient/viewer).
+    context = await requirePermission("reports:write");
+  } catch (error) {
+    if (error instanceof Error && error.message === "FORBIDDEN") {
+      return NextResponse.json(
+        { error: "You don't have permission to run this report" },
+        { status: 403 },
+      );
+    }
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 

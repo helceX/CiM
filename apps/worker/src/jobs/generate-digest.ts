@@ -1,14 +1,14 @@
 import type { Queue } from "bullmq";
 import { getEnv } from "@cim/config";
-import { QUEUE_NAMES, type SendEmailJobData } from "@cim/core";
+import type { SendEmailJobData } from "@cim/core";
 import {
   db,
-  enqueueEmail,
   getDigestSummaryForOrganization,
   listActiveMemberEmails,
   listActiveOrganizationIdsForDigest,
   type DigestOrgSummary,
 } from "@cim/db";
+import { queueOutboxEmail } from "../email";
 
 const DIGEST_SINCE_HOURS = 24;
 const DIGEST_TOP_LIMIT = 5;
@@ -44,25 +44,16 @@ export async function processGenerateDigestJob(emailQueue: Queue<SendEmailJobDat
       const subject = `Daily digest: ${summary.totalNewMentions} new mention${summary.totalNewMentions === 1 ? "" : "s"}`;
 
       for (const toEmail of recipients) {
-        // Isolated per recipient too (the same principle as fireAlert in
-        // apps/worker/src/alerts/notify.ts) — a failure enqueueing one
-        // recipient's email must not throw out of this loop, which would
-        // both skip every recipient ordered after them in this org and be
-        // caught by the outer per-org catch below, losing that org's
-        // isolation guarantee along with it.
-        try {
-          const outboxEntry = await enqueueEmail(db, { toEmail, subject, bodyText, kind: "digest" });
-          await emailQueue.add(
-            QUEUE_NAMES.sendEmail,
-            { emailOutboxId: outboxEntry.id },
-            { attempts: 5, backoff: { type: "exponential", delay: 2000 } },
-          );
-        } catch (error) {
-          console.error(
-            `[worker] failed to queue digest email for org ${organizationId} to ${toEmail}:`,
-            error,
-          );
-        }
+        // Isolated per recipient too (queueOutboxEmail's own doc comment)
+        // — a failure enqueueing one recipient's email must not throw out
+        // of this loop, which would both skip every recipient ordered
+        // after them in this org and be caught by the outer per-org catch
+        // below, losing that org's isolation guarantee along with it.
+        await queueOutboxEmail(
+          emailQueue,
+          { toEmail, subject, bodyText, kind: "digest" },
+          `digest for org ${organizationId}`,
+        );
       }
     } catch (error) {
       console.error(`[worker] generate_digest failed for org ${organizationId}:`, error);

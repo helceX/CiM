@@ -47,4 +47,30 @@ describe("processSendExecutiveBriefJob — per-org failure isolation", () => {
     expect(enqueueEmail).toHaveBeenCalledTimes(1);
     expect(emailQueue.add).toHaveBeenCalledTimes(1);
   });
+
+  it("still emails the remaining recipients in an org when one recipient's enqueue fails", async () => {
+    // Regression: the per-recipient loop originally had no isolation of
+    // its own — one recipient's enqueueEmail/emailQueue.add failure threw
+    // out of the loop, skipping every recipient ordered after them (and
+    // getting misreported as an org-level failure by the outer catch).
+    // generate-digest.ts's identical fan-out already covers this; this
+    // job's own coverage was the gap.
+    listActiveOrganizationIdsForDigest.mockResolvedValueOnce(["org-1"]);
+    getLatestInsightForOrganization.mockResolvedValueOnce(freshBrief());
+    listActiveMemberEmails.mockResolvedValueOnce([
+      "first@example.com",
+      "second@example.com",
+      "third@example.com",
+    ]);
+    enqueueEmail.mockResolvedValueOnce({ id: "outbox-1" });
+    enqueueEmail.mockRejectedValueOnce(new Error("transient DB error"));
+    enqueueEmail.mockResolvedValueOnce({ id: "outbox-3" });
+
+    const emailQueue = { add: vi.fn().mockResolvedValue(undefined) } as unknown as Queue<SendEmailJobData>;
+
+    await processSendExecutiveBriefJob(emailQueue);
+
+    expect(enqueueEmail).toHaveBeenCalledTimes(3);
+    expect(emailQueue.add).toHaveBeenCalledTimes(2);
+  });
 });

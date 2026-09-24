@@ -1,14 +1,14 @@
 import type { Queue } from "bullmq";
 import { getEnv } from "@cim/config";
-import { QUEUE_NAMES, type SendEmailJobData } from "@cim/core";
+import type { SendEmailJobData } from "@cim/core";
 import {
   db,
-  enqueueEmail,
   getLatestInsightForOrganization,
   listActiveMemberEmails,
   listActiveOrganizationIdsForDigest,
   type InsightWithEvidenceAndProject,
 } from "@cim/db";
+import { queueOutboxEmail } from "../email";
 
 const BRIEF_FRESHNESS_HOURS = 24;
 
@@ -46,16 +46,15 @@ export async function processSendExecutiveBriefJob(
       const subject = `Executive brief: ${brief.projectName}`;
 
       for (const toEmail of recipients) {
-        const outboxEntry = await enqueueEmail(db, {
-          toEmail,
-          subject,
-          bodyText,
-          kind: "executive_brief",
-        });
-        await emailQueue.add(
-          QUEUE_NAMES.sendEmail,
-          { emailOutboxId: outboxEntry.id },
-          { attempts: 5, backoff: { type: "exponential", delay: 2000 } },
+        // Isolated per recipient too (queueOutboxEmail's own doc comment)
+        // — a failure enqueueing one recipient's email must not throw out
+        // of this loop, which would both skip every recipient ordered
+        // after them in this org and get caught by the outer per-org
+        // catch below, losing that org's isolation guarantee along with it.
+        await queueOutboxEmail(
+          emailQueue,
+          { toEmail, subject, bodyText, kind: "executive_brief" },
+          `executive brief for org ${organizationId}`,
         );
       }
     } catch (error) {

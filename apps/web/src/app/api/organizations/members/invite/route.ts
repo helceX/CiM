@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { inviteMemberSchema } from "@cim/validation";
-import { generateRawToken, hashToken, isOrgRole } from "@cim/core";
-import { db, findUserByEmail, getCustomRole, inviteMember, recordAuditLog } from "@cim/db";
+import { generateRawToken, hashToken } from "@cim/core";
+import { db, findUserByEmail, inviteMember, recordAuditLog } from "@cim/db";
 import { getEnv } from "@cim/config";
-import { requirePermission } from "@/lib/tenant";
+import { requirePermission, resolvePermissionsForRoleString } from "@/lib/tenant";
 import { getCurrentUser } from "@/lib/session";
 import { invitationEmailBody, sendEmail } from "@/lib/email";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -75,9 +75,20 @@ export async function POST(request: Request) {
   // docs/product/FEATURE_MATRIX.md P2 "RBAC custom roles" — a
   // shape-valid role that isn't one of the six fixed ones must actually
   // be one of this organization's own custom roles; the zod schema
-  // alone can't check that (it just accepts any uuid).
-  if (!isOrgRole(input.role) && !(await getCustomRole(db, context.organizationId, input.role))) {
+  // alone can't check that (it just accepts any uuid). And whatever
+  // role it resolves to, its permissions can't exceed the inviter's own
+  // — otherwise org:manage_members alone (grantable via a custom role
+  // with no other permission) would let anyone invite a new
+  // organization_owner.
+  const rolePermissions = await resolvePermissionsForRoleString(context.organizationId, input.role);
+  if (!rolePermissions) {
     return NextResponse.json({ error: "That role doesn't exist" }, { status: 400 });
+  }
+  if (!rolePermissions.every((permission) => context.permissions.includes(permission))) {
+    return NextResponse.json(
+      { error: "You can't invite someone to a role with permissions you don't have" },
+      { status: 403 },
+    );
   }
 
   const rawToken = generateRawToken();

@@ -34,6 +34,19 @@ export async function PATCH(
     );
   }
 
+  // Same ceiling as create (POST /api/organizations/roles) — editing an
+  // existing role to add a permission is otherwise a live escalation
+  // path for anyone currently assigned that role, including the caller.
+  const disallowedPermissions = parsed.data.permissions.filter(
+    (permission) => !context.permissions.includes(permission),
+  );
+  if (disallowedPermissions.length > 0) {
+    return NextResponse.json(
+      { error: `You can't grant permissions you don't have: ${disallowedPermissions.join(", ")}` },
+      { status: 403 },
+    );
+  }
+
   const result = await updateCustomRole(db, context.organizationId, roleId, parsed.data);
   if (!result.ok) {
     if (result.reason === "not_found") {

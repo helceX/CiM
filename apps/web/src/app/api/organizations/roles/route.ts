@@ -42,6 +42,21 @@ export async function POST(request: Request) {
     );
   }
 
+  // A custom role is only dangerous once a membership is assigned to
+  // it — but nothing should let a caller define one with permissions
+  // beyond their own, or the assignment step (re-role/invite, which
+  // enforce the same ceiling) is the only thing standing between
+  // org:manage_members alone and a role that grants everything.
+  const disallowedPermissions = parsed.data.permissions.filter(
+    (permission) => !context.permissions.includes(permission),
+  );
+  if (disallowedPermissions.length > 0) {
+    return NextResponse.json(
+      { error: `You can't grant permissions you don't have: ${disallowedPermissions.join(", ")}` },
+      { status: 403 },
+    );
+  }
+
   const result = await createCustomRole(db, context.organizationId, parsed.data);
   if (!result.ok) {
     return NextResponse.json({ error: "A role with that name already exists" }, { status: 409 });

@@ -1,15 +1,13 @@
 import { NextResponse } from "next/server";
 import { updateMemberRoleSchema } from "@cim/validation";
-import { isOrgRole } from "@cim/core";
 import {
   db,
-  getCustomRole,
   recordAuditLog,
   revokeAllSessionsForUser,
   revokeMembership,
   updateMemberRole,
 } from "@cim/db";
-import { requirePermission } from "@/lib/tenant";
+import { requirePermission, resolvePermissionsForRoleString } from "@/lib/tenant";
 
 function forbiddenOrUnauthenticated(error: unknown) {
   if (error instanceof Error && error.message === "FORBIDDEN") {
@@ -52,12 +50,23 @@ export async function PATCH(
   }
 
   // docs/product/FEATURE_MATRIX.md P2 "RBAC custom roles" — see
-  // invite/route.ts's identical check.
-  if (
-    !isOrgRole(parsed.data.role) &&
-    !(await getCustomRole(db, context.organizationId, parsed.data.role))
-  ) {
+  // invite/route.ts's identical checks. A caller can only assign a role
+  // whose permissions are a subset of their own — otherwise anyone
+  // holding org:manage_members (a custom role can grant that alone,
+  // without any other permission) could re-role themselves, or anyone
+  // else, straight to organization_owner.
+  const rolePermissions = await resolvePermissionsForRoleString(
+    context.organizationId,
+    parsed.data.role,
+  );
+  if (!rolePermissions) {
     return NextResponse.json({ error: "That role doesn't exist" }, { status: 400 });
+  }
+  if (!rolePermissions.every((permission) => context.permissions.includes(permission))) {
+    return NextResponse.json(
+      { error: "You can't grant a role with permissions you don't have" },
+      { status: 403 },
+    );
   }
 
   const result = await updateMemberRole(

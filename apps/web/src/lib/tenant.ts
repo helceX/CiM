@@ -107,6 +107,24 @@ export async function requirePermission(permission: Permission): Promise<OrgCont
 }
 
 /**
+ * The permission set a role string (fixed OrgRole or a custom role's
+ * id) would actually grant — used to enforce a "you can't grant a role
+ * more powerful than your own" ceiling on invite/re-role, the same
+ * caller-can't-exceed-their-own-permissions rule
+ * resolveApiKeyAuth's scope check and createApiKeySchema's doc comment
+ * already assume for API keys. Returns null when the role doesn't
+ * exist in this organization.
+ */
+export async function resolvePermissionsForRoleString(
+  organizationId: OrganizationId,
+  role: string,
+): Promise<readonly Permission[] | null> {
+  if (isOrgRole(role)) return permissionsForRole(role);
+  const customRole = await getCustomRole(db, organizationId, role);
+  return customRole ? (customRole.permissions as Permission[]) : null;
+}
+
+/**
  * docs/architecture/SECURITY.md §83 "same authorization path as
  * session-based requests" — an API key's scope is checked against the
  * exact same `Permission` enum a session role is checked against

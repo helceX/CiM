@@ -46,4 +46,24 @@ describe("processGenerateDigestJob — per-org failure isolation", () => {
     expect(enqueueEmail).toHaveBeenCalledTimes(1);
     expect(emailQueue.add).toHaveBeenCalledTimes(1);
   });
+
+  it("still emails the remaining recipients in an org when one recipient's enqueue fails", async () => {
+    listActiveOrganizationIdsForDigest.mockResolvedValueOnce(["org-1"]);
+    getDigestSummaryForOrganization.mockResolvedValueOnce(fakeSummary());
+    listActiveMemberEmails.mockResolvedValueOnce([
+      "first@example.com",
+      "second@example.com",
+      "third@example.com",
+    ]);
+    enqueueEmail.mockResolvedValueOnce({ id: "outbox-1" });
+    enqueueEmail.mockRejectedValueOnce(new Error("transient DB error"));
+    enqueueEmail.mockResolvedValueOnce({ id: "outbox-3" });
+
+    const emailQueue = { add: vi.fn().mockResolvedValue(undefined) } as unknown as Queue<SendEmailJobData>;
+
+    await processGenerateDigestJob(emailQueue);
+
+    expect(enqueueEmail).toHaveBeenCalledTimes(3);
+    expect(emailQueue.add).toHaveBeenCalledTimes(2);
+  });
 });

@@ -31,6 +31,11 @@ export function Field({ id, label, error, hint, required, children, className }:
               id,
               "aria-describedby": error ? errorId : hint ? hintId : undefined,
               "aria-invalid": Boolean(error) || undefined,
+              // aria-invalid alone only tells assistive tech about the
+              // error — Input/Textarea/Select's own red-border styling
+              // is driven by this separate `invalid` prop, so it must be
+              // forwarded too or the visual error state never renders.
+              invalid: Boolean(error),
             },
           )
         : children}

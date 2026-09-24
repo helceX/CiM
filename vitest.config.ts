@@ -32,7 +32,17 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    include: ["packages/*/src/**/*.test.ts", "apps/*/src/**/*.test.ts"],
+    // packages/*.tsx (currently only packages/ui) set tsconfig's jsx to
+    // "react-jsx", so esbuild can transform their .test.tsx files
+    // directly — unlike apps/web, whose Next.js "preserve" setting needs
+    // a JSX-transform plugin this project doesn't configure (see any
+    // commit mentioning that gap). Only packages/*, not apps/*, until
+    // that's addressed.
+    include: [
+      "packages/*/src/**/*.test.ts",
+      "packages/*/src/**/*.test.tsx",
+      "apps/*/src/**/*.test.ts",
+    ],
     exclude: ["**/node_modules/**", "**/dist/**", "**/.next/**"],
     // Integration test files share one real Postgres instance with no
     // transactional isolation between files, and the ingestion pipeline

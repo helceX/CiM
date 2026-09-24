@@ -76,6 +76,11 @@ export async function listMentionsForInsightPeriod(
         eq(mentions.organizationId, organizationId),
         eq(mentions.projectId, projectId),
         gte(mentions.createdAt, sql`now() - (${sinceHours}::text || ' hours')::interval`),
+        // Same "already triaged, don't resurface it" exclusion
+        // listRecentMentionsForAssistant applies — a mention the user
+        // marked irrelevant/duplicate must never come back as grounding
+        // evidence for a generated insight, recommendation, or risk flag.
+        sql`${mentions.status} != 'archived'`,
       ),
     )
     // Plain `desc(mentions.priority)` sorts alphabetically ("normal"

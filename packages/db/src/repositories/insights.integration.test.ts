@@ -150,6 +150,20 @@ describe("insights repository (integration)", () => {
     expect(rows[0]?.priority).toBe("critical");
   });
 
+  it("never grounds a generated insight/recommendation/risk with a mention the user already dismissed as irrelevant/duplicate", async () => {
+    // Regression: a mention the user marked irrelevant/duplicate
+    // (setMentionFeedback -> status "archived") must not come back as
+    // grounding evidence here either — the same exclusion
+    // listRecentMentionsForAssistant already applies for the AI Assistant.
+    await db.update(mentions).set({ status: "archived" }).where(eq(mentions.id, mentionId));
+    try {
+      const rows = await listMentionsForInsightPeriod(db, organizationId, projectId, 24);
+      expect(rows.some((r) => r.id === mentionId)).toBe(false);
+    } finally {
+      await db.update(mentions).set({ status: "new" }).where(eq(mentions.id, mentionId));
+    }
+  });
+
   it("creates a grounded insight with evidence and reads it back as the latest for its kind", async () => {
     const periodStart = new Date(Date.now() - 24 * 60 * 60 * 1000);
     const periodEnd = new Date();

@@ -1,0 +1,1 @@
+ALTER TABLE "monitoring_queries" ADD COLUMN "tracking_target" text DEFAULT 'company' NOT NULL;

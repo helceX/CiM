@@ -1,0 +1,264 @@
+import { sql } from "drizzle-orm";
+import {
+  boolean,
+  customType,
+  index,
+  integer,
+  numeric,
+  pgTable,
+  primaryKey,
+  text,
+  timestamp,
+  uniqueIndex,
+  uuid,
+} from "drizzle-orm/pg-core";
+import { organizations, projects } from "./organizations";
+import { monitoringQueries } from "./monitoring";
+import { users } from "./users";
+
+/**
+ * docs/architecture/ADR-002-SEARCH.md / SEARCH.md — no built-in drizzle-orm
+ * column type for Postgres's `tsvector`, so this is the minimal wrapper
+ * `articles.searchVector` needs. Populated by application code
+ * (packages/db/src/repositories/articles.ts), never a Postgres
+ * GENERATED column — the Turkish-aware folding (`@cim/core`'s
+ * `turkishFold`) has to run in JS before `to_tsvector()` ever sees the
+ * text, and a generated column can only call IMMUTABLE SQL functions.
+ */
+const tsvector = customType<{ data: string }>({
+  dataType() {
+    return "tsvector";
+  },
+});
+
+/**
+ * Global/reference data — NOT tenant-scoped (ADR-001, DATA_MODEL.md).
+ * A Source is shared infrastructure; tenant meaning attaches via Mention.
+ */
+export const sources = pgTable("sources", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull(),
+  domain: text("domain").notNull(),
+  country: text("country"),
+  language: text("language"),
+  type: text("type").notNull(), // news | website | blog | press | tv | radio | podcast | youtube | social | forum | comments | rss | api | other
+  connector: text("connector").notNull(), // mock | rss | sitemap | web | api | social | youtube | podcast | broadcast | custom
+  // The URL the connector polls — a feed URL for rss, a sitemap.xml URL
+  // for sitemap, the page itself for web, or the API endpoint for api.
+  // Unused by mock.
+  url: text("url"),
+  // docs/architecture/INGESTION.md APIConnector — an official third-party
+  // API's bearer/key header, sent on every request (packages/ingestion's
+  // safeFetch). Both null (the common case for rss/sitemap/web/mock) means
+  // no auth header is added. `apiKey` is never returned by any API route
+  // or audit log entry, the same discipline organizations.webhookUrl
+  // follows for the secrets it can embed.
+  apiKeyHeaderName: text("api_key_header_name"),
+  apiKey: text("api_key"),
+  status: text("status").notNull().default("healthy"), // healthy | delayed | error | blocked | unavailable
+  lastCheckedAt: timestamp("last_checked_at", { withTimezone: true }),
+  // SourcePolicy (docs/architecture/SECURITY.md — enforced at ingestion AND render)
+  canStoreFullText: boolean("can_store_full_text").notNull().default(false),
+  canDisplayFullText: boolean("can_display_full_text").notNull().default(false),
+  canDisplayExcerpt: boolean("can_display_excerpt").notNull().default(true),
+  canStoreMedia: boolean("can_store_media").notNull().default(false),
+  canProcessAi: boolean("can_process_ai").notNull().default(true),
+  license: text("license"),
+  termsUrl: text("terms_url"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** Global/reference — one Article can produce Mentions across tenants. */
+export const articles = pgTable(
+  "articles",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    sourceId: uuid("source_id")
+      .notNull()
+      .references(() => sources.id, { onDelete: "cascade" }),
+    canonicalUrl: text("canonical_url").notNull(),
+    contentHash: text("content_hash").notNull(),
+    title: text("title").notNull(),
+    // Populated only when the source's SourcePolicy allows storage.
+    storedExcerpt: text("stored_excerpt"),
+    language: text("language"),
+    publishedAt: timestamp("published_at", { withTimezone: true }),
+    fetchedAt: timestamp("fetched_at", { withTimezone: true }).notNull().defaultNow(),
+    authorName: text("author_name"),
+    storyClusterId: uuid("story_cluster_id"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    // docs/architecture/ADR-002-SEARCH.md MVP tier — title + storedExcerpt,
+    // Turkish-folded then tokenized with the 'simple' (no-stemming)
+    // config, since Postgres ships no Turkish stemming dictionary
+    // (SEARCH.md's own acknowledged limitation). Null until
+    // insertArticle populates it; a null-vector row simply never
+    // matches a full-text query, never a crash.
+    searchVector: tsvector("search_vector"),
+  },
+  (table) => [
+    index("articles_source_idx").on(table.sourceId),
+    // Unique, not a plain index — findExistingArticle/insertArticle's
+    // select-then-insert dedup check (packages/ingestion/src/pipeline.ts's
+    // "never creates a duplicate Mention" claim) had no DB-level
+    // enforcement behind it, only this application-level check, leaving a
+    // TOCTOU race under concurrent crawl-job execution (crawlSource runs
+    // at concurrency:5, and a stalled-job requeue can dispatch the same
+    // source's job twice). insertArticle now backs its upsert with these.
+    uniqueIndex("articles_content_hash_uidx").on(table.contentHash),
+    uniqueIndex("articles_canonical_url_uidx").on(table.canonicalUrl),
+    index("articles_search_vector_idx").using("gin", table.searchVector),
+    index("articles_title_trgm_idx").using("gin", sql`${table.title} gin_trgm_ops`),
+  ],
+);
+
+/** Tenant-scoped join between an Article and a MonitoringQuery match. */
+export const mentions = pgTable(
+  "mentions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    queryId: uuid("query_id")
+      .notNull()
+      .references(() => monitoringQueries.id, { onDelete: "cascade" }),
+    articleId: uuid("article_id")
+      .notNull()
+      .references(() => articles.id, { onDelete: "cascade" }),
+    matchedTerms: text("matched_terms").array().notNull().default([]),
+    relevanceScore: numeric("relevance_score", { precision: 5, scale: 2 }),
+    sentiment: text("sentiment"), // positive | neutral | negative | null = unclassified
+    sentimentConfidence: numeric("sentiment_confidence", {
+      precision: 4,
+      scale: 3,
+    }),
+    // AI enrichment (docs/architecture/AI_ARCHITECTURE.md) — pending until
+    // the worker's ai_enrich job runs; failed/skipped both surface as
+    // "Not available" in the UI, never a fabricated fallback (brief §92).
+    aiStatus: text("ai_status").notNull().default("pending"), // pending | completed | failed | skipped
+    aiSummary: text("ai_summary"),
+    aiMethod: text("ai_method"), // e.g. "mock-heuristic-v1" | "anthropic:claude-haiku-4-5"
+    aiAnalyzedAt: timestamp("ai_analyzed_at", { withTimezone: true }),
+    priority: text("priority").notNull().default("normal"), // low | normal | high | critical
+    status: text("status").notNull().default("new"), // new | reviewed | archived
+    reviewFeedback: text("review_feedback"), // relevant | irrelevant | duplicate
+    assignedToUserId: uuid("assigned_to_user_id"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("mentions_org_created_idx").on(table.organizationId, table.createdAt),
+    index("mentions_org_project_idx").on(table.organizationId, table.projectId),
+    index("mentions_article_idx").on(table.articleId),
+    // The worker's ai_enrich job scans for pending work across tenants
+    // (the ingestion cross-tenant-read exception, ADR-001) — indexed so
+    // that scan stays cheap as mention volume grows.
+    index("mentions_ai_status_idx").on(table.aiStatus),
+    // Re-processing the same Article must not duplicate a Mention for the
+    // same query (docs/architecture/INGESTION.md — pipeline idempotency).
+    uniqueIndex("mentions_query_article_uidx").on(table.queryId, table.articleId),
+  ],
+);
+
+/** Real, source-reported metrics only — never fabricated (brief §26). */
+export const engagementMetrics = pgTable(
+  "engagement_metrics",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    articleId: uuid("article_id")
+      .notNull()
+      .references(() => articles.id, { onDelete: "cascade" }),
+    metricType: text("metric_type").notNull(), // likes | comments | shares | views | reach | ...
+    value: integer("value").notNull(),
+    source: text("source").notNull(), // which system/API reported this
+    observedAt: timestamp("observed_at", { withTimezone: true }).notNull(),
+    measurementMethod: text("measurement_method").notNull(), // reported | estimated | observed
+    confidence: numeric("confidence", { precision: 4, scale: 3 }),
+    isEstimated: boolean("is_estimated").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("engagement_metrics_article_idx").on(table.articleId)],
+);
+
+/**
+ * docs/architecture/DATA_MODEL.md "Tag — user-created label, tenant-
+ * scoped" — the "tag" slice of FEATURE_MATRIX.md P2 "Collaboration
+ * (assign/comment/tag)" (assign shipped in Phase 20; comment is its own,
+ * separately-scoped feature). Case-insensitive uniqueness per org so
+ * "Northwind" and "northwind" reuse the same tag rather than silently
+ * forking it, the same reuse discipline findOrCreateEntity/findOrCreateTopic
+ * already apply (packages/db/src/repositories/ai.ts).
+ */
+export const tags = pgTable(
+  "tags",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("tags_org_name_lower_uidx").on(table.organizationId, sql`lower(${table.name})`),
+    index("tags_org_idx").on(table.organizationId),
+  ],
+);
+
+/** Many-to-many join — a Mention can carry several Tags, a Tag can label many Mentions. */
+export const mentionTags = pgTable(
+  "mention_tags",
+  {
+    mentionId: uuid("mention_id")
+      .notNull()
+      .references(() => mentions.id, { onDelete: "cascade" }),
+    tagId: uuid("tag_id")
+      .notNull()
+      .references(() => tags.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.mentionId, table.tagId] }),
+    index("mention_tags_tag_idx").on(table.tagId),
+  ],
+);
+
+/**
+ * docs/product/FEATURE_MATRIX.md P2 "Collaboration (assign/comment/tag)"
+ * — the "comment" slice (assign shipped in Phase 20, tag in Phase 24;
+ * each is its own, separately-scoped feature per those features' own
+ * comments). A free-text note an org member leaves on a Mention, visible
+ * to every member of the organization — no threading/replies, no edit
+ * history, matching the scope the matrix names (a comment, not a full
+ * discussion thread).
+ */
+export const mentionComments = pgTable(
+  "mention_comments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    mentionId: uuid("mention_id")
+      .notNull()
+      .references(() => mentions.id, { onDelete: "cascade" }),
+    authorUserId: uuid("author_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    body: text("body").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("mention_comments_mention_idx").on(table.mentionId, table.createdAt),
+    index("mention_comments_org_idx").on(table.organizationId),
+  ],
+);
+
+export type Source = typeof sources.$inferSelect;
+export type Article = typeof articles.$inferSelect;
+export type Mention = typeof mentions.$inferSelect;
+export type Tag = typeof tags.$inferSelect;
+export type MentionComment = typeof mentionComments.$inferSelect;

@@ -1,0 +1,506 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Badge, Button, Field, Input, Select, Sheet, SheetContent, Skeleton, Textarea } from "@cim/ui";
+import type { MentionDetail, Tag } from "@cim/db";
+
+const SENTIMENT_TONE = {
+  positive: "success",
+  neutral: "neutral",
+  negative: "danger",
+} as const;
+
+export type AssignableMember = { userId: string; firstName: string; lastName: string };
+
+export function MentionDetailDrawer({
+  mentionId,
+  members,
+  existingTagNames,
+  currentUserId,
+  onClose,
+}: {
+  mentionId: string;
+  members: AssignableMember[];
+  existingTagNames: string[];
+  currentUserId: string;
+  onClose: () => void;
+}) {
+  const router = useRouter();
+  const [detail, setDetail] = useState<MentionDetail | null>(null);
+  const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
+  const [isAssigning, setIsAssigning] = useState(false);
+  const [assignError, setAssignError] = useState<string | null>(null);
+  const [tagInput, setTagInput] = useState("");
+  const [isAddingTag, setIsAddingTag] = useState(false);
+  const [tagError, setTagError] = useState<string | null>(null);
+  const [commentInput, setCommentInput] = useState("");
+  const [isAddingComment, setIsAddingComment] = useState(false);
+  const [commentError, setCommentError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setDetail(null);
+    fetch(`/api/mentions/${mentionId}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!cancelled) setDetail(data);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [mentionId]);
+
+  async function submitFeedback(feedback: "relevant" | "irrelevant" | "duplicate") {
+    setIsSubmittingFeedback(true);
+    try {
+      await fetch(`/api/mentions/${mentionId}/feedback`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ feedback }),
+      });
+      onClose();
+      router.refresh();
+    } finally {
+      setIsSubmittingFeedback(false);
+    }
+  }
+
+  async function handleAssign(nextUserId: string) {
+    const assignedToUserId = nextUserId || null;
+    setAssignError(null);
+    setIsAssigning(true);
+    try {
+      const response = await fetch(`/api/mentions/${mentionId}/assign`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ assignedToUserId }),
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        setAssignError(data.error ?? "Something went wrong. Please try again.");
+        return;
+      }
+      const assignee = members.find((m) => m.userId === assignedToUserId);
+      setDetail((prev) =>
+        prev
+          ? {
+              ...prev,
+              mention: { ...prev.mention, assignedToUserId },
+              assigneeName: assignee
+                ? `${assignee.firstName} ${assignee.lastName}`
+                : null,
+            }
+          : prev,
+      );
+      router.refresh();
+    } finally {
+      setIsAssigning(false);
+    }
+  }
+
+  async function addTag() {
+    const name = tagInput.trim();
+    if (!name) return;
+    setTagError(null);
+    setIsAddingTag(true);
+    try {
+      const response = await fetch(`/api/mentions/${mentionId}/tags`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        setTagError(data.error ?? "Something went wrong. Please try again.");
+        return;
+      }
+      const tag: Tag = await response.json();
+      setDetail((prev) =>
+        prev && !prev.tags.some((t) => t.id === tag.id)
+          ? { ...prev, tags: [...prev.tags, tag].sort((a, b) => a.name.localeCompare(b.name)) }
+          : prev,
+      );
+      setTagInput("");
+      router.refresh();
+    } finally {
+      setIsAddingTag(false);
+    }
+  }
+
+  async function removeTag(tagId: string) {
+    setTagError(null);
+    const response = await fetch(`/api/mentions/${mentionId}/tags/${tagId}`, {
+      method: "DELETE",
+    });
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      setTagError(data.error ?? "Something went wrong. Please try again.");
+      return;
+    }
+    setDetail((prev) =>
+      prev ? { ...prev, tags: prev.tags.filter((t) => t.id !== tagId) } : prev,
+    );
+    router.refresh();
+  }
+
+  async function addComment() {
+    const body = commentInput.trim();
+    if (!body) return;
+    setCommentError(null);
+    setIsAddingComment(true);
+    try {
+      const response = await fetch(`/api/mentions/${mentionId}/comments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ body }),
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        setCommentError(data.error ?? "Something went wrong. Please try again.");
+        return;
+      }
+      const comment = await response.json();
+      setDetail((prev) => (prev ? { ...prev, comments: [...prev.comments, comment] } : prev));
+      setCommentInput("");
+      router.refresh();
+    } finally {
+      setIsAddingComment(false);
+    }
+  }
+
+  async function removeComment(commentId: string) {
+    setCommentError(null);
+    const response = await fetch(`/api/mentions/${mentionId}/comments/${commentId}`, {
+      method: "DELETE",
+    });
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      setCommentError(data.error ?? "Something went wrong. Please try again.");
+      return;
+    }
+    setDetail((prev) =>
+      prev ? { ...prev, comments: prev.comments.filter((c) => c.id !== commentId) } : prev,
+    );
+    router.refresh();
+  }
+
+  return (
+    <Sheet open onOpenChange={(open) => !open && onClose()}>
+      <SheetContent title={detail?.article.title ?? "Mention"}>
+        {!detail ? (
+          <div className="flex flex-col gap-3">
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-2/3" />
+            <Skeleton className="h-24 w-full" />
+          </div>
+        ) : (
+          <div className="flex flex-col gap-6 text-sm">
+            <section className="flex flex-col gap-1">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Source
+              </p>
+              <p className="text-foreground">{detail.source.name}</p>
+              {detail.article.authorName ? (
+                <p className="text-muted-foreground">By {detail.article.authorName}</p>
+              ) : null}
+              <p className="text-muted-foreground">
+                Published{" "}
+                {detail.article.publishedAt
+                  ? new Date(detail.article.publishedAt).toLocaleString()
+                  : "Unknown"}
+              </p>
+              <a
+                href={detail.article.canonicalUrl}
+                target="_blank"
+                rel="noreferrer noopener"
+                className="text-primary underline underline-offset-2"
+              >
+                View original
+              </a>
+            </section>
+
+            <section className="flex flex-col gap-1">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Why did this match?
+              </p>
+              <p className="text-foreground">
+                Matched monitoring query &ldquo;{detail.queryName}&rdquo;
+              </p>
+              {detail.mention.matchedTerms.length > 0 ? (
+                <div className="mt-1 flex flex-wrap gap-1.5">
+                  {detail.mention.matchedTerms.map((term) => (
+                    <Badge key={term} tone="info">
+                      {term}
+                    </Badge>
+                  ))}
+                </div>
+              ) : null}
+            </section>
+
+            <section className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Sentiment
+                </p>
+                {detail.mention.sentiment ? (
+                  <Badge
+                    tone={
+                      SENTIMENT_TONE[
+                        detail.mention.sentiment as keyof typeof SENTIMENT_TONE
+                      ]
+                    }
+                  >
+                    {detail.mention.sentiment}
+                  </Badge>
+                ) : (
+                  <Badge tone="neutral">Unclassified</Badge>
+                )}
+              </div>
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Engagement
+                </p>
+                <p className="text-muted-foreground">Not available</p>
+              </div>
+            </section>
+
+            <section className="flex flex-col gap-2">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                AI summary
+              </p>
+              {detail.mention.aiStatus === "completed" ? (
+                <>
+                  <p className="text-foreground">{detail.mention.aiSummary}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Confidence{" "}
+                    {detail.mention.sentimentConfidence
+                      ? `${Math.round(Number(detail.mention.sentimentConfidence) * 100)}%`
+                      : "Not available"}{" "}
+                    · Method: {detail.mention.aiMethod ?? "Not available"}
+                  </p>
+                </>
+              ) : detail.mention.aiStatus === "failed" ? (
+                <p className="text-muted-foreground">
+                  Not available — AI enrichment failed for this item.
+                </p>
+              ) : detail.mention.aiStatus === "skipped" ? (
+                <p className="text-muted-foreground">
+                  Not available — this source&apos;s content rights don&apos;t permit AI
+                  processing.
+                </p>
+              ) : (
+                <p className="text-muted-foreground">
+                  Not available — AI enrichment is still in progress.
+                </p>
+              )}
+
+              {detail.aiEntities.length > 0 ? (
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Entities
+                  </p>
+                  <div className="mt-1 flex flex-wrap gap-1.5">
+                    {detail.aiEntities.map((entity) => (
+                      <Badge key={entity.name} tone="neutral">
+                        {entity.name}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
+              {detail.aiTopics.length > 0 ? (
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Topics
+                  </p>
+                  <div className="mt-1 flex flex-wrap gap-1.5">
+                    {detail.aiTopics.map((topic) => (
+                      <Badge key={topic.name} tone="info">
+                        {topic.name}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </section>
+
+            <section className="flex flex-col gap-2 border-t border-border pt-4">
+              <Field
+                id="mention-assignee"
+                label="Assigned to"
+                className="max-w-xs"
+                error={assignError ?? undefined}
+              >
+                <Select
+                  value={detail.mention.assignedToUserId ?? ""}
+                  disabled={isAssigning}
+                  onChange={(e) => handleAssign(e.target.value)}
+                >
+                  <option value="">Unassigned</option>
+                  {members.map((member) => (
+                    <option key={member.userId} value={member.userId}>
+                      {member.firstName} {member.lastName}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            </section>
+
+            <section className="flex flex-col gap-2 border-t border-border pt-4">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Tags
+              </p>
+              {detail.tags.length > 0 ? (
+                <ul className="flex flex-wrap gap-2">
+                  {detail.tags.map((tag) => (
+                    <li
+                      key={tag.id}
+                      className="flex items-center gap-2 rounded-sm bg-secondary px-2.5 py-1 text-sm text-secondary-foreground"
+                    >
+                      {tag.name}
+                      <button
+                        type="button"
+                        onClick={() => removeTag(tag.id)}
+                        aria-label={`Remove ${tag.name}`}
+                        className="text-muted-foreground hover:text-foreground"
+                      >
+                        &times;
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+              <div className="flex gap-2">
+                <Input
+                  value={tagInput}
+                  onChange={(e) => setTagInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      addTag();
+                    }
+                  }}
+                  placeholder="Add a tag…"
+                  aria-label="Tag"
+                  list="mention-tag-suggestions"
+                  disabled={isAddingTag}
+                />
+                <datalist id="mention-tag-suggestions">
+                  {existingTagNames.map((name) => (
+                    <option key={name} value={name} />
+                  ))}
+                </datalist>
+                <Button type="button" variant="secondary" disabled={isAddingTag} onClick={addTag}>
+                  Add
+                </Button>
+              </div>
+              {tagError ? (
+                <p role="alert" className="text-sm text-danger">
+                  {tagError}
+                </p>
+              ) : null}
+            </section>
+
+            <section className="flex flex-col gap-2 border-t border-border pt-4">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Feedback
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  disabled={isSubmittingFeedback}
+                  onClick={() => submitFeedback("relevant")}
+                >
+                  Relevant
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  disabled={isSubmittingFeedback}
+                  onClick={() => submitFeedback("irrelevant")}
+                >
+                  Irrelevant
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  disabled={isSubmittingFeedback}
+                  onClick={() => submitFeedback("duplicate")}
+                >
+                  Duplicate
+                </Button>
+              </div>
+            </section>
+
+            <section className="flex flex-col gap-2 border-t border-border pt-4">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Comments
+              </p>
+              {detail.comments.length > 0 ? (
+                <ul className="flex flex-col gap-3">
+                  {detail.comments.map((comment) => (
+                    <li key={comment.id} className="rounded-md border border-border p-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <p className="text-xs font-medium text-foreground">
+                          {comment.authorFirstName} {comment.authorLastName}
+                          <span className="ml-2 font-normal text-muted-foreground">
+                            {new Date(comment.createdAt).toLocaleString()}
+                          </span>
+                        </p>
+                        {comment.authorUserId === currentUserId ? (
+                          <button
+                            type="button"
+                            onClick={() => removeComment(comment.id)}
+                            aria-label="Delete comment"
+                            className="shrink-0 text-muted-foreground hover:text-foreground"
+                          >
+                            &times;
+                          </button>
+                        ) : null}
+                      </div>
+                      <p className="mt-1 whitespace-pre-wrap text-sm text-foreground">
+                        {comment.body}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-muted-foreground">No comments yet.</p>
+              )}
+              <div className="flex flex-col gap-2">
+                <Textarea
+                  value={commentInput}
+                  onChange={(e) => setCommentInput(e.target.value)}
+                  placeholder="Leave a comment for your team…"
+                  aria-label="Comment"
+                  disabled={isAddingComment}
+                />
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  className="self-start"
+                  disabled={isAddingComment || !commentInput.trim()}
+                  onClick={addComment}
+                >
+                  Comment
+                </Button>
+              </div>
+              {commentError ? (
+                <p role="alert" className="text-sm text-danger">
+                  {commentError}
+                </p>
+              ) : null}
+            </section>
+          </div>
+        )}
+      </SheetContent>
+    </Sheet>
+  );
+}

@@ -1,0 +1,29 @@
+{
+  "name": "@cim/worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch --env-file-if-exists=.env.local src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node --env-file-if-exists=.env dist/index.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@cim/ai": "workspace:*",
+    "@cim/config": "workspace:*",
+    "@cim/core": "workspace:*",
+    "@cim/db": "workspace:*",
+    "@cim/ingestion": "workspace:*",
+    "@cim/reports": "workspace:*",
+    "bullmq": "6.3.8",
+    "drizzle-orm": "0.45.2",
+    "ioredis": "6.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "22.15.0",
+    "tsx": "4.23.15",
+    "typescript": "6.0.3",
+    "vitest": "5.0.1"
+  }
+}

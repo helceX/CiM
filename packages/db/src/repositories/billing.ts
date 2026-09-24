@@ -1,0 +1,206 @@
+import { and, count, desc, eq, isNull, sql } from "drizzle-orm";
+import { getMonitoringQueryLimit } from "@cim/core";
+import type { Db } from "../client";
+import { featureUsageSnapshots, subscriptions } from "../schema/billing";
+import { organizationMemberships, organizations } from "../schema/organizations";
+import { monitoringQueries, type QueryAst } from "../schema/monitoring";
+import { articles, mentions } from "../schema/content";
+import { reports } from "../schema/reports";
+import { createMonitoringQuery } from "./monitoring-queries";
+import { asOrganizationId, type OrganizationId } from "./tenant-scope";
+
+export type Subscription = { plan: string };
+const DEFAULT_SUBSCRIPTION: Subscription = { plan: "free" };
+
+/** No row means "free" — same lazy-default convention as `getRetentionPolicy`. */
+export async function getSubscription(db: Db, organizationId: OrganizationId): Promise<Subscription> {
+  const [row] = await db
+    .select({ plan: subscriptions.plan })
+    .from(subscriptions)
+    .where(eq(subscriptions.organizationId, organizationId))
+    .limit(1);
+  return row ?? DEFAULT_SUBSCRIPTION;
+}
+
+export type PlanLimitCheck = { ok: true } | { ok: false; limit: number };
+
+/**
+ * The "active, non-deleted monitoring queries" count — shared by
+ * checkMonitoringQueryLimit (the plan-limit gate) and
+ * captureFeatureUsageSnapshot's keywordsCount, so the two can't drift
+ * apart on what counts as an active query.
+ */
+async function countActiveMonitoringQueries(db: Db, organizationId: OrganizationId): Promise<number> {
+  const [row] = await db
+    .select({ value: count() })
+    .from(monitoringQueries)
+    .where(
+      and(
+        eq(monitoringQueries.organizationId, organizationId),
+        eq(monitoringQueries.status, "active"),
+        isNull(monitoringQueries.deletedAt),
+      ),
+    );
+  return Number(row?.value ?? 0);
+}
+
+/**
+ * docs/product/FEATURE_MATRIX.md P3 "Billing: Plan enforcement" — the
+ * one plan limit this codebase actually enforces (@cim/core's
+ * plan-limits.ts). Counts live, never from the daily
+ * captureFeatureUsageSnapshot — that can be up to 24h stale, which
+ * would wrongly block an org that just deleted its only query, or
+ * wrongly admit one that just hit the cap.
+ */
+export async function checkMonitoringQueryLimit(
+  db: Db,
+  organizationId: OrganizationId,
+): Promise<PlanLimitCheck> {
+  const { plan } = await getSubscription(db, organizationId);
+  const limit = getMonitoringQueryLimit(plan);
+  if (limit === null) return { ok: true };
+
+  const current = await countActiveMonitoringQueries(db, organizationId);
+  return current >= limit ? { ok: false, limit } : { ok: true };
+}
+
+export type CreateMonitoringQueryWithPlanLimitResult =
+  | { ok: true; query: Awaited<ReturnType<typeof createMonitoringQuery>> }
+  | { ok: false; limit: number };
+
+/**
+ * checkMonitoringQueryLimit followed by createMonitoringQuery, alone,
+ * is a check-then-act race: two concurrent requests for the same
+ * just-created free-plan org (the "Save monitoring" button only blocks
+ * a double-click within one tab, not two tabs or a duplicated retry)
+ * can both read current=0 before either insert lands, creating two
+ * queries for a plan capped at one. A Postgres advisory lock scoped to
+ * the organization id serializes concurrent callers for the duration
+ * of the transaction — cheaper than a real schema constraint for a
+ * limit that's plan-dependent, not a fixed invariant the table itself
+ * could express.
+ */
+export async function createMonitoringQueryWithPlanLimit(
+  db: Db,
+  organizationId: OrganizationId,
+  input: {
+    projectId: string;
+    name: string;
+    queryAst: QueryAst;
+    booleanQuery: string;
+    sourceTypes: string[];
+    trackingTarget?: string;
+  },
+): Promise<CreateMonitoringQueryWithPlanLimitResult> {
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${organizationId}))`);
+
+    const check = await checkMonitoringQueryLimit(tx as unknown as Db, organizationId);
+    if (!check.ok) return check;
+
+    const query = await createMonitoringQuery(tx as unknown as Db, organizationId, input);
+    return { ok: true, query };
+  });
+}
+
+export type OrgRef = { organizationId: OrganizationId };
+
+/**
+ * Cross-tenant fan-out target for the worker's capture_feature_usage job
+ * (the same documented cross-tenant read exception ADR-001 already grants
+ * the digest/retention/scheduled-report jobs) — every organization that
+ * hasn't been soft-deleted.
+ */
+export async function listActiveOrganizationsForUsageCapture(db: Db): Promise<OrgRef[]> {
+  const rows = await db
+    .select({ id: organizations.id })
+    .from(organizations)
+    .where(isNull(organizations.deletedAt));
+  return rows.map((row) => ({ organizationId: asOrganizationId(row.id) }));
+}
+
+/**
+ * Every count is a fresh `COUNT(*)` against the source tables, not an
+ * incrementing counter touched at each usage site (see billing.ts's
+ * schema comment) — so this is the one place usage numbers are computed,
+ * never duplicated logic scattered across every mutation that happens to
+ * affect one.
+ */
+export async function captureFeatureUsageSnapshot(db: Db, organizationId: OrganizationId): Promise<void> {
+  const [keywordsCount, sourcesRow, mentionsRow, aiCreditsRow, reportsRow, usersRow] = await Promise.all([
+    countActiveMonitoringQueries(db, organizationId),
+    db
+      .select({ value: sql<number>`count(distinct ${articles.sourceId})` })
+      .from(mentions)
+      .innerJoin(articles, eq(articles.id, mentions.articleId))
+      .where(eq(mentions.organizationId, organizationId))
+      .then(([row]) => row),
+    db
+      .select({ value: count() })
+      .from(mentions)
+      .where(eq(mentions.organizationId, organizationId))
+      .then(([row]) => row),
+    db
+      .select({ value: count() })
+      .from(mentions)
+      .where(and(eq(mentions.organizationId, organizationId), eq(mentions.aiStatus, "completed")))
+      .then(([row]) => row),
+    db
+      .select({ value: count() })
+      .from(reports)
+      .where(eq(reports.organizationId, organizationId))
+      .then(([row]) => row),
+    db
+      .select({ value: count() })
+      .from(organizationMemberships)
+      .where(
+        and(
+          eq(organizationMemberships.organizationId, organizationId),
+          eq(organizationMemberships.status, "active"),
+        ),
+      )
+      .then(([row]) => row),
+  ]);
+
+  await db.insert(featureUsageSnapshots).values({
+    organizationId,
+    keywordsCount,
+    sourcesCount: Number(sourcesRow?.value ?? 0),
+    mentionsCount: Number(mentionsRow?.value ?? 0),
+    aiCreditsCount: Number(aiCreditsRow?.value ?? 0),
+    reportsCount: Number(reportsRow?.value ?? 0),
+    usersCount: Number(usersRow?.value ?? 0),
+  });
+}
+
+export type FeatureUsageSnapshot = {
+  capturedAt: Date;
+  keywordsCount: number;
+  sourcesCount: number;
+  mentionsCount: number;
+  aiCreditsCount: number;
+  reportsCount: number;
+  usersCount: number;
+};
+
+/** `undefined` (never a fabricated zero row) until the daily job has captured at least once. */
+export async function getLatestFeatureUsage(
+  db: Db,
+  organizationId: OrganizationId,
+): Promise<FeatureUsageSnapshot | undefined> {
+  const [row] = await db
+    .select({
+      capturedAt: featureUsageSnapshots.capturedAt,
+      keywordsCount: featureUsageSnapshots.keywordsCount,
+      sourcesCount: featureUsageSnapshots.sourcesCount,
+      mentionsCount: featureUsageSnapshots.mentionsCount,
+      aiCreditsCount: featureUsageSnapshots.aiCreditsCount,
+      reportsCount: featureUsageSnapshots.reportsCount,
+      usersCount: featureUsageSnapshots.usersCount,
+    })
+    .from(featureUsageSnapshots)
+    .where(eq(featureUsageSnapshots.organizationId, organizationId))
+    .orderBy(desc(featureUsageSnapshots.capturedAt))
+    .limit(1);
+  return row;
+}

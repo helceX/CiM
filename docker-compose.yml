@@ -1,0 +1,60 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: cim
+      POSTGRES_PASSWORD: cim
+      POSTGRES_DB: cim
+    ports:
+      - "5432:5432"
+    volumes:
+      - cim_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cim -d cim"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:8-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - cim_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.53.2
+    restart: unless-stopped
+    environment:
+      MEILI_NO_ANALYTICS: "true"
+      MEILI_ENV: development
+    ports:
+      - "7700:7700"
+    volumes:
+      - cim_meili_data:/meili_data
+
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: cim-dev
+      MINIO_ROOT_PASSWORD: cim-dev-secret
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - cim_minio_data:/data
+
+volumes:
+  cim_postgres_data:
+  cim_redis_data:
+  cim_meili_data:
+  cim_minio_data:

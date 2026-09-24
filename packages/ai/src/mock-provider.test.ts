@@ -303,6 +303,33 @@ describe("MockAIProvider", () => {
       });
       expect(result.evidenceMentionIds).toEqual(["m2"]);
     });
+
+    it("caps the answer at 1200 characters, matching assistantAnswerOutputSchema's own max", async () => {
+      // Regression: this path builds `answer` by concatenating up to 5
+      // mention titles/source names with no cap — unlike the Anthropic
+      // path, which is bounded by schema validation at the source. An
+      // uncapped answer here gets echoed back as `history` on the next
+      // question (apps/web's AiAssistantPanel), and
+      // conversationTurnSchema's own answer field caps at 1200 too —
+      // permanently stalling the conversation with a 400 on the very
+      // next, perfectly valid question.
+      const longTitleMentions = Array.from({ length: 5 }, (_, i) => ({
+        id: `m${i}`,
+        title: `Northwind quarterly results coverage ${"word ".repeat(60)}${i}`,
+        sourceName: "Daily Tech Wire",
+        sentiment: "positive" as const,
+        priority: "normal" as const,
+        publishedAt: null,
+      }));
+
+      const result = await provider.answerQuestion({
+        question: "What's happening with Northwind?",
+        screenContext: "Viewing the Dashboard",
+        history: [],
+        mentions: longTitleMentions,
+      });
+      expect(result.answer.length).toBeLessThanOrEqual(1200);
+    });
   });
 
   describe("reviewQuery", () => {

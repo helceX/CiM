@@ -18,6 +18,9 @@ type ConversationTurn = {
 // context bounded as a conversation runs long.
 const MAX_HISTORY_TURNS_SENT = 6;
 
+// assistantAskSchema requires `question` to be at least 3 characters.
+const MIN_QUESTION_LENGTH = 3;
+
 /**
  * docs/architecture/AI_ARCHITECTURE.md "Grounded, contextual assistant"
  * (FEATURE_MATRIX.md P2 "AI Assistant (context-aware)", P3 "... multi-turn").
@@ -41,7 +44,10 @@ export function AiAssistantPanel() {
   async function ask(event: FormEvent) {
     event.preventDefault();
     const trimmed = question.trim();
-    if (!trimmed || isAsking) return;
+    // Matches assistantAskSchema's own min(3) — without this, a 1-2
+    // character question is submittable here but always server-rejected,
+    // surfacing as a generic "Invalid input" with no explanation.
+    if (trimmed.length < MIN_QUESTION_LENGTH || isAsking) return;
     setError(null);
     setIsAsking(true);
     try {
@@ -63,6 +69,8 @@ export function AiAssistantPanel() {
       }
       setTurns((prev) => [...prev, { question: trimmed, ...data }]);
       setQuestion("");
+    } catch {
+      setError("Something went wrong. Please try again.");
     } finally {
       setIsAsking(false);
     }
@@ -111,7 +119,7 @@ export function AiAssistantPanel() {
           aria-label={turns.length > 0 ? "Ask a follow-up question" : "Ask the AI assistant a question"}
           disabled={isAsking}
         />
-        <Button type="submit" disabled={isAsking || !question.trim()}>
+        <Button type="submit" disabled={isAsking || question.trim().length < MIN_QUESTION_LENGTH}>
           {isAsking ? "Asking…" : "Ask"}
         </Button>
       </form>

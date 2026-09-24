@@ -26,6 +26,18 @@ import type {
 
 const METHOD = "mock-heuristic-v1";
 
+// Must match assistantAnswerOutputSchema's answer max(1200)
+// (packages/ai/src/types.ts) — the Anthropic path is already bounded
+// there since its output is schema-validated; this mock path builds the
+// string directly and needs its own cap. An answer over that limit would
+// still be accepted here (nothing validates a mock provider's own
+// output against the schema), but the *next* question would be
+// rejected: the client resends every prior turn as `history`
+// (apps/web/src/app/(app)/dashboard/ai-assistant-panel.tsx), and
+// conversationTurnSchema's own answer field carries the same max(1200)
+// — permanently stalling that conversation.
+const ANSWER_MAX_LENGTH = 1200;
+
 const POSITIVE_WORDS = [
   "award",
   "growth",
@@ -299,7 +311,8 @@ export class MockAIProvider implements AIProvider {
       (positive || negative ? ` — ${positive} positive, ${negative} negative.` : ".");
 
     return {
-      answer,
+      answer:
+        answer.length > ANSWER_MAX_LENGTH ? `${answer.slice(0, ANSWER_MAX_LENGTH - 1)}…` : answer,
       confidence: Math.min(0.8, 0.4 + top[0]!.overlap * 0.1),
       evidenceMentionIds: top.map((s) => s.mention.id),
       method: METHOD,

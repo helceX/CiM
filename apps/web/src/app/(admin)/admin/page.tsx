@@ -34,21 +34,46 @@ export default async function AdminOverviewPage() {
   // just makes one of its Promise.all siblings reject instead, aborting
   // the whole page (and the "Database unreachable" badge along with it)
   // before it ever gets to render. Each DB-dependent call below falls
-  // back the same way getQueueHealth's Redis call already does, so the
-  // page still renders — with empty/zeroed sections — when Postgres is
-  // the thing that's actually down.
+  // back the same way getQueueHealth's Redis call already does — an
+  // {ok, ...} wrapper, not a bare value — so a genuinely empty result
+  // (0 organizations, no sources yet) never gets confused with "this
+  // section's query failed", the same "never a fabricated zero" rule
+  // billing.ts and usage-section.tsx already follow, and each failure is
+  // logged so an operator debugging a partial outage isn't staring at a
+  // silently-empty table with nothing in the logs to explain it.
   const emptyTotals = { totalOrganizations: 0, totalUsers: 0, totalSources: 0, totalMentions: 0, mentionsLast24h: 0 };
-  const [totals, dbHealthy, queueResult, organizations, sources] = await Promise.all([
-    getPlatformTotals(db).catch(() => emptyTotals),
+  const [totalsResult, dbHealthy, queueResult, organizationsResult, sourcesResult] = await Promise.all([
+    getPlatformTotals(db)
+      .then((totals) => ({ ok: true as const, totals }))
+      .catch((error: unknown) => {
+        console.error("[admin] getPlatformTotals failed:", error);
+        return { ok: false as const, totals: emptyTotals };
+      }),
     checkDatabaseHealth(db),
     getQueueHealth()
       .then((rows) => ({ ok: true as const, rows }))
-      .catch(() => ({ ok: false as const, rows: [] })),
-    listOrganizationsForAdmin(db).catch(() => []),
-    listSourcesForAdmin(db).catch(() => []),
+      .catch((error: unknown) => {
+        console.error("[admin] getQueueHealth failed:", error);
+        return { ok: false as const, rows: [] };
+      }),
+    listOrganizationsForAdmin(db)
+      .then((organizations) => ({ ok: true as const, organizations }))
+      .catch((error: unknown) => {
+        console.error("[admin] listOrganizationsForAdmin failed:", error);
+        return { ok: false as const, organizations: [] };
+      }),
+    listSourcesForAdmin(db)
+      .then((sources) => ({ ok: true as const, sources }))
+      .catch((error: unknown) => {
+        console.error("[admin] listSourcesForAdmin failed:", error);
+        return { ok: false as const, sources: [] };
+      }),
   ]);
+  const totals = totalsResult.totals;
   const redisHealthy = queueResult.ok;
   const queues = queueResult.rows;
+  const organizations = organizationsResult.organizations;
+  const sources = sourcesResult.sources;
 
   return (
     <div className="flex flex-col gap-8">
@@ -64,6 +89,7 @@ export default async function AdminOverviewPage() {
         <div className="mt-3 flex gap-3">
           <Badge tone={dbHealthy ? "success" : "danger"}>Database {dbHealthy ? "reachable" : "unreachable"}</Badge>
           <Badge tone={redisHealthy ? "success" : "danger"}>Redis {redisHealthy ? "reachable" : "unreachable"}</Badge>
+          {!totalsResult.ok ? <Badge tone="danger">Totals unavailable</Badge> : null}
         </div>
         <div className="mt-4">
           <KpiRow
@@ -120,7 +146,10 @@ export default async function AdminOverviewPage() {
       </section>
 
       <section>
-        <h2 className="text-sm font-semibold text-foreground">Organizations</h2>
+        <div className="flex items-center gap-3">
+          <h2 className="text-sm font-semibold text-foreground">Organizations</h2>
+          {!organizationsResult.ok ? <Badge tone="danger">Unavailable — query failed</Badge> : null}
+        </div>
         <div className="mt-3 overflow-hidden rounded-lg border border-border">
           <table className="w-full text-sm">
             <thead className="border-b border-border bg-surface-muted text-left text-xs text-muted-foreground">
@@ -148,7 +177,10 @@ export default async function AdminOverviewPage() {
       </section>
 
       <section>
-        <h2 className="text-sm font-semibold text-foreground">Source health</h2>
+        <div className="flex items-center gap-3">
+          <h2 className="text-sm font-semibold text-foreground">Source health</h2>
+          {!sourcesResult.ok ? <Badge tone="danger">Unavailable — query failed</Badge> : null}
+        </div>
         <div className="mt-3 overflow-hidden rounded-lg border border-border">
           <table className="w-full text-sm">
             <thead className="border-b border-border bg-surface-muted text-left text-xs text-muted-foreground">

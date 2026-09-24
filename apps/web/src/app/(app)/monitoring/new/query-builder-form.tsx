@@ -131,6 +131,7 @@ export function QueryBuilderForm({ projects }: { projects: Project[] }) {
   }
 
   async function handlePreview() {
+    setError(null);
     setIsPreviewing(true);
     try {
       const response = await fetch("/api/monitoring/preview", {
@@ -138,7 +139,13 @@ export function QueryBuilderForm({ projects }: { projects: Project[] }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(currentAst),
       });
-      if (response.ok) setPreview(await response.json());
+      if (response.ok) {
+        setPreview(await response.json());
+      } else {
+        setError("Couldn't preview this query. Please try again.");
+      }
+    } catch {
+      setError("Couldn't preview this query. Please try again.");
     } finally {
       setIsPreviewing(false);
     }

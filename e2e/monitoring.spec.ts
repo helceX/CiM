@@ -34,6 +34,18 @@ test("create a monitoring query, preview real matches, save it, and see it produ
   await page.getByLabel("Include").press("Enter");
   await expect(page.getByRole("button", { name: "Remove Daily Tech Wire" })).toBeVisible();
 
+  // Regression: handlePreview (query-builder-form.tsx) used to have no
+  // catch/error handling, unlike handleSave — a failed preview request
+  // left the button's spinner-only feedback with no visible error, so a
+  // user couldn't tell a click had failed versus just not having clicked
+  // yet. Reuses this test's own registered session (registerAndOnboard is
+  // rate-limited, see e2e/mentions.spec.ts's comment) rather than a
+  // separate test.
+  await page.route("**/api/monitoring/preview", (route) => route.abort("failed"));
+  await page.getByRole("button", { name: "Preview" }).click();
+  await expect(page.getByText("Couldn't preview this query. Please try again.")).toBeVisible();
+  await page.unroute("**/api/monitoring/preview");
+
   await page.getByRole("button", { name: "Preview" }).click();
   await expect(page.getByText(/Your query matched \d+ results? from the last 30 days\./)).toBeVisible();
   const matchText = await page.getByText(/Your query matched \d+ results? from the last 30 days\./).innerText();

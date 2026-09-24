@@ -7,13 +7,23 @@ import {
   recordAuditLog,
   db,
 } from "@cim/db";
-import { requireOrgContext } from "@/lib/tenant";
+import { requirePermission } from "@/lib/tenant";
 
 export async function POST(request: Request) {
   let context;
   try {
-    context = await requireOrgContext();
-  } catch {
+    // A viewer or report_recipient role only has monitoring:read
+    // (packages/core/src/authz.ts) — both are explicitly meant to be
+    // read-only, the same reasoning POST /api/reports requires
+    // reports:write for.
+    context = await requirePermission("monitoring:write");
+  } catch (error) {
+    if (error instanceof Error && error.message === "FORBIDDEN") {
+      return NextResponse.json(
+        { error: "You don't have permission to create monitoring queries" },
+        { status: 403 },
+      );
+    }
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 

@@ -49,7 +49,13 @@ export function CustomRolesSection({ customRoles }: { customRoles: CustomRole[] 
             Define roles with exactly the permissions a member needs.
           </p>
         </div>
-        <RoleFormDialog trigger={<Button type="button" size="sm">New role</Button>} />
+        <RoleFormDialog
+          trigger={
+            <Button type="button" size="sm">
+              New role
+            </Button>
+          }
+        />
       </div>
       {customRoles.length === 0 ? (
         <p className="mt-3 text-sm text-muted-foreground">No custom roles yet.</p>
@@ -63,7 +69,8 @@ export function CustomRolesSection({ customRoles }: { customRoles: CustomRole[] 
               <div>
                 <p className="text-sm font-medium text-foreground">{role.name}</p>
                 <p className="text-xs text-muted-foreground">
-                  {role.permissions.length} permission{role.permissions.length === 1 ? "" : "s"}
+                  {role.permissions.length} permission
+                  {role.permissions.length === 1 ? "" : "s"}
                 </p>
               </div>
               <div className="flex items-center gap-2">
@@ -104,8 +111,22 @@ function RoleFormDialog({
 
   function togglePermission(permission: Permission) {
     setPermissions((prev) =>
-      prev.includes(permission) ? prev.filter((p) => p !== permission) : [...prev, permission],
+      prev.includes(permission)
+        ? prev.filter((p) => p !== permission)
+        : [...prev, permission],
     );
+  }
+
+  // Discards any unsaved edits made before Cancel — without this, the
+  // dialog stayed mounted with the edited-but-never-saved name/
+  // permissions, so reopening it later (even for an unrelated edit)
+  // showed those stale, never-submitted values instead of the real
+  // server state.
+  function handleCancel() {
+    setOpen(false);
+    setName(role?.name ?? "");
+    setPermissions((role?.permissions as Permission[]) ?? []);
+    setError(null);
   }
 
   async function handleSubmit() {
@@ -176,7 +197,7 @@ function RoleFormDialog({
             </p>
           ) : null}
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
+            <Button type="button" variant="secondary" onClick={handleCancel}>
               Cancel
             </Button>
             <Button
@@ -203,7 +224,9 @@ function DeleteRoleDialog({ roleId, name }: { roleId: string; name: string }) {
     setError(null);
     setIsSubmitting(true);
     try {
-      const response = await fetch(`/api/organizations/roles/${roleId}`, { method: "DELETE" });
+      const response = await fetch(`/api/organizations/roles/${roleId}`, {
+        method: "DELETE",
+      });
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));
         setError(data.error ?? "Something went wrong. Please try again.");
@@ -226,8 +249,8 @@ function DeleteRoleDialog({ roleId, name }: { roleId: string; name: string }) {
       <DialogContent title="Delete role">
         <div className="mt-4 flex flex-col gap-4">
           <p className="text-sm text-muted-foreground">
-            Delete <strong className="text-foreground">{name}</strong>? Members currently
-            assigned to it must be moved to a different role first.
+            Delete <strong className="text-foreground">{name}</strong>? Members
+            currently assigned to it must be moved to a different role first.
           </p>
           {error ? (
             <p role="alert" className="text-sm text-danger">
@@ -238,7 +261,12 @@ function DeleteRoleDialog({ roleId, name }: { roleId: string; name: string }) {
             <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
               Cancel
             </Button>
-            <Button type="button" variant="danger" onClick={handleDelete} disabled={isSubmitting}>
+            <Button
+              type="button"
+              variant="danger"
+              onClick={handleDelete}
+              disabled={isSubmitting}
+            >
               {isSubmitting ? "Deleting…" : "Delete role"}
             </Button>
           </div>

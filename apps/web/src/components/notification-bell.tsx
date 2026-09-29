@@ -19,11 +19,28 @@ type NotificationItem = {
   createdAt: string;
 };
 
-export function NotificationBell({ initialUnreadCount }: { initialUnreadCount: number }) {
+export function NotificationBell({
+  initialUnreadCount,
+}: {
+  initialUnreadCount: number;
+}) {
   const [open, setOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(initialUnreadCount);
   const [items, setItems] = useState<NotificationItem[] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // apps/web/src/app/(app)/layout.tsx recomputes initialUnreadCount fresh
+  // on every server render (each navigation within the (app) layout),
+  // but this component itself stays mounted across those navigations —
+  // useState's initializer only runs once, so without this effect the
+  // badge/list would go stale as soon as the user left the page they
+  // first opened the bell on. Clearing `items` forces a refetch next
+  // time the dropdown opens, rather than showing a stale list forever.
+  useEffect(() => {
+    setUnreadCount(initialUnreadCount);
+    setItems(null);
+  }, [initialUnreadCount]);
 
   useEffect(() => {
     if (!open || items !== null) return;
@@ -31,6 +48,7 @@ export function NotificationBell({ initialUnreadCount }: { initialUnreadCount: n
     fetch("/api/notifications")
       .then((res) => (res.ok ? res.json() : { items: [] }))
       .then((data) => setItems(data.items))
+      .catch(() => setItems([]))
       .finally(() => setIsLoading(false));
   }, [open, items]);
 
@@ -39,23 +57,58 @@ export function NotificationBell({ initialUnreadCount }: { initialUnreadCount: n
   }
 
   async function markRead(id: string) {
-    setItems((current) =>
-      current?.map((item) => (item.id === id ? { ...item, readAt: new Date().toISOString() } : item)) ?? null,
+    const previousItems = items;
+    const previousUnreadCount = unreadCount;
+    setError(null);
+    setItems(
+      (current) =>
+        current?.map((item) =>
+          item.id === id ? { ...item, readAt: new Date().toISOString() } : item,
+        ) ?? null,
     );
     setUnreadCount((count) => Math.max(0, count - 1));
-    await fetch(`/api/notifications/${id}/read`, { method: "POST" });
+    try {
+      const response = await fetch(`/api/notifications/${id}/read`, { method: "POST" });
+      if (!response.ok) throw new Error("request failed");
+    } catch {
+      setItems(previousItems);
+      setUnreadCount(previousUnreadCount);
+      setError("Couldn't mark that as read. Please try again.");
+    }
   }
 
   async function markAllRead() {
-    setItems((current) => current?.map((item) => ({ ...item, readAt: item.readAt ?? new Date().toISOString() })) ?? null);
+    const previousItems = items;
+    const previousUnreadCount = unreadCount;
+    setError(null);
+    setItems(
+      (current) =>
+        current?.map((item) => ({
+          ...item,
+          readAt: item.readAt ?? new Date().toISOString(),
+        })) ?? null,
+    );
     setUnreadCount(0);
-    await fetch("/api/notifications/mark-all-read", { method: "POST" });
+    try {
+      const response = await fetch("/api/notifications/mark-all-read", {
+        method: "POST",
+      });
+      if (!response.ok) throw new Error("request failed");
+    } catch {
+      setItems(previousItems);
+      setUnreadCount(previousUnreadCount);
+      setError("Couldn't mark all as read. Please try again.");
+    }
   }
 
   return (
     <DropdownMenu open={open} onOpenChange={handleOpenChange}>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ""}`}>
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ""}`}
+        >
           <span className="relative">
             <Bell className="size-4" aria-hidden="true" />
             {unreadCount > 0 ? (
@@ -79,11 +132,20 @@ export function NotificationBell({ initialUnreadCount }: { initialUnreadCount: n
             </button>
           ) : null}
         </div>
+        {error ? (
+          <p role="alert" className="px-2.5 pb-1.5 text-xs text-danger">
+            {error}
+          </p>
+        ) : null}
         <div className="max-h-96 overflow-y-auto">
           {isLoading ? (
-            <p className="px-2.5 py-4 text-center text-sm text-muted-foreground">Loading…</p>
+            <p className="px-2.5 py-4 text-center text-sm text-muted-foreground">
+              Loading…
+            </p>
           ) : !items || items.length === 0 ? (
-            <p className="px-2.5 py-4 text-center text-sm text-muted-foreground">You&apos;re all caught up.</p>
+            <p className="px-2.5 py-4 text-center text-sm text-muted-foreground">
+              You&apos;re all caught up.
+            </p>
           ) : (
             items.map((item) => (
               <DropdownMenuItem
@@ -95,7 +157,9 @@ export function NotificationBell({ initialUnreadCount }: { initialUnreadCount: n
                 className="flex-col items-start gap-0.5 whitespace-normal"
               >
                 <div className="flex w-full items-center justify-between gap-2">
-                  <span className="text-sm font-medium text-foreground">{item.title}</span>
+                  <span className="text-sm font-medium text-foreground">
+                    {item.title}
+                  </span>
                   {!item.readAt ? <Badge tone="info">New</Badge> : null}
                 </div>
                 <span className="text-xs text-muted-foreground">{item.body}</span>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Badge,
@@ -21,6 +21,13 @@ const FIXED_ASSIGNABLE_ROLES = [
   { value: "viewer", label: "Viewer" },
   { value: "report_recipient", label: "Report Recipient" },
 ] as const;
+
+// Least-privilege default — a new invite should require the inviter to
+// deliberately opt a teammate into more access, not the other way
+// around. Read-only and no configuration surface (PRODUCT_VISION.md's
+// role table), the same default every other invite-style flow in the
+// product assumes.
+const DEFAULT_INVITE_ROLE = "viewer";
 
 function formatFixedRole(role: string): string {
   const known = FIXED_ASSIGNABLE_ROLES.find((r) => r.value === role);
@@ -119,9 +126,16 @@ function InviteMemberDialog({ customRoles }: { customRoles: CustomRole[] }) {
   const options = assignableRoleOptions(customRoles);
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState<string>(options[0]!.value);
+  const [role, setRole] = useState<string>(DEFAULT_INVITE_ROLE);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  function handleCancel() {
+    setOpen(false);
+    setEmail("");
+    setRole(DEFAULT_INVITE_ROLE);
+    setError(null);
+  }
 
   async function handleInvite() {
     setError(null);
@@ -139,6 +153,7 @@ function InviteMemberDialog({ customRoles }: { customRoles: CustomRole[] }) {
       }
       setOpen(false);
       setEmail("");
+      setRole(DEFAULT_INVITE_ROLE);
       router.refresh();
     } catch {
       setError("Something went wrong. Please try again.");
@@ -184,7 +199,7 @@ function InviteMemberDialog({ customRoles }: { customRoles: CustomRole[] }) {
             </p>
           ) : null}
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
+            <Button type="button" variant="secondary" onClick={handleCancel}>
               Cancel
             </Button>
             <Button
@@ -212,10 +227,24 @@ function RoleSelect({
 }) {
   const router = useRouter();
   const options = assignableRoleOptions(customRoles);
+  // Local, optimistically-updated copy of the selected value — binding
+  // the <Select> straight to the `role` prop meant the dropdown visibly
+  // snapped back to the old value the instant handleChange's own
+  // setIsSaving/setError triggered a re-render, before router.refresh()
+  // ever brought the new prop value down (looking exactly like the
+  // click hadn't registered). Resyncs whenever the server-confirmed
+  // `role` prop actually changes.
+  const [localRole, setLocalRole] = useState(role);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    setLocalRole(role);
+  }, [role]);
+
   async function handleChange(nextRole: string) {
+    const previousRole = localRole;
+    setLocalRole(nextRole);
     setError(null);
     setIsSaving(true);
     try {
@@ -227,9 +256,13 @@ function RoleSelect({
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));
         setError(data.error ?? "Something went wrong. Please try again.");
+        setLocalRole(previousRole);
         return;
       }
       router.refresh();
+    } catch {
+      setError("Something went wrong. Please try again.");
+      setLocalRole(previousRole);
     } finally {
       setIsSaving(false);
     }
@@ -239,7 +272,7 @@ function RoleSelect({
     <div className="flex flex-col items-end gap-1">
       <Select
         aria-label="Role"
-        value={role}
+        value={localRole}
         disabled={isSaving}
         onChange={(e) => handleChange(e.target.value)}
         className="h-8 text-xs"

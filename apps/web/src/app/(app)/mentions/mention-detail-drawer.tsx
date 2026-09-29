@@ -29,6 +29,7 @@ export function MentionDetailDrawer({
   const router = useRouter();
   const [detail, setDetail] = useState<MentionDetail | null>(null);
   const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
+  const [feedbackError, setFeedbackError] = useState<string | null>(null);
   const [isAssigning, setIsAssigning] = useState(false);
   const [assignError, setAssignError] = useState<string | null>(null);
   const [tagInput, setTagInput] = useState("");
@@ -52,15 +53,23 @@ export function MentionDetailDrawer({
   }, [mentionId]);
 
   async function submitFeedback(feedback: "relevant" | "irrelevant" | "duplicate") {
+    setFeedbackError(null);
     setIsSubmittingFeedback(true);
     try {
-      await fetch(`/api/mentions/${mentionId}/feedback`, {
+      const response = await fetch(`/api/mentions/${mentionId}/feedback`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ feedback }),
       });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        setFeedbackError(data.error ?? "Something went wrong. Please try again.");
+        return;
+      }
       onClose();
       router.refresh();
+    } catch {
+      setFeedbackError("Something went wrong. Please try again.");
     } finally {
       setIsSubmittingFeedback(false);
     }
@@ -94,6 +103,8 @@ export function MentionDetailDrawer({
           : prev,
       );
       router.refresh();
+    } catch {
+      setAssignError("Something went wrong. Please try again.");
     } finally {
       setIsAssigning(false);
     }
@@ -123,6 +134,8 @@ export function MentionDetailDrawer({
       );
       setTagInput("");
       router.refresh();
+    } catch {
+      setTagError("Something went wrong. Please try again.");
     } finally {
       setIsAddingTag(false);
     }
@@ -130,18 +143,22 @@ export function MentionDetailDrawer({
 
   async function removeTag(tagId: string) {
     setTagError(null);
-    const response = await fetch(`/api/mentions/${mentionId}/tags/${tagId}`, {
-      method: "DELETE",
-    });
-    if (!response.ok) {
-      const data = await response.json().catch(() => ({}));
-      setTagError(data.error ?? "Something went wrong. Please try again.");
-      return;
+    try {
+      const response = await fetch(`/api/mentions/${mentionId}/tags/${tagId}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        setTagError(data.error ?? "Something went wrong. Please try again.");
+        return;
+      }
+      setDetail((prev) =>
+        prev ? { ...prev, tags: prev.tags.filter((t) => t.id !== tagId) } : prev,
+      );
+      router.refresh();
+    } catch {
+      setTagError("Something went wrong. Please try again.");
     }
-    setDetail((prev) =>
-      prev ? { ...prev, tags: prev.tags.filter((t) => t.id !== tagId) } : prev,
-    );
-    router.refresh();
   }
 
   async function addComment() {
@@ -164,6 +181,8 @@ export function MentionDetailDrawer({
       setDetail((prev) => (prev ? { ...prev, comments: [...prev.comments, comment] } : prev));
       setCommentInput("");
       router.refresh();
+    } catch {
+      setCommentError("Something went wrong. Please try again.");
     } finally {
       setIsAddingComment(false);
     }
@@ -171,18 +190,22 @@ export function MentionDetailDrawer({
 
   async function removeComment(commentId: string) {
     setCommentError(null);
-    const response = await fetch(`/api/mentions/${mentionId}/comments/${commentId}`, {
-      method: "DELETE",
-    });
-    if (!response.ok) {
-      const data = await response.json().catch(() => ({}));
-      setCommentError(data.error ?? "Something went wrong. Please try again.");
-      return;
+    try {
+      const response = await fetch(`/api/mentions/${mentionId}/comments/${commentId}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        setCommentError(data.error ?? "Something went wrong. Please try again.");
+        return;
+      }
+      setDetail((prev) =>
+        prev ? { ...prev, comments: prev.comments.filter((c) => c.id !== commentId) } : prev,
+      );
+      router.refresh();
+    } catch {
+      setCommentError("Something went wrong. Please try again.");
     }
-    setDetail((prev) =>
-      prev ? { ...prev, comments: prev.comments.filter((c) => c.id !== commentId) } : prev,
-    );
-    router.refresh();
   }
 
   return (
@@ -436,6 +459,11 @@ export function MentionDetailDrawer({
                   Duplicate
                 </Button>
               </div>
+              {feedbackError ? (
+                <p role="alert" className="text-sm text-danger">
+                  {feedbackError}
+                </p>
+              ) : null}
             </section>
 
             <section className="flex flex-col gap-2 border-t border-border pt-4">

@@ -71,19 +71,21 @@ export function AlertRuleForm({ queries }: { queries: MonitoringQueryOption[] })
   // sources (apps/web/src/app/api/alerts/route.ts enforces the same
   // rules server-side) — narrow the picker instead of letting the user
   // hit a 400 after filling out the rest of the form.
-  const selectableQueries =
-    type === "competitor"
-      ? queries.filter((q) => q.trackingTarget === "competitor")
-      : type === "creator_spike"
-        ? queries.filter((q) => q.sourceTypes.includes("social"))
-        : queries;
+  function queriesForType(value: string): MonitoringQueryOption[] {
+    if (value === "competitor") {
+      return queries.filter((q) => q.trackingTarget === "competitor");
+    }
+    if (value === "creator_spike") {
+      return queries.filter((q) => q.sourceTypes.includes("social"));
+    }
+    return queries;
+  }
+
+  const selectableQueries = queriesForType(type);
 
   function selectType(value: string) {
     setType(value);
-    const nextOptions =
-      value === "competitor"
-        ? queries.filter((q) => q.trackingTarget === "competitor")
-        : queries;
+    const nextOptions = queriesForType(value);
     if (!nextOptions.some((q) => q.id === queryId)) {
       setQueryId(nextOptions[0]?.id ?? "");
     }

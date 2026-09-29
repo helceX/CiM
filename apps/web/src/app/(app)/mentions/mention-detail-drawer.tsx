@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Badge,
@@ -63,8 +63,17 @@ export function MentionDetailDrawer({
   const [commentInput, setCommentInput] = useState("");
   const [isAddingComment, setIsAddingComment] = useState(false);
   const [commentError, setCommentError] = useState<string | null>(null);
+  // mentions-table.tsx renders this drawer with no `key`, so switching rows
+  // swaps `mentionId` in place rather than remounting the component — a
+  // handler's own closure still sees the `mentionId` it was called with,
+  // never the current one, so it can't tell on its own whether the user has
+  // since moved to a different mention. A ref (always current, unlike the
+  // closure) lets each handler check that after its request resolves,
+  // before applying the response to `detail`/closing the drawer.
+  const currentMentionIdRef = useRef(mentionId);
 
   useEffect(() => {
+    currentMentionIdRef.current = mentionId;
     let cancelled = false;
     setDetail(null);
     // mentions-table.tsx renders this drawer with no `key`, so clicking a
@@ -108,7 +117,10 @@ export function MentionDetailDrawer({
         setFeedbackError(data.error ?? "Something went wrong. Please try again.");
         return;
       }
-      onClose();
+      // The user may have switched to a different mention while this was
+      // in flight — closing now would dismiss the drawer they're actively
+      // viewing for a mention this submission was never about.
+      if (currentMentionIdRef.current === mentionId) onClose();
       router.refresh();
     } catch {
       setFeedbackError("Something went wrong. Please try again.");
@@ -132,18 +144,24 @@ export function MentionDetailDrawer({
         setAssignError(data.error ?? "Something went wrong. Please try again.");
         return;
       }
-      const assignee = members.find((m) => m.userId === assignedToUserId);
-      setDetail((prev) =>
-        prev
-          ? {
-              ...prev,
-              mention: { ...prev.mention, assignedToUserId },
-              assigneeName: assignee
-                ? `${assignee.firstName} ${assignee.lastName}`
-                : null,
-            }
-          : prev,
-      );
+      // The user may have switched to a different mention while this was
+      // in flight — applying this response to `detail` now would merge
+      // mention A's new assignee onto whatever mention B's drawer is
+      // currently displaying.
+      if (currentMentionIdRef.current === mentionId) {
+        const assignee = members.find((m) => m.userId === assignedToUserId);
+        setDetail((prev) =>
+          prev
+            ? {
+                ...prev,
+                mention: { ...prev.mention, assignedToUserId },
+                assigneeName: assignee
+                  ? `${assignee.firstName} ${assignee.lastName}`
+                  : null,
+              }
+            : prev,
+        );
+      }
       router.refresh();
     } catch {
       setAssignError("Something went wrong. Please try again.");
@@ -169,15 +187,20 @@ export function MentionDetailDrawer({
         return;
       }
       const tag: Tag = await response.json();
-      setDetail((prev) =>
-        prev && !prev.tags.some((t) => t.id === tag.id)
-          ? {
-              ...prev,
-              tags: [...prev.tags, tag].sort((a, b) => a.name.localeCompare(b.name)),
-            }
-          : prev,
-      );
-      setTagInput("");
+      // The user may have switched to a different mention while this was
+      // in flight — applying this response to `detail` now would attach
+      // mention A's new tag to whatever mention B's drawer is displaying.
+      if (currentMentionIdRef.current === mentionId) {
+        setDetail((prev) =>
+          prev && !prev.tags.some((t) => t.id === tag.id)
+            ? {
+                ...prev,
+                tags: [...prev.tags, tag].sort((a, b) => a.name.localeCompare(b.name)),
+              }
+            : prev,
+        );
+        setTagInput("");
+      }
       router.refresh();
     } catch {
       setTagError("Something went wrong. Please try again.");
@@ -203,9 +226,14 @@ export function MentionDetailDrawer({
         setTagError(data.error ?? "Something went wrong. Please try again.");
         return;
       }
-      setDetail((prev) =>
-        prev ? { ...prev, tags: prev.tags.filter((t) => t.id !== tagId) } : prev,
-      );
+      // The user may have switched to a different mention while this was
+      // in flight — filtering `detail.tags` now would remove a tag from
+      // whatever mention B's drawer is currently displaying.
+      if (currentMentionIdRef.current === mentionId) {
+        setDetail((prev) =>
+          prev ? { ...prev, tags: prev.tags.filter((t) => t.id !== tagId) } : prev,
+        );
+      }
       router.refresh();
     } catch {
       setTagError("Something went wrong. Please try again.");
@@ -231,10 +259,15 @@ export function MentionDetailDrawer({
         return;
       }
       const comment = await response.json();
-      setDetail((prev) =>
-        prev ? { ...prev, comments: [...prev.comments, comment] } : prev,
-      );
-      setCommentInput("");
+      // The user may have switched to a different mention while this was
+      // in flight — applying this response to `detail` now would attach
+      // mention A's new comment to whatever mention B's drawer is displaying.
+      if (currentMentionIdRef.current === mentionId) {
+        setDetail((prev) =>
+          prev ? { ...prev, comments: [...prev.comments, comment] } : prev,
+        );
+        setCommentInput("");
+      }
       router.refresh();
     } catch {
       setCommentError("Something went wrong. Please try again.");
@@ -254,11 +287,16 @@ export function MentionDetailDrawer({
         setCommentError(data.error ?? "Something went wrong. Please try again.");
         return;
       }
-      setDetail((prev) =>
-        prev
-          ? { ...prev, comments: prev.comments.filter((c) => c.id !== commentId) }
-          : prev,
-      );
+      // The user may have switched to a different mention while this was
+      // in flight — filtering `detail.comments` now would remove a
+      // comment from whatever mention B's drawer is currently displaying.
+      if (currentMentionIdRef.current === mentionId) {
+        setDetail((prev) =>
+          prev
+            ? { ...prev, comments: prev.comments.filter((c) => c.id !== commentId) }
+            : prev,
+        );
+      }
       router.refresh();
     } catch {
       setCommentError("Something went wrong. Please try again.");

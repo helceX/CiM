@@ -6,11 +6,23 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Search } from "lucide-react";
 import { NAV_ITEMS } from "./nav-config";
 
-type PaletteAction = { id: string; label: string; run: (router: ReturnType<typeof useRouter>) => void };
+type PaletteAction = {
+  id: string;
+  label: string;
+  run: (router: ReturnType<typeof useRouter>) => void;
+};
 
 const ACTIONS: PaletteAction[] = [
-  { id: "goto-dashboard", label: "Go to Dashboard", run: (router) => router.push("/dashboard") },
-  { id: "goto-settings", label: "Go to Settings", run: (router) => router.push("/settings") },
+  {
+    id: "goto-dashboard",
+    label: "Go to Dashboard",
+    run: (router) => router.push("/dashboard"),
+  },
+  {
+    id: "goto-settings",
+    label: "Go to Settings",
+    run: (router) => router.push("/settings"),
+  },
 ];
 
 /**
@@ -37,22 +49,41 @@ export function CommandPalette() {
   const results = useMemo(() => {
     const navResults = NAV_ITEMS.filter((item) =>
       item.label.toLowerCase().includes(query.toLowerCase()),
-    ).map((item) => ({ id: item.href, label: `Go to ${item.label}`, run: () => router.push(item.href) }));
+    ).map((item) => ({
+      id: item.href,
+      label: `Go to ${item.label}`,
+      run: () => router.push(item.href),
+    }));
     const actionResults = ACTIONS.filter((action) =>
       action.label.toLowerCase().includes(query.toLowerCase()),
-    ).map((action) => ({ id: action.id, label: action.label, run: () => action.run(router) }));
+    ).map((action) => ({
+      id: action.id,
+      label: action.label,
+      run: () => action.run(router),
+    }));
     return [...navResults, ...actionResults];
   }, [query, router]);
 
+  // Selecting a result already clears the query (below); closing any other
+  // way (Escape, overlay click) must too — otherwise the palette stays
+  // mounted with the last, never-acted-on search, so reopening it shows
+  // stale results until the user notices and clears the input themselves.
+  function handleOpenChange(next: boolean) {
+    setOpen(next);
+    if (!next) setQuery("");
+  }
+
   return (
-    <DialogPrimitive.Root open={open} onOpenChange={setOpen}>
+    <DialogPrimitive.Root open={open} onOpenChange={handleOpenChange}>
       <DialogPrimitive.Trigger
         className="flex h-8 items-center gap-2 rounded border border-border bg-surface px-2.5 text-sm text-muted-foreground hover:bg-surface-muted"
         aria-label="Open command palette"
       >
         <Search className="size-3.5" aria-hidden="true" />
         Search
-        <kbd className="ml-4 rounded-sm border border-border-strong px-1 text-[10px]">⌘K</kbd>
+        <kbd className="ml-4 rounded-sm border border-border-strong px-1 text-[10px]">
+          ⌘K
+        </kbd>
       </DialogPrimitive.Trigger>
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-foreground/20" />
@@ -60,7 +91,9 @@ export function CommandPalette() {
           className="fixed left-1/2 top-24 z-50 w-full max-w-lg -translate-x-1/2 rounded-lg border border-border bg-surface shadow-lg"
           aria-describedby={undefined}
         >
-          <DialogPrimitive.Title className="sr-only">Command palette</DialogPrimitive.Title>
+          <DialogPrimitive.Title className="sr-only">
+            Command palette
+          </DialogPrimitive.Title>
           <div className="flex items-center gap-2 border-b border-border px-4 py-3">
             <Search className="size-4 text-muted-foreground" aria-hidden="true" />
             <input
@@ -74,7 +107,9 @@ export function CommandPalette() {
           </div>
           <ul className="max-h-80 overflow-y-auto p-2">
             {results.length === 0 ? (
-              <li className="px-3 py-6 text-center text-sm text-muted-foreground">No matches</li>
+              <li className="px-3 py-6 text-center text-sm text-muted-foreground">
+                No matches
+              </li>
             ) : (
               results.map((result) => (
                 <li key={result.id}>

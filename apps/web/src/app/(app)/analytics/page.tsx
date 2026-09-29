@@ -12,7 +12,8 @@ import { requireOrgContext } from "@/lib/tenant";
 import { MentionTrendChart } from "@/components/charts/mention-trend-chart";
 import { SentimentTrendChart } from "@/components/charts/sentiment-trend-chart";
 import { DistributionBarChart } from "@/components/charts/distribution-bar-chart";
-import { RangeSelect } from "./range-select";
+import { ChangeBadge } from "@/components/change-badge";
+import { RangeSelect } from "@/components/range-select";
 
 const VALID_RANGES = [7, 30, 90];
 
@@ -157,19 +158,5 @@ export default async function AnalyticsPage({
         </>
       )}
     </div>
-  );
-}
-
-function ChangeBadge({ current, previous }: { current: number; previous: number }) {
-  if (previous === 0) {
-    return current > 0 ? <Badge tone="info">New</Badge> : null;
-  }
-  const change = Math.round(((current - previous) / previous) * 100);
-  if (change === 0) return <Badge tone="neutral">No change</Badge>;
-  return (
-    <Badge tone={change > 0 ? "success" : "danger"}>
-      {change > 0 ? "+" : ""}
-      {change}%
-    </Badge>
   );
 }

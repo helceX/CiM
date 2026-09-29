@@ -9,6 +9,7 @@ const RANGES = [
   { value: "90", label: "Last 90 days" },
 ];
 
+/** Shared `?since=` range picker — first used by Analytics, reused by the Social Listening dashboard. */
 export function RangeSelect({ current }: { current: number }) {
   const router = useRouter();
   const pathname = usePathname();

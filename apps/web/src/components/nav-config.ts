@@ -1,5 +1,14 @@
 import type { LucideIcon } from "lucide-react";
-import { BarChart3, BellRing, FileText, Inbox, LayoutDashboard, Radar, Settings } from "lucide-react";
+import {
+  BarChart3,
+  BellRing,
+  FileText,
+  Inbox,
+  LayoutDashboard,
+  Radar,
+  Settings,
+  Share2,
+} from "lucide-react";
 
 /**
  * Sidebar entries for sections that actually exist. Per brief §154, we
@@ -11,6 +20,7 @@ export const NAV_ITEMS: { href: string; label: string; icon: LucideIcon }[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/monitoring", label: "Monitoring", icon: Radar },
   { href: "/mentions", label: "Mentions", icon: Inbox },
+  { href: "/social", label: "Social", icon: Share2 },
   { href: "/alerts", label: "Alerts", icon: BellRing },
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/reports", label: "Reports", icon: FileText },

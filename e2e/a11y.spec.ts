@@ -47,6 +47,7 @@ const AUTHENTICATED_PATHS = [
   "/monitoring",
   "/monitoring/new",
   "/mentions",
+  "/social",
   "/alerts",
   "/alerts/new",
   "/reports",

@@ -30,4 +30,5 @@ export * from "./repositories/api-keys";
 export * from "./repositories/billing";
 export * from "./repositories/onboarding";
 export * from "./repositories/social-profiles";
+export * from "./repositories/social-listening";
 export * from "./search/postgres-search-index";

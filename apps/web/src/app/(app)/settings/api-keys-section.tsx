@@ -53,7 +53,9 @@ export function ApiKeysSection({
   const [revealedKey, setRevealedKey] = useState<string | null>(null);
 
   function toggleScope(scope: Permission) {
-    setScopes((prev) => (prev.includes(scope) ? prev.filter((s) => s !== scope) : [...prev, scope]));
+    setScopes((prev) =>
+      prev.includes(scope) ? prev.filter((s) => s !== scope) : [...prev, scope],
+    );
   }
 
   async function handleCreate() {
@@ -74,6 +76,8 @@ export function ApiKeysSection({
       setName("");
       setScopes([]);
       router.refresh();
+    } catch {
+      setError("Something went wrong. Please try again.");
     } finally {
       setIsCreating(false);
     }
@@ -81,13 +85,19 @@ export function ApiKeysSection({
 
   async function handleRevoke(id: string) {
     setError(null);
-    const response = await fetch(`/api/organizations/api-keys/${id}`, { method: "DELETE" });
-    if (!response.ok) {
-      const data = await response.json().catch(() => ({}));
-      setError(data.error ?? "Something went wrong. Please try again.");
-      return;
+    try {
+      const response = await fetch(`/api/organizations/api-keys/${id}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        setError(data.error ?? "Something went wrong. Please try again.");
+        return;
+      }
+      router.refresh();
+    } catch {
+      setError("Something went wrong. Please try again.");
     }
-    router.refresh();
   }
 
   if (!canManageApiKeys) {
@@ -169,13 +179,25 @@ export function ApiKeysSection({
       ) : null}
 
       <div className="mt-4 flex flex-col gap-3 border-t border-border pt-4">
-        <Field id="api-key-name" label="Key name" className="max-w-xs" error={error ?? undefined}>
-          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Internal reporting script" />
+        <Field
+          id="api-key-name"
+          label="Key name"
+          className="max-w-xs"
+          error={error ?? undefined}
+        >
+          <Input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="e.g. Internal reporting script"
+          />
         </Field>
         <div className="flex flex-col gap-1.5">
           <span className="text-sm font-medium text-foreground">Scopes</span>
           {SCOPE_OPTIONS.map((option) => (
-            <label key={option.value} className="flex items-center gap-2 text-sm text-foreground">
+            <label
+              key={option.value}
+              className="flex items-center gap-2 text-sm text-foreground"
+            >
               <Checkbox
                 checked={scopes.includes(option.value)}
                 onCheckedChange={() => toggleScope(option.value)}

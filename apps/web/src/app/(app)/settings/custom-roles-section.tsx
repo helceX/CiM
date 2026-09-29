@@ -152,6 +152,8 @@ function RoleFormDialog({
         setPermissions([]);
       }
       router.refresh();
+    } catch {
+      setError("Something went wrong. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -234,6 +236,8 @@ function DeleteRoleDialog({ roleId, name }: { roleId: string; name: string }) {
       }
       setOpen(false);
       router.refresh();
+    } catch {
+      setError("Something went wrong. Please try again.");
     } finally {
       setIsSubmitting(false);
     }

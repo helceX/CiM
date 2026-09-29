@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button, Checkbox, Field, Input, Select } from "@cim/ui";
+import { Button, Checkbox, Field, Input, Select, Textarea } from "@cim/ui";
 import { astToBooleanQuery, parseBooleanQuery, type QueryAst } from "@cim/core";
 import type { TrackingTarget } from "@cim/validation";
 import { TRACKING_TARGET_OPTIONS } from "@/lib/tracking-targets";
@@ -108,7 +108,10 @@ export function QueryBuilderForm({ projects }: { projects: Project[] }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const currentAst: QueryAst = useMemo(
-    () => (mode === "simple" ? { include, exclude, exactPhrases } : parseBooleanQuery(advancedText)),
+    () =>
+      mode === "simple"
+        ? { include, exclude, exactPhrases }
+        : parseBooleanQuery(advancedText),
     [mode, include, exclude, exactPhrases, advancedText],
   );
 
@@ -126,7 +129,9 @@ export function QueryBuilderForm({ projects }: { projects: Project[] }) {
 
   function toggleSourceCategory(value: string) {
     setSourceCategories((current) =>
-      current.includes(value) ? current.filter((v) => v !== value) : [...current, value],
+      current.includes(value)
+        ? current.filter((v) => v !== value)
+        : [...current, value],
     );
   }
 
@@ -164,7 +169,11 @@ export function QueryBuilderForm({ projects }: { projects: Project[] }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           projectId,
-          name: name || currentAst.include[0] || currentAst.exactPhrases[0] || "Untitled monitoring",
+          name:
+            name ||
+            currentAst.include[0] ||
+            currentAst.exactPhrases[0] ||
+            "Untitled monitoring",
           include: currentAst.include,
           exclude: currentAst.exclude,
           exactPhrases: currentAst.exactPhrases,
@@ -189,7 +198,11 @@ export function QueryBuilderForm({ projects }: { projects: Project[] }) {
   return (
     <div className="flex max-w-2xl flex-col gap-6">
       <Field id="name" label="Name" required>
-        <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Brand monitoring" />
+        <Input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="e.g. Brand monitoring"
+        />
       </Field>
 
       <Field id="tracking-target" label="What does this track?" required>
@@ -207,18 +220,13 @@ export function QueryBuilderForm({ projects }: { projects: Project[] }) {
 
       {projects.length > 1 ? (
         <Field id="project" label="Project" required>
-          <select
-            id="project"
-            value={projectId}
-            onChange={(e) => setProjectId(e.target.value)}
-            className="h-9 rounded border border-border bg-surface px-3 text-sm text-foreground"
-          >
+          <Select value={projectId} onChange={(e) => setProjectId(e.target.value)}>
             {projects.map((project) => (
               <option key={project.id} value={project.id}>
                 {project.name}
               </option>
             ))}
-          </select>
+          </Select>
         </Field>
       ) : null}
 
@@ -244,8 +252,18 @@ export function QueryBuilderForm({ projects }: { projects: Project[] }) {
 
         {mode === "simple" ? (
           <div className="flex flex-col gap-4">
-            <ChipInput label="Include" values={include} onChange={setInclude} placeholder="e.g. your brand name" />
-            <ChipInput label="Exclude" values={exclude} onChange={setExclude} placeholder="e.g. job posting" />
+            <ChipInput
+              label="Include"
+              values={include}
+              onChange={setInclude}
+              placeholder="e.g. your brand name"
+            />
+            <ChipInput
+              label="Exclude"
+              values={exclude}
+              onChange={setExclude}
+              placeholder="e.g. job posting"
+            />
             <ChipInput
               label="Exact phrase"
               values={exactPhrases}
@@ -259,12 +277,11 @@ export function QueryBuilderForm({ projects }: { projects: Project[] }) {
             label="Boolean query"
             hint='Supports AND, OR, NOT, and "exact phrases".'
           >
-            <textarea
-              id="advanced"
+            <Textarea
               value={advancedText}
               onChange={(e) => setAdvancedText(e.target.value)}
               rows={4}
-              className="w-full rounded border border-border bg-surface px-3 py-2 font-mono text-sm text-foreground"
+              className="font-mono"
             />
           </Field>
         )}
@@ -274,7 +291,10 @@ export function QueryBuilderForm({ projects }: { projects: Project[] }) {
         <span className="text-sm font-medium text-foreground">Sources</span>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
           {SOURCE_CATEGORIES.map((category) => (
-            <label key={category.value} className="flex items-center gap-2 text-sm text-foreground">
+            <label
+              key={category.value}
+              className="flex items-center gap-2 text-sm text-foreground"
+            >
               <Checkbox
                 checked={sourceCategories.includes(category.value)}
                 onCheckedChange={() => toggleSourceCategory(category.value)}
@@ -288,23 +308,31 @@ export function QueryBuilderForm({ projects }: { projects: Project[] }) {
       <div className="flex flex-col gap-3 rounded-lg border border-dashed border-border p-4">
         <div className="flex items-center justify-between">
           <span className="text-sm font-medium text-foreground">Preview results</span>
-          <Button type="button" size="sm" variant="secondary" onClick={handlePreview} disabled={isPreviewing}>
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            onClick={handlePreview}
+            disabled={isPreviewing}
+          >
             {isPreviewing ? "Checking…" : "Preview"}
           </Button>
         </div>
         {preview ? (
           <div className="flex flex-col gap-2 text-sm">
             <p className="text-foreground">
-              Your query matched {preview.matchCount} result{preview.matchCount === 1 ? "" : "s"} from the
-              last {preview.windowDays} days.
+              Your query matched {preview.matchCount} result
+              {preview.matchCount === 1 ? "" : "s"} from the last {preview.windowDays}{" "}
+              days.
             </p>
             {preview.warning ? <p className="text-warning">{preview.warning}</p> : null}
             {preview.aiAssessment ? (
               <div className="rounded-md bg-surface-muted p-2">
                 <p className="text-foreground">{preview.aiAssessment.text}</p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  AI assessment · Confidence {Math.round(preview.aiAssessment.confidence * 100)}% ·
-                  Method: {preview.aiAssessment.method}
+                  AI assessment · Confidence{" "}
+                  {Math.round(preview.aiAssessment.confidence * 100)}% · Method:{" "}
+                  {preview.aiAssessment.method}
                 </p>
               </div>
             ) : null}

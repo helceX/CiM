@@ -3,6 +3,7 @@ import type { Db } from "../client";
 import { articles, mentions, sources, type Tag } from "../schema/content";
 import { monitoringQueries } from "../schema/monitoring";
 import { organizationMemberships } from "../schema/organizations";
+import { socialProfiles } from "../schema/social";
 import { users } from "../schema/users";
 import { PostgresSearchIndex } from "../search/postgres-search-index";
 import type { OrganizationId } from "./tenant-scope";
@@ -83,6 +84,13 @@ export async function createMentionIfNotExists(
     articleId: string;
     matchedTerms: string[];
     priority?: "low" | "normal" | "high" | "critical";
+    // docs/architecture/ADR-006-SOCIAL-LISTENING.md — the typed match
+    // taxonomy behind the "Why matched?" UI. Omitted (not just null) by
+    // every caller that predates this classification, so those mentions
+    // keep rendering "Not classified" rather than a guessed value.
+    matchType?: string | null;
+    matchConfidence?: string | null;
+    matchedRule?: string | null;
   },
 ): Promise<string | null> {
   const result = await db
@@ -94,6 +102,9 @@ export async function createMentionIfNotExists(
       articleId: input.articleId,
       matchedTerms: input.matchedTerms,
       priority: input.priority ?? "normal",
+      matchType: input.matchType ?? null,
+      matchConfidence: input.matchConfidence ?? null,
+      matchedRule: input.matchedRule ?? null,
     })
     .onConflictDoNothing({ target: [mentions.queryId, mentions.articleId] })
     .returning({ id: mentions.id });
@@ -235,19 +246,36 @@ export async function listMentionsFiltered(
   };
 }
 
+export type MentionSocialAuthor = {
+  platform: string;
+  handle: string;
+  displayName: string | null;
+  profileUrl: string | null;
+  followers: number | null;
+  verified: boolean | null;
+};
+
 export type MentionDetail = MentionListItem & {
   queryName: string;
   aiEntities: MentionEntityRow[];
   aiTopics: MentionTopicRow[];
   tags: Tag[];
   comments: MentionCommentWithAuthor[];
+  // docs/architecture/ADR-006-SOCIAL-LISTENING.md — populated only when
+  // the article's source is social and a social_profiles row was linked
+  // at ingestion time; null for every non-social mention, never a
+  // fabricated placeholder (brief §35, §182–184).
+  socialAuthor: MentionSocialAuthor | null;
 };
 
 /**
  * For the Mention Detail Drawer's "Why did this match?" (brief §15) and
  * AI trust layer (summary/sentiment/entities/topics with confidence +
  * method, AI_ARCHITECTURE.md) — `mention.aiStatus` tells the UI whether to
- * render enrichment or "Not available".
+ * render enrichment or "Not available". `mention.matchType`/
+ * `matchConfidence`/`matchedRule` (ADR-006) drive the "Why matched?"
+ * section; the socialProfiles left join (`socialAuthor`) backs the
+ * author card for social-sourced mentions.
  */
 export async function getMentionDetail(
   db: Db,
@@ -261,12 +289,19 @@ export async function getMentionDetail(
       source: sources,
       queryName: monitoringQueries.name,
       assigneeName: assigneeNameColumn,
+      socialPlatform: socialProfiles.platform,
+      socialHandle: socialProfiles.handle,
+      socialDisplayName: socialProfiles.displayName,
+      socialProfileUrl: socialProfiles.profileUrl,
+      socialFollowers: socialProfiles.followers,
+      socialVerified: socialProfiles.verified,
     })
     .from(mentions)
     .innerJoin(articles, eq(articles.id, mentions.articleId))
     .innerJoin(sources, eq(sources.id, articles.sourceId))
     .innerJoin(monitoringQueries, eq(monitoringQueries.id, mentions.queryId))
     .leftJoin(users, eq(users.id, mentions.assignedToUserId))
+    .leftJoin(socialProfiles, eq(socialProfiles.id, articles.authorProfileId))
     .where(and(eq(mentions.organizationId, organizationId), eq(mentions.id, mentionId)))
     .limit(1);
   if (!row) return undefined;
@@ -277,7 +312,27 @@ export async function getMentionDetail(
     listTagsForMention(db, mentionId),
     listCommentsForMention(db, mentionId),
   ]);
-  return { ...row, aiEntities, aiTopics, tags, comments };
+  const {
+    socialPlatform,
+    socialHandle,
+    socialDisplayName,
+    socialProfileUrl,
+    socialFollowers,
+    socialVerified,
+    ...rest
+  } = row;
+  const socialAuthor: MentionSocialAuthor | null =
+    socialPlatform && socialHandle
+      ? {
+          platform: socialPlatform,
+          handle: socialHandle,
+          displayName: socialDisplayName,
+          profileUrl: socialProfileUrl,
+          followers: socialFollowers,
+          verified: socialVerified,
+        }
+      : null;
+  return { ...rest, aiEntities, aiTopics, tags, comments, socialAuthor };
 }
 
 export type AssignMentionResult = "ok" | "not_found" | "invalid_assignee";

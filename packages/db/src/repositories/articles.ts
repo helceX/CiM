@@ -33,6 +33,10 @@ export async function insertArticle(
     language: string | null;
     publishedAt: Date | null;
     authorName: string | null;
+    // docs/architecture/ADR-006-SOCIAL-LISTENING.md — set by the
+    // pipeline when the raw fetch result carried a social author;
+    // absent/null for every non-social article.
+    authorProfileId?: string | null;
   },
 ) {
   // docs/architecture/ADR-002-SEARCH.md MVP tier — folded here (JS, not a

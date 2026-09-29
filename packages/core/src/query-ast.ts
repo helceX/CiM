@@ -148,6 +148,61 @@ export function computeMatchPriority(ast: QueryAst, text: string): "high" | "nor
   return hasExactPhraseMatch ? "high" : "normal";
 }
 
+/**
+ * The term/phrase that actually satisfied `matchesText`, for the "Why
+ * matched?" UI (docs/architecture/ADR-006-SOCIAL-LISTENING.md) — exact
+ * phrases take priority over loose include terms since they're the
+ * stronger signal (mirrors computeMatchPriority's own ordering). Null
+ * when the query has no include/exactPhrase terms at all (the
+ * vacuously-true case matchesText itself falls back to).
+ */
+export function findMatchedTerm(ast: QueryAst, text: string): string | null {
+  const folded = turkishFold(text);
+  for (const phrase of ast.exactPhrases) {
+    if (folded.includes(turkishFold(phrase))) return phrase;
+  }
+  for (const term of ast.include) {
+    if (folded.includes(turkishFold(term))) return term;
+  }
+  return null;
+}
+
+export type MatchType = "direct_mention" | "hashtag" | "url" | "exact_name" | "contextual";
+
+const URL_LIKE = /^(https?:\/\/)?[a-z0-9-]+(\.[a-z0-9-]+)+(\/\S*)?$/i;
+
+/**
+ * docs/architecture/ADR-006-SOCIAL-LISTENING.md — a deterministic,
+ * non-AI classification of *how* a term matched, driven by the matched
+ * term's own shape (an "@handle", a "#hashtag", a domain/URL, an exact
+ * multi-word phrase, or a loose keyword). Two match types from the CiM
+ * V2 master prompt's taxonomy are deliberately NOT produced here:
+ * `alias` (needs the EntityAlias table wired into MonitoringQuery
+ * matching — not yet built) and `semantic` (an AI capability, per the
+ * ADR — never guessed by string shape). A term this function can't
+ * confidently classify falls back to "contextual" rather than fabricating
+ * a more specific type.
+ */
+export function classifyMatchType(
+  ast: QueryAst,
+  matchedTerm: string,
+  sourceType: string,
+): { matchType: MatchType; matchedRule: string } {
+  if (sourceType === "social" && matchedTerm.startsWith("@")) {
+    return { matchType: "direct_mention", matchedRule: `Matched direct mention: "${matchedTerm}"` };
+  }
+  if (matchedTerm.startsWith("#")) {
+    return { matchType: "hashtag", matchedRule: `Matched hashtag: "${matchedTerm}"` };
+  }
+  if (URL_LIKE.test(matchedTerm.trim())) {
+    return { matchType: "url", matchedRule: `Matched URL/domain: "${matchedTerm}"` };
+  }
+  if (ast.exactPhrases.includes(matchedTerm)) {
+    return { matchType: "exact_name", matchedRule: `Matched exact phrase: "${matchedTerm}"` };
+  }
+  return { matchType: "contextual", matchedRule: `Matched keyword: "${matchedTerm}"` };
+}
+
 /** Flags obviously ambiguous/too-broad single-term queries (brief §101). */
 export function queryQualityWarning(ast: QueryAst): string | null {
   const totalTerms = ast.include.length + ast.exactPhrases.length;

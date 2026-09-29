@@ -43,7 +43,7 @@ export const sources = pgTable("sources", {
   country: text("country"),
   language: text("language"),
   type: text("type").notNull(), // news | website | blog | press | tv | radio | podcast | youtube | social | forum | comments | rss | api | other
-  connector: text("connector").notNull(), // mock | rss | sitemap | web | api | social | youtube | podcast | broadcast | custom
+  connector: text("connector").notNull(), // mock | mock-social | rss | sitemap | web | api | social | youtube | podcast | broadcast | custom
   // The URL the connector polls — a feed URL for rss, a sitemap.xml URL
   // for sitemap, the page itself for web, or the API endpoint for api.
   // Unused by mock.

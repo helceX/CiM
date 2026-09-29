@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   astToBooleanQuery,
+  classifyMatchType,
   computeMatchPriority,
+  findMatchedTerm,
   matchesText,
   parseBooleanQuery,
   queryQualityWarning,
@@ -101,6 +103,61 @@ describe("query AST", () => {
     it("is 'normal' when there are no exact phrases configured at all", () => {
       const ast = { include: ["Northwind"], exclude: [], exactPhrases: [] };
       expect(computeMatchPriority(ast, "Northwind announces quarterly results")).toBe("normal");
+    });
+  });
+
+  describe("findMatchedTerm", () => {
+    it("prefers an exact phrase over a looser include term when both match", () => {
+      const ast = { include: ["Northwind"], exclude: [], exactPhrases: ["Northwind Atlas"] };
+      expect(findMatchedTerm(ast, "Northwind Atlas wins regional award")).toBe("Northwind Atlas");
+    });
+
+    it("falls back to the matching include term when no exact phrase matches", () => {
+      const ast = { include: ["Northwind"], exclude: [], exactPhrases: ["Northwind Atlas"] };
+      expect(findMatchedTerm(ast, "Northwind expands into a new region")).toBe("Northwind");
+    });
+
+    it("returns null when the query has no include/exactPhrase terms at all", () => {
+      const ast = { include: [], exclude: ["spam"], exactPhrases: [] };
+      expect(findMatchedTerm(ast, "regular article text")).toBeNull();
+    });
+  });
+
+  describe("classifyMatchType", () => {
+    it("classifies an @handle on a social source as direct_mention", () => {
+      const ast = { include: ["@brand"], exclude: [], exactPhrases: [] };
+      expect(classifyMatchType(ast, "@brand", "social")).toEqual({
+        matchType: "direct_mention",
+        matchedRule: 'Matched direct mention: "@brand"',
+      });
+    });
+
+    it("does not classify an @handle as direct_mention on a non-social source", () => {
+      const ast = { include: ["@brand"], exclude: [], exactPhrases: [] };
+      expect(classifyMatchType(ast, "@brand", "news").matchType).toBe("contextual");
+    });
+
+    it("classifies a #hashtag as hashtag regardless of source type", () => {
+      const ast = { include: ["#Brand"], exclude: [], exactPhrases: [] };
+      expect(classifyMatchType(ast, "#Brand", "news")).toEqual({
+        matchType: "hashtag",
+        matchedRule: 'Matched hashtag: "#Brand"',
+      });
+    });
+
+    it("classifies a bare domain as url", () => {
+      const ast = { include: ["brand.com"], exclude: [], exactPhrases: [] };
+      expect(classifyMatchType(ast, "brand.com", "web").matchType).toBe("url");
+    });
+
+    it("classifies a matched exact phrase as exact_name", () => {
+      const ast = { include: [], exclude: [], exactPhrases: ["Brand Company"] };
+      expect(classifyMatchType(ast, "Brand Company", "news").matchType).toBe("exact_name");
+    });
+
+    it("classifies a loose include-term match as contextual", () => {
+      const ast = { include: ["Brand"], exclude: [], exactPhrases: [] };
+      expect(classifyMatchType(ast, "Brand", "news").matchType).toBe("contextual");
     });
   });
 });

@@ -1,15 +1,16 @@
-import { computeMatchPriority, matchesText } from "@cim/core";
+import { classifyMatchType, computeMatchPriority, findMatchedTerm, matchesText } from "@cim/core";
 import {
   asOrganizationId,
   createMentionIfNotExists,
   findExistingArticle,
+  findOrCreateSocialProfile,
   insertArticle,
   listActiveMonitoringQueriesForSourceType,
   type Db,
   type OrganizationId,
 } from "@cim/db";
 import type { Source } from "@cim/db/schema";
-import type { SourceConnector } from "./connector";
+import type { RawFetchResult, SourceConnector } from "./connector";
 import { normalizeToArticleInput } from "./normalize";
 
 export type NewMentionRecord = {
@@ -56,19 +57,30 @@ export async function ingestSource(
       canonicalUrl: normalized.canonicalUrl,
       contentHash: normalized.contentHash,
     });
-    const article = existing ?? (await insertArticle(db, normalized));
+    const article =
+      existing ??
+      (await insertArticle(db, {
+        ...normalized,
+        authorProfileId: await resolveAuthorProfileId(db, raw),
+      }));
     if (!existing) articlesCreated += 1;
 
     for (const query of activeQueries) {
       if (!matchesText(query.queryAst, article.title)) continue;
       const priority = computeMatchPriority(query.queryAst, article.title);
       const organizationId = asOrganizationId(query.organizationId);
+      const matchedTerm = findMatchedTerm(query.queryAst, article.title);
+      const { matchType, matchedRule } = matchedTerm
+        ? classifyMatchType(query.queryAst, matchedTerm, source.type)
+        : { matchType: null, matchedRule: null };
       const mentionId = await createMentionIfNotExists(db, organizationId, {
         projectId: query.projectId,
         queryId: query.id,
         articleId: article.id,
         matchedTerms: query.queryAst.include,
         priority,
+        matchType,
+        matchedRule,
       });
       if (mentionId) {
         newMentions.push({
@@ -89,5 +101,30 @@ export async function ingestSource(
     mentionsCreated: newMentions.length,
     newMentions,
   };
+}
+
+/**
+ * docs/architecture/ADR-006-SOCIAL-LISTENING.md — resolves (or creates)
+ * the socialProfiles row for a raw fetch result's author, when the
+ * connector reported one. Null for every non-social connector (raw's
+ * social* fields are absent) and never fabricated when they're missing.
+ */
+async function resolveAuthorProfileId(db: Db, raw: RawFetchResult): Promise<string | null> {
+  if (!raw.socialPlatform || !raw.socialAuthorExternalId || !raw.socialAuthorHandle) return null;
+  const profile = await findOrCreateSocialProfile(db, {
+    platform: raw.socialPlatform,
+    externalId: raw.socialAuthorExternalId,
+    handle: raw.socialAuthorHandle,
+    displayName: raw.socialAuthorDisplayName ?? null,
+    profileUrl: raw.socialAuthorProfileUrl ?? null,
+    followers: raw.socialAuthorFollowers ?? null,
+    following: null,
+    verified: raw.socialAuthorVerified ?? null,
+    accountType: null,
+    language: null,
+    country: null,
+    avatarUrl: null,
+  });
+  return profile.id;
 }
 

@@ -11,6 +11,20 @@ const SENTIMENT_TONE = {
   negative: "danger",
 } as const;
 
+// docs/architecture/ADR-006-SOCIAL-LISTENING.md — human labels for the
+// typed match taxonomy; a matchType this map doesn't recognize (or null,
+// for mentions created before this classification existed) falls back
+// to "Not classified" rather than guessing.
+const MATCH_TYPE_LABEL: Record<string, string> = {
+  direct_mention: "Direct mention",
+  exact_name: "Exact name",
+  alias: "Alias",
+  hashtag: "Hashtag",
+  url: "URL",
+  contextual: "Keyword context",
+  semantic: "Semantic match",
+};
+
 export type AssignableMember = { userId: string; firstName: string; lastName: string };
 
 export function MentionDetailDrawer({
@@ -243,6 +257,38 @@ export function MentionDetailDrawer({
               </a>
             </section>
 
+            {detail.socialAuthor ? (
+              <section className="flex flex-col gap-1">
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Author
+                </p>
+                <div className="flex items-center gap-2">
+                  <p className="text-foreground">
+                    {detail.socialAuthor.displayName ?? detail.socialAuthor.handle}
+                  </p>
+                  {detail.socialAuthor.verified ? <Badge tone="info">Verified</Badge> : null}
+                </div>
+                {detail.socialAuthor.profileUrl ? (
+                  <a
+                    href={detail.socialAuthor.profileUrl}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    className="text-primary underline underline-offset-2"
+                  >
+                    {detail.socialAuthor.handle}
+                  </a>
+                ) : (
+                  <p className="text-muted-foreground">{detail.socialAuthor.handle}</p>
+                )}
+                <p className="text-muted-foreground">
+                  Followers{" "}
+                  {detail.socialAuthor.followers !== null
+                    ? detail.socialAuthor.followers.toLocaleString()
+                    : "Unknown"}
+                </p>
+              </section>
+            ) : null}
+
             <section className="flex flex-col gap-1">
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 Why did this match?
@@ -250,6 +296,24 @@ export function MentionDetailDrawer({
               <p className="text-foreground">
                 Matched monitoring query &ldquo;{detail.queryName}&rdquo;
               </p>
+              <div className="flex items-center gap-2">
+                <Badge tone="neutral">
+                  {detail.mention.matchType
+                    ? (MATCH_TYPE_LABEL[detail.mention.matchType] ?? detail.mention.matchType)
+                    : "Not classified"}
+                </Badge>
+                {detail.mention.matchType === "semantic" ? (
+                  <span className="text-xs text-muted-foreground">
+                    Confidence{" "}
+                    {detail.mention.matchConfidence
+                      ? `${Math.round(Number(detail.mention.matchConfidence) * 100)}%`
+                      : "Not available"}
+                  </span>
+                ) : null}
+              </div>
+              {detail.mention.matchedRule ? (
+                <p className="text-muted-foreground">{detail.mention.matchedRule}</p>
+              ) : null}
               {detail.mention.matchedTerms.length > 0 ? (
                 <div className="mt-1 flex flex-wrap gap-1.5">
                   {detail.mention.matchedTerms.map((term) => (

@@ -65,11 +65,15 @@ async function main() {
 
   console.log("Seeding sources...");
   const sourceNames = [
-    { name: "Daily Tech Wire", domain: "dailytechwire.example", type: "news" },
-    { name: "Marketplace Journal", domain: "marketplacejournal.example", type: "news" },
-    { name: "Northwind Blog Network", domain: "nwblogs.example", type: "blog" },
-    { name: "Industry Pulse", domain: "industrypulse.example", type: "news" },
-    { name: "Community Forum Hub", domain: "forumhub.example", type: "forum" },
+    { name: "Daily Tech Wire", domain: "dailytechwire.example", type: "news", connector: "mock" },
+    { name: "Marketplace Journal", domain: "marketplacejournal.example", type: "news", connector: "mock" },
+    { name: "Northwind Blog Network", domain: "nwblogs.example", type: "blog", connector: "mock" },
+    { name: "Industry Pulse", domain: "industrypulse.example", type: "news", connector: "mock" },
+    { name: "Community Forum Hub", domain: "forumhub.example", type: "forum", connector: "mock" },
+    // docs/architecture/ADR-006-SOCIAL-LISTENING.md — one social source
+    // so the Social Listening dashboard/mentions have real (synthetic)
+    // data to show in dev/demo, mirroring the news sources' mock role.
+    { name: "Social Buzz Mock", domain: "socialbuzz.example", type: "social", connector: "mock-social" },
   ] as const;
   const seededSources = await db
     .insert(sources)
@@ -78,7 +82,7 @@ async function main() {
         name: s.name,
         domain: s.domain,
         type: s.type,
-        connector: "mock",
+        connector: s.connector,
         status: "healthy" as const,
         lastCheckedAt: new Date(),
         canStoreFullText: false,

@@ -17,6 +17,19 @@ export type RawFetchResult = {
   language?: string | null;
   publishedAt: Date | null;
   authorName?: string | null;
+  // docs/architecture/ADR-006-SOCIAL-LISTENING.md — set only by social
+  // connectors (Mock today; X/Instagram/etc. are future phases). When
+  // socialAuthorExternalId is present, the pipeline resolves/creates a
+  // socialProfiles row and links it via articles.authorProfileId — a
+  // structured author distinct from the plain-string `authorName` above.
+  // Absent (not just null) on every non-social connector.
+  socialPlatform?: string;
+  socialAuthorExternalId?: string;
+  socialAuthorHandle?: string;
+  socialAuthorDisplayName?: string | null;
+  socialAuthorProfileUrl?: string | null;
+  socialAuthorFollowers?: number | null;
+  socialAuthorVerified?: boolean | null;
 };
 
 export type SourceHealthStatus = "healthy" | "delayed" | "error" | "blocked" | "unavailable";

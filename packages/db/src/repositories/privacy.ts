@@ -15,11 +15,41 @@ import { asOrganizationId, type OrganizationId } from "./tenant-scope";
  */
 
 /** Owner-only, enforced by the caller (route handler) before this runs. */
-export async function softDeleteOrganization(db: Db, organizationId: OrganizationId): Promise<void> {
+export async function softDeleteOrganization(
+  db: Db,
+  organizationId: OrganizationId,
+): Promise<void> {
   await db
     .update(organizations)
     .set({ deletedAt: new Date(), updatedAt: new Date() })
     .where(eq(organizations.id, organizationId));
+}
+
+/**
+ * softDeleteOrganization + its required "organization.deleted" audit
+ * entry, as one transaction — the same partial-audit-trail gap
+ * deleteUserAccount's own docstring below describes and was fixed for:
+ * without this, a failure between the two statements (e.g. a dropped
+ * connection) leaves an organization fully deleted — every member
+ * instantly loses access — with no audit entry recording that it
+ * happened, violating the "audit trail of these actions" guarantee this
+ * whole file exists for.
+ */
+export async function softDeleteOrganizationWithAuditLog(
+  db: Db,
+  organizationId: OrganizationId,
+  actorUserId: string,
+): Promise<void> {
+  await db.transaction(async (tx) => {
+    const txDb = tx as unknown as Db;
+    await softDeleteOrganization(txDb, organizationId);
+    await recordAuditLog(txDb, organizationId, {
+      actorUserId,
+      action: "organization.deleted",
+      targetType: "organization",
+      targetId: organizationId,
+    });
+  });
 }
 
 export type SoleOwnershipRow = { organizationId: string; organizationName: string };
@@ -31,11 +61,20 @@ export type SoleOwnershipRow = { organizationId: string; organizationName: strin
  * (ownership transfer isn't built yet). Returns the orgs that block
  * deletion so the UI can name them, not just say "no."
  */
-export async function listSoleOwnedOrganizations(db: Db, userId: string): Promise<SoleOwnershipRow[]> {
+export async function listSoleOwnedOrganizations(
+  db: Db,
+  userId: string,
+): Promise<SoleOwnershipRow[]> {
   const ownedMemberships = await db
-    .select({ organizationId: organizationMemberships.organizationId, organizationName: organizations.name })
+    .select({
+      organizationId: organizationMemberships.organizationId,
+      organizationName: organizations.name,
+    })
     .from(organizationMemberships)
-    .innerJoin(organizations, eq(organizations.id, organizationMemberships.organizationId))
+    .innerJoin(
+      organizations,
+      eq(organizations.id, organizationMemberships.organizationId),
+    )
     .where(
       and(
         eq(organizationMemberships.userId, userId),
@@ -77,7 +116,12 @@ export async function listMembershipOrganizationIdsForAudit(
   const rows = await db
     .select({ organizationId: organizationMemberships.organizationId })
     .from(organizationMemberships)
-    .where(and(eq(organizationMemberships.userId, userId), eq(organizationMemberships.status, "active")));
+    .where(
+      and(
+        eq(organizationMemberships.userId, userId),
+        eq(organizationMemberships.status, "active"),
+      ),
+    );
   return rows.map((row) => asOrganizationId(row.organizationId));
 }
 
@@ -155,7 +199,10 @@ export type AccountExport = {
  * Never touches Mentions/Articles/monitored media content, which is
  * shared tenant infrastructure, not personal data about this user.
  */
-export async function exportAccountData(db: Db, userId: string): Promise<AccountExport | undefined> {
+export async function exportAccountData(
+  db: Db,
+  userId: string,
+): Promise<AccountExport | undefined> {
   const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
   if (!user) return undefined;
 
@@ -166,8 +213,16 @@ export async function exportAccountData(db: Db, userId: string): Promise<Account
       joinedAt: organizationMemberships.createdAt,
     })
     .from(organizationMemberships)
-    .innerJoin(organizations, eq(organizations.id, organizationMemberships.organizationId))
-    .where(and(eq(organizationMemberships.userId, userId), eq(organizationMemberships.status, "active")));
+    .innerJoin(
+      organizations,
+      eq(organizations.id, organizationMemberships.organizationId),
+    )
+    .where(
+      and(
+        eq(organizationMemberships.userId, userId),
+        eq(organizationMemberships.status, "active"),
+      ),
+    );
 
   return {
     account: {

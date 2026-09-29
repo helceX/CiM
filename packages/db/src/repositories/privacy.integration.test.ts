@@ -11,6 +11,7 @@ import {
   listMembershipOrganizationIdsForAudit,
   listSoleOwnedOrganizations,
   softDeleteOrganization,
+  softDeleteOrganizationWithAuditLog,
 } from "./privacy";
 
 describe("privacy repository (integration)", () => {
@@ -73,7 +74,8 @@ describe("privacy repository (integration)", () => {
         emailVerifiedAt: new Date(),
       })
       .returning();
-    if (!soleOwner || !coOwner || !anonymizeTarget) throw new Error("failed to create test users");
+    if (!soleOwner || !coOwner || !anonymizeTarget)
+      throw new Error("failed to create test users");
     soleOwnerUserId = soleOwner.id;
     coOwnerUserId = coOwner.id;
     anonymizeTargetUserId = anonymizeTarget.id;
@@ -118,7 +120,9 @@ describe("privacy repository (integration)", () => {
 
   it("flags a user as a sole owner only of the org they exclusively own", async () => {
     const soleOwnerBlocking = await listSoleOwnedOrganizations(db, soleOwnerUserId);
-    expect(soleOwnerBlocking.map((row) => row.organizationId)).toEqual([soleOwnedOrgId]);
+    expect(soleOwnerBlocking.map((row) => row.organizationId)).toEqual([
+      soleOwnedOrgId,
+    ]);
 
     const coOwnerBlocking = await listSoleOwnedOrganizations(db, coOwnerUserId);
     expect(coOwnerBlocking).toEqual([]);
@@ -126,13 +130,58 @@ describe("privacy repository (integration)", () => {
 
   it("soft-deletes an organization by setting deletedAt, without removing the row", async () => {
     await softDeleteOrganization(db, toDeleteOrgId);
-    const [row] = await db.select().from(organizations).where(eq(organizations.id, toDeleteOrgId));
+    const [row] = await db
+      .select()
+      .from(organizations)
+      .where(eq(organizations.id, toDeleteOrgId));
     expect(row?.deletedAt).toBeInstanceOf(Date);
+  });
+
+  it("softDeleteOrganizationWithAuditLog soft-deletes and records the audit entry together", async () => {
+    // Regression: the route used to call softDeleteOrganization and
+    // recordAuditLog as two separate statements — a failure between them
+    // could leave an organization fully deleted with no audit entry
+    // recording it. This combined function wraps both in one transaction,
+    // the same pattern deleteUserAccount already uses for its own
+    // multi-step invariant.
+    const [org] = await db
+      .insert(organizations)
+      .values({ name: "Atomic Delete Org", slug: `atomic-delete-org-${Date.now()}` })
+      .returning();
+    if (!org) throw new Error("failed to create test organization");
+    const orgId = asOrganizationId(org.id);
+
+    try {
+      await softDeleteOrganizationWithAuditLog(db, orgId, soleOwnerUserId);
+
+      const [row] = await db
+        .select()
+        .from(organizations)
+        .where(eq(organizations.id, orgId));
+      expect(row?.deletedAt).toBeInstanceOf(Date);
+
+      const logs = await db
+        .select()
+        .from(auditLogs)
+        .where(
+          and(
+            eq(auditLogs.organizationId, orgId),
+            eq(auditLogs.action, "organization.deleted"),
+          ),
+        );
+      expect(logs).toHaveLength(1);
+      expect(logs[0]?.actorUserId).toBe(soleOwnerUserId);
+    } finally {
+      await db.delete(organizations).where(eq(organizations.id, orgId));
+    }
   });
 
   it("anonymizes a user's PII in place and sets deletedAt, preserving the row id", async () => {
     await anonymizeUser(db, anonymizeTargetUserId);
-    const [row] = await db.select().from(users).where(eq(users.id, anonymizeTargetUserId));
+    const [row] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, anonymizeTargetUserId));
     expect(row?.id).toBe(anonymizeTargetUserId);
     expect(row?.email).toBe(`deleted-${anonymizeTargetUserId}@deleted.invalid`);
     expect(row?.firstName).toBe("Deleted");
@@ -151,7 +200,9 @@ describe("privacy repository (integration)", () => {
   });
 
   it("returns undefined exporting a nonexistent user", async () => {
-    expect(await exportAccountData(db, "00000000-0000-0000-0000-000000000000")).toBeUndefined();
+    expect(
+      await exportAccountData(db, "00000000-0000-0000-0000-000000000000"),
+    ).toBeUndefined();
   });
 
   it("still lists a membership's org id for audit even after that org is soft-deleted", async () => {
@@ -200,7 +251,12 @@ describe("privacy repository (integration)", () => {
       const logs = await db
         .select()
         .from(auditLogs)
-        .where(and(eq(auditLogs.organizationId, sharedOrgId), eq(auditLogs.targetId, target.id)));
+        .where(
+          and(
+            eq(auditLogs.organizationId, sharedOrgId),
+            eq(auditLogs.targetId, target.id),
+          ),
+        );
       expect(logs).toEqual([]);
     } finally {
       await db.delete(users).where(eq(users.id, target.id));

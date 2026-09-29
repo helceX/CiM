@@ -92,29 +92,51 @@ describe("query AST", () => {
   describe("computeMatchPriority", () => {
     it("is 'high' when an exact phrase matches (a stronger signal than a loose keyword)", () => {
       const ast = { include: [], exclude: [], exactPhrases: ["Northwind Atlas"] };
-      expect(computeMatchPriority(ast, "Northwind Atlas wins regional award")).toBe("high");
+      expect(computeMatchPriority(ast, "Northwind Atlas wins regional award")).toBe(
+        "high",
+      );
     });
 
     it("is 'normal' when only a loose include term matches, even with exact phrases configured", () => {
-      const ast = { include: ["Northwind"], exclude: [], exactPhrases: ["Northwind Atlas"] };
-      expect(computeMatchPriority(ast, "Northwind expands into a new region")).toBe("normal");
+      const ast = {
+        include: ["Northwind"],
+        exclude: [],
+        exactPhrases: ["Northwind Atlas"],
+      };
+      expect(computeMatchPriority(ast, "Northwind expands into a new region")).toBe(
+        "normal",
+      );
     });
 
     it("is 'normal' when there are no exact phrases configured at all", () => {
       const ast = { include: ["Northwind"], exclude: [], exactPhrases: [] };
-      expect(computeMatchPriority(ast, "Northwind announces quarterly results")).toBe("normal");
+      expect(computeMatchPriority(ast, "Northwind announces quarterly results")).toBe(
+        "normal",
+      );
     });
   });
 
   describe("findMatchedTerm", () => {
     it("prefers an exact phrase over a looser include term when both match", () => {
-      const ast = { include: ["Northwind"], exclude: [], exactPhrases: ["Northwind Atlas"] };
-      expect(findMatchedTerm(ast, "Northwind Atlas wins regional award")).toBe("Northwind Atlas");
+      const ast = {
+        include: ["Northwind"],
+        exclude: [],
+        exactPhrases: ["Northwind Atlas"],
+      };
+      expect(findMatchedTerm(ast, "Northwind Atlas wins regional award")).toBe(
+        "Northwind Atlas",
+      );
     });
 
     it("falls back to the matching include term when no exact phrase matches", () => {
-      const ast = { include: ["Northwind"], exclude: [], exactPhrases: ["Northwind Atlas"] };
-      expect(findMatchedTerm(ast, "Northwind expands into a new region")).toBe("Northwind");
+      const ast = {
+        include: ["Northwind"],
+        exclude: [],
+        exactPhrases: ["Northwind Atlas"],
+      };
+      expect(findMatchedTerm(ast, "Northwind expands into a new region")).toBe(
+        "Northwind",
+      );
     });
 
     it("returns null when the query has no include/exactPhrase terms at all", () => {
@@ -152,7 +174,9 @@ describe("query AST", () => {
 
     it("classifies a matched exact phrase as exact_name", () => {
       const ast = { include: [], exclude: [], exactPhrases: ["Brand Company"] };
-      expect(classifyMatchType(ast, "Brand Company", "news").matchType).toBe("exact_name");
+      expect(classifyMatchType(ast, "Brand Company", "news").matchType).toBe(
+        "exact_name",
+      );
     });
 
     it("classifies a loose include-term match as contextual", () => {

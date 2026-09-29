@@ -14,7 +14,10 @@ import {
   type MentionTopicRow,
 } from "./ai";
 import { listTagsForMention } from "./tags";
-import { listCommentsForMention, type MentionCommentWithAuthor } from "./mention-comments";
+import {
+  listCommentsForMention,
+  type MentionCommentWithAuthor,
+} from "./mention-comments";
 
 export type MentionListItem = {
   mention: typeof mentions.$inferSelect;
@@ -62,7 +65,10 @@ export async function listRecentMentions(
         // stories from outside it, so it passes this to stay consistent with
         // the period the report itself claims to cover.
         options.sinceDays !== undefined
-          ? gte(mentions.createdAt, sql`now() - (${options.sinceDays}::text || ' days')::interval`)
+          ? gte(
+              mentions.createdAt,
+              sql`now() - (${options.sinceDays}::text || ' days')::interval`,
+            )
           : undefined,
       ),
     )
@@ -203,7 +209,10 @@ export async function listMentionsFiltered(
     // capped preview would silently under-report totalCount and make
     // results beyond the cap unreachable.
     const searchIndex = new PostgresSearchIndex(db);
-    const result = await searchIndex.search({ text: filters.search }, { organizationId });
+    const result = await searchIndex.search(
+      { text: filters.search },
+      { organizationId },
+    );
     searchArticleIds = result.items.map((item) => item.articleId);
   }
 
@@ -497,10 +506,16 @@ export async function getCompetitorComparison(
         eq(monitoringQueries.status, "active"),
         isNull(monitoringQueries.deletedAt),
         inArray(monitoringQueries.trackingTarget, ["company", "competitor"]),
-        options.projectId ? eq(monitoringQueries.projectId, options.projectId) : undefined,
+        options.projectId
+          ? eq(monitoringQueries.projectId, options.projectId)
+          : undefined,
       ),
     )
-    .groupBy(monitoringQueries.id, monitoringQueries.name, monitoringQueries.trackingTarget)
+    .groupBy(
+      monitoringQueries.id,
+      monitoringQueries.name,
+      monitoringQueries.trackingTarget,
+    )
     .orderBy(monitoringQueries.trackingTarget, monitoringQueries.name);
 
   return rows.map((row) => ({

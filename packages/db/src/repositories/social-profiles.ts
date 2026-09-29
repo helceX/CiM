@@ -37,7 +37,9 @@ export async function findOrCreateSocialProfile(
   const [created] = await db
     .insert(socialProfiles)
     .values(input)
-    .onConflictDoNothing({ target: [socialProfiles.platform, socialProfiles.externalId] })
+    .onConflictDoNothing({
+      target: [socialProfiles.platform, socialProfiles.externalId],
+    })
     .returning();
   if (created) return created;
 
@@ -54,7 +56,12 @@ export async function getSocialProfile(
   const [row] = await db
     .select()
     .from(socialProfiles)
-    .where(and(eq(socialProfiles.platform, platform), eq(socialProfiles.externalId, externalId)))
+    .where(
+      and(
+        eq(socialProfiles.platform, platform),
+        eq(socialProfiles.externalId, externalId),
+      ),
+    )
     .limit(1);
   return row;
 }
@@ -68,7 +75,12 @@ export async function getSocialProfile(
 export async function touchSocialProfile(
   db: Db,
   id: string,
-  update: Partial<Pick<SocialProfileInput, "followers" | "following" | "verified" | "displayName" | "avatarUrl">>,
+  update: Partial<
+    Pick<
+      SocialProfileInput,
+      "followers" | "following" | "verified" | "displayName" | "avatarUrl"
+    >
+  >,
 ): Promise<void> {
   await db
     .update(socialProfiles)

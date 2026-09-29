@@ -1,4 +1,9 @@
-import { classifyMatchType, computeMatchPriority, findMatchedTerm, matchesText } from "@cim/core";
+import {
+  classifyMatchType,
+  computeMatchPriority,
+  findMatchedTerm,
+  matchesText,
+} from "@cim/core";
 import {
   asOrganizationId,
   createMentionIfNotExists,
@@ -109,8 +114,12 @@ export async function ingestSource(
  * connector reported one. Null for every non-social connector (raw's
  * social* fields are absent) and never fabricated when they're missing.
  */
-async function resolveAuthorProfileId(db: Db, raw: RawFetchResult): Promise<string | null> {
-  if (!raw.socialPlatform || !raw.socialAuthorExternalId || !raw.socialAuthorHandle) return null;
+async function resolveAuthorProfileId(
+  db: Db,
+  raw: RawFetchResult,
+): Promise<string | null> {
+  if (!raw.socialPlatform || !raw.socialAuthorExternalId || !raw.socialAuthorHandle)
+    return null;
   const profile = await findOrCreateSocialProfile(db, {
     platform: raw.socialPlatform,
     externalId: raw.socialAuthorExternalId,
@@ -127,4 +136,3 @@ async function resolveAuthorProfileId(db: Db, raw: RawFetchResult): Promise<stri
   });
   return profile.id;
 }
-

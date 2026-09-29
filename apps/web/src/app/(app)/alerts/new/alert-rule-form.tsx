@@ -46,7 +46,7 @@ const TYPE_OPTIONS: { value: string; label: string; description: string }[] = [
     value: "competitor",
     label: "Competitor",
     description:
-      "Notify when a query tagged \"Competitor\" gets more mentions in 24 hours than your tracked company queries in the same project.",
+      'Notify when a query tagged "Competitor" gets more mentions in 24 hours than your tracked company queries in the same project.',
   },
   {
     value: "creator_spike",
@@ -80,7 +80,10 @@ export function AlertRuleForm({ queries }: { queries: MonitoringQueryOption[] })
 
   function selectType(value: string) {
     setType(value);
-    const nextOptions = value === "competitor" ? queries.filter((q) => q.trackingTarget === "competitor") : queries;
+    const nextOptions =
+      value === "competitor"
+        ? queries.filter((q) => q.trackingTarget === "competitor")
+        : queries;
     if (!nextOptions.some((q) => q.id === queryId)) {
       setQueryId(nextOptions[0]?.id ?? "");
     }
@@ -159,7 +162,11 @@ export function AlertRuleForm({ queries }: { queries: MonitoringQueryOption[] })
 
       <Field id="query" label="Monitoring query" required>
         {selectableQueries.length > 0 ? (
-          <Select id="query" value={queryId} onChange={(e) => setQueryId(e.target.value)}>
+          <Select
+            id="query"
+            value={queryId}
+            onChange={(e) => setQueryId(e.target.value)}
+          >
             {selectableQueries.map((query) => (
               <option key={query.id} value={query.id}>
                 {query.name}

@@ -226,7 +226,10 @@ export const tags = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    uniqueIndex("tags_org_name_lower_uidx").on(table.organizationId, sql`lower(${table.name})`),
+    uniqueIndex("tags_org_name_lower_uidx").on(
+      table.organizationId,
+      sql`lower(${table.name})`,
+    ),
     index("tags_org_idx").on(table.organizationId),
   ],
 );

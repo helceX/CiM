@@ -2,7 +2,11 @@ import { afterEach, describe, expect, it } from "vitest";
 import { and, eq } from "drizzle-orm";
 import { db } from "../client";
 import { socialProfiles } from "../schema/social";
-import { findOrCreateSocialProfile, getSocialProfile, touchSocialProfile } from "./social-profiles";
+import {
+  findOrCreateSocialProfile,
+  getSocialProfile,
+  touchSocialProfile,
+} from "./social-profiles";
 
 /**
  * Integration test (docs/testing/TEST_STRATEGY.md) against a real
@@ -90,7 +94,12 @@ describe("social profiles repository (integration)", () => {
     const rows = await db
       .select()
       .from(socialProfiles)
-      .where(and(eq(socialProfiles.platform, platform), eq(socialProfiles.externalId, externalId)));
+      .where(
+        and(
+          eq(socialProfiles.platform, platform),
+          eq(socialProfiles.externalId, externalId),
+        ),
+      );
     expect(rows).toHaveLength(1);
   });
 

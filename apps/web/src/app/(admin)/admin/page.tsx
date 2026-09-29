@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Badge } from "@cim/ui";
+import { getConnectorCapabilities } from "@cim/core";
 import {
   checkDatabaseHealth,
   db,
@@ -11,12 +12,30 @@ import { requireSuperAdmin } from "@/lib/admin";
 import { getQueueHealth } from "@/lib/admin-queues";
 import { KpiRow } from "@/components/kpi-row";
 
-const SOURCE_STATUS_TONE: Record<string, "success" | "warning" | "danger" | "neutral"> = {
-  healthy: "success",
-  delayed: "warning",
-  error: "danger",
-  blocked: "danger",
-  unavailable: "neutral",
+const SOURCE_STATUS_TONE: Record<string, "success" | "warning" | "danger" | "neutral"> =
+  {
+    healthy: "success",
+    delayed: "warning",
+    error: "danger",
+    blocked: "danger",
+    unavailable: "neutral",
+  };
+
+// docs/product/FEATURE_MATRIX_V2.md "Platform capability matrix" (master
+// prompt §28) — never implies a capability a connector doesn't actually
+// have; an unrecognized/not-yet-implemented connector renders every
+// capability "unavailable"/"provider_required", never a guess.
+const CAPABILITY_TONE: Record<string, "success" | "warning" | "danger" | "neutral"> = {
+  supported: "success",
+  partial: "warning",
+  provider_required: "neutral",
+  unavailable: "danger",
+};
+const CAPABILITY_LABEL: Record<string, string> = {
+  supported: "Supported",
+  partial: "Partial",
+  provider_required: "Provider required",
+  unavailable: "Unavailable",
 };
 
 /**
@@ -41,34 +60,41 @@ export default async function AdminOverviewPage() {
   // billing.ts and usage-section.tsx already follow, and each failure is
   // logged so an operator debugging a partial outage isn't staring at a
   // silently-empty table with nothing in the logs to explain it.
-  const emptyTotals = { totalOrganizations: 0, totalUsers: 0, totalSources: 0, totalMentions: 0, mentionsLast24h: 0 };
-  const [totalsResult, dbHealthy, queueResult, organizationsResult, sourcesResult] = await Promise.all([
-    getPlatformTotals(db)
-      .then((totals) => ({ ok: true as const, totals }))
-      .catch((error: unknown) => {
-        console.error("[admin] getPlatformTotals failed:", error);
-        return { ok: false as const, totals: emptyTotals };
-      }),
-    checkDatabaseHealth(db),
-    getQueueHealth()
-      .then((rows) => ({ ok: true as const, rows }))
-      .catch((error: unknown) => {
-        console.error("[admin] getQueueHealth failed:", error);
-        return { ok: false as const, rows: [] };
-      }),
-    listOrganizationsForAdmin(db)
-      .then((organizations) => ({ ok: true as const, organizations }))
-      .catch((error: unknown) => {
-        console.error("[admin] listOrganizationsForAdmin failed:", error);
-        return { ok: false as const, organizations: [] };
-      }),
-    listSourcesForAdmin(db)
-      .then((sources) => ({ ok: true as const, sources }))
-      .catch((error: unknown) => {
-        console.error("[admin] listSourcesForAdmin failed:", error);
-        return { ok: false as const, sources: [] };
-      }),
-  ]);
+  const emptyTotals = {
+    totalOrganizations: 0,
+    totalUsers: 0,
+    totalSources: 0,
+    totalMentions: 0,
+    mentionsLast24h: 0,
+  };
+  const [totalsResult, dbHealthy, queueResult, organizationsResult, sourcesResult] =
+    await Promise.all([
+      getPlatformTotals(db)
+        .then((totals) => ({ ok: true as const, totals }))
+        .catch((error: unknown) => {
+          console.error("[admin] getPlatformTotals failed:", error);
+          return { ok: false as const, totals: emptyTotals };
+        }),
+      checkDatabaseHealth(db),
+      getQueueHealth()
+        .then((rows) => ({ ok: true as const, rows }))
+        .catch((error: unknown) => {
+          console.error("[admin] getQueueHealth failed:", error);
+          return { ok: false as const, rows: [] };
+        }),
+      listOrganizationsForAdmin(db)
+        .then((organizations) => ({ ok: true as const, organizations }))
+        .catch((error: unknown) => {
+          console.error("[admin] listOrganizationsForAdmin failed:", error);
+          return { ok: false as const, organizations: [] };
+        }),
+      listSourcesForAdmin(db)
+        .then((sources) => ({ ok: true as const, sources }))
+        .catch((error: unknown) => {
+          console.error("[admin] listSourcesForAdmin failed:", error);
+          return { ok: false as const, sources: [] };
+        }),
+    ]);
   const totals = totalsResult.totals;
   const redisHealthy = queueResult.ok;
   const queues = queueResult.rows;
@@ -80,15 +106,20 @@ export default async function AdminOverviewPage() {
       <div>
         <h1 className="text-lg font-semibold text-foreground">Platform overview</h1>
         <p className="text-sm text-muted-foreground">
-          Operational aggregates across every organization — not a way to browse tenant content.
+          Operational aggregates across every organization — not a way to browse tenant
+          content.
         </p>
       </div>
 
       <section>
         <h2 className="text-sm font-semibold text-foreground">System health</h2>
         <div className="mt-3 flex gap-3">
-          <Badge tone={dbHealthy ? "success" : "danger"}>Database {dbHealthy ? "reachable" : "unreachable"}</Badge>
-          <Badge tone={redisHealthy ? "success" : "danger"}>Redis {redisHealthy ? "reachable" : "unreachable"}</Badge>
+          <Badge tone={dbHealthy ? "success" : "danger"}>
+            Database {dbHealthy ? "reachable" : "unreachable"}
+          </Badge>
+          <Badge tone={redisHealthy ? "success" : "danger"}>
+            Redis {redisHealthy ? "reachable" : "unreachable"}
+          </Badge>
           {!totalsResult.ok ? <Badge tone="danger">Totals unavailable</Badge> : null}
         </div>
         <div className="mt-4">
@@ -124,7 +155,9 @@ export default async function AdminOverviewPage() {
             <tbody className="divide-y divide-border">
               {queues.map((q) => (
                 <tr key={q.queueName}>
-                  <td className="px-4 py-3 font-medium text-foreground">{q.queueName}</td>
+                  <td className="px-4 py-3 font-medium text-foreground">
+                    {q.queueName}
+                  </td>
                   <td className="px-4 py-3 text-muted-foreground">{q.waiting}</td>
                   <td className="px-4 py-3 text-muted-foreground">{q.active}</td>
                   <td className="px-4 py-3 text-muted-foreground">{q.completed}</td>
@@ -148,7 +181,9 @@ export default async function AdminOverviewPage() {
       <section>
         <div className="flex items-center gap-3">
           <h2 className="text-sm font-semibold text-foreground">Organizations</h2>
-          {!organizationsResult.ok ? <Badge tone="danger">Unavailable — query failed</Badge> : null}
+          {!organizationsResult.ok ? (
+            <Badge tone="danger">Unavailable — query failed</Badge>
+          ) : null}
         </div>
         <div className="mt-3 overflow-hidden rounded-lg border border-border">
           <table className="w-full text-sm">
@@ -166,9 +201,15 @@ export default async function AdminOverviewPage() {
                 <tr key={org.id}>
                   <td className="px-4 py-3 font-medium text-foreground">{org.name}</td>
                   <td className="px-4 py-3 text-muted-foreground">{org.memberCount}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{org.projectCount}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{org.mentionCount}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{org.createdAt.toLocaleDateString()}</td>
+                  <td className="px-4 py-3 text-muted-foreground">
+                    {org.projectCount}
+                  </td>
+                  <td className="px-4 py-3 text-muted-foreground">
+                    {org.mentionCount}
+                  </td>
+                  <td className="px-4 py-3 text-muted-foreground">
+                    {org.createdAt.toLocaleDateString()}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -179,7 +220,9 @@ export default async function AdminOverviewPage() {
       <section>
         <div className="flex items-center gap-3">
           <h2 className="text-sm font-semibold text-foreground">Source health</h2>
-          {!sourcesResult.ok ? <Badge tone="danger">Unavailable — query failed</Badge> : null}
+          {!sourcesResult.ok ? (
+            <Badge tone="danger">Unavailable — query failed</Badge>
+          ) : null}
         </div>
         <div className="mt-3 overflow-hidden rounded-lg border border-border">
           <table className="w-full text-sm">
@@ -189,23 +232,48 @@ export default async function AdminOverviewPage() {
                 <th className="px-4 py-2 font-medium">Type</th>
                 <th className="px-4 py-2 font-medium">Connector</th>
                 <th className="px-4 py-2 font-medium">Status</th>
+                <th className="px-4 py-2 font-medium">Capabilities</th>
                 <th className="px-4 py-2 font-medium">Last checked</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {sources.map((source) => (
-                <tr key={source.id}>
-                  <td className="px-4 py-3 font-medium text-foreground">{source.name}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{source.type}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{source.connector}</td>
-                  <td className="px-4 py-3">
-                    <Badge tone={SOURCE_STATUS_TONE[source.status] ?? "neutral"}>{source.status}</Badge>
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground">
-                    {source.lastCheckedAt ? source.lastCheckedAt.toLocaleString() : "Not available"}
-                  </td>
-                </tr>
-              ))}
+              {sources.map((source) => {
+                const capabilities = getConnectorCapabilities(source.connector);
+                return (
+                  <tr key={source.id}>
+                    <td className="px-4 py-3 font-medium text-foreground">
+                      {source.name}
+                    </td>
+                    <td className="px-4 py-3 text-muted-foreground">{source.type}</td>
+                    <td className="px-4 py-3 text-muted-foreground">
+                      {source.connector}
+                    </td>
+                    <td className="px-4 py-3">
+                      <Badge tone={SOURCE_STATUS_TONE[source.status] ?? "neutral"}>
+                        {source.status}
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-wrap gap-1">
+                        <Badge tone={CAPABILITY_TONE[capabilities.realTimeSearch]}>
+                          Real-time: {CAPABILITY_LABEL[capabilities.realTimeSearch]}
+                        </Badge>
+                        <Badge tone={CAPABILITY_TONE[capabilities.engagementMetrics]}>
+                          Engagement: {CAPABILITY_LABEL[capabilities.engagementMetrics]}
+                        </Badge>
+                        <Badge tone={CAPABILITY_TONE[capabilities.officialApi]}>
+                          Official API: {CAPABILITY_LABEL[capabilities.officialApi]}
+                        </Badge>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-muted-foreground">
+                      {source.lastCheckedAt
+                        ? source.lastCheckedAt.toLocaleString()
+                        : "Not available"}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

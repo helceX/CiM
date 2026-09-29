@@ -2,7 +2,17 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Badge, Button, Field, Input, Select, Sheet, SheetContent, Skeleton, Textarea } from "@cim/ui";
+import {
+  Badge,
+  Button,
+  Field,
+  Input,
+  Select,
+  Sheet,
+  SheetContent,
+  Skeleton,
+  Textarea,
+} from "@cim/ui";
 import type { MentionDetail, Tag } from "@cim/db";
 
 const SENTIMENT_TONE = {
@@ -143,7 +153,10 @@ export function MentionDetailDrawer({
       const tag: Tag = await response.json();
       setDetail((prev) =>
         prev && !prev.tags.some((t) => t.id === tag.id)
-          ? { ...prev, tags: [...prev.tags, tag].sort((a, b) => a.name.localeCompare(b.name)) }
+          ? {
+              ...prev,
+              tags: [...prev.tags, tag].sort((a, b) => a.name.localeCompare(b.name)),
+            }
           : prev,
       );
       setTagInput("");
@@ -192,7 +205,9 @@ export function MentionDetailDrawer({
         return;
       }
       const comment = await response.json();
-      setDetail((prev) => (prev ? { ...prev, comments: [...prev.comments, comment] } : prev));
+      setDetail((prev) =>
+        prev ? { ...prev, comments: [...prev.comments, comment] } : prev,
+      );
       setCommentInput("");
       router.refresh();
     } catch {
@@ -214,7 +229,9 @@ export function MentionDetailDrawer({
         return;
       }
       setDetail((prev) =>
-        prev ? { ...prev, comments: prev.comments.filter((c) => c.id !== commentId) } : prev,
+        prev
+          ? { ...prev, comments: prev.comments.filter((c) => c.id !== commentId) }
+          : prev,
       );
       router.refresh();
     } catch {
@@ -266,7 +283,9 @@ export function MentionDetailDrawer({
                   <p className="text-foreground">
                     {detail.socialAuthor.displayName ?? detail.socialAuthor.handle}
                   </p>
-                  {detail.socialAuthor.verified ? <Badge tone="info">Verified</Badge> : null}
+                  {detail.socialAuthor.verified ? (
+                    <Badge tone="info">Verified</Badge>
+                  ) : null}
                 </div>
                 {detail.socialAuthor.profileUrl ? (
                   <a
@@ -299,7 +318,8 @@ export function MentionDetailDrawer({
               <div className="flex items-center gap-2">
                 <Badge tone="neutral">
                   {detail.mention.matchType
-                    ? (MATCH_TYPE_LABEL[detail.mention.matchType] ?? detail.mention.matchType)
+                    ? (MATCH_TYPE_LABEL[detail.mention.matchType] ??
+                      detail.mention.matchType)
                     : "Not classified"}
                 </Badge>
                 {detail.mention.matchType === "semantic" ? (
@@ -479,7 +499,12 @@ export function MentionDetailDrawer({
                     <option key={name} value={name} />
                   ))}
                 </datalist>
-                <Button type="button" variant="secondary" disabled={isAddingTag} onClick={addTag}>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={isAddingTag}
+                  onClick={addTag}
+                >
                   Add
                 </Button>
               </div>
@@ -537,7 +562,10 @@ export function MentionDetailDrawer({
               {detail.comments.length > 0 ? (
                 <ul className="flex flex-col gap-3">
                   {detail.comments.map((comment) => (
-                    <li key={comment.id} className="rounded-md border border-border p-3">
+                    <li
+                      key={comment.id}
+                      className="rounded-md border border-border p-3"
+                    >
                       <div className="flex items-start justify-between gap-3">
                         <p className="text-xs font-medium text-foreground">
                           {comment.authorFirstName} {comment.authorLastName}

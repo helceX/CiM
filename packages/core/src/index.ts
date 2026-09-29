@@ -6,4 +6,5 @@ export * from "./turkish";
 export * from "./email-provider";
 export * from "./jobs";
 export * from "./source-categories";
+export * from "./connector-capabilities";
 export * from "./plan-limits";

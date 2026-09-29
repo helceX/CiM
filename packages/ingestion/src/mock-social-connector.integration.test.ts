@@ -32,7 +32,10 @@ describe("MockSocialConnector ingestion (integration)", () => {
   beforeAll(async () => {
     const [org] = await db
       .insert(schema.organizations)
-      .values({ name: "Social Pipeline Test Co", slug: `social-pipeline-test-${Date.now()}` })
+      .values({
+        name: "Social Pipeline Test Co",
+        slug: `social-pipeline-test-${Date.now()}`,
+      })
       .returning();
     if (!org) throw new Error("failed to create test organization");
     organizationId = asOrganizationId(org.id);
@@ -74,12 +77,17 @@ describe("MockSocialConnector ingestion (integration)", () => {
 
   afterAll(async () => {
     // Cascades: organization -> workspace/project/memberships/mentions/monitoring_queries.
-    await db.delete(schema.organizations).where(eq(schema.organizations.id, organizationId));
+    await db
+      .delete(schema.organizations)
+      .where(eq(schema.organizations.id, organizationId));
     await db.delete(schema.sources).where(eq(schema.sources.id, sourceId));
   });
 
   it("links the ingested article to a social profile and creates a mention", async () => {
-    const [source] = await db.select().from(schema.sources).where(eq(schema.sources.id, sourceId));
+    const [source] = await db
+      .select()
+      .from(schema.sources)
+      .where(eq(schema.sources.id, sourceId));
     if (!source) throw new Error("test source missing");
 
     const result = await ingestSource(db, source, new MockSocialConnector());
@@ -101,7 +109,10 @@ describe("MockSocialConnector ingestion (integration)", () => {
   });
 
   it("does not create a duplicate social profile row on a second ingest cycle", async () => {
-    const [source] = await db.select().from(schema.sources).where(eq(schema.sources.id, sourceId));
+    const [source] = await db
+      .select()
+      .from(schema.sources)
+      .where(eq(schema.sources.id, sourceId));
     if (!source) throw new Error("test source missing");
 
     await ingestSource(db, source, new MockSocialConnector());

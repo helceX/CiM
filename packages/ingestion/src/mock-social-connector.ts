@@ -10,7 +10,13 @@ const POST_TEMPLATES: ((name: string, handle: string) => string)[] = [
   (name) => `${name} keeps showing up in every conversation lately.`,
 ];
 
-const HANDLES = ["mockuser1", "mockuser2", "mockuser3", "mockcreator", "mockjournalist"];
+const HANDLES = [
+  "mockuser1",
+  "mockuser2",
+  "mockuser3",
+  "mockcreator",
+  "mockjournalist",
+];
 const BUCKET_MS = 60_000;
 
 /**

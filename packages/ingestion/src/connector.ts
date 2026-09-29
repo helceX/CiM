@@ -32,7 +32,12 @@ export type RawFetchResult = {
   socialAuthorVerified?: boolean | null;
 };
 
-export type SourceHealthStatus = "healthy" | "delayed" | "error" | "blocked" | "unavailable";
+export type SourceHealthStatus =
+  | "healthy"
+  | "delayed"
+  | "error"
+  | "blocked"
+  | "unavailable";
 
 export type SourceHealth = {
   status: SourceHealthStatus;

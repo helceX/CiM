@@ -119,7 +119,14 @@ export function fakeReportData(overrides: Partial<ReportData> = {}): ReportData 
         assigneeName: null,
       },
     ],
-    topicBreakdown: [{ queryId: "66666666-6666-6666-6666-666666666666", queryName: "Brand mentions", currentCount: 12, previousCount: 8 }],
+    topicBreakdown: [
+      {
+        queryId: "66666666-6666-6666-6666-666666666666",
+        queryName: "Brand mentions",
+        currentCount: 12,
+        previousCount: 8,
+      },
+    ],
     competitorComparison: [
       {
         queryId: "66666666-6666-6666-6666-666666666666",

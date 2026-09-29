@@ -27,7 +27,10 @@ describe("social listening repository (integration)", () => {
   beforeAll(async () => {
     const [org] = await db
       .insert(organizations)
-      .values({ name: "Social Listening Test Co", slug: `social-listening-test-${Date.now()}` })
+      .values({
+        name: "Social Listening Test Co",
+        slug: `social-listening-test-${Date.now()}`,
+      })
       .returning();
     if (!org) throw new Error("failed to create test organization");
     organizationId = asOrganizationId(org.id);
@@ -82,14 +85,30 @@ describe("social listening repository (integration)", () => {
         handle: "@authorb",
       })
       .returning();
-    if (!profileA || !profileB) throw new Error("failed to create test social profiles");
+    if (!profileA || !profileB)
+      throw new Error("failed to create test social profiles");
     profileAId = profileA.id;
     profileBId = profileB.id;
 
     const articleDefs = [
-      { authorProfileId: profileAId, matchType: "direct_mention", sentiment: "positive" as const, matchedTerms: ["@authora"] },
-      { authorProfileId: profileAId, matchType: "hashtag", sentiment: "negative" as const, matchedTerms: ["#brand"] },
-      { authorProfileId: profileBId, matchType: null, sentiment: null, matchedTerms: [] },
+      {
+        authorProfileId: profileAId,
+        matchType: "direct_mention",
+        sentiment: "positive" as const,
+        matchedTerms: ["@authora"],
+      },
+      {
+        authorProfileId: profileAId,
+        matchType: "hashtag",
+        sentiment: "negative" as const,
+        matchedTerms: ["#brand"],
+      },
+      {
+        authorProfileId: profileBId,
+        matchType: null,
+        sentiment: null,
+        matchedTerms: [],
+      },
     ];
     for (const [i, def] of articleDefs.entries()) {
       const [article] = await db
@@ -130,13 +149,22 @@ describe("social listening repository (integration)", () => {
   });
 
   it("groups platform distribution by the linked social profile's platform", async () => {
-    const platforms = await getSocialPlatformDistribution(db, organizationId, { sinceDays: 7 });
+    const platforms = await getSocialPlatformDistribution(db, organizationId, {
+      sinceDays: 7,
+    });
     expect(platforms).toEqual([{ platform: "mock", count: 3 }]);
   });
 
   it("breaks sentiment into positive/neutral/negative/unclassified", async () => {
-    const sentiment = await getSocialSentimentBreakdown(db, organizationId, { sinceDays: 7 });
-    expect(sentiment).toEqual({ positive: 1, neutral: 0, negative: 1, unclassified: 1 });
+    const sentiment = await getSocialSentimentBreakdown(db, organizationId, {
+      sinceDays: 7,
+    });
+    expect(sentiment).toEqual({
+      positive: 1,
+      neutral: 0,
+      negative: 1,
+      unclassified: 1,
+    });
   });
 
   it("surfaces the matched hashtag as a trending hashtag with a zero baseline", async () => {
@@ -159,7 +187,9 @@ describe("social listening repository (integration)", () => {
   it("lists all matching posts with their author handle", async () => {
     const posts = await getTopSocialPosts(db, organizationId, { sinceDays: 7 });
     expect(posts.length).toBe(3);
-    expect(posts.every((p) => p.title.startsWith("Social listening test post"))).toBe(true);
+    expect(posts.every((p) => p.title.startsWith("Social listening test post"))).toBe(
+      true,
+    );
   });
 
   it("returns per-creator current-vs-baseline counts, most active first", async () => {

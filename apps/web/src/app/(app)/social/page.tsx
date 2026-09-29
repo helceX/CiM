@@ -52,7 +52,11 @@ export default async function SocialListeningPage({
     getTopSocialPosts(db, context.organizationId, scope),
   ]);
 
-  const sentimentTotal = sentiment.positive + sentiment.neutral + sentiment.negative + sentiment.unclassified;
+  const sentimentTotal =
+    sentiment.positive +
+    sentiment.neutral +
+    sentiment.negative +
+    sentiment.unclassified;
 
   return (
     <div className="flex flex-col gap-8">
@@ -76,7 +80,10 @@ export default async function SocialListeningPage({
         <>
           <KpiRow
             items={[
-              { label: "Total conversations", value: String(overview.totalConversations) },
+              {
+                label: "Total conversations",
+                value: String(overview.totalConversations),
+              },
               { label: "Direct mentions", value: String(overview.directMentions) },
               { label: "Unique authors", value: String(overview.uniqueAuthors) },
               {
@@ -91,13 +98,17 @@ export default async function SocialListeningPage({
 
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <section className="rounded-lg border border-border p-4">
-              <h2 className="text-sm font-semibold text-foreground">Platform distribution</h2>
+              <h2 className="text-sm font-semibold text-foreground">
+                Platform distribution
+              </h2>
               <p className="text-xs text-muted-foreground">
                 Conversations by platform in this period.
               </p>
               <div className="mt-3">
                 {platforms.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No platform activity in this period.</p>
+                  <p className="text-sm text-muted-foreground">
+                    No platform activity in this period.
+                  </p>
                 ) : (
                   <DistributionBarChart
                     data={platforms.map((p) => ({ label: p.platform, value: p.count }))}
@@ -109,18 +120,20 @@ export default async function SocialListeningPage({
             <section className="rounded-lg border border-border p-4">
               <h2 className="text-sm font-semibold text-foreground">Sentiment</h2>
               <p className="text-xs text-muted-foreground">
-                From AI enrichment. Not-yet-analyzed conversations show as unclassified, never
-                guessed.
+                From AI enrichment. Not-yet-analyzed conversations show as unclassified,
+                never guessed.
               </p>
               <div className="mt-3 flex flex-wrap gap-2">
-                {(["positive", "neutral", "negative", "unclassified"] as const).map((key) => (
-                  <Badge
-                    key={key}
-                    tone={key === "unclassified" ? "neutral" : SENTIMENT_TONE[key]}
-                  >
-                    {key} · {sentiment[key]}
-                  </Badge>
-                ))}
+                {(["positive", "neutral", "negative", "unclassified"] as const).map(
+                  (key) => (
+                    <Badge
+                      key={key}
+                      tone={key === "unclassified" ? "neutral" : SENTIMENT_TONE[key]}
+                    >
+                      {key} · {sentiment[key]}
+                    </Badge>
+                  ),
+                )}
               </div>
             </section>
           </div>
@@ -132,14 +145,22 @@ export default async function SocialListeningPage({
             </p>
             <div className="mt-3 flex flex-col gap-2">
               {hashtags.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No hashtag matches in this period.</p>
+                <p className="text-sm text-muted-foreground">
+                  No hashtag matches in this period.
+                </p>
               ) : (
                 hashtags.map((h) => (
-                  <div key={h.hashtag} className="flex items-center justify-between text-sm">
+                  <div
+                    key={h.hashtag}
+                    className="flex items-center justify-between text-sm"
+                  >
                     <span className="text-foreground">{h.hashtag}</span>
                     <span className="flex items-center gap-2">
                       <span className="text-muted-foreground">{h.currentCount}</span>
-                      <ChangeBadge current={h.currentCount} previous={h.previousCount} />
+                      <ChangeBadge
+                        current={h.currentCount}
+                        previous={h.previousCount}
+                      />
                     </span>
                   </div>
                 ))
@@ -150,13 +171,20 @@ export default async function SocialListeningPage({
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <section className="rounded-lg border border-border p-4">
               <h2 className="text-sm font-semibold text-foreground">Top authors</h2>
-              <p className="text-xs text-muted-foreground">By conversation count in this period.</p>
+              <p className="text-xs text-muted-foreground">
+                By conversation count in this period.
+              </p>
               <ul className="mt-3 flex flex-col gap-3">
                 {authors.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No authors in this period.</p>
+                  <p className="text-sm text-muted-foreground">
+                    No authors in this period.
+                  </p>
                 ) : (
                   authors.map((author) => (
-                    <li key={author.profileId} className="flex items-center justify-between text-sm">
+                    <li
+                      key={author.profileId}
+                      className="flex items-center justify-between text-sm"
+                    >
                       <div>
                         <p className="text-foreground">
                           {author.displayName ?? author.handle}
@@ -173,7 +201,9 @@ export default async function SocialListeningPage({
                             : "Followers unknown"}
                         </p>
                       </div>
-                      <span className="text-muted-foreground">{author.mentionCount}</span>
+                      <span className="text-muted-foreground">
+                        {author.mentionCount}
+                      </span>
                     </li>
                   ))
                 )}
@@ -183,12 +213,14 @@ export default async function SocialListeningPage({
             <section className="rounded-lg border border-border p-4">
               <h2 className="text-sm font-semibold text-foreground">Top posts</h2>
               <p className="text-xs text-muted-foreground">
-                Ranked by match priority, most recent first — engagement metrics not available
-                for this source.
+                Ranked by match priority, most recent first — engagement metrics not
+                available for this source.
               </p>
               <ul className="mt-3 flex flex-col gap-3">
                 {posts.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No posts in this period.</p>
+                  <p className="text-sm text-muted-foreground">
+                    No posts in this period.
+                  </p>
                 ) : (
                   posts.map((post) => (
                     <li key={post.mentionId} className="text-sm">

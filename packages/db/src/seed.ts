@@ -59,21 +59,55 @@ async function main() {
 
   const [project] = await db
     .insert(projects)
-    .values({ organizationId: org.id, workspaceId: workspace.id, name: "Brand Monitoring" })
+    .values({
+      organizationId: org.id,
+      workspaceId: workspace.id,
+      name: "Brand Monitoring",
+    })
     .returning();
   if (!project) throw new Error("seed: failed to create project");
 
   console.log("Seeding sources...");
   const sourceNames = [
-    { name: "Daily Tech Wire", domain: "dailytechwire.example", type: "news", connector: "mock" },
-    { name: "Marketplace Journal", domain: "marketplacejournal.example", type: "news", connector: "mock" },
-    { name: "Northwind Blog Network", domain: "nwblogs.example", type: "blog", connector: "mock" },
-    { name: "Industry Pulse", domain: "industrypulse.example", type: "news", connector: "mock" },
-    { name: "Community Forum Hub", domain: "forumhub.example", type: "forum", connector: "mock" },
+    {
+      name: "Daily Tech Wire",
+      domain: "dailytechwire.example",
+      type: "news",
+      connector: "mock",
+    },
+    {
+      name: "Marketplace Journal",
+      domain: "marketplacejournal.example",
+      type: "news",
+      connector: "mock",
+    },
+    {
+      name: "Northwind Blog Network",
+      domain: "nwblogs.example",
+      type: "blog",
+      connector: "mock",
+    },
+    {
+      name: "Industry Pulse",
+      domain: "industrypulse.example",
+      type: "news",
+      connector: "mock",
+    },
+    {
+      name: "Community Forum Hub",
+      domain: "forumhub.example",
+      type: "forum",
+      connector: "mock",
+    },
     // docs/architecture/ADR-006-SOCIAL-LISTENING.md — one social source
     // so the Social Listening dashboard/mentions have real (synthetic)
     // data to show in dev/demo, mirroring the news sources' mock role.
-    { name: "Social Buzz Mock", domain: "socialbuzz.example", type: "social", connector: "mock-social" },
+    {
+      name: "Social Buzz Mock",
+      domain: "socialbuzz.example",
+      type: "social",
+      connector: "mock-social",
+    },
   ] as const;
   const seededSources = await db
     .insert(sources)

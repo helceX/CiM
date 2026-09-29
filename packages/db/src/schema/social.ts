@@ -1,4 +1,13 @@
-import { boolean, index, integer, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import {
+  boolean,
+  index,
+  integer,
+  pgTable,
+  text,
+  timestamp,
+  uniqueIndex,
+  uuid,
+} from "drizzle-orm/pg-core";
 
 /**
  * docs/architecture/ADR-006-SOCIAL-LISTENING.md — global/reference data
@@ -25,13 +34,20 @@ export const socialProfiles = pgTable(
     language: text("language"),
     country: text("country"),
     avatarUrl: text("avatar_url"),
-    firstSeenAt: timestamp("first_seen_at", { withTimezone: true }).notNull().defaultNow(),
-    lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).notNull().defaultNow(),
+    firstSeenAt: timestamp("first_seen_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    lastSeenAt: timestamp("last_seen_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
   },
   (table) => [
     // A platform account is unique by (platform, externalId) — a rename
     // (handle change) must resolve to the same profile row, not fork it.
-    uniqueIndex("social_profiles_platform_external_id_uidx").on(table.platform, table.externalId),
+    uniqueIndex("social_profiles_platform_external_id_uidx").on(
+      table.platform,
+      table.externalId,
+    ),
     index("social_profiles_platform_idx").on(table.platform),
   ],
 );

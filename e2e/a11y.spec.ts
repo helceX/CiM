@@ -32,7 +32,15 @@ function formatViolations(violations: Awaited<ReturnType<typeof scan>>): string 
     .join("\n\n");
 }
 
-const PUBLIC_PATHS = ["/", "/login", "/register", "/forgot-password", "/pricing", "/features", "/security"];
+const PUBLIC_PATHS = [
+  "/",
+  "/login",
+  "/register",
+  "/forgot-password",
+  "/pricing",
+  "/features",
+  "/security",
+];
 
 for (const pagePath of PUBLIC_PATHS) {
   test(`a11y: no violations on public page ${pagePath}`, async ({ page }) => {
@@ -57,7 +65,10 @@ const AUTHENTICATED_PATHS = [
 ];
 
 test.describe("a11y: authenticated app pages", () => {
-  const storageStatePath = path.join(os.tmpdir(), `cim-e2e-a11y-auth-${Date.now()}.json`);
+  const storageStatePath = path.join(
+    os.tmpdir(),
+    `cim-e2e-a11y-auth-${Date.now()}.json`,
+  );
 
   test.beforeAll(async ({ browser }) => {
     const context = await browser.newContext();
@@ -92,7 +103,10 @@ test.describe("a11y: authenticated app pages", () => {
  * well within the register endpoint's own rate limit (SECURITY.md).
  */
 test.describe("a11y + keyboard operability: overlays and nav", () => {
-  const storageStatePath = path.join(os.tmpdir(), `cim-e2e-a11y-overlay-${Date.now()}.json`);
+  const storageStatePath = path.join(
+    os.tmpdir(),
+    `cim-e2e-a11y-overlay-${Date.now()}.json`,
+  );
 
   test.beforeAll(async ({ browser }) => {
     // Explicit `storageState: undefined` here — `test.use` below already
@@ -118,14 +132,19 @@ test.describe("a11y + keyboard operability: overlays and nav", () => {
     await page.goto("/mentions");
     await page.getByLabel("Search").fill("Daily Tech Wire");
     await page.getByLabel("Search").press("Enter");
-    await page.getByRole("row", { name: /Daily Tech Wire/ }).first().click();
+    await page
+      .getByRole("row", { name: /Daily Tech Wire/ })
+      .first()
+      .click();
     await expect(page.getByRole("dialog")).toBeVisible();
 
     const violations = await scan(page);
     expect(violations, formatViolations(violations)).toEqual([]);
   });
 
-  test("command palette has no violations while open and is reachable by keyboard", async ({ page }) => {
+  test("command palette has no violations while open and is reachable by keyboard", async ({
+    page,
+  }) => {
     await page.goto("/dashboard");
     await page.keyboard.press("Control+k");
     const dialog = page.getByRole("dialog");
@@ -139,7 +158,9 @@ test.describe("a11y + keyboard operability: overlays and nav", () => {
     await expect(dialog).not.toBeVisible();
   });
 
-  test("mentions table rows open the detail drawer via keyboard, not just a mouse click", async ({ page }) => {
+  test("mentions table rows open the detail drawer via keyboard, not just a mouse click", async ({
+    page,
+  }) => {
     await page.goto("/mentions");
     await page.getByLabel("Search").fill("Daily Tech Wire");
     await page.getByLabel("Search").press("Enter");
@@ -151,7 +172,9 @@ test.describe("a11y + keyboard operability: overlays and nav", () => {
     await expect(page.getByRole("dialog")).toBeVisible();
   });
 
-  test("the primary nav is fully reachable by Tab and Enter activates a link", async ({ page }) => {
+  test("the primary nav is fully reachable by Tab and Enter activates a link", async ({
+    page,
+  }) => {
     await page.goto("/dashboard");
 
     const monitoringLink = page.getByRole("link", { name: "Monitoring" });

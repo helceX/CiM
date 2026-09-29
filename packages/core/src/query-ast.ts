@@ -25,10 +25,17 @@ export function astToBooleanQuery(ast: QueryAst): string {
   const includeTerms = ast.include.map((term) => quoteIfNeeded(term));
   const phraseTerms = ast.exactPhrases.map((phrase) => `"${escapeQuoted(phrase)}"`);
   const includeClause = [...includeTerms, ...phraseTerms].join(" OR ");
-  const excludeClause = ast.exclude.map((term) => `NOT ${quoteIfNeeded(term)}`).join(" AND ");
+  const excludeClause = ast.exclude
+    .map((term) => `NOT ${quoteIfNeeded(term)}`)
+    .join(" AND ");
 
   const parts: string[] = [];
-  if (includeClause) parts.push(includeTerms.length + phraseTerms.length > 1 ? `(${includeClause})` : includeClause);
+  if (includeClause)
+    parts.push(
+      includeTerms.length + phraseTerms.length > 1
+        ? `(${includeClause})`
+        : includeClause,
+    );
   if (excludeClause) parts.push(excludeClause);
   return parts.join(" AND ");
 }
@@ -144,7 +151,9 @@ export function matchesText(ast: QueryAst, text: string): boolean {
  */
 export function computeMatchPriority(ast: QueryAst, text: string): "high" | "normal" {
   const folded = turkishFold(text);
-  const hasExactPhraseMatch = ast.exactPhrases.some((phrase) => folded.includes(turkishFold(phrase)));
+  const hasExactPhraseMatch = ast.exactPhrases.some((phrase) =>
+    folded.includes(turkishFold(phrase)),
+  );
   return hasExactPhraseMatch ? "high" : "normal";
 }
 
@@ -167,7 +176,12 @@ export function findMatchedTerm(ast: QueryAst, text: string): string | null {
   return null;
 }
 
-export type MatchType = "direct_mention" | "hashtag" | "url" | "exact_name" | "contextual";
+export type MatchType =
+  | "direct_mention"
+  | "hashtag"
+  | "url"
+  | "exact_name"
+  | "contextual";
 
 const URL_LIKE = /^(https?:\/\/)?[a-z0-9-]+(\.[a-z0-9-]+)+(\/\S*)?$/i;
 
@@ -189,7 +203,10 @@ export function classifyMatchType(
   sourceType: string,
 ): { matchType: MatchType; matchedRule: string } {
   if (sourceType === "social" && matchedTerm.startsWith("@")) {
-    return { matchType: "direct_mention", matchedRule: `Matched direct mention: "${matchedTerm}"` };
+    return {
+      matchType: "direct_mention",
+      matchedRule: `Matched direct mention: "${matchedTerm}"`,
+    };
   }
   if (matchedTerm.startsWith("#")) {
     return { matchType: "hashtag", matchedRule: `Matched hashtag: "${matchedTerm}"` };
@@ -198,7 +215,10 @@ export function classifyMatchType(
     return { matchType: "url", matchedRule: `Matched URL/domain: "${matchedTerm}"` };
   }
   if (ast.exactPhrases.includes(matchedTerm)) {
-    return { matchType: "exact_name", matchedRule: `Matched exact phrase: "${matchedTerm}"` };
+    return {
+      matchType: "exact_name",
+      matchedRule: `Matched exact phrase: "${matchedTerm}"`,
+    };
   }
   return { matchType: "contextual", matchedRule: `Matched keyword: "${matchedTerm}"` };
 }

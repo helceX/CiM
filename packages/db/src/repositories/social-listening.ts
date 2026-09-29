@@ -51,9 +51,7 @@ export async function getSocialOverviewStats(
     .innerJoin(articles, eq(articles.id, mentions.articleId))
     .innerJoin(sources, eq(sources.id, articles.sourceId))
     .where(socialScopeWhere(organizationId, scope));
-  return (
-    row ?? { totalConversations: 0, directMentions: 0, uniqueAuthors: 0 }
-  );
+  return row ?? { totalConversations: 0, directMentions: 0, uniqueAuthors: 0 };
 }
 
 export type SocialPlatformCount = { platform: string; count: number };
@@ -218,7 +216,10 @@ export type CreatorSpikeStat = {
  * with `baselineAvgPerDay: 0` — the caller's floor decides whether that
  * counts as a spike, this function never does.
  */
-export async function getCreatorSpikeStats(db: Db, queryId: string): Promise<CreatorSpikeStat[]> {
+export async function getCreatorSpikeStats(
+  db: Db,
+  queryId: string,
+): Promise<CreatorSpikeStat[]> {
   const rows = await db.execute<{
     profile_id: string;
     handle: string;

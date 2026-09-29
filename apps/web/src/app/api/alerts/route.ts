@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import { createAlertRuleSchema } from "@cim/validation";
-import { createAlertRule, getMonitoringQuery, getProject, recordAuditLog, db } from "@cim/db";
+import {
+  createAlertRule,
+  getMonitoringQuery,
+  getProject,
+  recordAuditLog,
+  db,
+} from "@cim/db";
 import { requireOrgContext } from "@/lib/tenant";
 
 export async function POST(request: Request) {
@@ -48,7 +54,9 @@ export async function POST(request: Request) {
   // and confusing to read, against a query not tagged that way.
   if (input.type === "competitor" && query.trackingTarget !== "competitor") {
     return NextResponse.json(
-      { error: 'Competitor alerts can only be created for a query tagged "Competitor".' },
+      {
+        error: 'Competitor alerts can only be created for a query tagged "Competitor".',
+      },
       { status: 400 },
     );
   }
@@ -57,7 +65,10 @@ export async function POST(request: Request) {
   // against a query that isn't even watching social sources.
   if (input.type === "creator_spike" && !query.sourceTypes.includes("social")) {
     return NextResponse.json(
-      { error: 'Creator spike alerts can only be created for a query that includes "Social" as a source type.' },
+      {
+        error:
+          'Creator spike alerts can only be created for a query that includes "Social" as a source type.',
+      },
       { status: 400 },
     );
   }

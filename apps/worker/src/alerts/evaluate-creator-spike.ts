@@ -17,7 +17,9 @@ const BASELINE_MULTIPLIER = 3; // "3x baseline" floor, same explainable formula 
  * on its single most active creator (per-rule cooldown, the same
  * fatigue control every other scheduler-tick alert type uses).
  */
-export async function evaluateCreatorSpikeAlerts(emailQueue: Queue<SendEmailJobData>): Promise<void> {
+export async function evaluateCreatorSpikeAlerts(
+  emailQueue: Queue<SendEmailJobData>,
+): Promise<void> {
   const rules = await getActiveCreatorSpikeAlertRules(db);
 
   for (const rule of rules) {

@@ -13,7 +13,8 @@ const getCreatorSpikeStats = vi.fn();
 
 vi.mock("@cim/db", () => ({
   db: {},
-  getActiveCreatorSpikeAlertRules: (...args: unknown[]) => getActiveCreatorSpikeAlertRules(...args),
+  getActiveCreatorSpikeAlertRules: (...args: unknown[]) =>
+    getActiveCreatorSpikeAlertRules(...args),
   getCreatorSpikeStats: (...args: unknown[]) => getCreatorSpikeStats(...args),
 }));
 

@@ -41,7 +41,9 @@ import {
  */
 export interface AnthropicMessagesClient {
   messages: {
-    create(params: Anthropic.MessageCreateParamsNonStreaming): Promise<Anthropic.Message>;
+    create(
+      params: Anthropic.MessageCreateParamsNonStreaming,
+    ): Promise<Anthropic.Message>;
   };
 }
 
@@ -73,11 +75,16 @@ const SYSTEM_RULES = [
 ].join(" ");
 
 /**
- * docs/product/FEATURE_MATRIX.md P3 "AI Assistant: ... multi-turn" —
- * prior turns are the same user's own questions and this assistant's own
- * prior answers, trusted content folded straight into USER QUERY, never
- * SOURCE CONTENT's "untrusted, scraped" bucket the prompt-injection
- * defense is written for.
+ * docs/product/FEATURE_MATRIX.md P3 "AI Assistant: ... multi-turn" — there
+ * is no server-side conversation record (apps/web/.../ai-assistant-panel.tsx's
+ * own doc comment), so `history` is whatever the caller's own request body
+ * says it is, not a verified transcript. It's folded into USER QUERY
+ * rather than SOURCE CONTENT's "untrusted, scraped" bucket anyway: unlike
+ * SOURCE CONTENT it can't come from a third party (assistantAskSchema
+ * only accepts it from the requesting org's own authenticated caller), and
+ * the structural defenses that matter — forced tool_choice, schema-shaped
+ * output, evidenceMentionIds re-filtered against real mention ids below —
+ * hold regardless of what a caller puts in it.
  */
 function formatConversationHistory(history: AssistantConversationTurn[]): string {
   if (history.length === 0) return "";
@@ -132,7 +139,10 @@ export class AnthropicAIProvider implements AIProvider {
       max_tokens: params.maxTokens,
       system: SYSTEM_RULES,
       messages: [
-        { role: "user", content: buildUserContent(params.userQuery, params.sourceContent) },
+        {
+          role: "user",
+          content: buildUserContent(params.userQuery, params.sourceContent),
+        },
       ],
       tools: [
         {
@@ -148,7 +158,8 @@ export class AnthropicAIProvider implements AIProvider {
     for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
       const message = await this.client.messages.create(request);
       const block = message.content.find(
-        (b): b is Anthropic.ToolUseBlock => b.type === "tool_use" && b.name === params.toolName,
+        (b): b is Anthropic.ToolUseBlock =>
+          b.type === "tool_use" && b.name === params.toolName,
       );
       if (!block) {
         lastError = new Error(`provider did not call tool "${params.toolName}"`);
@@ -164,7 +175,9 @@ export class AnthropicAIProvider implements AIProvider {
     throw new AIProviderValidationError(params.toolName, lastError);
   }
 
-  async classifySentiment(input: ClassifySentimentInput): Promise<WithMethod<SentimentOutput>> {
+  async classifySentiment(
+    input: ClassifySentimentInput,
+  ): Promise<WithMethod<SentimentOutput>> {
     const result = await this.callTool({
       model: this.cheapModel,
       maxTokens: 300,
@@ -187,12 +200,15 @@ export class AnthropicAIProvider implements AIProvider {
     return { ...result, method: `anthropic:${this.cheapModel}` };
   }
 
-  async extractEntities(input: ExtractEntitiesInput): Promise<WithMethod<EntityOutput>> {
+  async extractEntities(
+    input: ExtractEntitiesInput,
+  ): Promise<WithMethod<EntityOutput>> {
     const result = await this.callTool({
       model: this.cheapModel,
       maxTokens: 500,
       toolName: "extract_entities",
-      toolDescription: "Extract the named entities (companies, people, products, places) mentioned.",
+      toolDescription:
+        "Extract the named entities (companies, people, products, places) mentioned.",
       inputSchema: {
         type: "object",
         properties: {
@@ -205,7 +221,15 @@ export class AnthropicAIProvider implements AIProvider {
                 name: { type: "string" },
                 type: {
                   type: "string",
-                  enum: ["company", "brand", "person", "product", "organization", "place", "other"],
+                  enum: [
+                    "company",
+                    "brand",
+                    "person",
+                    "product",
+                    "organization",
+                    "place",
+                    "other",
+                  ],
                 },
                 salience: { type: "number", minimum: 0, maximum: 1 },
               },
@@ -247,14 +271,17 @@ export class AnthropicAIProvider implements AIProvider {
         },
         required: ["topics"],
       },
-      userQuery: "Detect up to 10 topics this article covers, each with a confidence from 0 to 1.",
+      userQuery:
+        "Detect up to 10 topics this article covers, each with a confidence from 0 to 1.",
       sourceContent: `${input.title}\n\n${input.text}`,
       outputSchema: topicOutputSchema,
     });
     return { ...result, method: `anthropic:${this.cheapModel}` };
   }
 
-  async generateSummary(input: GenerateSummaryInput): Promise<WithMethod<SummaryOutput>> {
+  async generateSummary(
+    input: GenerateSummaryInput,
+  ): Promise<WithMethod<SummaryOutput>> {
     const result = await this.callTool({
       model: this.cheapModel,
       maxTokens: 400,
@@ -273,7 +300,9 @@ export class AnthropicAIProvider implements AIProvider {
     return { ...result, method: `anthropic:${this.cheapModel}` };
   }
 
-  async generateInsight(input: GenerateInsightInput): Promise<WithMethod<InsightOutput>> {
+  async generateInsight(
+    input: GenerateInsightInput,
+  ): Promise<WithMethod<InsightOutput>> {
     if (input.mentions.length === 0) {
       throw new Error("generateInsight requires at least one mention as evidence");
     }
@@ -288,7 +317,8 @@ export class AnthropicAIProvider implements AIProvider {
       model: this.synthesisModel,
       maxTokens: 800,
       toolName: "generate_insight",
-      toolDescription: "Generate a grounded executive summary of what changed over the period.",
+      toolDescription:
+        "Generate a grounded executive summary of what changed over the period.",
       inputSchema: {
         type: "object",
         properties: {
@@ -312,7 +342,9 @@ export class AnthropicAIProvider implements AIProvider {
     });
 
     const knownIds = new Set(input.mentions.map((m) => m.id));
-    const evidenceMentionIds = result.evidenceMentionIds.filter((id) => knownIds.has(id));
+    const evidenceMentionIds = result.evidenceMentionIds.filter((id) =>
+      knownIds.has(id),
+    );
     if (evidenceMentionIds.length === 0) {
       throw new AIProviderValidationError(
         "generate_insight",
@@ -320,7 +352,11 @@ export class AnthropicAIProvider implements AIProvider {
       );
     }
 
-    return { ...result, evidenceMentionIds, method: `anthropic:${this.synthesisModel}` };
+    return {
+      ...result,
+      evidenceMentionIds,
+      method: `anthropic:${this.synthesisModel}`,
+    };
   }
 
   async generateRecommendations(
@@ -362,7 +398,13 @@ export class AnthropicAIProvider implements AIProvider {
                   maxItems: 50,
                 },
               },
-              required: ["recommendation", "why", "priority", "confidence", "evidenceMentionIds"],
+              required: [
+                "recommendation",
+                "why",
+                "priority",
+                "confidence",
+                "evidenceMentionIds",
+              ],
             },
           },
         },
@@ -443,7 +485,9 @@ export class AnthropicAIProvider implements AIProvider {
     }
 
     const knownIds = new Set(input.mentions.map((m) => m.id));
-    const evidenceMentionIds = result.risk.evidenceMentionIds.filter((id) => knownIds.has(id));
+    const evidenceMentionIds = result.risk.evidenceMentionIds.filter((id) =>
+      knownIds.has(id),
+    );
     // A risk whose cited evidence didn't actually match any mention we
     // provided is no longer grounded — fall back to "no risk flagged"
     // rather than render an unsupported claim (same rule generateInsight
@@ -458,7 +502,9 @@ export class AnthropicAIProvider implements AIProvider {
     };
   }
 
-  async answerQuestion(input: AssistantAnswerInput): Promise<WithMethod<AssistantAnswerOutput>> {
+  async answerQuestion(
+    input: AssistantAnswerInput,
+  ): Promise<WithMethod<AssistantAnswerOutput>> {
     const mentionList =
       input.mentions.length === 0
         ? "(no recent mentions available)"
@@ -501,7 +547,9 @@ export class AnthropicAIProvider implements AIProvider {
     });
 
     const knownIds = new Set(input.mentions.map((m) => m.id));
-    const evidenceMentionIds = result.evidenceMentionIds.filter((id) => knownIds.has(id));
+    const evidenceMentionIds = result.evidenceMentionIds.filter((id) =>
+      knownIds.has(id),
+    );
 
     // evidenceMentionIds may legitimately be empty (a question with no
     // specific-mention answer, per this schema's own doc comment) — but
@@ -520,7 +568,11 @@ export class AnthropicAIProvider implements AIProvider {
       };
     }
 
-    return { ...result, evidenceMentionIds, method: `anthropic:${this.synthesisModel}` };
+    return {
+      ...result,
+      evidenceMentionIds,
+      method: `anthropic:${this.synthesisModel}`,
+    };
   }
 
   async reviewQuery(input: QueryReviewInput): Promise<WithMethod<QueryReviewOutput>> {
@@ -533,7 +585,8 @@ export class AnthropicAIProvider implements AIProvider {
       model: this.cheapModel,
       maxTokens: 400,
       toolName: "review_query",
-      toolDescription: "Assess a monitoring query's breadth and precision from its sample results.",
+      toolDescription:
+        "Assess a monitoring query's breadth and precision from its sample results.",
       inputSchema: {
         type: "object",
         properties: {

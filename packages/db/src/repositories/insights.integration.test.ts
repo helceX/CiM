@@ -144,7 +144,13 @@ describe("insights repository (integration)", () => {
       priority: "critical",
     });
 
-    const rows = await listMentionsForInsightPeriod(db, organizationId, projectId, 24, 1);
+    const rows = await listMentionsForInsightPeriod(
+      db,
+      organizationId,
+      projectId,
+      24,
+      1,
+    );
     expect(rows).toHaveLength(1);
     expect(rows[0]?.id).toBe(criticalMentionId);
     expect(rows[0]?.priority).toBe("critical");
@@ -155,12 +161,23 @@ describe("insights repository (integration)", () => {
     // (setMentionFeedback -> status "archived") must not come back as
     // grounding evidence here either — the same exclusion
     // listRecentMentionsForAssistant already applies for the AI Assistant.
-    await db.update(mentions).set({ status: "archived" }).where(eq(mentions.id, mentionId));
+    await db
+      .update(mentions)
+      .set({ status: "archived" })
+      .where(eq(mentions.id, mentionId));
     try {
-      const rows = await listMentionsForInsightPeriod(db, organizationId, projectId, 24);
+      const rows = await listMentionsForInsightPeriod(
+        db,
+        organizationId,
+        projectId,
+        24,
+      );
       expect(rows.some((r) => r.id === mentionId)).toBe(false);
     } finally {
-      await db.update(mentions).set({ status: "new" }).where(eq(mentions.id, mentionId));
+      await db
+        .update(mentions)
+        .set({ status: "new" })
+        .where(eq(mentions.id, mentionId));
     }
   });
 
@@ -179,7 +196,12 @@ describe("insights repository (integration)", () => {
       evidenceMentionIds: [mentionId],
     });
 
-    const latest = await getLatestInsight(db, organizationId, projectId, "whats_changed");
+    const latest = await getLatestInsight(
+      db,
+      organizationId,
+      projectId,
+      "whats_changed",
+    );
     expect(latest?.summary).toBe("1 new mention — 1 high-priority match.");
     expect(latest?.evidence).toHaveLength(1);
     expect(latest?.evidence[0]?.mentionId).toBe(mentionId);
@@ -228,12 +250,18 @@ describe("insights repository (integration)", () => {
     // (setMentionFeedback -> status "archived") must not come back as
     // evidence in an assistant answer — the same default exclusion
     // mentionFiltersToWhere already applies for the Mentions table.
-    await db.update(mentions).set({ status: "archived" }).where(eq(mentions.id, mentionId));
+    await db
+      .update(mentions)
+      .set({ status: "archived" })
+      .where(eq(mentions.id, mentionId));
     try {
       const rows = await listRecentMentionsForAssistant(db, organizationId);
       expect(rows.some((r) => r.id === mentionId)).toBe(false);
     } finally {
-      await db.update(mentions).set({ status: "new" }).where(eq(mentions.id, mentionId));
+      await db
+        .update(mentions)
+        .set({ status: "new" })
+        .where(eq(mentions.id, mentionId));
     }
   });
 
@@ -279,9 +307,13 @@ describe("insights repository (integration)", () => {
       evidenceMentionIds: [mentionId],
     });
 
-    const latestBatch = await listLatestRecommendationsForOrganization(db, organizationId, {
-      projectId,
-    });
+    const latestBatch = await listLatestRecommendationsForOrganization(
+      db,
+      organizationId,
+      {
+        projectId,
+      },
+    );
     expect(latestBatch).toHaveLength(2);
     expect(latestBatch.some((r) => r.summary.includes("Stale"))).toBe(false);
     // Ordering must be by actual severity ("high" before "medium"), not
@@ -299,5 +331,66 @@ describe("insights repository (integration)", () => {
     const otherOrgId = asOrganizationId("00000000-0000-0000-0000-000000000000");
     const rows = await listLatestRecommendationsForOrganization(db, otherOrgId);
     expect(rows).toEqual([]);
+  });
+
+  it("includes every project's own latest batch on an org-wide call, not just whichever project ran last", async () => {
+    // Regression: apps/worker/src/ai/generate-insight.ts computes
+    // periodEnd fresh (`new Date()`) inside its per-project loop, so two
+    // projects' batches never share an exact periodEnd. An org-wide call
+    // (no projectId, as the Dashboard makes) must still surface both
+    // projects' latest recommendations, not just the one with the
+    // numerically-largest periodEnd.
+    const workspace = await db
+      .select()
+      .from(workspaces)
+      .where(eq(workspaces.organizationId, organizationId))
+      .then(([w]) => w);
+    if (!workspace) throw new Error("test workspace missing");
+    const secondProject = await createProject(db, organizationId, {
+      workspaceId: workspace.id,
+      name: `Second Insight Test Project ${Date.now()}`,
+    });
+
+    const firstProjectPeriodEnd = new Date();
+    await createInsight(db, organizationId, {
+      projectId,
+      kind: "recommendation",
+      summary: "First project's own latest recommendation.",
+      why: "Evidence for the first project.",
+      priority: "medium",
+      confidence: 0.6,
+      method: "mock-heuristic-v1",
+      periodStart: new Date(firstProjectPeriodEnd.getTime() - 24 * 60 * 60 * 1000),
+      periodEnd: firstProjectPeriodEnd,
+      evidenceMentionIds: [mentionId],
+    });
+
+    // Strictly later than the first project's periodEnd, the way a
+    // second project processed moments later in the same job run would
+    // naturally produce.
+    const secondProjectPeriodEnd = new Date(firstProjectPeriodEnd.getTime() + 5000);
+    await createInsight(db, organizationId, {
+      projectId: secondProject.id,
+      kind: "recommendation",
+      summary: "Second project's own latest recommendation.",
+      why: "Evidence for the second project.",
+      priority: "medium",
+      confidence: 0.6,
+      method: "mock-heuristic-v1",
+      periodStart: new Date(secondProjectPeriodEnd.getTime() - 24 * 60 * 60 * 1000),
+      periodEnd: secondProjectPeriodEnd,
+      evidenceMentionIds: [mentionId],
+    });
+
+    const orgWideBatch = await listLatestRecommendationsForOrganization(
+      db,
+      organizationId,
+    );
+    expect(orgWideBatch.some((r) => r.summary.includes("First project's own"))).toBe(
+      true,
+    );
+    expect(orgWideBatch.some((r) => r.summary.includes("Second project's own"))).toBe(
+      true,
+    );
   });
 });

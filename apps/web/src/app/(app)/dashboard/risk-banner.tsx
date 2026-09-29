@@ -14,6 +14,13 @@ const LEVEL_TONE = {
  * card, surfaced ahead of it (docs/ux/INFORMATION_ARCHITECTURE.md
  * "Crisis/risk signals" is the top Communications Manager concern). Only
  * rendered when a risk insight actually exists — most periods have none.
+ *
+ * Unlike "whats_changed", a risk row is only ever inserted when
+ * detectRisk actually flags something (most periods produce nothing), so
+ * getLatestInsightForOrganization can keep surfacing the same row for
+ * days after the risk it describes has passed with no newer one to
+ * replace it. "Flagged {date}" is what keeps this danger-styled banner
+ * from reading as a live, still-current warning once it's gone stale.
  */
 export function RiskBanner({ risk }: { risk: InsightWithEvidence }) {
   const level = risk.priority ?? "medium";
@@ -22,11 +29,14 @@ export function RiskBanner({ risk }: { risk: InsightWithEvidence }) {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <h2 className="text-sm font-semibold text-foreground">Risk signal</h2>
-          <Badge tone={LEVEL_TONE[level as keyof typeof LEVEL_TONE] ?? "warning"}>{level}</Badge>
+          <Badge tone={LEVEL_TONE[level as keyof typeof LEVEL_TONE] ?? "warning"}>
+            {level}
+          </Badge>
         </div>
       </div>
       <p className="mt-2 text-sm text-foreground">{risk.summary}</p>
       <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+        <span>Flagged {new Date(risk.createdAt).toLocaleString()}</span>
         <span>Confidence {Math.round(Number(risk.confidence) * 100)}%</span>
         <span>Method: {risk.method}</span>
         <span>

@@ -19,6 +19,15 @@ import { CompetitorComparisonSection } from "./competitor-comparison-section";
 import { RecommendationsSection } from "./recommendations-section";
 import { RiskBanner } from "./risk-banner";
 
+// A "risk" insight row is only ever created when detectRisk actually
+// flags something (most periods produce nothing), unlike "whats_changed"
+// which refreshes daily whenever there's coverage — so without a cutoff
+// the danger-styled RiskBanner could keep showing a resolved risk from
+// weeks ago as if it were still live. Same 24h window
+// apps/worker/src/jobs/send-executive-brief.ts already applies before
+// emailing a "whats_changed" brief.
+const RISK_FRESHNESS_HOURS = 24;
+
 const SENTIMENT_TONE = {
   positive: "success",
   neutral: "neutral",
@@ -51,23 +60,37 @@ export default async function DashboardPage() {
     );
   }
 
-  const [summary, recentMentions, trend, insight, competitorComparison, recommendations, risk] =
-    await Promise.all([
-      getDashboardSummary(db, context.organizationId, { sinceDays: 7 }),
-      listRecentMentions(db, context.organizationId, { limit: 10 }),
-      getMentionVolumeSeries(db, context.organizationId, { sinceDays: 14 }),
-      getLatestInsightForOrganization(db, context.organizationId, "whats_changed"),
-      getCompetitorComparison(db, context.organizationId, { sinceDays: 7 }),
-      listLatestRecommendationsForOrganization(db, context.organizationId),
-      getLatestInsightForOrganization(db, context.organizationId, "risk"),
-    ]);
-  const hasCompetitor = competitorComparison.some((row) => row.trackingTarget === "competitor");
+  const [
+    summary,
+    recentMentions,
+    trend,
+    insight,
+    competitorComparison,
+    recommendations,
+    risk,
+  ] = await Promise.all([
+    getDashboardSummary(db, context.organizationId, { sinceDays: 7 }),
+    listRecentMentions(db, context.organizationId, { limit: 10 }),
+    getMentionVolumeSeries(db, context.organizationId, { sinceDays: 14 }),
+    getLatestInsightForOrganization(db, context.organizationId, "whats_changed"),
+    getCompetitorComparison(db, context.organizationId, { sinceDays: 7 }),
+    listLatestRecommendationsForOrganization(db, context.organizationId),
+    getLatestInsightForOrganization(db, context.organizationId, "risk", {
+      freshSince: new Date(Date.now() - RISK_FRESHNESS_HOURS * 60 * 60 * 1000),
+    }),
+  ]);
+  const hasCompetitor = competitorComparison.some(
+    (row) => row.trackingTarget === "competitor",
+  );
 
   return (
     <div className="flex flex-col gap-8">
       <div>
         <h1 className="text-lg font-semibold text-foreground">Dashboard</h1>
-        <p className="text-sm text-muted-foreground">Last 7 days across {projects.length} project{projects.length === 1 ? "" : "s"}.</p>
+        <p className="text-sm text-muted-foreground">
+          Last 7 days across {projects.length} project{projects.length === 1 ? "" : "s"}
+          .
+        </p>
       </div>
 
       <KpiRow
@@ -96,13 +119,16 @@ export default async function DashboardPage() {
             <span>Confidence {Math.round(Number(insight.confidence) * 100)}%</span>
             <span>Method: {insight.method}</span>
             <span>
-              Based on {insight.evidence.length} mention{insight.evidence.length === 1 ? "" : "s"}
+              Based on {insight.evidence.length} mention
+              {insight.evidence.length === 1 ? "" : "s"}
             </span>
           </div>
         </section>
       ) : null}
 
-      {recommendations.length > 0 ? <RecommendationsSection items={recommendations} /> : null}
+      {recommendations.length > 0 ? (
+        <RecommendationsSection items={recommendations} />
+      ) : null}
 
       <AiAssistantPanel />
 
@@ -110,7 +136,10 @@ export default async function DashboardPage() {
         <section className="rounded-lg border border-border p-4">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold text-foreground">Mention trend</h2>
-            <Link href="/analytics" className="text-xs text-primary underline underline-offset-2">
+            <Link
+              href="/analytics"
+              className="text-xs text-primary underline underline-offset-2"
+            >
               View analytics
             </Link>
           </div>
@@ -121,7 +150,9 @@ export default async function DashboardPage() {
         </section>
       ) : null}
 
-      {hasCompetitor ? <CompetitorComparisonSection rows={competitorComparison} /> : null}
+      {hasCompetitor ? (
+        <CompetitorComparisonSection rows={competitorComparison} />
+      ) : null}
 
       <section>
         <h2 className="text-sm font-semibold text-foreground">Top stories</h2>
@@ -137,16 +168,28 @@ export default async function DashboardPage() {
               {recentMentions.map(({ mention, article, source }) => (
                 <li key={mention.id} className="flex flex-col gap-1 px-4 py-3">
                   <div className="flex items-center justify-between gap-3">
-                    <p className="text-sm font-medium text-foreground">{article.title}</p>
+                    <p className="text-sm font-medium text-foreground">
+                      {article.title}
+                    </p>
                     <div className="flex shrink-0 items-center gap-2">
                       {mention.sentiment ? (
-                        <Badge tone={SENTIMENT_TONE[mention.sentiment as keyof typeof SENTIMENT_TONE]}>
+                        <Badge
+                          tone={
+                            SENTIMENT_TONE[
+                              mention.sentiment as keyof typeof SENTIMENT_TONE
+                            ]
+                          }
+                        >
                           {mention.sentiment}
                         </Badge>
                       ) : (
                         <Badge tone="neutral">Unclassified</Badge>
                       )}
-                      <Badge tone={PRIORITY_TONE[mention.priority as keyof typeof PRIORITY_TONE]}>
+                      <Badge
+                        tone={
+                          PRIORITY_TONE[mention.priority as keyof typeof PRIORITY_TONE]
+                        }
+                      >
                         {mention.priority}
                       </Badge>
                     </div>

@@ -72,9 +72,11 @@ export async function POST(request: Request) {
   // Resolve the model's evidence ids back to the grounding rows for
   // display — result.evidenceMentionIds is already filtered to real
   // candidates at the provider layer (never a fabricated id), same
-  // guarantee generateInsight gives its own caller.
+  // guarantee generateInsight gives its own caller. assistantAnswerOutputSchema
+  // doesn't require uniqueness, so dedupe here — otherwise a repeated id
+  // renders the same evidence line twice under the same React key.
   const mentionById = new Map(mentions.map((m) => [m.id, m]));
-  const evidence = result.evidenceMentionIds
+  const evidence = [...new Set(result.evidenceMentionIds)]
     .map((id) => mentionById.get(id))
     .filter((m): m is NonNullable<typeof m> => Boolean(m))
     .map((m) => ({ id: m.id, title: m.title, sourceName: m.sourceName }));

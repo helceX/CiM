@@ -15,7 +15,9 @@ export type ActiveProjectRef = { organizationId: OrganizationId; projectId: stri
  * cross-tenant read exception as `listActiveMonitoringQueriesForSourceType`,
  * ADR-001), not one project passed in by a caller.
  */
-export async function listActiveProjectsForInsightGeneration(db: Db): Promise<ActiveProjectRef[]> {
+export async function listActiveProjectsForInsightGeneration(
+  db: Db,
+): Promise<ActiveProjectRef[]> {
   const rows = await db
     .selectDistinct({
       organizationId: monitoringQueries.organizationId,
@@ -30,7 +32,10 @@ export async function listActiveProjectsForInsightGeneration(db: Db): Promise<Ac
         isNull(organizations.deletedAt),
       ),
     );
-  return rows.map((row) => ({ ...row, organizationId: asOrganizationId(row.organizationId) }));
+  return rows.map((row) => ({
+    ...row,
+    organizationId: asOrganizationId(row.organizationId),
+  }));
 }
 
 /**
@@ -75,7 +80,10 @@ export async function listMentionsForInsightPeriod(
       and(
         eq(mentions.organizationId, organizationId),
         eq(mentions.projectId, projectId),
-        gte(mentions.createdAt, sql`now() - (${sinceHours}::text || ' hours')::interval`),
+        gte(
+          mentions.createdAt,
+          sql`now() - (${sinceHours}::text || ' hours')::interval`,
+        ),
         // Same "already triaged, don't resurface it" exclusion
         // listRecentMentionsForAssistant applies — a mention the user
         // marked irrelevant/duplicate must never come back as grounding
@@ -186,9 +194,11 @@ export async function createInsight(
 
     // AI_ARCHITECTURE.md Trust Layer — mandatory, not optional: an Insight
     // with zero evidence rows cannot be rendered as a factual claim.
-    await tx.insert(insightEvidence).values(
-      input.evidenceMentionIds.map((mentionId) => ({ insightId: row.id, mentionId })),
-    );
+    await tx
+      .insert(insightEvidence)
+      .values(
+        input.evidenceMentionIds.map((mentionId) => ({ insightId: row.id, mentionId })),
+      );
 
     return row.id;
   });
@@ -245,7 +255,9 @@ export async function getLatestInsight(
   return { ...insight, evidence };
 }
 
-export type InsightWithEvidenceAndProject = InsightWithEvidence & { projectName: string };
+export type InsightWithEvidenceAndProject = InsightWithEvidence & {
+  projectName: string;
+};
 
 /**
  * The dashboard (docs/product/PRODUCT_VISION.md "since yesterday"
@@ -254,12 +266,22 @@ export type InsightWithEvidenceAndProject = InsightWithEvidence & { projectName:
  * to be selected. A report's "AI Insight" section (FEATURE_MATRIX.md P2
  * report builder) is scoped to one project, so it passes `projectId` to
  * avoid surfacing a different project's insight in this project's report.
+ *
+ * `freshSince` matters for a kind like "risk", which (unlike
+ * "whats_changed") only ever gets a new row when detectRisk actually
+ * flags something — most periods produce nothing. Without a cutoff, "the
+ * latest risk row" can be days or weeks old once the flagged issue has
+ * passed, and a caller rendering it as a live warning (dashboard/
+ * risk-banner.tsx) would misrepresent stale news as current. Same
+ * freshness-window discipline apps/worker/src/jobs/
+ * send-executive-brief.ts already applies to "whats_changed" before
+ * emailing it.
  */
 export async function getLatestInsightForOrganization(
   db: Db,
   organizationId: OrganizationId,
   kind: string,
-  options: { projectId?: string } = {},
+  options: { projectId?: string; freshSince?: Date } = {},
 ): Promise<InsightWithEvidenceAndProject | undefined> {
   const [row] = await db
     .select({ insight: insights, projectName: projects.name })
@@ -270,6 +292,7 @@ export async function getLatestInsightForOrganization(
         eq(insights.organizationId, organizationId),
         eq(insights.kind, kind),
         options.projectId ? eq(insights.projectId, options.projectId) : undefined,
+        options.freshSince ? gte(insights.createdAt, options.freshSince) : undefined,
       ),
     )
     .orderBy(desc(insights.createdAt))
@@ -296,6 +319,14 @@ export async function getLatestInsightForOrganization(
  * optional, same convention as `getLatestInsightForOrganization`: the
  * Dashboard shows the org's latest batch across every project, a report
  * passes `projectId` to stay scoped to the one it's for.
+ *
+ * "Latest batch" is resolved per project, not with one org-wide max —
+ * apps/worker/src/ai/generate-insight.ts computes `periodEnd = new
+ * Date()` fresh inside its per-project loop, so two projects processed
+ * moments apart never share an exact periodEnd. An org-wide
+ * `eq(periodEnd, max(periodEnd))` would then match only whichever
+ * project happened to run last, silently dropping every other project's
+ * just-generated recommendations from an org-wide (no projectId) call.
  */
 export async function listLatestRecommendationsForOrganization(
   db: Db,
@@ -308,18 +339,19 @@ export async function listLatestRecommendationsForOrganization(
     options.projectId ? eq(insights.projectId, options.projectId) : undefined,
   );
 
-  const [latest] = await db
-    .select({ periodEnd: insights.periodEnd })
-    .from(insights)
-    .where(scope)
-    .orderBy(desc(insights.periodEnd))
-    .limit(1);
-  if (!latest) return [];
-
   const rows = await db
     .select()
     .from(insights)
-    .where(and(scope, eq(insights.periodEnd, latest.periodEnd)))
+    .where(
+      and(
+        scope,
+        sql`${insights.periodEnd} = (
+          select max(latest.period_end) from insights latest
+          where latest.project_id = ${insights.projectId}
+            and latest.kind = 'recommendation'
+        )`,
+      ),
+    )
     // Same alphabetical-sort trap as mentions.priority — rank explicitly
     // so "high" recommendations/risks actually outrank "medium"/"low".
     .orderBy(desc(insightPriorityRank()), desc(insights.confidence));
@@ -336,12 +368,21 @@ export async function listLatestRecommendationsForOrganization(
     .innerJoin(mentions, eq(mentions.id, insightEvidence.mentionId))
     .innerJoin(articles, eq(articles.id, mentions.articleId))
     .innerJoin(sources, eq(sources.id, articles.sourceId))
-    .where(inArray(insightEvidence.insightId, rows.map((r) => r.id)));
+    .where(
+      inArray(
+        insightEvidence.insightId,
+        rows.map((r) => r.id),
+      ),
+    );
 
   return rows.map((row) => ({
     ...row,
     evidence: evidence
       .filter((e) => e.insightId === row.id)
-      .map((e) => ({ mentionId: e.mentionId, title: e.title, sourceName: e.sourceName })),
+      .map((e) => ({
+        mentionId: e.mentionId,
+        title: e.title,
+        sourceName: e.sourceName,
+      })),
   }));
 }

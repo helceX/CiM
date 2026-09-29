@@ -23,10 +23,13 @@ const MAX_INDEX_DEPTH = 1;
  */
 export class SitemapConnector implements SourceConnector {
   async fetch(source: Source): Promise<RawFetchResult[]> {
-    if (!source.url) throw new Error(`Source "${source.name}" has no sitemap URL configured`);
+    if (!source.url)
+      throw new Error(`Source "${source.name}" has no sitemap URL configured`);
 
     const urls = await this.collectUrls(source.url, MAX_INDEX_DEPTH);
-    const newestFirst = [...urls].sort((a, b) => (b.lastmod?.getTime() ?? 0) - (a.lastmod?.getTime() ?? 0));
+    const newestFirst = [...urls].sort(
+      (a, b) => (b.lastmod?.getTime() ?? 0) - (a.lastmod?.getTime() ?? 0),
+    );
     const candidates = newestFirst.slice(0, MAX_PAGES_PER_CRAWL);
 
     const results: RawFetchResult[] = [];
@@ -43,7 +46,17 @@ export class SitemapConnector implements SourceConnector {
       try {
         const allowed = await isAllowed(entry.loc);
         if (!allowed) continue;
-        const { body } = await safeFetch(entry.loc);
+        const { status, body } = await safeFetch(entry.loc);
+        if (status >= 400) {
+          // Unlike the sitemap.xml fetch itself (parseSitemap throws on
+          // non-sitemap content, so a broken sitemap fails loud), each
+          // listed page has no such guard — extractTitle/htmlToPlainText
+          // process any HTML they're given, error page or not. A sitemap
+          // routinely lists pages that have since been removed or moved,
+          // so this isn't a rare race the way it is for WebConnector —
+          // it's an expected, regular occurrence.
+          continue;
+        }
         results.push({
           externalId: entry.loc,
           canonicalUrl: entry.loc,
@@ -60,7 +73,10 @@ export class SitemapConnector implements SourceConnector {
     return results;
   }
 
-  private async collectUrls(sitemapUrl: string, depthRemaining: number): Promise<SitemapUrl[]> {
+  private async collectUrls(
+    sitemapUrl: string,
+    depthRemaining: number,
+  ): Promise<SitemapUrl[]> {
     const { body } = await safeFetch(sitemapUrl);
     const parsed = parseSitemap(body);
     if (parsed.kind === "urlset") return parsed.urls;
@@ -74,15 +90,21 @@ export class SitemapConnector implements SourceConnector {
   }
 
   async healthCheck(source: Source): Promise<SourceHealth> {
-    if (!source.url) return { status: "unavailable", message: "No sitemap URL configured" };
+    if (!source.url)
+      return { status: "unavailable", message: "No sitemap URL configured" };
     try {
       const { status, body } = await safeFetch(source.url, { timeoutMs: 8000 });
-      if (status >= 400) return { status: "error", message: `Sitemap responded HTTP ${status}` };
+      if (status >= 400)
+        return { status: "error", message: `Sitemap responded HTTP ${status}` };
       parseSitemap(body);
       return { status: "healthy" };
     } catch (error) {
-      if (error instanceof SsrfBlockedError) return { status: "blocked", message: error.message };
-      return { status: "error", message: error instanceof Error ? error.message : String(error) };
+      if (error instanceof SsrfBlockedError)
+        return { status: "blocked", message: error.message };
+      return {
+        status: "error",
+        message: error instanceof Error ? error.message : String(error),
+      };
     }
   }
 }

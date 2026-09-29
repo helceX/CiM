@@ -19,7 +19,10 @@ vi.mock("./robots", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./robots")>();
   return {
     ...actual,
-    createRobotsChecker: () => (...args: Parameters<typeof robotsMock>) => robotsMock(...args),
+    createRobotsChecker:
+      () =>
+      (...args: Parameters<typeof robotsMock>) =>
+        robotsMock(...args),
   };
 });
 
@@ -126,6 +129,30 @@ describe("SitemapConnector", () => {
 
     const items = await new SitemapConnector().fetch(fakeSource());
     expect(items).toHaveLength(1);
+  });
+
+  it("skips a page that responds with a non-2xx status, never fabricating an article from its error page", async () => {
+    // Regression: a listed page's fetch had no status check before
+    // extractTitle/htmlToPlainText, so a page that had since been
+    // removed (a routine, expected occurrence for a sitemap entry —
+    // unlike WebConnector's single always-healthChecked page) would get
+    // ingested with its 404 page's own <title>/body as if it were real
+    // content.
+    robotsMock.mockResolvedValue(true);
+    safeFetchMock
+      .mockResolvedValueOnce(fetchResult({ body: URLSET }))
+      .mockResolvedValueOnce(
+        fetchResult({
+          status: 404,
+          body: "<html><head><title>404 Not Found</title></head><body>Gone.</body></html>",
+        }),
+      )
+      .mockResolvedValueOnce(fetchResult({ body: PAGE_HTML("A") }));
+
+    const items = await new SitemapConnector().fetch(fakeSource());
+    expect(items).toHaveLength(1);
+    expect(items[0]!.title).toBe("A");
+    expect(items.some((item) => item.title.includes("404"))).toBe(false);
   });
 
   it("throws fetching a source with no sitemap URL configured", async () => {

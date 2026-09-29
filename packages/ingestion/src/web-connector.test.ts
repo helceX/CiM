@@ -91,6 +91,24 @@ describe("WebConnector", () => {
     );
   });
 
+  it("throws rather than fabricating an article from a non-2xx page response", async () => {
+    // Regression: fetch() didn't check status before extractTitle/
+    // htmlToPlainText, so an error page's own <title> ("404 Not Found")
+    // would be ingested as if it were the real page's content.
+    // healthCheck runs right before fetch() on every real crawl tick and
+    // would normally catch this first, but they're two separate HTTP
+    // calls — fetch() needs its own guard for the page erroring in
+    // between them, not just a health-check-time snapshot.
+    robotsMock.mockResolvedValueOnce(true);
+    safeFetchMock.mockResolvedValueOnce(
+      fetchResult({
+        status: 404,
+        body: "<html><head><title>404 Not Found</title></head><body>Gone.</body></html>",
+      }),
+    );
+    await expect(new WebConnector().fetch(fakeSource())).rejects.toThrow(/HTTP 404/);
+  });
+
   it("healthCheck reports blocked when safeFetch raises SsrfBlockedError", async () => {
     safeFetchMock.mockRejectedValueOnce(new SsrfBlockedError("blocked for test"));
     const health = await new WebConnector().healthCheck(fakeSource());

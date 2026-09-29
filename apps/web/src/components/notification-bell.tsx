@@ -25,10 +25,17 @@ export function NotificationBell({
   initialUnreadCount: number;
 }) {
   const [open, setOpen] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(initialUnreadCount);
+  // Only the server-computed count before the list has ever been
+  // fetched — once `items` is non-null, `unreadCount` below derives
+  // straight from it instead, so markRead/markAllRead never need to
+  // maintain a separate counter that could drift from the list itself.
+  const [fallbackUnreadCount, setFallbackUnreadCount] = useState(initialUnreadCount);
   const [items, setItems] = useState<NotificationItem[] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const unreadCount = items
+    ? items.filter((item) => !item.readAt).length
+    : fallbackUnreadCount;
 
   // apps/web/src/app/(app)/layout.tsx recomputes initialUnreadCount fresh
   // on every server render (each navigation within the (app) layout),
@@ -38,7 +45,7 @@ export function NotificationBell({
   // first opened the bell on. Clearing `items` forces a refetch next
   // time the dropdown opens, rather than showing a stale list forever.
   useEffect(() => {
-    setUnreadCount(initialUnreadCount);
+    setFallbackUnreadCount(initialUnreadCount);
     setItems(null);
   }, [initialUnreadCount]);
 
@@ -57,8 +64,6 @@ export function NotificationBell({
   }
 
   async function markRead(id: string) {
-    const previousItems = items;
-    const previousUnreadCount = unreadCount;
     setError(null);
     setItems(
       (current) =>
@@ -66,20 +71,34 @@ export function NotificationBell({
           item.id === id ? { ...item, readAt: new Date().toISOString() } : item,
         ) ?? null,
     );
-    setUnreadCount((count) => Math.max(0, count - 1));
     try {
       const response = await fetch(`/api/notifications/${id}/read`, { method: "POST" });
       if (!response.ok) throw new Error("request failed");
     } catch {
-      setItems(previousItems);
-      setUnreadCount(previousUnreadCount);
+      // Reverts only this one item against whatever `items` currently
+      // holds, not a snapshot captured before this call — clicking
+      // "Mark all read" while this request is still in flight applies
+      // its own optimistic update to every item in between; restoring a
+      // stale full-list snapshot here would silently undo that unrelated,
+      // possibly-successful update too. Same stale-snapshot bug class
+      // already fixed in mention-detail-drawer.tsx.
+      setItems(
+        (current) =>
+          current?.map((item) => (item.id === id ? { ...item, readAt: null } : item)) ??
+          null,
+      );
       setError("Couldn't mark that as read. Please try again.");
     }
   }
 
   async function markAllRead() {
-    const previousItems = items;
-    const previousUnreadCount = unreadCount;
+    // The ids this call is actually responsible for — captured now so a
+    // failure only reverts *these*, not whatever `items` holds by the
+    // time the request comes back (which a concurrent markRead(id) may
+    // have since moved past).
+    const idsBeingMarked = new Set(
+      items?.filter((item) => !item.readAt).map((item) => item.id) ?? [],
+    );
     setError(null);
     setItems(
       (current) =>
@@ -88,15 +107,18 @@ export function NotificationBell({
           readAt: item.readAt ?? new Date().toISOString(),
         })) ?? null,
     );
-    setUnreadCount(0);
     try {
       const response = await fetch("/api/notifications/mark-all-read", {
         method: "POST",
       });
       if (!response.ok) throw new Error("request failed");
     } catch {
-      setItems(previousItems);
-      setUnreadCount(previousUnreadCount);
+      setItems(
+        (current) =>
+          current?.map((item) =>
+            idsBeingMarked.has(item.id) ? { ...item, readAt: null } : item,
+          ) ?? null,
+      );
       setError("Couldn't mark all as read. Please try again.");
     }
   }

@@ -23,6 +23,27 @@ vi.mock("@cim/ingestion", () => ({
   safeFetch: (...args: unknown[]) => safeFetchMock(...args),
 }));
 
+// Same module-boundary technique as safeFetch above, but forwarding to
+// the real implementation by default (mockImplementation is set inside
+// the factory once the real module is loaded) — every test except the
+// one that explicitly overrides it with mockImplementationOnce still
+// exercises a real DB insert, the same as if this mock didn't exist.
+// vi.hoisted, not a plain const, because vi.mock's own hoisting to the
+// top of the file would otherwise reference this before it's assigned.
+const { createNotificationForOrgMembersMock } = vi.hoisted(() => ({
+  createNotificationForOrgMembersMock: vi.fn(),
+}));
+vi.mock("@cim/db", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@cim/db")>();
+  createNotificationForOrgMembersMock.mockImplementation(
+    actual.createNotificationForOrgMembers,
+  );
+  return {
+    ...actual,
+    createNotificationForOrgMembers: createNotificationForOrgMembersMock,
+  };
+});
+
 import { fireAlert } from "./notify";
 
 /**
@@ -194,6 +215,47 @@ describe("fireAlert — webhook channel (integration)", () => {
       limit: 10,
     });
     expect(notifications.some((n) => n.title === rule.name)).toBe(true);
+  });
+
+  it("still delivers the webhook when the in_app notification insert throws", async () => {
+    // Regression: the in_app channel had no failure isolation, unlike its
+    // email/webhook siblings — a throw here aborted fireAlert entirely
+    // (after the AlertEvent had already committed), so the rule went
+    // silently suppressed for its whole cooldown window with no webhook
+    // or email ever sent either.
+    await updateOrganizationWebhookUrl(
+      db,
+      organizationId,
+      "https://hooks.example.test/in-app-failure",
+    );
+    safeFetchMock.mockClear();
+    safeFetchMock.mockResolvedValueOnce({
+      status: 200,
+      headers: new Headers(),
+      body: "",
+      finalUrl: "",
+    });
+    createNotificationForOrgMembersMock.mockImplementationOnce(() => {
+      throw new Error("simulated DB failure on the bulk notification insert");
+    });
+
+    const rule = await createAlertRule(db, organizationId, {
+      projectId,
+      queryId,
+      createdByUserId: userId,
+      name: "In-app + webhook rule",
+      type: "keyword",
+      channels: ["in_app", "webhook"],
+      cooldownMinutes: 60,
+    });
+
+    const fired = await fireAlert(emailQueue, rule, {
+      triggerSummary: "in_app insert will throw, webhook must still fire",
+      mentionIds: [],
+    });
+
+    expect(fired).toBe(true);
+    expect(safeFetchMock).toHaveBeenCalledTimes(1);
   });
 
   it("queues every other recipient's email even when one recipient's queuing fails", async () => {

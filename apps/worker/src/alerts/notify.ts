@@ -36,12 +36,24 @@ export async function fireAlert(
   });
 
   if (rule.channels.includes("in_app")) {
-    await createNotificationForOrgMembers(db, organizationId, {
-      kind: "alert",
-      title: rule.name,
-      body: input.triggerSummary,
-      relatedAlertEventId: event.id,
-    });
+    // Isolated like the email/webhook channels below (commit f3753d6) —
+    // a failure here (e.g. a transient DB error on the bulk notification
+    // insert) must not skip the channels that come after it or throw out
+    // of fireAlert, which would abort the caller's whole rule-evaluation
+    // loop for every rule still left to evaluate.
+    try {
+      await createNotificationForOrgMembers(db, organizationId, {
+        kind: "alert",
+        title: rule.name,
+        body: input.triggerSummary,
+        relatedAlertEventId: event.id,
+      });
+    } catch (error) {
+      console.error(
+        `[worker] in-app notification for alert "${rule.name}" failed:`,
+        error,
+      );
+    }
   }
 
   if (rule.channels.includes("email")) {

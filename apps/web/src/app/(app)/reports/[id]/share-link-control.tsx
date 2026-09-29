@@ -45,6 +45,8 @@ export function ShareLinkControl({
       }
       setNewUrl(data.url);
       setActiveLink({ expiresAt: data.expiresAt });
+    } catch {
+      setError("Something went wrong. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -64,6 +66,8 @@ export function ShareLinkControl({
       }
       setActiveLink(null);
       setNewUrl(null);
+    } catch {
+      setError("Something went wrong. Please try again.");
     } finally {
       setIsLoading(false);
     }

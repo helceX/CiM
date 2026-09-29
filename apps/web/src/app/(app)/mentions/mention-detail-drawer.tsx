@@ -59,6 +59,7 @@ export function MentionDetailDrawer({
   const [tagInput, setTagInput] = useState("");
   const [isAddingTag, setIsAddingTag] = useState(false);
   const [tagError, setTagError] = useState<string | null>(null);
+  const [removingTagId, setRemovingTagId] = useState<string | null>(null);
   const [commentInput, setCommentInput] = useState("");
   const [isAddingComment, setIsAddingComment] = useState(false);
   const [commentError, setCommentError] = useState<string | null>(null);
@@ -66,6 +67,23 @@ export function MentionDetailDrawer({
   useEffect(() => {
     let cancelled = false;
     setDetail(null);
+    // mentions-table.tsx renders this drawer with no `key`, so clicking a
+    // different row while it's already open swaps `mentionId` in place
+    // rather than remounting the component — without resetting these too,
+    // mention A's half-typed tag/comment text or a leftover error message
+    // would carry straight into mention B's drawer, and submitting it
+    // would silently act on B instead of A.
+    setTagInput("");
+    setTagError(null);
+    setIsAddingTag(false);
+    setRemovingTagId(null);
+    setCommentInput("");
+    setCommentError(null);
+    setIsAddingComment(false);
+    setFeedbackError(null);
+    setIsSubmittingFeedback(false);
+    setAssignError(null);
+    setIsAssigning(false);
     fetch(`/api/mentions/${mentionId}`)
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
@@ -169,7 +187,13 @@ export function MentionDetailDrawer({
   }
 
   async function removeTag(tagId: string) {
+    // Without this guard, double-clicking × fires two DELETEs for the
+    // same tag; the first succeeds and removes the row, the second finds
+    // nothing left to delete and 404s — surfacing a "not found" error to
+    // the user even though the tag was actually removed successfully.
+    if (removingTagId === tagId) return;
     setTagError(null);
+    setRemovingTagId(tagId);
     try {
       const response = await fetch(`/api/mentions/${mentionId}/tags/${tagId}`, {
         method: "DELETE",
@@ -185,6 +209,8 @@ export function MentionDetailDrawer({
       router.refresh();
     } catch {
       setTagError("Something went wrong. Please try again.");
+    } finally {
+      setRemovingTagId(null);
     }
   }
 
@@ -502,8 +528,9 @@ export function MentionDetailDrawer({
                       <button
                         type="button"
                         onClick={() => removeTag(tag.id)}
+                        disabled={removingTagId === tag.id}
                         aria-label={`Remove ${tag.name}`}
-                        className="text-muted-foreground hover:text-foreground"
+                        className="text-muted-foreground hover:text-foreground disabled:opacity-50"
                       >
                         &times;
                       </button>

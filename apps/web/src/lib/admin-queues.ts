@@ -12,7 +12,13 @@ export type QueueHealthRow = {
   delayed: number;
 };
 
-const JOB_COUNT_TYPES = ["waiting", "active", "completed", "failed", "delayed"] as const;
+const JOB_COUNT_TYPES = [
+  "waiting",
+  "active",
+  "completed",
+  "failed",
+  "delayed",
+] as const;
 
 // One Queue per name, reused for the process lifetime — same singleton
 // pattern as getSendEmailQueue in ./email.ts. Constructing a new BullMQ
@@ -79,6 +85,11 @@ export async function getFailedJobsForQueue(
   queueName: string,
   limit = 50,
 ): Promise<FailedJobRow[]> {
+  // BullMQ's getJobs end index follows Redis ZRANGE conventions, where -1
+  // means "through the last element" rather than "none" — limit=0 would
+  // otherwise pass end=-1 and return every failed job in the queue instead
+  // of zero, silently breaking the limit parameter's own contract.
+  if (limit <= 0) return [];
   const queue = getCachedQueue(queueName);
   const jobs = await queue.getJobs(["failed"], 0, limit - 1, false);
   return jobs.map((job) => ({

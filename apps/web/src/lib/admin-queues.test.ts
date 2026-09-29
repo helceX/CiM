@@ -18,7 +18,9 @@ describe("getFailedJobsForQueue (integration)", () => {
     // for BullMQ's blocking commands (apps/worker/src/redis.ts) — getRedis()
     // above is the shared apps/web client (rate-limiting etc.), which
     // isn't configured that way.
-    const workerConnection = new Redis(getEnv().REDIS_URL, { maxRetriesPerRequest: null });
+    const workerConnection = new Redis(getEnv().REDIS_URL, {
+      maxRetriesPerRequest: null,
+    });
     const worker = new Worker(
       queueName,
       async () => {
@@ -40,7 +42,10 @@ describe("getFailedJobsForQueue (integration)", () => {
         worker.on("failed", (failedJob) => {
           if (failedJob?.id === job.id) resolve();
         });
-        setTimeout(() => reject(new Error("timed out waiting for the job to fail")), 10000);
+        setTimeout(
+          () => reject(new Error("timed out waiting for the job to fail")),
+          10000,
+        );
       });
 
       const rows = await getFailedJobsForQueue(queueName);
@@ -64,6 +69,46 @@ describe("getFailedJobsForQueue (integration)", () => {
     const rows = await getFailedJobsForQueue(queueName);
     expect(rows).toEqual([]);
   });
+
+  it("returns an empty list for limit=0, never every failed job in the queue", async () => {
+    // Regression: BullMQ's getJobs end index follows Redis ZRANGE
+    // conventions, where -1 means "through the last element" — passing
+    // limit - 1 as end without guarding limit <= 0 turned limit=0 into
+    // end=-1 and returned the entire failed-jobs list instead of none.
+    const queueName = `admin-queues-test-zero-limit-${crypto.randomUUID()}`;
+    const queue = new Queue(queueName, { connection: getRedis() });
+    const workerConnection = new Redis(getEnv().REDIS_URL, {
+      maxRetriesPerRequest: null,
+    });
+    const worker = new Worker(
+      queueName,
+      async () => {
+        throw new Error("boom - deliberate test failure");
+      },
+      { connection: workerConnection, concurrency: 1 },
+    );
+
+    try {
+      const job = await queue.add("test-job", {}, { attempts: 1 });
+      await new Promise<void>((resolve, reject) => {
+        worker.on("failed", (failedJob) => {
+          if (failedJob?.id === job.id) resolve();
+        });
+        setTimeout(
+          () => reject(new Error("timed out waiting for the job to fail")),
+          10000,
+        );
+      });
+
+      const rows = await getFailedJobsForQueue(queueName, 0);
+      expect(rows).toEqual([]);
+    } finally {
+      await worker.close();
+      await workerConnection.quit();
+      await queue.obliterate({ force: true });
+      await queue.close();
+    }
+  }, 15000);
 });
 
 describe("isKnownQueueName", () => {

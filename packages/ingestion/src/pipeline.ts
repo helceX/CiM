@@ -14,6 +14,7 @@ import {
   insertArticle,
   listActiveMonitoringQueriesForSourceType,
   setArticleStoryCluster,
+  touchSocialProfile,
   type Db,
   type OrganizationId,
 } from "@cim/db";
@@ -88,7 +89,16 @@ export async function ingestSource(
         projectId: query.projectId,
         queryId: query.id,
         articleId: article.id,
-        matchedTerms: query.queryAst.include,
+        // The one term that actually matched (findMatchedTerm above) —
+        // not the query's whole include list. Downstream code treats
+        // matchedTerms as "what actually matched," not "everything this
+        // query was configured to look for": getTrendingHashtags
+        // (social-listening.ts) unnests matchedTerms for every
+        // match_type='hashtag' mention and would otherwise count and
+        // display non-hashtag terms as trending hashtags. Falls back to
+        // the full include list only in the edge case matchedTerm is
+        // null (a query with no include/exactPhrase terms at all).
+        matchedTerms: matchedTerm ? [matchedTerm] : query.queryAst.include,
         priority,
         matchType,
         matchedRule,
@@ -150,6 +160,15 @@ async function maybeAssignStoryCluster(
  * the socialProfiles row for a raw fetch result's author, when the
  * connector reported one. Null for every non-social connector (raw's
  * social* fields are absent) and never fabricated when they're missing.
+ *
+ * Also refreshes the profile via touchSocialProfile on every sighting —
+ * findOrCreateSocialProfile alone only writes the row once, on first
+ * sighting; without this, an existing author's follower count/verified
+ * status/display name would go stale forever after that first post,
+ * contradicting touchSocialProfile's own documented purpose. Only
+ * fields this fetch actually reported are included in the update — a
+ * field the connector left unset here must not clobber a previously
+ * known value with a fabricated "now unknown."
  */
 async function resolveAuthorProfileId(
   db: Db,
@@ -171,5 +190,15 @@ async function resolveAuthorProfileId(
     country: null,
     avatarUrl: null,
   });
+
+  const update: Parameters<typeof touchSocialProfile>[2] = {};
+  if (raw.socialAuthorFollowers !== undefined)
+    update.followers = raw.socialAuthorFollowers;
+  if (raw.socialAuthorVerified !== undefined)
+    update.verified = raw.socialAuthorVerified;
+  if (raw.socialAuthorDisplayName !== undefined)
+    update.displayName = raw.socialAuthorDisplayName;
+  await touchSocialProfile(db, profile.id, update);
+
   return profile.id;
 }

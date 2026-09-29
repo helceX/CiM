@@ -15,6 +15,7 @@ import {
 import { organizations, projects } from "./organizations";
 import { monitoringQueries } from "./monitoring";
 import { users } from "./users";
+import { socialProfiles } from "./social";
 
 /**
  * docs/architecture/ADR-002-SEARCH.md / SEARCH.md — no built-in drizzle-orm
@@ -86,6 +87,13 @@ export const articles = pgTable(
     publishedAt: timestamp("published_at", { withTimezone: true }),
     fetchedAt: timestamp("fetched_at", { withTimezone: true }).notNull().defaultNow(),
     authorName: text("author_name"),
+    // docs/architecture/ADR-006-SOCIAL-LISTENING.md — structured author
+    // data (followers, verified, account type) for social-sourced
+    // articles; null for non-social sources, where authorName (a plain
+    // string) remains the only author info available.
+    authorProfileId: uuid("author_profile_id").references(() => socialProfiles.id, {
+      onDelete: "set null",
+    }),
     storyClusterId: uuid("story_cluster_id"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     // docs/architecture/ADR-002-SEARCH.md MVP tier — title + storedExcerpt,
@@ -109,6 +117,7 @@ export const articles = pgTable(
     uniqueIndex("articles_canonical_url_uidx").on(table.canonicalUrl),
     index("articles_search_vector_idx").using("gin", table.searchVector),
     index("articles_title_trgm_idx").using("gin", sql`${table.title} gin_trgm_ops`),
+    index("articles_author_profile_idx").on(table.authorProfileId),
   ],
 );
 
@@ -130,6 +139,20 @@ export const mentions = pgTable(
       .notNull()
       .references(() => articles.id, { onDelete: "cascade" }),
     matchedTerms: text("matched_terms").array().notNull().default([]),
+    // docs/architecture/ADR-006-SOCIAL-LISTENING.md — typed match
+    // taxonomy for the "Why matched?" UI. Text, not an enum (same
+    // convention as alertRules.type): direct_mention | exact_name |
+    // alias | hashtag | url | contextual | semantic. Null for mentions
+    // created before this column existed — rendered "Not classified",
+    // never inferred after the fact.
+    matchType: text("match_type"),
+    // Required by application code (not the schema) whenever
+    // matchType = "semantic" — a semantic match is never shown without
+    // a confidence indicator (master prompt §25, §57).
+    matchConfidence: numeric("match_confidence", { precision: 4, scale: 3 }),
+    // Human-readable statement of which alias/hashtag/rule fired, shown
+    // verbatim in the "Why matched?" drawer section.
+    matchedRule: text("matched_rule"),
     relevanceScore: numeric("relevance_score", { precision: 5, scale: 2 }),
     sentiment: text("sentiment"), // positive | neutral | negative | null = unclassified
     sentimentConfidence: numeric("sentiment_confidence", {

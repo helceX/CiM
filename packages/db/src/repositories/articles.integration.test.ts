@@ -2,7 +2,14 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { db } from "../client";
 import { articles, sources } from "../schema/content";
-import { findExistingArticle, insertArticle, listRecentArticlesForPreview } from "./articles";
+import {
+  findExistingArticle,
+  findSimilarRecentArticle,
+  insertArticle,
+  listRecentArticlesForPreview,
+  listRelatedArticles,
+  setArticleStoryCluster,
+} from "./articles";
 
 /**
  * Integration test (docs/testing/TEST_STRATEGY.md) against a real
@@ -76,7 +83,10 @@ describe("articles repository (integration)", () => {
     expect(loser.id).toBe(winner.id);
     expect(loser.title).toBe("The winning insert");
 
-    const rows = await db.select().from(articles).where(eq(articles.canonicalUrl, canonicalUrl));
+    const rows = await db
+      .select()
+      .from(articles)
+      .where(eq(articles.canonicalUrl, canonicalUrl));
     expect(rows).toHaveLength(1);
   });
 
@@ -148,5 +158,148 @@ describe("articles repository (integration)", () => {
 
     const preview = await listRecentArticlesForPreview(db, 30, 500);
     expect(preview.some((row) => row.id === article.id)).toBe(false);
+  });
+
+  describe("story clustering (findSimilarRecentArticle / listRelatedArticles)", () => {
+    let otherSourceId: string;
+
+    beforeAll(async () => {
+      const [otherSource] = await db
+        .insert(sources)
+        .values({
+          name: "Articles Test Wire (other source)",
+          domain: `articles-test-other-${Date.now()}.example`,
+          type: "news",
+          connector: "mock",
+          canDisplayExcerpt: true,
+        })
+        .returning();
+      if (!otherSource) throw new Error("failed to create second test source");
+      otherSourceId = otherSource.id;
+    });
+
+    afterAll(async () => {
+      await db.delete(sources).where(eq(sources.id, otherSourceId));
+    });
+
+    it("finds a similar recent article from a different source, but not from the same source", async () => {
+      const title = `Northwind Atlas wins regional innovation award ${Date.now()}`;
+      const [ownSourceArticle] = await db
+        .insert(articles)
+        .values({
+          sourceId,
+          canonicalUrl: `https://articles-test.example/cluster-own-${Date.now()}`,
+          contentHash: `articles-cluster-own-hash-${Date.now()}`,
+          title,
+        })
+        .returning();
+      if (!ownSourceArticle) throw new Error("failed to create test article");
+
+      const sameSourceMatch = await findSimilarRecentArticle(db, {
+        title,
+        excludeSourceId: sourceId,
+      });
+      expect(sameSourceMatch).toBeUndefined();
+
+      const [otherSourceArticle] = await db
+        .insert(articles)
+        .values({
+          sourceId: otherSourceId,
+          canonicalUrl: `https://articles-test-other.example/cluster-other-${Date.now()}`,
+          contentHash: `articles-cluster-other-hash-${Date.now()}`,
+          title: `${title} — updated`,
+        })
+        .returning();
+      if (!otherSourceArticle) throw new Error("failed to create second test article");
+
+      const crossSourceMatch = await findSimilarRecentArticle(db, {
+        title,
+        excludeSourceId: sourceId,
+      });
+      expect(crossSourceMatch?.id).toBe(otherSourceArticle.id);
+      expect(crossSourceMatch?.storyClusterId).toBeNull();
+    });
+
+    it("does not match an unrelated headline", async () => {
+      const [article] = await db
+        .insert(articles)
+        .values({
+          sourceId: otherSourceId,
+          canonicalUrl: `https://articles-test-other.example/unrelated-${Date.now()}`,
+          contentHash: `articles-unrelated-hash-${Date.now()}`,
+          title: "Completely unrelated story about local weather patterns",
+        })
+        .returning();
+      if (!article) throw new Error("failed to create test article");
+
+      const match = await findSimilarRecentArticle(db, {
+        title: `Some entirely different headline ${Date.now()}`,
+        excludeSourceId: sourceId,
+      });
+      expect(match?.id).not.toBe(article.id);
+    });
+
+    it("listRelatedArticles returns every other article sharing a storyClusterId, most recent first", async () => {
+      const clusterId = crypto.randomUUID();
+      const [older] = await db
+        .insert(articles)
+        .values({
+          sourceId,
+          canonicalUrl: `https://articles-test.example/related-older-${Date.now()}`,
+          contentHash: `articles-related-older-hash-${Date.now()}`,
+          title: "Older related coverage",
+          publishedAt: new Date(Date.now() - 60 * 60 * 1000),
+          storyClusterId: clusterId,
+        })
+        .returning();
+      const [newer] = await db
+        .insert(articles)
+        .values({
+          sourceId: otherSourceId,
+          canonicalUrl: `https://articles-test-other.example/related-newer-${Date.now()}`,
+          contentHash: `articles-related-newer-hash-${Date.now()}`,
+          title: "Newer related coverage",
+          publishedAt: new Date(),
+          storyClusterId: clusterId,
+        })
+        .returning();
+      const [subject] = await db
+        .insert(articles)
+        .values({
+          sourceId,
+          canonicalUrl: `https://articles-test.example/related-subject-${Date.now()}`,
+          contentHash: `articles-related-subject-hash-${Date.now()}`,
+          title: "The subject article itself",
+          storyClusterId: clusterId,
+        })
+        .returning();
+      if (!older || !newer || !subject)
+        throw new Error("failed to create test articles");
+
+      const related = await listRelatedArticles(db, clusterId, subject.id);
+      expect(related.map((r) => r.id)).toEqual([newer.id, older.id]);
+    });
+
+    it("setArticleStoryCluster persists the cluster id on the article row", async () => {
+      const [article] = await db
+        .insert(articles)
+        .values({
+          sourceId,
+          canonicalUrl: `https://articles-test.example/set-cluster-${Date.now()}`,
+          contentHash: `articles-set-cluster-hash-${Date.now()}`,
+          title: "An article that will be assigned to a cluster",
+        })
+        .returning();
+      if (!article) throw new Error("failed to create test article");
+
+      const clusterId = crypto.randomUUID();
+      await setArticleStoryCluster(db, article.id, clusterId);
+
+      const [updated] = await db
+        .select()
+        .from(articles)
+        .where(eq(articles.id, article.id));
+      expect(updated?.storyClusterId).toBe(clusterId);
+    });
   });
 });

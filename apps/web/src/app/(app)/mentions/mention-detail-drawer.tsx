@@ -345,6 +345,38 @@ export function MentionDetailDrawer({
               ) : null}
             </section>
 
+            {detail.relatedArticles.length > 0 ? (
+              <section className="flex flex-col gap-2">
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Related coverage
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Other sources with a similar headline — a potential connection, not a
+                  confirmed one.
+                </p>
+                <ul className="flex flex-col gap-2">
+                  {detail.relatedArticles.map((related) => (
+                    <li key={related.id} className="text-sm">
+                      <a
+                        href={related.canonicalUrl}
+                        target="_blank"
+                        rel="noreferrer noopener"
+                        className="text-primary underline underline-offset-2"
+                      >
+                        {related.title}
+                      </a>
+                      <p className="text-xs text-muted-foreground">
+                        {related.sourceName} · {related.sourceType} ·{" "}
+                        {new Date(
+                          related.publishedAt ?? related.fetchedAt,
+                        ).toLocaleDateString()}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ) : null}
+
             <section className="grid grid-cols-2 gap-4">
               <div>
                 <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">

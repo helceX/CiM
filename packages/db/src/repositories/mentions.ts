@@ -18,6 +18,7 @@ import {
   listCommentsForMention,
   type MentionCommentWithAuthor,
 } from "./mention-comments";
+import { listRelatedArticles, type RelatedArticle } from "./articles";
 
 export type MentionListItem = {
   mention: typeof mentions.$inferSelect;
@@ -275,6 +276,12 @@ export type MentionDetail = MentionListItem & {
   // at ingestion time; null for every non-social mention, never a
   // fabricated placeholder (brief §35, §182–184).
   socialAuthor: MentionSocialAuthor | null;
+  // docs/architecture/ADR-004-INGESTION.md — other articles sharing this
+  // one's storyClusterId (packages/ingestion's title-similarity
+  // clustering), most recent first. Empty for an uncorroborated,
+  // single-source story — never a certain "this caused that" claim
+  // (master prompt §38), just what else looks related.
+  relatedArticles: RelatedArticle[];
 };
 
 /**
@@ -315,11 +322,14 @@ export async function getMentionDetail(
     .limit(1);
   if (!row) return undefined;
 
-  const [aiEntities, aiTopics, tags, comments] = await Promise.all([
+  const [aiEntities, aiTopics, tags, comments, relatedArticles] = await Promise.all([
     listMentionEntities(db, mentionId),
     listMentionTopics(db, mentionId),
     listTagsForMention(db, mentionId),
     listCommentsForMention(db, mentionId),
+    row.article.storyClusterId
+      ? listRelatedArticles(db, row.article.storyClusterId, row.article.id)
+      : Promise.resolve([]),
   ]);
   const {
     socialPlatform,
@@ -341,7 +351,15 @@ export async function getMentionDetail(
           verified: socialVerified,
         }
       : null;
-  return { ...rest, aiEntities, aiTopics, tags, comments, socialAuthor };
+  return {
+    ...rest,
+    aiEntities,
+    aiTopics,
+    tags,
+    comments,
+    socialAuthor,
+    relatedArticles,
+  };
 }
 
 export type AssignMentionResult = "ok" | "not_found" | "invalid_assignee";

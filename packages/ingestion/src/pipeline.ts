@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import {
   classifyMatchType,
   computeMatchPriority,
@@ -9,8 +10,10 @@ import {
   createMentionIfNotExists,
   findExistingArticle,
   findOrCreateSocialProfile,
+  findSimilarRecentArticle,
   insertArticle,
   listActiveMonitoringQueriesForSourceType,
+  setArticleStoryCluster,
   type Db,
   type OrganizationId,
 } from "@cim/db";
@@ -68,7 +71,10 @@ export async function ingestSource(
         ...normalized,
         authorProfileId: await resolveAuthorProfileId(db, raw),
       }));
-    if (!existing) articlesCreated += 1;
+    if (!existing) {
+      articlesCreated += 1;
+      await maybeAssignStoryCluster(db, article);
+    }
 
     for (const query of activeQueries) {
       if (!matchesText(query.queryAst, article.title)) continue;
@@ -106,6 +112,37 @@ export async function ingestSource(
     mentionsCreated: newMentions.length,
     newMentions,
   };
+}
+
+/**
+ * docs/architecture/ADR-004-INGESTION.md's "title/semantic similarity...
+ * producing StoryCluster rows" promise — a newly-inserted article that
+ * closely matches another recent article from a *different* source
+ * (findSimilarRecentArticle's own cross-source-only search) joins that
+ * article's existing cluster, or starts a new one if neither article
+ * had one yet. A single-source story is never clustered with itself —
+ * clustering exists to answer "who else is covering this."
+ */
+async function maybeAssignStoryCluster(
+  db: Db,
+  article: {
+    id: string;
+    sourceId: string;
+    title: string;
+    storyClusterId: string | null;
+  },
+): Promise<void> {
+  if (article.storyClusterId) return;
+  const similar = await findSimilarRecentArticle(db, {
+    title: article.title,
+    excludeSourceId: article.sourceId,
+  });
+  if (!similar) return;
+  const storyClusterId = similar.storyClusterId ?? randomUUID();
+  await setArticleStoryCluster(db, article.id, storyClusterId);
+  if (!similar.storyClusterId) {
+    await setArticleStoryCluster(db, similar.id, storyClusterId);
+  }
 }
 
 /**

@@ -69,6 +69,87 @@ export async function insertArticle(
 }
 
 /**
+ * docs/architecture/ADR-004-INGESTION.md's own promise — "title/semantic
+ * similarity... producing StoryCluster rows" — implemented here as the
+ * title-similarity slice, via the same pg_trgm extension/index
+ * `articles_title_trgm_idx` already exists for. Deliberately excludes
+ * `excludeSourceId`: the point of clustering is cross-source
+ * corroboration ("who else is covering this"), not linking an outlet's
+ * own two headlines about the same event. 0.5 is a stricter floor than
+ * pg_trgm's own 0.3 default `%` threshold — clustering drives what a
+ * user is shown as "related coverage" (master prompt §38: never framed
+ * as a certain link), so a false-positive costs more here than in a
+ * plain search match.
+ */
+export async function findSimilarRecentArticle(
+  db: Db,
+  input: { title: string; excludeSourceId: string; sinceHours?: number },
+): Promise<{ id: string; storyClusterId: string | null } | undefined> {
+  const sinceHours = input.sinceHours ?? 48;
+  const rows = await db.execute<{ id: string; story_cluster_id: string | null }>(sql`
+    select id, story_cluster_id
+    from articles
+    where source_id != ${input.excludeSourceId}
+      and fetched_at >= now() - (${sinceHours}::text || ' hours')::interval
+      and similarity(title, ${input.title}) > 0.5
+    order by similarity(title, ${input.title}) desc
+    limit 1
+  `);
+  const row = rows.rows[0];
+  return row ? { id: row.id, storyClusterId: row.story_cluster_id } : undefined;
+}
+
+export async function setArticleStoryCluster(
+  db: Db,
+  articleId: string,
+  storyClusterId: string,
+): Promise<void> {
+  await db.update(articles).set({ storyClusterId }).where(eq(articles.id, articleId));
+}
+
+/**
+ * docs/architecture/DATA_MODEL.md — "Related coverage" for the Mention
+ * Detail Drawer: every other article sharing this article's
+ * storyClusterId, most recent first. Empty when the article isn't
+ * clustered with anything yet (a single-source story stays uncertain
+ * until a second source corroborates it — findSimilarRecentArticle only
+ * assigns a cluster once that happens).
+ */
+export type RelatedArticle = {
+  id: string;
+  title: string;
+  canonicalUrl: string;
+  publishedAt: Date | null;
+  fetchedAt: Date;
+  sourceName: string;
+  sourceType: string;
+};
+
+export async function listRelatedArticles(
+  db: Db,
+  storyClusterId: string,
+  excludeArticleId: string,
+): Promise<RelatedArticle[]> {
+  return db
+    .select({
+      id: articles.id,
+      title: articles.title,
+      canonicalUrl: articles.canonicalUrl,
+      publishedAt: articles.publishedAt,
+      fetchedAt: articles.fetchedAt,
+      sourceName: sources.name,
+      sourceType: sources.type,
+    })
+    .from(articles)
+    .innerJoin(sources, eq(sources.id, articles.sourceId))
+    .where(
+      sql`${articles.storyClusterId} = ${storyClusterId} and ${articles.id} != ${excludeArticleId}`,
+    )
+    .orderBy(sql`coalesce(${articles.publishedAt}, ${articles.fetchedAt}) desc`)
+    .limit(10);
+}
+
+/**
  * docs/architecture/SEARCH.md "Preview results" — a read-only sample of
  * recent articles, evaluated in-process against a candidate QueryAst
  * before it's saved. Capped and time-bounded on purpose: this is a

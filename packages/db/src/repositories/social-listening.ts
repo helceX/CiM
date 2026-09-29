@@ -200,6 +200,68 @@ export async function getTopSocialAuthors(
     .limit(limit);
 }
 
+export type CreatorSpikeStat = {
+  profileId: string;
+  handle: string;
+  currentCount: number;
+  baselineAvgPerDay: number;
+};
+
+/**
+ * docs/product/FEATURE_MATRIX_V2.md "Social-specific alert types (creator
+ * spike, ...)" — same transparent current-vs-trailing-week-baseline
+ * principle as analytics.ts's getEmergingTopicStats, applied per social
+ * author instead of per AI topic: is a single creator suddenly driving a
+ * disproportionate share of this query's social conversation? One row
+ * per author who posted about this query's monitoring rule in the last
+ * 24 hours; an author with no baseline history still gets a real row
+ * with `baselineAvgPerDay: 0` — the caller's floor decides whether that
+ * counts as a spike, this function never does.
+ */
+export async function getCreatorSpikeStats(db: Db, queryId: string): Promise<CreatorSpikeStat[]> {
+  const rows = await db.execute<{
+    profile_id: string;
+    handle: string;
+    current_count: number;
+    baseline_count: number;
+  }>(sql`
+    with current_counts as (
+      select sp.id as profile_id, sp.handle, count(distinct m.id) as current_count
+      from ${mentions} m
+      join ${articles} a on a.id = m.article_id
+      join ${socialProfiles} sp on sp.id = a.author_profile_id
+      where m.query_id = ${queryId}
+        and m.created_at >= now() - interval '24 hours'
+      group by sp.id, sp.handle
+    ),
+    baseline_counts as (
+      select a.author_profile_id as profile_id, count(distinct m.id) as baseline_count
+      from ${mentions} m
+      join ${articles} a on a.id = m.article_id
+      where m.query_id = ${queryId}
+        and a.author_profile_id is not null
+        and m.created_at < now() - interval '24 hours'
+        and m.created_at >= now() - interval '8 days'
+      group by a.author_profile_id
+    )
+    select
+      cc.profile_id,
+      cc.handle,
+      cc.current_count,
+      coalesce(bc.baseline_count, 0) as baseline_count
+    from current_counts cc
+    left join baseline_counts bc on bc.profile_id = cc.profile_id
+    order by cc.current_count desc
+  `);
+
+  return rows.rows.map((row) => ({
+    profileId: row.profile_id,
+    handle: row.handle,
+    currentCount: Number(row.current_count),
+    baselineAvgPerDay: Number(row.baseline_count) / 7,
+  }));
+}
+
 export type TopSocialPost = {
   mentionId: string;
   articleId: string;

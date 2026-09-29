@@ -7,6 +7,7 @@ export const alertRuleTypeSchema = z.enum([
   "sentiment_shift",
   "emerging_topic",
   "competitor",
+  "creator_spike",
 ]);
 export const alertChannelSchema = z.enum(["in_app", "email", "webhook"]);
 

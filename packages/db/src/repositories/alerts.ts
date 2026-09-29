@@ -11,7 +11,8 @@ export type AlertRuleType =
   | "spike"
   | "sentiment_shift"
   | "emerging_topic"
-  | "competitor";
+  | "competitor"
+  | "creator_spike";
 export type AlertChannel = "in_app" | "email" | "webhook";
 
 export async function createAlertRule(
@@ -130,6 +131,10 @@ export function getActiveEmergingTopicAlertRules(db: Db) {
 
 export function getActiveCompetitorAlertRules(db: Db) {
   return getActiveAlertRulesOfType(db, "competitor");
+}
+
+export function getActiveCreatorSpikeAlertRules(db: Db) {
+  return getActiveAlertRulesOfType(db, "creator_spike");
 }
 
 /** Alert fatigue (brief §19–20): suppress re-notifying within the rule's cooldown window. */

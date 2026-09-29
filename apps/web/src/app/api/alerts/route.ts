@@ -52,6 +52,15 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   }
+  // A "creator_spike" rule compares a single social author's post volume
+  // against their own baseline (getCreatorSpikeStats) — meaningless
+  // against a query that isn't even watching social sources.
+  if (input.type === "creator_spike" && !query.sourceTypes.includes("social")) {
+    return NextResponse.json(
+      { error: 'Creator spike alerts can only be created for a query that includes "Social" as a source type.' },
+      { status: 400 },
+    );
+  }
 
   const rule = await createAlertRule(db, context.organizationId, {
     projectId: project.id,

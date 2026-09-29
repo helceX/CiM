@@ -9,6 +9,7 @@ type MonitoringQueryOption = {
   name: string;
   projectId: string;
   trackingTarget: string;
+  sourceTypes: string[];
 };
 
 const TYPE_OPTIONS: { value: string; label: string; description: string }[] = [
@@ -47,6 +48,12 @@ const TYPE_OPTIONS: { value: string; label: string; description: string }[] = [
     description:
       "Notify when a query tagged \"Competitor\" gets more mentions in 24 hours than your tracked company queries in the same project.",
   },
+  {
+    value: "creator_spike",
+    label: "Creator spike",
+    description:
+      "Notify when a single social author's post volume for this query surges well above their trailing week's baseline.",
+  },
 ];
 
 export function AlertRuleForm({ queries }: { queries: MonitoringQueryOption[] }) {
@@ -60,11 +67,16 @@ export function AlertRuleForm({ queries }: { queries: MonitoringQueryOption[] })
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // A "competitor" rule only means something against a query tagged that
-  // way (apps/web/src/app/api/alerts/route.ts enforces the same rule
-  // server-side) — narrow the picker instead of letting the user hit a
-  // 400 after filling out the rest of the form.
+  // way, and "creator_spike" only against a query that watches social
+  // sources (apps/web/src/app/api/alerts/route.ts enforces the same
+  // rules server-side) — narrow the picker instead of letting the user
+  // hit a 400 after filling out the rest of the form.
   const selectableQueries =
-    type === "competitor" ? queries.filter((q) => q.trackingTarget === "competitor") : queries;
+    type === "competitor"
+      ? queries.filter((q) => q.trackingTarget === "competitor")
+      : type === "creator_spike"
+        ? queries.filter((q) => q.sourceTypes.includes("social"))
+        : queries;
 
   function selectType(value: string) {
     setType(value);

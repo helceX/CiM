@@ -7,6 +7,7 @@ import { socialProfiles } from "../schema/social";
 import { createProject } from "./projects";
 import { createMonitoringQuery } from "./monitoring-queries";
 import {
+  getCreatorSpikeStats,
   getSocialOverviewStats,
   getSocialPlatformDistribution,
   getSocialSentimentBreakdown,
@@ -21,6 +22,7 @@ describe("social listening repository (integration)", () => {
   let sourceId: string;
   let profileAId: string;
   let profileBId: string;
+  let queryId: string;
 
   beforeAll(async () => {
     const [org] = await db
@@ -48,6 +50,7 @@ describe("social listening repository (integration)", () => {
       booleanQuery: "",
       sourceTypes: ["social"],
     });
+    queryId = query.id;
 
     const [source] = await db
       .insert(sources)
@@ -157,5 +160,24 @@ describe("social listening repository (integration)", () => {
     const posts = await getTopSocialPosts(db, organizationId, { sinceDays: 7 });
     expect(posts.length).toBe(3);
     expect(posts.every((p) => p.title.startsWith("Social listening test post"))).toBe(true);
+  });
+
+  it("returns per-creator current-vs-baseline counts, most active first", async () => {
+    const stats = await getCreatorSpikeStats(db, queryId);
+    const authorA = stats.find((s) => s.profileId === profileAId);
+    const authorB = stats.find((s) => s.profileId === profileBId);
+    expect(authorA).toEqual({
+      profileId: profileAId,
+      handle: "@authora",
+      currentCount: 2,
+      baselineAvgPerDay: 0,
+    });
+    expect(authorB).toEqual({
+      profileId: profileBId,
+      handle: "@authorb",
+      currentCount: 1,
+      baselineAvgPerDay: 0,
+    });
+    expect(stats[0]?.profileId).toBe(profileAId);
   });
 });

@@ -13,6 +13,7 @@ export const QUEUE_NAMES = {
   alertSentimentShiftCheck: "alert_sentiment_shift_check",
   alertEmergingTopicCheck: "alert_emerging_topic_check",
   alertCompetitorCheck: "alert_competitor_check",
+  alertCreatorSpikeCheck: "alert_creator_spike_check",
   aiEnrich: "ai_enrich",
   insightGenerate: "insight_generate",
   generateReport: "generate_report",
@@ -40,6 +41,8 @@ export type AlertSentimentShiftCheckJobData = Record<string, never>;
 export type AlertEmergingTopicCheckJobData = Record<string, never>;
 
 export type AlertCompetitorCheckJobData = Record<string, never>;
+
+export type AlertCreatorSpikeCheckJobData = Record<string, never>;
 
 export type AiEnrichJobData = Record<string, never>;
 

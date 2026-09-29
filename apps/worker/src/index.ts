@@ -3,6 +3,7 @@ import {
   QUEUE_NAMES,
   type AiEnrichJobData,
   type AlertCompetitorCheckJobData,
+  type AlertCreatorSpikeCheckJobData,
   type AlertEmergingTopicCheckJobData,
   type AlertSentimentShiftCheckJobData,
   type AlertSpikeCheckJobData,
@@ -31,6 +32,7 @@ import { evaluateSpikeAlerts } from "./alerts/evaluate-spikes";
 import { evaluateSentimentShiftAlerts } from "./alerts/evaluate-sentiment-shift";
 import { evaluateEmergingTopicAlerts } from "./alerts/evaluate-emerging-topics";
 import { evaluateCompetitorAlerts } from "./alerts/evaluate-competitor";
+import { evaluateCreatorSpikeAlerts } from "./alerts/evaluate-creator-spike";
 import { processAiEnrichJob } from "./ai/enrich";
 import { processInsightGenerateJob } from "./ai/generate-insight";
 
@@ -125,6 +127,16 @@ const alertCompetitorCheckQueue = new Queue<AlertCompetitorCheckJobData>(
 const alertCompetitorCheckWorker = new Worker<AlertCompetitorCheckJobData>(
   QUEUE_NAMES.alertCompetitorCheck,
   () => evaluateCompetitorAlerts(sendEmailQueue),
+  { connection, concurrency: 1 },
+);
+
+const alertCreatorSpikeCheckQueue = new Queue<AlertCreatorSpikeCheckJobData>(
+  QUEUE_NAMES.alertCreatorSpikeCheck,
+  { connection, defaultJobOptions: DEFAULT_JOB_OPTIONS },
+);
+const alertCreatorSpikeCheckWorker = new Worker<AlertCreatorSpikeCheckJobData>(
+  QUEUE_NAMES.alertCreatorSpikeCheck,
+  () => evaluateCreatorSpikeAlerts(sendEmailQueue),
   { connection, concurrency: 1 },
 );
 
@@ -225,6 +237,7 @@ const allWorkers = [
   alertSentimentShiftCheckWorker,
   alertEmergingTopicCheckWorker,
   alertCompetitorCheckWorker,
+  alertCreatorSpikeCheckWorker,
   aiEnrichWorker,
   insightGenerateWorker,
   generateReportWorker,
@@ -273,6 +286,11 @@ async function scheduleRepeatingJobs() {
     "alert-competitor-check-repeat",
     { every: 60_000 },
     { name: QUEUE_NAMES.alertCompetitorCheck, data: {} },
+  );
+  await alertCreatorSpikeCheckQueue.upsertJobScheduler(
+    "alert-creator-spike-check-repeat",
+    { every: 60_000 },
+    { name: QUEUE_NAMES.alertCreatorSpikeCheck, data: {} },
   );
   // Dev-friendly cadence, same rationale as the crawl scheduler above —
   // a production deployment would enrich promptly after ingestion (~20s)
@@ -334,6 +352,7 @@ async function scheduleRepeatingJobs() {
   console.log(
     "Schedulers registered: source crawl (30s), spike alert check (60s), " +
       "sentiment shift alert check (60s), emerging topic alert check (60s), " +
+      "creator spike alert check (60s), " +
       "AI enrichment (20s), insight generation (2m), " +
       "daily digest (08:00 UTC), scheduled reports (08:15 UTC), retention enforcement (08:30 UTC), " +
       "feature usage capture (08:45 UTC), executive brief delivery (09:00 UTC).",
@@ -359,6 +378,7 @@ async function shutdown() {
   await alertSentimentShiftCheckQueue.close();
   await alertEmergingTopicCheckQueue.close();
   await alertCompetitorCheckQueue.close();
+  await alertCreatorSpikeCheckQueue.close();
   await aiEnrichQueue.close();
   await insightGenerateQueue.close();
   await generateReportQueue.close();

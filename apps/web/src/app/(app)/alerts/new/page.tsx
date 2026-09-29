@@ -20,6 +20,7 @@ export default async function NewAlertPage() {
           name: q.name,
           projectId: q.projectId,
           trackingTarget: q.trackingTarget,
+          sourceTypes: q.sourceTypes,
         }))}
       />
     </div>

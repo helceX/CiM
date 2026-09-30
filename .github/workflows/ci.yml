@@ -69,6 +69,21 @@ jobs:
       - name: Build
         run: pnpm build
 
+  docker-build:
+    # Build-only verification that apps/web/Dockerfile and
+    # apps/worker/Dockerfile still produce a working image on every
+    # push/PR — not a deploy (no registry/hosting target chosen yet, see
+    # docs/deployment/DEPLOYMENT.md). Once one is, this is where `push:
+    # true` + registry login + a deploy trigger get added.
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [web, worker]
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -f apps/${{ matrix.target }}/Dockerfile -t cim-${{ matrix.target }}:ci .
+
   changes:
     runs-on: ubuntu-latest
     outputs:

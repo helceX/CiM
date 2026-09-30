@@ -32,7 +32,7 @@ export default async function ResourcesPage() {
                   <IconTile icon={item.icon} tone={item.tone} />
                   {item.key === "api" ? <span className="mk-chip mk-chip-soon">{common("comingSoon")}</span> : null}
                 </div>
-                <h2 className="mt-6 text-xl font-semibold">{t(`items.${item.key}.title`)}</h2>
+                <h2 className="mt-6 text-2xl font-extrabold">{t(`items.${item.key}.title`)}</h2>
                 <p className="mt-3 text-[var(--mk-muted)]">{t(`items.${item.key}.body`)}</p>
               </GlowCard>
             </Reveal>

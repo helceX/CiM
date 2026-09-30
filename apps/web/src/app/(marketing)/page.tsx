@@ -53,7 +53,7 @@ export default async function LandingPage() {
         <div className="mk-wrap flex flex-col items-center text-center">
           <Reveal className="flex flex-col items-center gap-7">
             <span className="mk-eyebrow"><i aria-hidden="true" />{t("hero.eyebrow")}</span>
-            <h1 className="max-w-5xl text-[clamp(2.5rem,5.8vw,4.4rem)] font-semibold">
+            <h1 className="max-w-5xl text-[clamp(2.9rem,8.4vw,6.25rem)] font-extrabold">
               {t("hero.titleA")}
               <br />
               <span className="mk-gradient-text">{t("hero.titleB")}</span>

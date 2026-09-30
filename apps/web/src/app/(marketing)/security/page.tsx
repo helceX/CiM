@@ -28,7 +28,7 @@ export default async function SecurityPage() {
             <Reveal as="li" key={pillar.key} delay={(index % 2) * 90}>
               <GlowCard className="h-full p-8">
                 <IconTile icon={pillar.icon} tone={pillar.tone} />
-                <h2 className="mt-6 text-2xl font-semibold">{t(`pillars.${pillar.key}.title`)}</h2>
+                <h2 className="mt-6 text-3xl font-extrabold">{t(`pillars.${pillar.key}.title`)}</h2>
                 <p className="mt-3 text-[var(--mk-muted)]">{t(`pillars.${pillar.key}.body`)}</p>
               </GlowCard>
             </Reveal>

@@ -22,7 +22,7 @@ export function PageHero({
       <div className="mk-wrap">
         <Reveal className="flex flex-col items-center gap-6">
           <span className="mk-eyebrow"><i aria-hidden="true" />{eyebrow}</span>
-          <h1 className="max-w-4xl text-[clamp(2.4rem,6.4vw,4.75rem)] font-semibold">
+          <h1 className="max-w-4xl text-[clamp(2.75rem,8vw,6rem)] font-extrabold">
             {title} <span className="mk-gradient-text">{accent}</span>
           </h1>
           <p className="mk-lead max-w-2xl">{lead}</p>
@@ -80,7 +80,7 @@ export function FeatureRow({
     <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
       <Reveal className={flip ? "lg:order-2" : ""}>
         <div className="flex flex-col gap-5">
-          <h2 className="mk-h2 text-[clamp(1.75rem,3.4vw,2.6rem)]">{title}</h2>
+          <h2 className="mk-h2 text-[clamp(2rem,4.4vw,3.25rem)]">{title}</h2>
           <p className="mk-lead">{body}</p>
           <ul className="mt-2 flex flex-col gap-3">
             {points.map((point) => (

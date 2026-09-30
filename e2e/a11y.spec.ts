@@ -40,6 +40,9 @@ const PUBLIC_PATHS = [
   "/pricing",
   "/features",
   "/security",
+  "/solutions",
+  "/resources",
+  "/contact",
 ];
 
 for (const pagePath of PUBLIC_PATHS) {

@@ -2,6 +2,7 @@ import {
   captureFeatureUsageSnapshot,
   db,
   listActiveOrganizationsForUsageCapture,
+  meterKeywordDay,
 } from "@cim/db";
 
 /**
@@ -13,8 +14,15 @@ import {
  * as the digest/scheduled-reports/retention jobs — one pass across every
  * organization, capturing a fresh snapshot rather than trusting any
  * incrementally-maintained counter.
+ *
+ * The same daily pass also meters credits (docs/product/
+ * NEXT_FEATURES_SPEC.md §3): one debit per tracked keyword per UTC day,
+ * idempotent per (org, day). The two steps are isolated from each other as
+ * well as across orgs — a failed snapshot must not skip that day's metering
+ * (there is no second chance until tomorrow), nor the reverse.
  */
-export async function processCaptureFeatureUsageJob(): Promise<void> {
+export async function processCaptureFeatureUsageJob(now: Date = new Date()): Promise<void> {
+  const day = now.toISOString().slice(0, 10);
   const orgs = await listActiveOrganizationsForUsageCapture(db);
   for (const { organizationId } of orgs) {
     // Isolated per org (the established fan-out pattern, generate-insight.ts)
@@ -24,6 +32,11 @@ export async function processCaptureFeatureUsageJob(): Promise<void> {
       await captureFeatureUsageSnapshot(db, organizationId);
     } catch (error) {
       console.error(`[worker] capture_feature_usage failed for org ${organizationId}:`, error);
+    }
+    try {
+      await meterKeywordDay(db, organizationId, day);
+    } catch (error) {
+      console.error(`[worker] keyword metering failed for org ${organizationId}:`, error);
     }
   }
 }

@@ -190,6 +190,13 @@
       "when": 1790781334560,
       "tag": "0026_living_blacklash",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1790783463748,
+      "tag": "0027_greedy_starbolt",
+      "breakpoints": true
     }
   ]
 }

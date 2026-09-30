@@ -1,4 +1,4 @@
-import { and, eq, ne, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import type { Permission } from "@cim/core";
 import type { Db } from "../client";
 import { customRoles, organizationMemberships, type CustomRole } from "../schema/organizations";
@@ -143,28 +143,59 @@ export type DeleteCustomRoleResult = "ok" | "not_found" | "in_use";
  * the same "don't silently break access" reasoning
  * assertNotDemotingSoleOwner (members.ts) applies to the sole-owner
  * case, here applied to "this role still names someone."
+ *
+ * The in-use check and the delete used to be two separate statements —
+ * a check-then-act race: a concurrent invite/re-role assigning someone
+ * to this exact role between the SELECT and the DELETE would pass the
+ * check (not yet committed, or committed after the SELECT ran) and then
+ * lose that assignment out from under them anyway, leaving their
+ * membership row's `role` pointing at a deleted custom role. getOrgContext
+ * fails closed on that (the same way it does for any unresolvable role),
+ * silently locking them out of the app until an admin notices and
+ * re-roles them. Folding the check into the DELETE's own WHERE (a
+ * `NOT EXISTS` against organizationMemberships) makes "is this role
+ * still in use" and "delete it" one atomic statement, closing the
+ * original unbounded gap (an entire concurrent request's round trip)
+ * down to this single statement's own execution — organizationMemberships.role
+ * is a plain text column (it also holds fixed OrgRole strings), not a
+ * real foreign key, so a concurrent invite/re-role's own INSERT/UPDATE
+ * landing in that now much narrower window is still theoretically
+ * possible, not fully impossible; closing that residual would need a
+ * lock shared with every place that writes this column (inviteMember,
+ * updateMemberRole), which isn't worth the spread for a fail-closed,
+ * admin-self-recoverable edge case this narrow.
  */
 export async function deleteCustomRole(
   db: Db,
   organizationId: OrganizationId,
   roleId: string,
 ): Promise<DeleteCustomRoleResult> {
-  const [inUse] = await db
-    .select({ id: organizationMemberships.id })
-    .from(organizationMemberships)
-    .where(
-      and(
-        eq(organizationMemberships.organizationId, organizationId),
-        eq(organizationMemberships.role, roleId),
-        ne(organizationMemberships.status, "revoked"),
-      ),
-    )
-    .limit(1);
-  if (inUse) return "in_use";
-
   const result = await db
     .delete(customRoles)
-    .where(and(eq(customRoles.id, roleId), eq(customRoles.organizationId, organizationId)))
+    .where(
+      and(
+        eq(customRoles.id, roleId),
+        eq(customRoles.organizationId, organizationId),
+        sql`not exists (
+          select 1 from ${organizationMemberships}
+          where ${organizationMemberships.organizationId} = ${organizationId}
+            and ${organizationMemberships.role} = ${roleId}
+            and ${organizationMemberships.status} != 'revoked'
+        )`,
+      ),
+    )
     .returning({ id: customRoles.id });
-  return result.length > 0 ? "ok" : "not_found";
+  if (result.length > 0) return "ok";
+
+  // The atomic delete above already refused to remove an in-use role —
+  // this is purely to pick the right error message for the caller, and
+  // being racy here (the role could be deleted or put back in use by
+  // the time this runs) only risks a slightly stale message, never an
+  // incorrect deletion.
+  const [stillExists] = await db
+    .select({ id: customRoles.id })
+    .from(customRoles)
+    .where(and(eq(customRoles.id, roleId), eq(customRoles.organizationId, organizationId)))
+    .limit(1);
+  return stillExists ? "in_use" : "not_found";
 }

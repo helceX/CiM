@@ -50,7 +50,9 @@ test.describe("reports", () => {
     // defaults — matches what a user creating their first report clicks
     // through.
     const createResponse = page.waitForResponse(
-      (response) => response.url().endsWith("/api/reports") && response.request().method() === "POST",
+      (response) =>
+        response.url().endsWith("/api/reports") &&
+        response.request().method() === "POST",
     );
     await page.getByRole("button", { name: "Generate report" }).click();
     const response = await createResponse;
@@ -58,12 +60,20 @@ test.describe("reports", () => {
     expect(reportId).toBeTruthy();
     expect(reportRunId).toBeTruthy();
 
-    await expect(page).toHaveURL(new RegExp(`/reports/${reportId}$`), { timeout: 5000 });
+    await expect(page).toHaveURL(new RegExp(`/reports/${reportId}$`), {
+      timeout: 5000,
+    });
     await expect(page.getByText("queued")).toBeVisible();
 
     await simulateReportGeneration(reportRunId);
     await page.reload();
-    await expect(page.getByText("completed")).toBeVisible();
+    // simulateReportGeneration renders a real PDF via headless Chromium
+    // synchronously before this line runs, so the run is already
+    // "completed" in the DB by the time we get here — this is purely
+    // waiting on the reload's own server round trip, which intermittently
+    // exceeds the 5s default under CI's shared-runner load right after
+    // that same heavy render (never reproduces locally).
+    await expect(page.getByText("completed")).toBeVisible({ timeout: 15000 });
 
     const pdfLink = page.getByRole("link", { name: "PDF" });
     const csvLink = page.getByRole("link", { name: "CSV" });
@@ -102,17 +112,25 @@ test.describe("reports", () => {
     await page.goto("/reports/new");
     await page.getByLabel("Name").fill("E2E share-link report");
     const createResponse = page.waitForResponse(
-      (response) => response.url().endsWith("/api/reports") && response.request().method() === "POST",
+      (response) =>
+        response.url().endsWith("/api/reports") &&
+        response.request().method() === "POST",
     );
     await page.getByRole("button", { name: "Generate report" }).click();
     const { reportRunId } = await (await createResponse).json();
 
     await simulateReportGeneration(reportRunId);
     await page.reload();
-    await expect(page.getByText("completed")).toBeVisible();
+    // See the identical wait above (line ~66) — the run is already
+    // "completed" in the DB by this point; this is just the reload's own
+    // server round trip occasionally exceeding the 5s default under CI's
+    // shared-runner load, observed here specifically since it's the
+    // second heavy headless-Chromium PDF render in this file's run.
+    await expect(page.getByText("completed")).toBeVisible({ timeout: 15000 });
 
     const shareResponse = page.waitForResponse(
-      (response) => response.url().includes("/share") && response.request().method() === "POST",
+      (response) =>
+        response.url().includes("/share") && response.request().method() === "POST",
     );
     await page.getByRole("button", { name: "Share", exact: true }).click();
     const shareData = await (await shareResponse).json();
@@ -128,7 +146,8 @@ test.describe("reports", () => {
     expect(publicBody.subarray(0, 5).toString("ascii")).toBe("%PDF-");
 
     const revokeResponse = page.waitForResponse(
-      (response) => response.url().includes("/share") && response.request().method() === "DELETE",
+      (response) =>
+        response.url().includes("/share") && response.request().method() === "DELETE",
     );
     await page.getByRole("button", { name: "Revoke" }).click();
     expect((await revokeResponse).ok()).toBe(true);

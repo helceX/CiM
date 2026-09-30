@@ -8,6 +8,8 @@ before pricing can be announced; the builder is the largest).
 
 ## 1. Brand groups (own brands vs. competitors)
 
+> **Status: shipped (v1).** Groups CRUD + query assignment in Settings, group filter on Mentions, group comparison on the Dashboard. Not yet: the "group vs. group" competitor alert and the report section (see *Behaviour* below).
+
 **Problem.** Today a monitoring query has a single `trackingTarget` label
 (`company`, `competitor`, …) and the Dashboard's "Competitor comparison"
 groups by it. Teams want named clusters — "Our brands", "Competitor A",

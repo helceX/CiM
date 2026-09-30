@@ -5,7 +5,6 @@ import {
   BellRing,
   Compass,
   Gauge,
-  Layers,
   LineChart,
   Share2,
   ShieldCheck,
@@ -44,8 +43,8 @@ export default async function LandingPage() {
   }));
 
   const sources = t.raw("sources.items") as string[];
-  const soon = ["groups", "charts", "credits"] as const;
-  const soonIcons = { groups: Layers, charts: LineChart, credits: Gauge } as const;
+  const soon = ["charts", "credits"] as const;
+  const soonIcons = { charts: LineChart, credits: Gauge } as const;
 
   return (
     <>
@@ -219,12 +218,12 @@ export default async function LandingPage() {
       <section className="mk-section">
         <div className="mk-wrap">
           <SectionHead eyebrow={t("soon.eyebrow")} title={t("soon.title")} lead={t("soon.lead")} />
-          <ul className="mt-14 grid gap-5 md:grid-cols-3">
+          <ul className="mx-auto mt-14 grid max-w-3xl gap-5 md:grid-cols-2">
             {soon.map((key, index) => (
               <Reveal as="li" key={key} delay={index * 90}>
                 <GlowCard className="h-full p-7">
                   <div className="flex items-center justify-between">
-                    <IconTile icon={soonIcons[key]} tone={key === "groups" ? "magenta" : key === "charts" ? "violet" : "coral"} />
+                    <IconTile icon={soonIcons[key]} tone={key === "charts" ? "violet" : "coral"} />
                     <span className="mk-chip mk-chip-soon">{common("comingSoon")}</span>
                   </div>
                   <h3 className="mt-6 text-xl font-semibold">{t(`soon.items.${key}.title`)}</h3>

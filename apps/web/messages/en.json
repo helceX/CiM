@@ -48,7 +48,18 @@
     },
     "sources": {
       "label": "Watches the places your audience actually talks",
-      "items": ["News", "Web", "RSS feeds", "Sitemaps", "Social", "Video", "Podcasts", "Forums", "Comments", "Custom APIs"]
+      "items": [
+        "News",
+        "Web",
+        "RSS feeds",
+        "Sitemaps",
+        "Social",
+        "Video",
+        "Podcasts",
+        "Forums",
+        "Comments",
+        "Custom APIs"
+      ]
     },
     "story": {
       "eyebrow": "One continuous loop",
@@ -134,10 +145,6 @@
       "title": "Where Mediaory goes next.",
       "lead": "We build in the open with our users. These are in design now — tell us what would make them useful for you.",
       "items": {
-        "groups": {
-          "title": "Brand groups",
-          "body": "Cluster your own brands and your competitors separately, then compare the two sides in one view."
-        },
         "charts": {
           "title": "Chart & table builder",
           "body": "Build your own charts and tables from your monitoring data and drop them straight into reports."
@@ -182,49 +189,95 @@
       "monitoring": {
         "title": "Monitoring & query builder",
         "body": "Track brands, products, executives, competitors and topics with a chip-based simple mode or full Boolean syntax — the same query, either way. Preview what a query would have matched before you save it.",
-        "points": ["Include, exclude and exact phrases", "News, web, social, video, podcasts, forums and comments", "Query quality suggestions"],
+        "points": [
+          "Include, exclude and exact phrases",
+          "News, web, social, video, podcasts, forums and comments",
+          "Query quality suggestions"
+        ],
         "alt": "The new monitoring form."
       },
       "dedupe": {
         "title": "Deduplication & story clustering",
         "body": "The same story from 30 outlets shows up once, with every source attached — not 30 separate alerts. Filter by sentiment, priority, date and owner, and search across everything.",
-        "points": ["One story, every source", "Full-text search", "Assign, tag and comment as a team"],
+        "points": [
+          "One story, every source",
+          "Full-text search",
+          "Assign, tag and comment as a team"
+        ],
         "alt": "The mentions table with filters."
       },
       "ai": {
         "title": "Grounded AI insights",
         "body": "Executive summaries, risk signals and recommendations — every claim linked to the mentions and metrics behind it, with confidence and method shown. Ask follow-up questions in plain language.",
-        "points": ["“Why did this match?” on every mention", "Confidence, method and evidence on every insight", "Multi-turn AI assistant grounded in your data"],
+        "points": [
+          "“Why did this match?” on every mention",
+          "Confidence, method and evidence on every insight",
+          "Multi-turn AI assistant grounded in your data"
+        ],
         "alt": "A mention drawer with an AI summary."
       },
       "alerts": {
         "title": "Alerts that do not cry wolf",
         "body": "Spike, sentiment-shift, emerging-topic, competitor and creator alerts with grouping and cooldowns — delivered in-app, by email or to Slack and Teams through webhooks.",
-        "points": ["Seven alert types", "Cooldowns and grouping", "Email, in-app and webhook delivery"],
+        "points": [
+          "Seven alert types",
+          "Cooldowns and grouping",
+          "Email, in-app and webhook delivery"
+        ],
         "alt": "The new alert form."
       },
       "analytics": {
         "title": "Analytics that answer “so what?”",
         "body": "Mention volume, sentiment trend, source distribution and topics over the period you choose — plus a cross-platform view of how a story travels.",
-        "points": ["Volume and sentiment over time", "Source and topic breakdowns", "Social listening dashboard"],
+        "points": [
+          "Volume and sentiment over time",
+          "Source and topic breakdowns",
+          "Social listening dashboard"
+        ],
         "alt": "The analytics view."
       },
       "reports": {
         "title": "Reports on your schedule",
         "body": "Daily digests and weekly or monthly reports, from templates or a fully custom report builder — exported to PDF, CSV or XLSX and shareable with a link.",
-        "points": ["PDF, CSV and XLSX", "Scheduled delivery", "Share links for stakeholders"],
+        "points": [
+          "PDF, CSV and XLSX",
+          "Scheduled delivery",
+          "Share links for stakeholders"
+        ],
         "alt": "The new report form."
       }
     },
     "more": {
       "title": "And the details that make it work for real teams.",
       "items": [
-        { "title": "Roles & permissions", "body": "Built-in roles plus custom ones you define." },
-        { "title": "Internal API keys", "body": "Connect Mediaory to the rest of your stack." },
-        { "title": "Webhooks", "body": "Push alerts into Slack, Teams or your own systems." },
-        { "title": "Data retention", "body": "Set how long mentions are kept, automatically enforced." },
-        { "title": "Command palette", "body": "Jump anywhere with a keystroke." },
-        { "title": "Light & dark", "body": "A workspace that respects your eyes and your OS." }
+        {
+          "title": "Brand groups",
+          "body": "Cluster your own brands and your competitors, then compare share of voice and sentiment."
+        },
+        {
+          "title": "Roles & permissions",
+          "body": "Built-in roles plus custom ones you define."
+        },
+        {
+          "title": "Internal API keys",
+          "body": "Connect Mediaory to the rest of your stack."
+        },
+        {
+          "title": "Webhooks",
+          "body": "Push alerts into Slack, Teams or your own systems."
+        },
+        {
+          "title": "Data retention",
+          "body": "Set how long mentions are kept, automatically enforced."
+        },
+        {
+          "title": "Command palette",
+          "body": "Jump anywhere with a keystroke."
+        },
+        {
+          "title": "Light & dark",
+          "body": "A workspace that respects your eyes and your OS."
+        }
       ]
     }
   },
@@ -239,22 +292,38 @@
       "comms": {
         "title": "Corporate communications",
         "body": "Catch developing stories early, see how sentiment moves after an announcement, and brief the executive team with a report that cites its sources.",
-        "points": ["Early warning on spikes and sentiment shifts", "Executive-ready briefs and scheduled reports", "Risk signals with evidence"]
+        "points": [
+          "Early warning on spikes and sentiment shifts",
+          "Executive-ready briefs and scheduled reports",
+          "Risk signals with evidence"
+        ]
       },
       "pr": {
         "title": "PR & agencies",
         "body": "Run many clients from one place. Separate projects, role-based access and share links keep every account organized and every deliverable one click away.",
-        "points": ["Projects and roles per client", "Share links instead of attachments", "Coverage tracking across outlets"]
+        "points": [
+          "Projects and roles per client",
+          "Share links instead of attachments",
+          "Coverage tracking across outlets"
+        ]
       },
       "brand": {
         "title": "Brand & marketing",
         "body": "Understand campaigns in the wild — who is talking, on which platforms, and in what tone — including the conversations that never tag your brand.",
-        "points": ["Unprompted brand conversations", "Competitor tracking side by side", "Trending hashtags and top posts"]
+        "points": [
+          "Unprompted brand conversations",
+          "Competitor tracking side by side",
+          "Trending hashtags and top posts"
+        ]
       },
       "crisis": {
         "title": "Crisis & risk",
         "body": "When minutes matter, alerts reach the right people first, mentions can be assigned on the spot, and everything is logged for the review afterwards.",
-        "points": ["Spike and sentiment-shift alerts", "Assign and comment in context", "Tags and comments kept with the mention"]
+        "points": [
+          "Spike and sentiment-shift alerts",
+          "Assign and comment in context",
+          "Tags and comments kept with the mention"
+        ]
       }
     },
     "cta": {

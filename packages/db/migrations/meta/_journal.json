@@ -183,6 +183,13 @@
       "when": 1790695423561,
       "tag": "0025_next_overlord",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1790781334560,
+      "tag": "0026_living_blacklash",
+      "breakpoints": true
     }
   ]
 }

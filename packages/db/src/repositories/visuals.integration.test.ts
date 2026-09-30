@@ -11,6 +11,7 @@ import {
   createSavedVisual,
   deleteSavedVisual,
   getSavedVisual,
+  listPinnedVisuals,
   listSavedVisuals,
   runVisual,
   updateSavedVisual,
@@ -205,15 +206,41 @@ describe("visual builder (integration)", () => {
 
     expect(await getSavedVisual(db, b.organizationId, saved.id)).toBeUndefined();
     expect(await listSavedVisuals(db, b.organizationId)).toEqual([]);
-    expect(await updateSavedVisual(db, b.organizationId, saved.id, { name: "Hijacked" })).toBeUndefined();
+    expect(await updateSavedVisual(db, b.organizationId, saved.id, { name: "Hijacked" })).toEqual({ ok: false, reason: "not_found" });
     expect(await deleteSavedVisual(db, b.organizationId, saved.id)).toBe(false);
     expect((await getSavedVisual(db, a.organizationId, saved.id))?.name).toBe("Sentiment mix");
 
     const renamed = await updateSavedVisual(db, a.organizationId, saved.id, { name: "Renamed", kind: "table" });
-    expect(renamed).toMatchObject({ name: "Renamed", kind: "table" });
+    expect(renamed.ok && renamed.visual).toMatchObject({ name: "Renamed", kind: "table" });
 
     expect(await deleteSavedVisual(db, a.organizationId, saved.id)).toBe(true);
     expect(await getSavedVisual(db, a.organizationId, saved.id)).toBeUndefined();
     expect(await deleteSavedVisual(db, a.organizationId, saved.id)).toBe(false);
+  });
+
+  it("pins up to the limit, refuses the next one, frees a slot on unpin, and never pins across organizations", async () => {
+    const c = await makeOrg("vis-pin");
+    const ids: string[] = [];
+    for (let i = 0; i < 5; i += 1) {
+      const v = await createSavedVisual(db, c.organizationId, { name: `V${i}`, kind: "chart", spec: spec({}), createdBy: null });
+      ids.push(v.id);
+    }
+    for (const id of ids.slice(0, 4)) {
+      expect((await updateSavedVisual(db, c.organizationId, id, { pinned: true })).ok).toBe(true);
+    }
+    expect(await updateSavedVisual(db, c.organizationId, ids[4]!, { pinned: true })).toEqual({ ok: false, reason: "pin_limit" });
+    // Re-pinning an already pinned visual is not a new slot.
+    expect((await updateSavedVisual(db, c.organizationId, ids[0]!, { pinned: true })).ok).toBe(true);
+    expect((await listPinnedVisuals(db, c.organizationId)).map((v) => v.name)).toEqual(["V0", "V1", "V2", "V3"]);
+
+    expect((await updateSavedVisual(db, c.organizationId, ids[1]!, { pinned: false })).ok).toBe(true);
+    expect((await updateSavedVisual(db, c.organizationId, ids[4]!, { pinned: true })).ok).toBe(true);
+
+    expect(await listPinnedVisuals(db, a.organizationId)).toEqual([]);
+    expect(await updateSavedVisual(db, a.organizationId, ids[2]!, { pinned: true })).toEqual({ ok: false, reason: "not_found" });
+
+    // Deleting a pinned visual removes it from the dashboard set.
+    await deleteSavedVisual(db, c.organizationId, ids[0]!);
+    expect((await listPinnedVisuals(db, c.organizationId)).map((v) => v.name)).not.toContain("V0");
   });
 });

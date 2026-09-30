@@ -21,6 +21,8 @@ export const savedVisuals = pgTable(
     name: text("name").notNull(),
     kind: text("kind").$type<"chart" | "table">().notNull().default("chart"),
     spec: jsonb("spec").$type<Record<string, unknown>>().notNull(),
+    // Set when pinned to the Dashboard (newest pin shows last); null = not pinned.
+    pinnedAt: timestamp("pinned_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),

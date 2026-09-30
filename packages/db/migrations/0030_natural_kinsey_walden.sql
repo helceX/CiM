@@ -1,0 +1,1 @@
+ALTER TABLE "saved_visuals" ADD COLUMN "pinned_at" timestamp with time zone;

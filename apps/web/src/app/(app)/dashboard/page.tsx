@@ -20,6 +20,7 @@ import { CompetitorComparisonSection } from "./competitor-comparison-section";
 import { BrandGroupComparisonSection } from "./brand-group-comparison-section";
 import { RecommendationsSection } from "./recommendations-section";
 import { RiskBanner } from "./risk-banner";
+import { PinnedVisualsSection } from "./pinned-visuals-section";
 
 // A "risk" insight row is only ever created when detectRisk actually
 // flags something (most periods produce nothing), unlike "whats_changed"
@@ -171,6 +172,8 @@ export default async function DashboardPage() {
       {hasCompetitor ? (
         <CompetitorComparisonSection rows={competitorComparison} />
       ) : null}
+
+      <PinnedVisualsSection organizationId={context.organizationId} />
 
       <section>
         <h2 className="text-sm font-semibold text-foreground">Top stories</h2>

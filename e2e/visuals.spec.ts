@@ -49,3 +49,48 @@ test("a visual id from nowhere is a 404, not an error page", async ({ page }) =>
   const response = await page.goto("/visuals/00000000-0000-4000-8000-000000000000");
   expect(response?.status()).toBe(404);
 });
+
+test("pin a visual to the Dashboard, export it as CSV, edit it, unpin it", async ({ page }) => {
+  await registerAndOnboard(page);
+  await page.goto("/visuals/new");
+  await expect(page.getByText("Computing…")).toBeHidden({ timeout: 10_000 });
+  await page.getByLabel("Name").fill("Daily volume");
+  await page.getByRole("button", { name: "Save visual" }).click();
+  await expect(page).toHaveURL(/\/visuals\/[0-9a-f-]{36}$/);
+  const detailUrl = page.url();
+
+  // Not on the Dashboard until pinned.
+  await page.goto("/dashboard");
+  await expect(page.getByRole("heading", { name: "Your visuals" })).toHaveCount(0);
+
+  await page.goto(detailUrl);
+  await page.getByRole("button", { name: "Pin to Dashboard" }).click();
+  await expect(page.getByRole("button", { name: "Unpin from Dashboard" })).toBeVisible();
+  await page.goto("/dashboard");
+  await expect(page.getByRole("heading", { name: "Your visuals" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Daily volume" })).toBeVisible();
+
+  // CSV export downloads a real file with the header row.
+  await page.goto(detailUrl);
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByRole("link", { name: "Export CSV" }).click(),
+  ]);
+  expect(download.suggestedFilename()).toBe("daily-volume.csv");
+  const fs = await import("node:fs/promises");
+  const csv = await fs.readFile((await download.path())!, "utf8");
+  expect(csv.startsWith('"Day","Mentions"\r\n')).toBe(true);
+
+  // Edit keeps the visual and changes it.
+  await page.getByRole("link", { name: "Edit" }).click();
+  await expect(page.getByLabel("Name")).toHaveValue("Daily volume");
+  await page.getByLabel("Name").fill("Volume by source");
+  await page.getByLabel("Group by").selectOption("source");
+  await page.getByRole("button", { name: "Save changes" }).click();
+  await expect(page.getByRole("heading", { name: "Volume by source" })).toBeVisible({ timeout: 15_000 });
+
+  await page.getByRole("button", { name: "Unpin from Dashboard" }).click();
+  await expect(page.getByRole("button", { name: "Pin to Dashboard" })).toBeVisible();
+  await page.goto("/dashboard");
+  await expect(page.getByRole("heading", { name: "Your visuals" })).toHaveCount(0);
+});

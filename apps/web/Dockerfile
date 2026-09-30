@@ -32,6 +32,16 @@ RUN pnpm install --frozen-lockfile
 # --- builder: full source + Next.js standalone build ---
 FROM deps AS builder
 COPY . .
+# `next build` statically collects each API route's config, which imports
+# @cim/db -> @cim/config's getEnv() (packages/config/src/index.ts) — it
+# validates process.env eagerly, so the build fails without *some* value
+# here even though nothing is actually connected to at build time. These
+# never reach the runner stage (separate `FROM`, no ENV inheritance across
+# stages) — real values are supplied as container runtime env vars, the
+# same way CI's own "checks" job passes placeholders to `pnpm build`.
+ENV SESSION_SECRET=docker-build-time-placeholder-0123456789abcdef01234567
+ENV DATABASE_URL=postgres://build:build@localhost:5432/build
+ENV REDIS_URL=redis://localhost:6379
 RUN pnpm --filter @cim/web build
 
 # --- runner: minimal image, only the traced standalone output ---

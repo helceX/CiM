@@ -44,6 +44,17 @@ test.describe("reports", () => {
    * download links work.
    */
   test("generate a report and download the real PDF and CSV", async ({ page }) => {
+    // Regression: bumping just the "completed" assertion's own timeout
+    // (5000ms -> 15000ms) wasn't enough — it still failed at 15000ms in CI,
+    // because this test genuinely does a real headless-Chromium PDF render
+    // (simulateReportGeneration) on top of Playwright's own browser, and
+    // under a shared CI runner the two compete for CPU badly enough that
+    // even the *page reload* afterward can take well past 15s. test.slow()
+    // triples this test's own 30s budget to 90s (Playwright's own
+    // mechanism for a test that's inherently this heavy), which is what
+    // actually buys the reload room — a bigger assertion-only timeout was
+    // fighting the still-fixed 30s ceiling around it.
+    test.slow();
     await page.goto("/reports/new");
     await page.getByLabel("Name").fill("E2E smoke report");
     // Project, template (Weekly Summary), and period are all pre-selected
@@ -70,10 +81,11 @@ test.describe("reports", () => {
     // simulateReportGeneration renders a real PDF via headless Chromium
     // synchronously before this line runs, so the run is already
     // "completed" in the DB by the time we get here — this is purely
-    // waiting on the reload's own server round trip, which intermittently
-    // exceeds the 5s default under CI's shared-runner load right after
-    // that same heavy render (never reproduces locally).
-    await expect(page.getByText("completed")).toBeVisible({ timeout: 15000 });
+    // waiting on the reload's own server round trip, which under CI's
+    // shared-runner load competing with that same heavy render can take
+    // well past a few seconds (never reproduces locally). test.slow()
+    // above gives the whole test 90s of room for this.
+    await expect(page.getByText("completed")).toBeVisible({ timeout: 30000 });
 
     const pdfLink = page.getByRole("link", { name: "PDF" });
     const csvLink = page.getByRole("link", { name: "CSV" });
@@ -109,6 +121,10 @@ test.describe("reports", () => {
     page,
     browser,
   }) => {
+    // See test.slow()'s comment above — this is the second real
+    // headless-Chromium PDF render in the file, the one CI has actually
+    // observed exceeding even a 15000ms assertion-only timeout.
+    test.slow();
     await page.goto("/reports/new");
     await page.getByLabel("Name").fill("E2E share-link report");
     const createResponse = page.waitForResponse(
@@ -123,10 +139,9 @@ test.describe("reports", () => {
     await page.reload();
     // See the identical wait above (line ~66) — the run is already
     // "completed" in the DB by this point; this is just the reload's own
-    // server round trip occasionally exceeding the 5s default under CI's
-    // shared-runner load, observed here specifically since it's the
-    // second heavy headless-Chromium PDF render in this file's run.
-    await expect(page.getByText("completed")).toBeVisible({ timeout: 15000 });
+    // server round trip, observed here specifically to run slowest since
+    // it's the second heavy headless-Chromium PDF render in this file's run.
+    await expect(page.getByText("completed")).toBeVisible({ timeout: 30000 });
 
     const shareResponse = page.waitForResponse(
       (response) =>

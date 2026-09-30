@@ -3,6 +3,7 @@ import { Badge, Button, EmptyState } from "@cim/ui";
 import { Radar } from "lucide-react";
 import {
   db,
+  getBrandGroupComparison,
   getCompetitorComparison,
   getDashboardSummary,
   getLatestInsightForOrganization,
@@ -16,6 +17,7 @@ import { KpiRow } from "@/components/kpi-row";
 import { MentionTrendChart } from "@/components/charts/mention-trend-chart";
 import { AiAssistantPanel } from "./ai-assistant-panel";
 import { CompetitorComparisonSection } from "./competitor-comparison-section";
+import { BrandGroupComparisonSection } from "./brand-group-comparison-section";
 import { RecommendationsSection } from "./recommendations-section";
 import { RiskBanner } from "./risk-banner";
 
@@ -68,6 +70,7 @@ export default async function DashboardPage() {
     competitorComparison,
     recommendations,
     risk,
+    brandGroupComparison,
   ] = await Promise.all([
     getDashboardSummary(db, context.organizationId, { sinceDays: 7 }),
     listRecentMentions(db, context.organizationId, { limit: 10 }),
@@ -78,6 +81,7 @@ export default async function DashboardPage() {
     getLatestInsightForOrganization(db, context.organizationId, "risk", {
       freshSince: new Date(Date.now() - RISK_FRESHNESS_HOURS * 60 * 60 * 1000),
     }),
+    getBrandGroupComparison(db, context.organizationId, { sinceDays: 7 }),
   ]);
   const hasCompetitor = competitorComparison.some(
     (row) => row.trackingTarget === "competitor",
@@ -158,6 +162,10 @@ export default async function DashboardPage() {
             <MentionTrendChart data={trend} />
           </div>
         </section>
+      ) : null}
+
+      {brandGroupComparison.length > 0 ? (
+        <BrandGroupComparisonSection rows={brandGroupComparison} />
       ) : null}
 
       {hasCompetitor ? (

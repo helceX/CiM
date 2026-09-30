@@ -24,11 +24,13 @@ export function MentionsTable({
   result,
   members,
   tags,
+  brandGroups,
   currentUserId,
 }: {
   result: MentionsPage;
   members: AssignableMember[];
   tags: Tag[];
+  brandGroups: { id: string; name: string }[];
   currentUserId: string;
 }) {
   const router = useRouter();
@@ -93,6 +95,15 @@ export function MentionsTable({
                   key: "tag",
                   label: "Tag",
                   options: tags.map((tag) => ({ value: tag.id, label: tag.name })),
+                },
+              ]
+            : []),
+          ...(brandGroups.length > 0
+            ? [
+                {
+                  key: "group",
+                  label: "Group",
+                  options: brandGroups.map((group) => ({ value: group.id, label: group.name })),
                 },
               ]
             : []),

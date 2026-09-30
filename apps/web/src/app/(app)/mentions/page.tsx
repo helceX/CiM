@@ -1,5 +1,6 @@
 import {
   db,
+  listBrandGroups,
   listMembersForOrganization,
   listMentionsFiltered,
   listTagsForOrganization,
@@ -9,6 +10,7 @@ import { requireOrgContext } from "@/lib/tenant";
 import { MentionsTable } from "./mentions-table";
 
 const PAGE_SIZE = 20;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
@@ -39,15 +41,21 @@ export default async function MentionsPage({
     assignedToUserId: assigned === "me" ? context.userId : undefined,
     unassignedOnly: assigned === "unassigned",
     tagId: param(resolvedParams, "tag") || undefined,
+    // A malformed id in the URL is ignored rather than reaching Postgres,
+    // where a non-uuid string would fail the whole page.
+    brandGroupId: UUID_PATTERN.test(param(resolvedParams, "group") ?? "")
+      ? param(resolvedParams, "group")
+      : undefined,
   };
 
-  const [result, members, tags] = await Promise.all([
+  const [result, members, tags, brandGroups] = await Promise.all([
     listMentionsFiltered(db, context.organizationId, filters, {
       page,
       pageSize: PAGE_SIZE,
     }),
     listMembersForOrganization(db, context.organizationId),
     listTagsForOrganization(db, context.organizationId),
+    listBrandGroups(db, context.organizationId),
   ]);
   const assignableMembers = members.filter((m) => m.status === "active");
 
@@ -64,6 +72,7 @@ export default async function MentionsPage({
         result={result}
         members={assignableMembers}
         tags={tags}
+        brandGroups={brandGroups.map((group) => ({ id: group.id, name: group.name }))}
         currentUserId={context.userId}
       />
     </div>

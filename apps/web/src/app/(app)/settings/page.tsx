@@ -5,6 +5,9 @@ import {
   getRetentionPolicy,
   getSubscription,
   listApiKeys,
+  listBrandGroups,
+  listMonitoringQueries,
+  listProjects,
   listCustomRolesForOrganization,
   listMembersForOrganization,
 } from "@cim/db";
@@ -20,22 +23,37 @@ import { RetentionSection } from "./retention-section";
 import { WebhookSection } from "./webhook-section";
 import { ApiKeysSection } from "./api-keys-section";
 import { UsageSection } from "./usage-section";
+import { BrandGroupsSection } from "./brand-groups-section";
 
 export default async function SettingsPage() {
   const context = await requireOrgContext();
-  const [members, customRoles, retentionPolicy, webhookUrl, apiKeys, subscription, usage] =
-    await Promise.all([
-      listMembersForOrganization(db, context.organizationId),
-      listCustomRolesForOrganization(db, context.organizationId),
-      getRetentionPolicy(db, context.organizationId),
-      getOrganizationWebhookUrl(db, context.organizationId),
-      listApiKeys(db, context.organizationId),
-      getSubscription(db, context.organizationId),
-      getLatestFeatureUsage(db, context.organizationId),
-    ]);
+  const [
+    members,
+    customRoles,
+    retentionPolicy,
+    webhookUrl,
+    apiKeys,
+    subscription,
+    usage,
+    brandGroups,
+    queries,
+    projects,
+  ] = await Promise.all([
+    listMembersForOrganization(db, context.organizationId),
+    listCustomRolesForOrganization(db, context.organizationId),
+    getRetentionPolicy(db, context.organizationId),
+    getOrganizationWebhookUrl(db, context.organizationId),
+    listApiKeys(db, context.organizationId),
+    getSubscription(db, context.organizationId),
+    getLatestFeatureUsage(db, context.organizationId),
+    listBrandGroups(db, context.organizationId),
+    listMonitoringQueries(db, context.organizationId),
+    listProjects(db, context.organizationId),
+  ]);
   const canManageMembers = context.permissions.includes("org:manage_members");
   const canManageSettings = context.permissions.includes("org:manage_settings");
   const canManageApiKeys = context.permissions.includes("api_keys:manage");
+  const canManageBrandGroups = context.permissions.includes("monitoring:write");
 
   return (
     <div className="flex max-w-2xl flex-col gap-8">
@@ -59,6 +77,25 @@ export default async function SettingsPage() {
       />
 
       {canManageMembers ? <CustomRolesSection customRoles={customRoles} /> : null}
+
+      <BrandGroupsSection
+        groups={brandGroups.map((group) => ({
+          id: group.id,
+          projectId: group.projectId,
+          name: group.name,
+          kind: group.kind,
+          color: group.color,
+          queryCount: group.queryCount,
+        }))}
+        queries={queries.map((query) => ({
+          id: query.id,
+          projectId: query.projectId,
+          name: query.name,
+          brandGroupId: query.brandGroupId,
+        }))}
+        projects={projects.map((project) => ({ id: project.id, name: project.name }))}
+        canManage={canManageBrandGroups}
+      />
 
       <RetentionSection
         mentionRetentionDays={retentionPolicy.mentionRetentionDays}

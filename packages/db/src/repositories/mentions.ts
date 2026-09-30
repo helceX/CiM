@@ -131,6 +131,8 @@ export type MentionFilters = {
   assignedToUserId?: string;
   unassignedOnly?: boolean;
   tagId?: string;
+  // Mentions of any query currently in this brand group.
+  brandGroupId?: string;
 };
 
 export type MentionsPage = {
@@ -188,6 +190,9 @@ function mentionFiltersToWhere(
     // exist", same shape as the entity/topic exists-checks in ai.ts.
     filters.tagId
       ? sql`exists (select 1 from mention_tags mt where mt.mention_id = ${mentions.id} and mt.tag_id = ${filters.tagId})`
+      : undefined,
+    filters.brandGroupId
+      ? sql`${mentions.queryId} in (select mq.id from monitoring_queries mq where mq.brand_group_id = ${filters.brandGroupId} and mq.organization_id = ${organizationId})`
       : undefined,
   );
 }

@@ -48,7 +48,18 @@
     },
     "sources": {
       "label": "Kitlenizin gerçekten konuştuğu yerleri izler",
-      "items": ["Haber", "Web", "RSS akışları", "Site haritaları", "Sosyal medya", "Video", "Podcast", "Forumlar", "Yorumlar", "Özel API’ler"]
+      "items": [
+        "Haber",
+        "Web",
+        "RSS akışları",
+        "Site haritaları",
+        "Sosyal medya",
+        "Video",
+        "Podcast",
+        "Forumlar",
+        "Yorumlar",
+        "Özel API’ler"
+      ]
     },
     "story": {
       "eyebrow": "Kesintisiz tek bir döngü",
@@ -134,10 +145,6 @@
       "title": "Mediaory’nin sıradaki durağı.",
       "lead": "Kullanıcılarımızla birlikte, şeffaf biçimde geliştiriyoruz. Bunlar şu an tasarım aşamasında — sizin için neyin faydalı olacağını bize söyleyin.",
       "items": {
-        "groups": {
-          "title": "Marka grupları",
-          "body": "Kendi markalarınızı ve rakiplerinizi ayrı ayrı kümeleyin, iki tarafı tek görünümde karşılaştırın."
-        },
         "charts": {
           "title": "Grafik ve tablo oluşturucu",
           "body": "İzleme verilerinizden kendi grafik ve tablolarınızı oluşturun, doğrudan raporlarınıza ekleyin."
@@ -182,49 +189,95 @@
       "monitoring": {
         "title": "İzleme ve sorgu oluşturucu",
         "body": "Markaları, ürünleri, yöneticileri, rakipleri ve konuları etiket tabanlı basit modla ya da tam Boolean sözdizimiyle takip edin — iki yolla da aynı sorgu. Kaydetmeden önce sorgunun neleri yakalayacağını önizleyin.",
-        "points": ["Dahil etme, hariç tutma ve tam ifadeler", "Haber, web, sosyal medya, video, podcast, forum ve yorumlar", "Sorgu kalitesi önerileri"],
+        "points": [
+          "Dahil etme, hariç tutma ve tam ifadeler",
+          "Haber, web, sosyal medya, video, podcast, forum ve yorumlar",
+          "Sorgu kalitesi önerileri"
+        ],
         "alt": "Yeni izleme formu."
       },
       "dedupe": {
         "title": "Tekilleştirme ve hikâye kümeleme",
         "body": "30 mecradan çıkan aynı haber, tüm kaynaklarıyla birlikte bir kez görünür — 30 ayrı uyarı olarak değil. Duygu, öncelik, tarih ve sorumluya göre filtreleyin, her şeyin içinde arayın.",
-        "points": ["Tek hikâye, tüm kaynaklar", "Tam metin arama", "Ekip olarak atayın, etiketleyin, yorumlayın"],
+        "points": [
+          "Tek hikâye, tüm kaynaklar",
+          "Tam metin arama",
+          "Ekip olarak atayın, etiketleyin, yorumlayın"
+        ],
         "alt": "Filtreli bahsetmeler tablosu."
       },
       "ai": {
         "title": "Dayanaklı yapay zekâ içgörüleri",
         "body": "Yönetici özetleri, risk sinyalleri ve öneriler — her iddia arkasındaki bahsetmelere ve metriklere bağlı, güven ve yöntem gösterilir. Takip sorularını düz dille sorun.",
-        "points": ["Her bahsetmede “Neden eşleşti?”", "Her içgörüde güven, yöntem ve kanıt", "Verilerinize dayalı çok turlu yapay zekâ asistanı"],
+        "points": [
+          "Her bahsetmede “Neden eşleşti?”",
+          "Her içgörüde güven, yöntem ve kanıt",
+          "Verilerinize dayalı çok turlu yapay zekâ asistanı"
+        ],
         "alt": "Yapay zekâ özetli bir bahsetme paneli."
       },
       "alerts": {
         "title": "Boşuna alarm çalmayan uyarılar",
         "body": "Ani artış, duygu değişimi, yükselen konu, rakip ve içerik üreticisi uyarıları; gruplama ve bekleme süreleriyle — uygulama içinde, e-postayla ya da webhook ile Slack ve Teams’e iletilir.",
-        "points": ["Yedi uyarı türü", "Bekleme süreleri ve gruplama", "E-posta, uygulama içi ve webhook iletimi"],
+        "points": [
+          "Yedi uyarı türü",
+          "Bekleme süreleri ve gruplama",
+          "E-posta, uygulama içi ve webhook iletimi"
+        ],
         "alt": "Yeni uyarı formu."
       },
       "analytics": {
         "title": "“Peki ne olacak?” sorusunu yanıtlayan analitik",
         "body": "Seçtiğiniz dönemde bahsetme hacmi, duygu trendi, kaynak dağılımı ve konular — ayrıca bir haberin platformlar arasında nasıl yayıldığını gösteren görünüm.",
-        "points": ["Zaman içinde hacim ve duygu", "Kaynak ve konu kırılımları", "Sosyal dinleme panosu"],
+        "points": [
+          "Zaman içinde hacim ve duygu",
+          "Kaynak ve konu kırılımları",
+          "Sosyal dinleme panosu"
+        ],
         "alt": "Analitik görünümü."
       },
       "reports": {
         "title": "Raporlar sizin takviminizde",
         "body": "Günlük özetler, haftalık ya da aylık raporlar; şablonlardan veya tamamen özel rapor oluşturucudan — PDF, CSV ya da XLSX olarak dışa aktarılır, bağlantıyla paylaşılır.",
-        "points": ["PDF, CSV ve XLSX", "Zamanlanmış gönderim", "Paydaşlar için paylaşım bağlantıları"],
+        "points": [
+          "PDF, CSV ve XLSX",
+          "Zamanlanmış gönderim",
+          "Paydaşlar için paylaşım bağlantıları"
+        ],
         "alt": "Yeni rapor formu."
       }
     },
     "more": {
       "title": "Ve gerçek ekipler için işe yarayan ayrıntılar.",
       "items": [
-        { "title": "Roller ve izinler", "body": "Yerleşik roller ve tanımlayabileceğiniz özel roller." },
-        { "title": "Dahili API anahtarları", "body": "Mediaory’yi yığınızın geri kalanına bağlayın." },
-        { "title": "Webhook’lar", "body": "Uyarıları Slack’e, Teams’e veya kendi sistemlerinize gönderin." },
-        { "title": "Veri saklama", "body": "Bahsetmelerin ne kadar tutulacağını belirleyin, otomatik uygulanır." },
-        { "title": "Komut paleti", "body": "Tek tuşla her yere gidin." },
-        { "title": "Açık ve koyu tema", "body": "Gözünüze ve işletim sisteminize saygı duyan bir çalışma alanı." }
+        {
+          "title": "Marka grupları",
+          "body": "Kendi markalarınızı ve rakiplerinizi kümeleyin; ses payını ve duyguyu karşılaştırın."
+        },
+        {
+          "title": "Roller ve izinler",
+          "body": "Yerleşik roller ve tanımlayabileceğiniz özel roller."
+        },
+        {
+          "title": "Dahili API anahtarları",
+          "body": "Mediaory’yi yığınızın geri kalanına bağlayın."
+        },
+        {
+          "title": "Webhook’lar",
+          "body": "Uyarıları Slack’e, Teams’e veya kendi sistemlerinize gönderin."
+        },
+        {
+          "title": "Veri saklama",
+          "body": "Bahsetmelerin ne kadar tutulacağını belirleyin, otomatik uygulanır."
+        },
+        {
+          "title": "Komut paleti",
+          "body": "Tek tuşla her yere gidin."
+        },
+        {
+          "title": "Açık ve koyu tema",
+          "body": "Gözünüze ve işletim sisteminize saygı duyan bir çalışma alanı."
+        }
       ]
     }
   },
@@ -239,22 +292,38 @@
       "comms": {
         "title": "Kurumsal iletişim",
         "body": "Gelişen haberleri erken yakalayın, bir duyurudan sonra duygunun nasıl değiştiğini görün ve yönetimi kaynaklarını gösteren bir raporla bilgilendirin.",
-        "points": ["Ani artış ve duygu değişimlerinde erken uyarı", "Yönetime hazır brifingler ve zamanlanmış raporlar", "Kanıtlı risk sinyalleri"]
+        "points": [
+          "Ani artış ve duygu değişimlerinde erken uyarı",
+          "Yönetime hazır brifingler ve zamanlanmış raporlar",
+          "Kanıtlı risk sinyalleri"
+        ]
       },
       "pr": {
         "title": "PR ve ajanslar",
         "body": "Birçok müşteriyi tek yerden yönetin. Ayrı projeler, rol tabanlı erişim ve paylaşım bağlantıları her hesabı düzenli, her teslimatı bir tık uzakta tutar.",
-        "points": ["Müşteri başına proje ve roller", "Ek yerine paylaşım bağlantıları", "Mecralar arası yayın takibi"]
+        "points": [
+          "Müşteri başına proje ve roller",
+          "Ek yerine paylaşım bağlantıları",
+          "Mecralar arası yayın takibi"
+        ]
       },
       "brand": {
         "title": "Marka ve pazarlama",
         "body": "Kampanyaları sahada anlayın — kim, hangi platformlarda, hangi tonda konuşuyor — markanızı hiç etiketlemeyen konuşmalar dahil.",
-        "points": ["Kendiliğinden gelişen marka konuşmaları", "Rakip takibi yan yana", "Trend etiketler ve öne çıkan gönderiler"]
+        "points": [
+          "Kendiliğinden gelişen marka konuşmaları",
+          "Rakip takibi yan yana",
+          "Trend etiketler ve öne çıkan gönderiler"
+        ]
       },
       "crisis": {
         "title": "Kriz ve risk",
         "body": "Dakikaların önemli olduğu anlarda uyarılar doğru kişilere önce ulaşır, bahsetmeler anında atanabilir ve sonraki değerlendirme için her şey kayıt altında kalır.",
-        "points": ["Ani artış ve duygu değişimi uyarıları", "Bağlam içinde atama ve yorum", "Etiket ve yorumlar bahsetmeyle birlikte saklanır"]
+        "points": [
+          "Ani artış ve duygu değişimi uyarıları",
+          "Bağlam içinde atama ve yorum",
+          "Etiket ve yorumlar bahsetmeyle birlikte saklanır"
+        ]
       }
     },
     "cta": {

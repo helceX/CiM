@@ -27,6 +27,17 @@
   --info: oklch(47% 0.11 240);
   --info-foreground: oklch(98% 0.01 240);
 
+  /* Categorical series colours (brand groups, chart series) — fixed order,
+     a group's colour follows the group, never its rank. */
+  --group-blue: #2a78d6;
+  --group-orange: #eb6834;
+  --group-aqua: #1baf7a;
+  --group-yellow: #eda100;
+  --group-magenta: #e87ba4;
+  --group-green: #008300;
+  --group-violet: #4a3aa7;
+  --group-red: #e34948;
+
   --radius-sm: 6px;
   --radius: 8px;
   --radius-lg: 10px;
@@ -69,6 +80,14 @@
     --danger-foreground: oklch(15% 0.02 25);
     --info: oklch(72% 0.11 240);
     --info-foreground: oklch(15% 0.02 240);
+    --group-blue: #3987e5;
+    --group-orange: #d95926;
+    --group-aqua: #199e70;
+    --group-yellow: #c98500;
+    --group-magenta: #d55181;
+    --group-green: #008300;
+    --group-violet: #9085e9;
+    --group-red: #e66767;
   }
 }
 
@@ -95,6 +114,14 @@
   --danger-foreground: oklch(15% 0.02 25);
   --info: oklch(72% 0.11 240);
   --info-foreground: oklch(15% 0.02 240);
+  --group-blue: #3987e5;
+  --group-orange: #d95926;
+  --group-aqua: #199e70;
+  --group-yellow: #c98500;
+  --group-magenta: #d55181;
+  --group-green: #008300;
+  --group-violet: #9085e9;
+  --group-red: #e66767;
 }
 
 body {

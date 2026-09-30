@@ -20,7 +20,7 @@ test("invite a member, they accept, owner changes role and revokes access", asyn
 
   await page.goto("/settings");
   await page.getByRole("button", { name: "Invite member" }).click();
-  await page.getByLabel("Email").fill(inviteeEmail);
+  await page.getByLabel("Email", { exact: true }).fill(inviteeEmail);
   await page.getByLabel("Role").selectOption({ label: "Analyst" });
   await page.getByRole("button", { name: "Send invite" }).click();
   await expect(page.getByText(inviteeEmail)).toBeVisible({ timeout: 5000 });
@@ -104,7 +104,7 @@ test("a custom role grants exactly its own permissions, nothing more", async ({
   const inviteeEmail = `e2e-custom-role-${unique}@example.com`;
 
   await page.getByRole("button", { name: "Invite member" }).click();
-  await page.getByLabel("Email").fill(inviteeEmail);
+  await page.getByLabel("Email", { exact: true }).fill(inviteeEmail);
   await page.getByLabel("Role").selectOption({ label: "Report Viewer (custom)" });
   await page.getByRole("button", { name: "Send invite" }).click();
   await expect(page.getByText(inviteeEmail)).toBeVisible({ timeout: 5000 });

@@ -161,7 +161,7 @@ test.describe("mentions", () => {
 
     await page.goto("/settings");
     await page.getByRole("button", { name: "Invite member" }).click();
-    await page.getByLabel("Email").fill(inviteeEmail);
+    await page.getByLabel("Email", { exact: true }).fill(inviteeEmail);
     await page.getByLabel("Role").selectOption({ label: "Analyst" });
     await page.getByRole("button", { name: "Send invite" }).click();
     await expect(page.getByText(inviteeEmail)).toBeVisible({ timeout: 5000 });

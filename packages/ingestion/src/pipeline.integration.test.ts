@@ -112,14 +112,25 @@ describe("ingestSource (integration)", () => {
   });
 
   describe("story clustering across sources", () => {
-    /** Returns one fixed item per fetch — lets the test control the exact title two different sources report. */
+    /**
+     * Returns one fixed item per fetch — lets the test control the exact
+     * title two different sources report. `slug` keeps each test's
+     * canonicalUrl distinct from every other test in this describe block
+     * sharing the same two sources — otherwise a later test's ingest
+     * would dedupe onto an earlier test's already-inserted Article (same
+     * canonicalUrl) instead of inserting a new one, and
+     * maybeAssignStoryCluster only ever runs for a newly-inserted Article.
+     */
     class FixedTitleConnector implements SourceConnector {
-      constructor(private readonly title: string) {}
+      constructor(
+        private readonly title: string,
+        private readonly slug: string = "fixed",
+      ) {}
       async fetch(source: Source): Promise<RawFetchResult[]> {
         return [
           {
-            externalId: `${source.id}-fixed`,
-            canonicalUrl: `https://${source.domain}/fixed`,
+            externalId: `${source.id}-${this.slug}`,
+            canonicalUrl: `https://${source.domain}/${this.slug}`,
             title: this.title,
             bodyText: this.title,
             publishedAt: new Date(),
@@ -182,6 +193,53 @@ describe("ingestSource (integration)", () => {
         .from(schema.articles)
         .where(
           eq(schema.articles.canonicalUrl, `https://${secondSource.domain}/fixed`),
+        );
+
+      expect(firstArticle?.storyClusterId).not.toBeNull();
+      expect(firstArticle?.storyClusterId).toBe(secondArticle?.storyClusterId);
+    });
+
+    /**
+     * Regression: crawlSourceWorker runs at concurrency 5 (apps/worker/
+     * src/index.ts), so two different sources' crawls of the same
+     * breaking story genuinely run concurrently, not just back-to-back
+     * like the test above. Before pipeline.ts's maybeAssignStoryCluster
+     * serialized itself with a Postgres advisory lock, both concurrent
+     * calls could see the *other* article's storyClusterId as still null
+     * and each generate their own new cluster id, cross-writing each
+     * other's row — leaving the two articles on two different final
+     * cluster ids instead of sharing one.
+     */
+    it("still clusters two similar headlines together when both sources are ingested concurrently", async () => {
+      const title = `Pipeline Test Wire announces a concurrent regional deal ${Date.now()}`;
+      const [firstSource] = await db
+        .select()
+        .from(schema.sources)
+        .where(eq(schema.sources.id, sourceId));
+      const [secondSource] = await db
+        .select()
+        .from(schema.sources)
+        .where(eq(schema.sources.id, secondSourceId));
+      if (!firstSource || !secondSource) throw new Error("test sources missing");
+
+      await Promise.all([
+        ingestSource(db, firstSource, new FixedTitleConnector(title, "concurrent")),
+        ingestSource(
+          db,
+          secondSource,
+          new FixedTitleConnector(`${title} — live updates`, "concurrent"),
+        ),
+      ]);
+
+      const [firstArticle] = await db
+        .select()
+        .from(schema.articles)
+        .where(eq(schema.articles.canonicalUrl, `https://${firstSource.domain}/concurrent`));
+      const [secondArticle] = await db
+        .select()
+        .from(schema.articles)
+        .where(
+          eq(schema.articles.canonicalUrl, `https://${secondSource.domain}/concurrent`),
         );
 
       expect(firstArticle?.storyClusterId).not.toBeNull();

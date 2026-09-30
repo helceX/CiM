@@ -58,7 +58,7 @@ describe("credit metering (integration)", () => {
     await db.update(monitoringQueries).set({ status: "paused" }).where(eq(monitoringQueries.id, paused.id));
     await addQuery(b, "B1", ["Other"]);
 
-    expect(await getTrackedKeywordCount(db, a.organizationId)).toBe(3); // acme, widget, phrase "acme corp"
+    expect(await getTrackedKeywordCount(db, a.organizationId)).toBe(3); // acme, widget, "acme corp"
     expect(await getTrackedKeywordCount(db, b.organizationId)).toBe(1);
   });
 

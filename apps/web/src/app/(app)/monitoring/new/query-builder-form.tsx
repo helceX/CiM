@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Checkbox, Field, Input, Select, Textarea } from "@cim/ui";
-import { astToBooleanQuery, parseBooleanQuery, type QueryAst } from "@cim/core";
+import { astToBooleanQuery, mergeKeywords, parseBooleanQuery, parseKeywordList, type QueryAst } from "@cim/core";
 import type { TrackingTarget } from "@cim/validation";
 import { TRACKING_TARGET_OPTIONS } from "@/lib/tracking-targets";
 
@@ -40,10 +40,12 @@ function ChipInput({
 }) {
   const [draft, setDraft] = useState("");
 
+  // One keyword = one comma-separated item (a word or a whole sentence);
+  // pasting "a, b, c" adds three chips.
   function add() {
-    const value = draft.trim();
-    if (!value || values.includes(value)) return;
-    onChange([...values, value]);
+    const additions = parseKeywordList(draft);
+    if (additions.length === 0) return;
+    onChange(mergeKeywords(values, additions));
     setDraft("");
   }
 
@@ -57,7 +59,7 @@ function ChipInput({
           aria-label={label}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === "Enter") {
+            if (e.key === "Enter" || e.key === ",") {
               e.preventDefault();
               add();
             }
@@ -256,7 +258,7 @@ export function QueryBuilderForm({ projects }: { projects: Project[] }) {
               label="Include"
               values={include}
               onChange={setInclude}
-              placeholder="e.g. your brand name"
+              placeholder="e.g. your brand, brand + product name"
             />
             <ChipInput
               label="Exclude"

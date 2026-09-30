@@ -64,6 +64,8 @@ const AUTHENTICATED_PATHS = [
   "/reports",
   "/reports/new",
   "/analytics",
+  "/visuals",
+  "/visuals/new",
   "/settings",
 ];
 

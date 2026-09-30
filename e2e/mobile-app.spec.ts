@@ -20,6 +20,7 @@ test("phone: navigation is reachable and pages do not overflow horizontally", as
     ["Mentions", "/mentions"],
     ["Alerts", "/alerts"],
     ["Analytics", "/analytics"],
+    ["Visuals", "/visuals"],
     ["Reports", "/reports"],
     ["Monitoring", "/monitoring"],
   ] as const) {

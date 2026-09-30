@@ -1,4 +1,4 @@
-import { and, count, eq, isNull } from "drizzle-orm";
+import { and, count, eq, isNull, ne } from "drizzle-orm";
 import type { Db } from "../client";
 import { organizationMemberships, organizations } from "../schema/organizations";
 import { users } from "../schema/users";
@@ -159,6 +159,16 @@ export async function anonymizeUser(db: Db, userId: string): Promise<void> {
  * acceptInvitation already use for their own multi-step invariants) gets
  * both guarantees at once: either everything commits together, or the
  * account is left fully untouched.
+ *
+ * Also revokes every organizationMemberships row for this user — without
+ * it, a deleted account kept showing up as an "active" member (rendered
+ * as the anonymized "Deleted User" placeholder) in every org's Settings >
+ * Members list forever, and kept inflating captureFeatureUsageSnapshot's
+ * usersCount, since neither query filters on the user row's own
+ * deletedAt. The route already blocks deletion while the caller is a
+ * sole owner of any org (listSoleOwnedOrganizations), so revoking here
+ * unconditionally — unlike revokeMembership's own admin-facing path —
+ * can never leave an org ownerless.
  */
 export async function deleteUserAccount(
   db: Db,
@@ -176,6 +186,15 @@ export async function deleteUserAccount(
         targetId: userId,
       });
     }
+    await txDb
+      .update(organizationMemberships)
+      .set({ status: "revoked", updatedAt: new Date() })
+      .where(
+        and(
+          eq(organizationMemberships.userId, userId),
+          ne(organizationMemberships.status, "revoked"),
+        ),
+      );
     await revokeAllSessionsForUser(txDb, userId);
   });
 }

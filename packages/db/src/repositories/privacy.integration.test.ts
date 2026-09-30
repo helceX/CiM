@@ -218,6 +218,53 @@ describe("privacy repository (integration)", () => {
     expect(after).toContain(soleOwnedOrgId);
   });
 
+  it("revokes every membership row for the deleted user, so they stop counting as an active member", async () => {
+    // Regression: deleteUserAccount used to anonymize the user and revoke
+    // sessions without touching organizationMemberships at all — the
+    // deleted account kept showing up as an "active" member (rendered as
+    // the anonymized "Deleted User" placeholder) in every org's Settings
+    // list, and kept inflating captureFeatureUsageSnapshot's usersCount,
+    // forever.
+    const [target] = await db
+      .insert(users)
+      .values({
+        email: `membership-revoke-target-${Date.now()}@example.com`,
+        passwordHash: "unused-in-this-test",
+        firstName: "Departing",
+        lastName: "Member",
+        emailVerifiedAt: new Date(),
+      })
+      .returning();
+    if (!target) throw new Error("failed to create test user");
+
+    await db.insert(organizationMemberships).values({
+      organizationId: sharedOrgId,
+      userId: target.id,
+      role: "member",
+      status: "active",
+    });
+
+    try {
+      await deleteUserAccount(db, target.id, [sharedOrgId]);
+
+      const [membership] = await db
+        .select()
+        .from(organizationMemberships)
+        .where(
+          and(
+            eq(organizationMemberships.organizationId, sharedOrgId),
+            eq(organizationMemberships.userId, target.id),
+          ),
+        );
+      expect(membership?.status).toBe("revoked");
+    } finally {
+      await db
+        .delete(organizationMemberships)
+        .where(eq(organizationMemberships.userId, target.id));
+      await db.delete(users).where(eq(users.id, target.id));
+    }
+  });
+
   it("rolls back the whole deletion, including anonymization, if any audit-log write fails", async () => {
     // Regression: deleteUserAccount wraps anonymize + the per-org audit-log
     // loop + session revocation in one transaction specifically so a

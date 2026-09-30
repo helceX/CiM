@@ -16,17 +16,25 @@
 # every base image) rather than a compiled dist/. So the runner stage
 # copies the whole built monorepo rather than a pruned subset.
 #
-# Runs via `pnpm --filter @cim/worker start`, which runs src/index.ts
-# directly through tsx (same as the "dev" script, minus --watch) rather
-# than `node dist/index.js` — tsconfig.base.json sets moduleResolution:
-# "Bundler" for the whole monorepo (apps/web's imports go through Next's
-# own bundler; every other package is consumed as raw .ts, never as
-# compiled output), so apps/worker/src's extensionless relative imports
-# (e.g. `from "./redis"`) compile fine but are NOT valid specifiers under
-# Node's own strict ESM resolution — `node dist/index.js` throws
-# ERR_MODULE_NOT_FOUND on the first one it hits. `pnpm build`/tsc still
-# runs below as a real type-check gate; its dist/ output just isn't the
-# thing that gets executed.
+# Runs src/index.ts directly through tsx's own binary (same as the "dev"
+# script, minus --watch) rather than `node dist/index.js` —
+# tsconfig.base.json sets moduleResolution: "Bundler" for the whole
+# monorepo (apps/web's imports go through Next's own bundler; every other
+# package is consumed as raw .ts, never as compiled output), so
+# apps/worker/src's extensionless relative imports (e.g. `from "./redis"`)
+# compile fine but are NOT valid specifiers under Node's own strict ESM
+# resolution — `node dist/index.js` throws ERR_MODULE_NOT_FOUND on the
+# first one it hits. `pnpm build`/tsc still runs below as a real
+# type-check gate; its dist/ output just isn't the thing that gets
+# executed.
+#
+# CMD calls the tsx binary directly (not via `pnpm run`/`pnpm exec`):
+# pnpm's own invocation goes through corepack first to verify the pinned
+# package-manager version, which needs to write to a cache under $HOME —
+# the non-root `worker` user below has no real home directory
+# (`adduser --system` sets HOME=/nonexistent), so that write fails with
+# EACCES the moment the container starts. Going straight to tsx's binary
+# skips corepack — and pnpm — entirely at runtime.
 
 FROM node:22-bookworm-slim AS base
 RUN corepack enable
@@ -61,7 +69,6 @@ RUN pnpm --filter @cim/reports exec playwright install --with-deps chromium
 
 # --- runner: whole built monorepo (see note above on why) ---
 FROM node:22-bookworm-slim AS runner
-RUN corepack enable
 WORKDIR /repo
 ENV NODE_ENV=production
 ENV PLAYWRIGHT_BROWSERS_PATH=/repo/.playwright-browsers
@@ -72,4 +79,4 @@ RUN addgroup --system --gid 1001 worker \
 COPY --from=builder --chown=worker:worker /repo ./
 
 USER worker
-CMD ["pnpm", "--filter", "@cim/worker", "start"]
+CMD ["apps/worker/node_modules/.bin/tsx", "apps/worker/src/index.ts"]

@@ -35,6 +35,7 @@ import { evaluateCompetitorAlerts } from "./alerts/evaluate-competitor";
 import { evaluateCreatorSpikeAlerts } from "./alerts/evaluate-creator-spike";
 import { processAiEnrichJob } from "./ai/enrich";
 import { processInsightGenerateJob } from "./ai/generate-insight";
+import { getEnv } from "@cim/config";
 import { applyMigrations } from "@cim/db/migrate-runner";
 
 // Nothing else applies migrations to the production database (the deploy
@@ -43,6 +44,16 @@ import { applyMigrations } from "@cim/db/migrate-runner";
 // loudly instead of running against an unmigrated schema.
 await applyMigrations();
 console.log("Database migrations are up to date.");
+
+// With the default "console" provider nothing is ever delivered — verification
+// and password-reset links only appear in this log. Fine locally, a silent
+// outage in production, so say so at every boot.
+if (process.env.NODE_ENV === "production" && getEnv().EMAIL_PROVIDER === "console") {
+  console.warn(
+    '[worker] WARNING: EMAIL_PROVIDER is "console" — no email is being sent. ' +
+      "Set EMAIL_PROVIDER=resend and EMAIL_API_KEY on this service.",
+  );
+}
 
 /**
  * One BullMQ Worker per queue (docs/architecture/ARCHITECTURE.md — worker

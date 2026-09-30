@@ -20,7 +20,7 @@ export default async function ContactPage() {
             <div className="flex justify-center">
               <IconTile icon={Mail} tone="magenta" />
             </div>
-            <h2 className="mt-6 text-2xl font-semibold">{t("card.title")}</h2>
+            <h2 className="mt-6 text-3xl font-extrabold">{t("card.title")}</h2>
             <p className="mt-2 text-[var(--mk-muted)]">{t("card.body")}</p>
             <a
               href="mailto:hello@mediaory.io"

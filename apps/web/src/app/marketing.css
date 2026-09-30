@@ -1,5 +1,4 @@
-@import "@fontsource-variable/inter";
-@import "@fontsource-variable/bricolage-grotesque";
+@import "@fontsource-variable/plus-jakarta-sans";
 
 @layer components {
 /*
@@ -77,8 +76,8 @@
   --color-info: var(--info);
   --color-info-foreground: var(--info-foreground);
 
-  --mk-display: "Bricolage Grotesque Variable", "Inter Variable", ui-sans-serif, system-ui, sans-serif;
-  --font-sans: "Inter Variable", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --mk-display: "Plus Jakarta Sans Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Plus Jakarta Sans Variable", ui-sans-serif, system-ui, -apple-system, sans-serif;
 
   position: relative;
   min-height: 100vh;
@@ -121,8 +120,10 @@
 .mk h2,
 .mk h3 {
   font-family: var(--mk-display);
-  letter-spacing: -0.03em;
-  line-height: 1.04;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  word-spacing: 0.08em;
+  line-height: 1;
   text-wrap: balance;
 }
 .mk p { text-wrap: pretty; }
@@ -354,8 +355,8 @@
 /* ---------- section helpers ---------- */
 .mk-section { position: relative; padding: 6rem 1rem; }
 .mk-wrap { margin-inline: auto; max-width: 72rem; }
-.mk-h2 { font-size: clamp(2rem, 4.6vw, 3.4rem); font-weight: 650; }
-.mk-lead { color: var(--mk-muted); font-size: clamp(1.02rem, 1.6vw, 1.2rem); line-height: 1.6; }
+.mk-h2 { font-size: clamp(2.25rem, 5.6vw, 4.25rem); font-weight: 800; }
+.mk-lead { color: var(--mk-muted); font-size: clamp(1.08rem, 1.8vw, 1.3rem); line-height: 1.55; font-weight: 500; }
 
 .mk-chip {
   display: inline-flex;

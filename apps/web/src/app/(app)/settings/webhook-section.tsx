@@ -65,6 +65,8 @@ function WebhookForm({ webhookUrl }: { webhookUrl: string | null }) {
         return;
       }
       router.refresh();
+    } catch {
+      setError("Something went wrong. Please try again.");
     } finally {
       setIsSaving(false);
     }

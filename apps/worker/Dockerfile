@@ -1,0 +1,62 @@
+# apps/worker/Dockerfile — production image for the BullMQ worker.
+#
+# Build from the MONOREPO ROOT so the build context includes the
+# workspace packages this app imports (@cim/db, @cim/ai, ...):
+#
+#   docker build -f apps/worker/Dockerfile -t cim-worker .
+#
+# Not build-tested in this environment (no Docker daemon available here) —
+# CI's "docker-build" job (.github/workflows/ci.yml) builds this on every
+# push/PR so breakage is caught before it reaches a real deploy.
+#
+# Unlike apps/web, this can't use a trimmed/traced output: every workspace
+# package (@cim/db, @cim/ai, ...) ships raw TypeScript as its `main` (no
+# build step — see packages/*/package.json), resolved at runtime via
+# Node's native TS support (confirmed on Node 22.22, not guaranteed on
+# every base image) rather than a compiled dist/. So the runner stage
+# copies the whole built monorepo rather than a pruned subset.
+
+FROM node:22-bookworm-slim AS base
+RUN corepack enable
+WORKDIR /repo
+
+# --- deps: install once, cached as long as lockfile/package.jsons don't change ---
+FROM base AS deps
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+COPY apps/web/package.json apps/web/package.json
+COPY apps/worker/package.json apps/worker/package.json
+COPY packages/ai/package.json packages/ai/package.json
+COPY packages/config/package.json packages/config/package.json
+COPY packages/core/package.json packages/core/package.json
+COPY packages/db/package.json packages/db/package.json
+COPY packages/ingestion/package.json packages/ingestion/package.json
+COPY packages/reports/package.json packages/reports/package.json
+COPY packages/search/package.json packages/search/package.json
+COPY packages/ui/package.json packages/ui/package.json
+COPY packages/validation/package.json packages/validation/package.json
+RUN pnpm install --frozen-lockfile
+
+# --- builder: full source, tsc build, and the Chromium binary reports need ---
+FROM deps AS builder
+COPY . .
+RUN pnpm --filter @cim/worker build
+# packages/reports (render-pdf.ts) launches headless Chromium for report
+# PDFs — install the exact browser build Playwright's pinned version
+# expects, plus the OS-level libs it needs (fonts, codecs, etc.), into a
+# fixed path so it survives into the runner stage below.
+ENV PLAYWRIGHT_BROWSERS_PATH=/repo/.playwright-browsers
+RUN pnpm --filter @cim/reports exec playwright install --with-deps chromium
+
+# --- runner: whole built monorepo (see note above on why) ---
+FROM node:22-bookworm-slim AS runner
+WORKDIR /repo
+ENV NODE_ENV=production
+ENV PLAYWRIGHT_BROWSERS_PATH=/repo/.playwright-browsers
+
+RUN addgroup --system --gid 1001 worker \
+  && adduser --system --uid 1001 worker
+
+COPY --from=builder --chown=worker:worker /repo ./
+
+USER worker
+CMD ["node", "apps/worker/dist/index.js"]

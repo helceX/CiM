@@ -4,8 +4,7 @@ import { hashToken } from "@cim/core";
 import {
   db,
   findUserById,
-  findValidVerificationTokenByHash,
-  consumeVerificationToken,
+  claimVerificationToken,
   markUserVerified,
 } from "@cim/db";
 import { createUserSession } from "@/lib/session";
@@ -18,7 +17,9 @@ export async function POST(request: Request) {
   }
 
   const tokenHash = hashToken(parsed.data.token);
-  const tokenRow = await findValidVerificationTokenByHash(db, tokenHash);
+  // Atomic check-and-consume: of two concurrent requests with one link only
+  // one gets the token, so only one session is ever minted from it.
+  const tokenRow = await claimVerificationToken(db, tokenHash);
   if (!tokenRow) {
     return NextResponse.json({ error: "This link is invalid or has expired." }, { status: 400 });
   }
@@ -35,7 +36,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "This link is invalid or has expired." }, { status: 400 });
   }
 
-  await consumeVerificationToken(db, tokenRow.id);
   await markUserVerified(db, tokenRow.userId);
   await createUserSession(tokenRow.userId, {
     userAgent: request.headers.get("user-agent") ?? undefined,

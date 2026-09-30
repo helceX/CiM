@@ -542,6 +542,23 @@ export function MentionDetailDrawer({
                   onChange={(e) => handleAssign(e.target.value)}
                 >
                   <option value="">Unassigned</option>
+                  {/* `members` is only currently-active org members (page.tsx
+                      filters it before passing it down), but a mention can
+                      still be assigned to someone who's since left the org
+                      or had their account deleted — assignMention only
+                      guards *new* assignments, it never clears an existing
+                      one when membership changes. Without this, the select's
+                      value wouldn't match any option below and the browser
+                      would silently fall back to displaying "Unassigned",
+                      hiding a real assignment. detail.assigneeName already
+                      carries the correct name via a live join (mentions.ts),
+                      same as the list view's own assigneeName column. */}
+                  {detail.mention.assignedToUserId &&
+                  !members.some((m) => m.userId === detail.mention.assignedToUserId) ? (
+                    <option value={detail.mention.assignedToUserId} disabled>
+                      {detail.assigneeName ?? "Former member"} (no longer a member)
+                    </option>
+                  ) : null}
                   {members.map((member) => (
                     <option key={member.userId} value={member.userId}>
                       {member.firstName} {member.lastName}

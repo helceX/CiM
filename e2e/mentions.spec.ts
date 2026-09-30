@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { test, expect } from "@playwright/test";
 import { registerAndOnboard } from "./helpers";
+import { latestEmailLinkFor } from "./db";
 import { simulateCrawl } from "./simulate";
 
 /**
@@ -137,5 +138,90 @@ test.describe("mentions", () => {
     expect((await deleteResponse).ok()).toBe(true);
     await expect(drawer.getByText("Flagging this for legal review")).not.toBeVisible();
     await expect(drawer.getByText("No comments yet.")).toBeVisible();
+  });
+
+  /**
+   * Regression: the assignee <select> (mention-detail-drawer.tsx) used to
+   * build its <option> list from only currently-active members, but never
+   * cleared assignedToUserId when a member's access was later revoked — so
+   * once that happened, the select's value matched no option and the
+   * browser silently fell back to displaying "Unassigned", hiding that the
+   * mention was still actually assigned to the departed teammate. Exercises
+   * the real lifecycle through the same invite/accept/revoke flow
+   * members.spec.ts uses, not a fabricated membership row.
+   */
+  test("keeps naming a former member as assignee after their membership is revoked", async ({
+    page,
+    browser,
+  }) => {
+    await simulateCrawl("Daily Tech Wire");
+
+    const unique = `${Date.now()}-${Math.floor(Math.random() * 100000)}`;
+    const inviteeEmail = `e2e-assignee-${unique}@example.com`;
+
+    await page.goto("/settings");
+    await page.getByRole("button", { name: "Invite member" }).click();
+    await page.getByLabel("Email").fill(inviteeEmail);
+    await page.getByLabel("Role").selectOption({ label: "Analyst" });
+    await page.getByRole("button", { name: "Send invite" }).click();
+    await expect(page.getByText(inviteeEmail)).toBeVisible({ timeout: 5000 });
+
+    const inviteLink = latestEmailLinkFor(inviteeEmail, "invitation");
+    const inviteeContext = await browser.newContext();
+    const inviteePage = await inviteeContext.newPage();
+    await inviteePage.goto(inviteLink);
+    await inviteePage.getByLabel("First name").fill("Ivy");
+    await inviteePage.getByLabel("Last name").fill("Departing");
+    await inviteePage.getByLabel("Password").fill("Sup3rSecret!");
+    await inviteePage.getByRole("button", { name: "Accept invitation" }).click();
+    await expect(inviteePage).toHaveURL(/\/dashboard/, { timeout: 5000 });
+    await inviteeContext.close();
+
+    await page.goto("/mentions");
+    await page.getByLabel("Search").fill("Daily Tech Wire");
+    await page.getByLabel("Search").press("Enter");
+    const row = page.getByRole("row", { name: /Daily Tech Wire/ }).first();
+    await expect(row).toBeVisible({ timeout: 5000 });
+    await row.click();
+
+    const drawer = page.getByRole("dialog");
+    await expect(drawer).toBeVisible();
+    const assignResponse = page.waitForResponse(
+      (response) =>
+        response.url().includes("/assign") && response.request().method() === "PATCH",
+    );
+    await drawer.getByLabel("Assigned to").selectOption({ label: "Ivy Departing" });
+    expect((await assignResponse).ok()).toBe(true);
+
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("dialog")).not.toBeVisible();
+
+    await page.goto("/settings");
+    await expect(page.getByText(inviteeEmail)).toBeVisible();
+    await page.getByRole("button", { name: "Revoke" }).click();
+    const revokeResponse = page.waitForResponse(
+      (response) =>
+        /\/api\/organizations\/members\/.+$/.test(response.url()) &&
+        response.request().method() === "DELETE" &&
+        response.ok(),
+    );
+    await page.getByRole("button", { name: "Revoke access" }).click();
+    await revokeResponse;
+
+    await page.goto("/mentions");
+    await page.getByLabel("Search").fill("Daily Tech Wire");
+    await page.getByLabel("Search").press("Enter");
+    const revisitedRow = page.getByRole("row", { name: /Daily Tech Wire/ }).first();
+    await expect(revisitedRow).toBeVisible({ timeout: 5000 });
+    await revisitedRow.click();
+
+    const reopenedDrawer = page.getByRole("dialog");
+    await expect(reopenedDrawer).toBeVisible();
+    const assigneeSelect = reopenedDrawer.getByLabel("Assigned to");
+    const selectedLabel = await assigneeSelect.evaluate(
+      (el: HTMLSelectElement) => el.options[el.selectedIndex]?.textContent,
+    );
+    expect(selectedLabel).toContain("Ivy Departing");
+    expect(selectedLabel).not.toBe("Unassigned");
   });
 });

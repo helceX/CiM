@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Skeleton } from "@cim/ui";
+import { ResendVerificationForm } from "./resend-form";
 
 type Status = "verifying" | "success" | "error" | "no-token";
 
@@ -59,15 +60,20 @@ export function VerifyEmailClient() {
 
   if (status === "no-token") {
     return (
-      <p className="text-sm text-muted-foreground">
-        Open the verification link from your email to activate your account.
-      </p>
+      <div className="flex flex-col gap-4">
+        <p className="text-sm text-muted-foreground">
+          Open the verification link from your email to activate your account. Didn&apos;t get it? We
+          can send a new one.
+        </p>
+        <ResendVerificationForm />
+      </div>
     );
   }
 
   return (
-    <p className="text-sm text-danger">
-      This link is invalid or has expired. Request a new one from the sign-in page.
-    </p>
+    <div className="flex flex-col gap-4">
+      <p className="text-sm text-danger">This link is invalid or has expired. Request a new one below.</p>
+      <ResendVerificationForm />
+    </div>
   );
 }

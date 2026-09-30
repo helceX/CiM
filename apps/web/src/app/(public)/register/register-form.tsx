@@ -61,6 +61,12 @@ export function RegisterForm() {
         <p className="text-sm text-muted-foreground">
           We sent a verification link to your inbox. Click it to activate your account.
         </p>
+        <p className="text-sm text-muted-foreground">
+          Nothing after a few minutes?{" "}
+          <Link href="/verify-email" className="text-primary underline underline-offset-2">
+            Send it again
+          </Link>
+        </p>
       </div>
     );
   }

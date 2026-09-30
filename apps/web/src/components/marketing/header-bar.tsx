@@ -74,7 +74,7 @@ export function HeaderBar({
         </nav>
 
         <div className="flex items-center gap-2">
-          {languageSwitcher}
+          <div className="hidden sm:block">{languageSwitcher}</div>
           <Link href="/login" className="mk-btn mk-btn-ghost mk-btn-sm hidden sm:inline-flex">
             {signIn}
           </Link>
@@ -110,6 +110,7 @@ export function HeaderBar({
                 </Link>
               </li>
             ))}
+            {languageSwitcher ? <li className="mt-2 px-3 sm:hidden">{languageSwitcher}</li> : null}
             <li className="mt-2">
               <Link href="/login" onClick={() => setOpen(false)} className="block rounded-xl px-3 py-3 text-base font-medium text-zinc-100 hover:bg-white/5">
                 {signIn}

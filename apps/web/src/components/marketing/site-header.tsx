@@ -1,5 +1,6 @@
 import { getTranslations } from "next-intl/server";
 import { HeaderBar } from "./header-bar";
+import { LanguageSwitcher } from "./language-switcher";
 
 const LINKS = [
   { href: "/features", key: "features" },
@@ -19,6 +20,7 @@ export async function MarketingHeader() {
       homeLabel={t("home")}
       menuLabel={t("openMenu")}
       closeLabel={t("closeMenu")}
+      languageSwitcher={<LanguageSwitcher label={t("language")} />}
     />
   );
 }

@@ -20,7 +20,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   }
 
   return (
-    <div className="flex min-h-screen flex-col">
+    <div lang="en" className="flex min-h-screen flex-col">
       <header className="flex items-center justify-between border-b border-border px-6 py-4">
         <div>
           <span className="text-sm font-semibold text-foreground">Mediaory Admin</span>

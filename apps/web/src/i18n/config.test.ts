@@ -25,8 +25,10 @@ describe("resolveLocale", () => {
     expect(resolveLocale({}, supported)).toBe("en");
   });
 
-  it("only offers English until a second catalog ships", () => {
-    expect(resolveLocale({ acceptLanguage: "tr" })).toBe("en");
+  it("negotiates among the declared locales and defaults to English", () => {
+    expect(resolveLocale({ acceptLanguage: "tr-TR,tr;q=0.9" })).toBe("tr");
+    expect(resolveLocale({ acceptLanguage: "fr-FR" })).toBe("en");
+    expect(resolveLocale({ cookie: "tr", acceptLanguage: "en" })).toBe("tr");
   });
 });
 

@@ -1,7 +1,13 @@
-export const LOCALES = ["en"] as const;
+export const LOCALES = ["en", "tr"] as const;
 export type Locale = (typeof LOCALES)[number];
 export const DEFAULT_LOCALE: Locale = "en";
 export const LOCALE_COOKIE = "NEXT_LOCALE";
+
+/** Each language names itself, so a visitor can find theirs in any UI language. */
+export const LOCALE_LABELS: Record<Locale, string> = {
+  en: "English",
+  tr: "Türkçe",
+};
 
 export function isLocale(value: string): value is Locale {
   return (LOCALES as readonly string[]).includes(value);

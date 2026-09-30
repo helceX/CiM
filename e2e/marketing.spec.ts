@@ -66,3 +66,15 @@ test("reduced motion: content is visible without any reveal animation", async ({
   expect(await page.locator('[data-reveal="hidden"]').count()).toBe(0);
   await context.close();
 });
+
+test("language switcher: English by default, Turkish on request, remembered", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator("html")).toHaveAttribute("lang", "en");
+  await page.getByLabel("Language").selectOption("tr");
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("Hikâyeyi görün");
+  await expect(page.locator("html")).toHaveAttribute("lang", "tr");
+  await page.goto("/pricing");
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("ödeyin");
+  await page.getByLabel("Dil").selectOption("en");
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("Pay for what you");
+});

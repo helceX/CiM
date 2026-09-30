@@ -15,7 +15,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   const unreadCount = await countUnreadNotifications(db, context.organizationId, context.userId);
 
   return (
-    <div className="flex min-h-screen">
+    <div lang="en" className="flex min-h-screen">
       <AppSidebar />
       <div className="flex flex-1 flex-col">
         <AppTopbar

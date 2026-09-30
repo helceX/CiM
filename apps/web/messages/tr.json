@@ -1,0 +1,365 @@
+{
+  "meta": {
+    "title": "Mediaory — İletişim İstihbaratı Platformu",
+    "description": "Dünyanın markanız hakkında söylediklerini izleyin, anlayın ve harekete geçin. Haber, web ve sosyal medya tek döngüde: izle, filtrele, anla, uyar, raporla."
+  },
+  "nav": {
+    "features": "Özellikler",
+    "solutions": "Çözümler",
+    "security": "Güvenlik",
+    "resources": "Kaynaklar",
+    "pricing": "Fiyatlandırma",
+    "signIn": "Giriş yap",
+    "getStarted": "Başlayın",
+    "home": "Mediaory ana sayfa",
+    "openMenu": "Menüyü aç",
+    "closeMenu": "Menüyü kapat",
+    "skip": "İçeriğe geç",
+    "language": "Dil"
+  },
+  "footer": {
+    "rights": "Tüm hakları saklıdır.",
+    "security": "Güvenlik",
+    "resources": "Kaynaklar",
+    "contact": "İletişim",
+    "tagline": "Önce bilmesi — ve nedenini de bilmesi — gereken ekipler için iletişim istihbaratı.",
+    "product": "Ürün",
+    "trust": "Şirket",
+    "account": "Hesap"
+  },
+  "common": {
+    "startMonitoring": "İzlemeye başla",
+    "seeHowItWorks": "Nasıl çalışır?",
+    "talkToUs": "Bizimle konuşun",
+    "comingSoon": "Çok yakında",
+    "learnMore": "Daha fazla bilgi",
+    "exploreFeatures": "Tüm özellikleri keşfedin"
+  },
+  "home": {
+    "hero": {
+      "eyebrow": "İletişim istihbaratı platformu",
+      "titleA": "Hikâyeyi görün,",
+      "titleB": "manşet olmadan önce.",
+      "subtitle": "Mediaory haber, web ve sosyal medyayı günün her saati izler, gürültüyü hikâyelere dönüştürür ve ekibinize neyin önemli olduğunu kanıtlarıyla birlikte söyler.",
+      "note": "İlk izlemenizi üç dakikadan kısa sürede kurun.",
+      "screenAlt": "Mediaory panosu: bahsetme toplamları, son 24 saatin yapay zekâ özeti ve bahsetme trendi.",
+      "chipMentions": "38 bahsetme · son 7 gün",
+      "chipAi": "Yapay zekâ özeti · %90 güven"
+    },
+    "sources": {
+      "label": "Kitlenizin gerçekten konuştuğu yerleri izler",
+      "items": ["Haber", "Web", "RSS akışları", "Site haritaları", "Sosyal medya", "Video", "Podcast", "Forumlar", "Yorumlar", "Özel API’ler"]
+    },
+    "story": {
+      "eyebrow": "Kesintisiz tek bir döngü",
+      "title": "Gürültüden karara,",
+      "titleAccent": "beş hamlede.",
+      "lead": "“Hakkımızda ne konuşuluyor?” sorusunun, yönetimin harekete geçebileceği bir yanıta nasıl dönüştüğünü kaydırarak izleyin.",
+      "listLabel": "Mediaory adım adım nasıl çalışır",
+      "steps": {
+        "watch": {
+          "kicker": "İzle",
+          "title": "Neyi izleyeceğini söyleyin.",
+          "body": "Markalar, yöneticiler, rakipler, kampanyalar. Basit etiketlerle ya da tam Boolean sözdizimiyle sorgu oluşturun — iki yolla da aynı sorgu — ve kaynaklarınızı seçin.",
+          "alt": "Dahil etme, hariç tutma ve tam ifade alanları ile kaynak kutucuklarını içeren yeni izleme formu."
+        },
+        "filter": {
+          "kicker": "Filtrele",
+          "title": "Gürültüyü eleyin, sinyali tutun.",
+          "body": "Duygu, öncelik, tarih ve sorumluya göre filtreleyin. Yinelenenler tek satırda toplanır; otuz mecrada çıkan haber tüm kaynaklarıyla birlikte bir kez görünür.",
+          "alt": "Arama ile duygu, öncelik, tarih ve atama filtrelerini içeren bahsetmeler tablosu."
+        },
+        "understand": {
+          "kicker": "Anla",
+          "title": "Neden eşleştiğini — ve ne anlama geldiğini bilin.",
+          "body": "Her bahsetme neden yakalandığını açıklar; güveni ve yöntemiyle birlikte yapay zekâ özeti taşır. Kara kutu yok, kanıtsız iddia yok.",
+          "alt": "Eşleşme nedenini, duyguyu, güvenli yapay zekâ özetini, etiketleri ve geri bildirimi gösteren bahsetme detay paneli."
+        },
+        "alert": {
+          "kicker": "Uyar",
+          "title": "Önemli olan için bildirim alın.",
+          "body": "Anahtar kelime, yüksek ilgi, ani artış, duygu değişimi, yükselen konu, rakip ve içerik üreticisi uyarıları — bekleme süreleriyle, gelen kutunuz sakin kalsın.",
+          "alt": "Anahtar kelime, yüksek ilgi, ani artış, duygu değişimi, yükselen konu ve rakip uyarı türlerini listeleyen yeni uyarı formu."
+        },
+        "report": {
+          "kicker": "Raporla",
+          "title": "Yönetime bitmiş bir rapor sunun.",
+          "body": "Haftalık özetler, izleme genel bakışları veya özel tasarım. PDF, CSV ya da XLSX olarak dışa aktarın; ya da zamanlayıp unutun.",
+          "alt": "Haftalık özet, izleme genel bakışı ve özel şablonları içeren yeni rapor formu."
+        }
+      }
+    },
+    "why": {
+      "eyebrow": "Güven üzerine kurulu",
+      "title": "Yönetim kurulunda savunabileceğiniz istihbarat.",
+      "lead": "Hızlı olmak kolay. Doğru olmak — ve çalışmanızı göstermek — ürünün kendisi.",
+      "cards": {
+        "grounded": {
+          "title": "Dayanaklı yapay zekâ",
+          "body": "Her içgörü kanıt, kaynak ve güven skoru ile gelir. Veri bir iddiayı desteklemiyorsa Mediaory o iddiayı yapmaz.",
+          "meta": "Güven %90 · 21 bahsetmeye dayalı"
+        },
+        "honest": {
+          "title": "Dürüst veri",
+          "body": "Erişim ve etkileşim, kaynak bildirmiyorsa “Mevcut değil” olarak görünür. Sessizce tahmin edilmez.",
+          "pill": "Mevcut değil"
+        },
+        "alerts": {
+          "title": "Boşuna alarm çalmayan uyarılar",
+          "body": "Gruplama, eşik ve bekleme süreleri, yinelenenlerin sağanağını açmaya değer birkaç sinyale dönüştürür."
+        },
+        "teams": {
+          "title": "Ekipler için tasarlandı",
+          "body": "Kuruluşlar, projeler ve rol tabanlı erişim. Bahsetmeleri atayın, yorumlayın, etiketleyin ve devredin — analistten yöneticiye."
+        },
+        "social": {
+          "title": "Sosyal dinleme",
+          "body": "Konuşmalar, yazarlar ve etiketler tek görünümde — sizi hiç etiketlemeyen, kendiliğinden gelişen marka konuşmaları da dahil."
+        },
+        "control": {
+          "title": "Verileriniz, sizin kontrolünüzde",
+          "body": "Kiracı izolasyonu, saklama politikaları, veri dışa aktarma ve silme — gizlilik, söz değil işletebileceğiniz bir özellik."
+        }
+      }
+    },
+    "devices": {
+      "eyebrow": "Çalıştığınız her yerde",
+      "title": "Masada. Toplantıda. Yolda.",
+      "lead": "Aynı sinyal, geniş bir analist çalışma alanından, mesai dışında bir şey patladığında cebinizdeki telefona kadar sizinle gelir.",
+      "laptopAlt": "Bahsetme hacmi ve duygu trendi grafiklerini içeren Mediaory analitik görünümü.",
+      "note": "Telefon ekranı temsilidir."
+    },
+    "soon": {
+      "eyebrow": "Yol haritasında",
+      "title": "Mediaory’nin sıradaki durağı.",
+      "lead": "Kullanıcılarımızla birlikte, şeffaf biçimde geliştiriyoruz. Bunlar şu an tasarım aşamasında — sizin için neyin faydalı olacağını bize söyleyin.",
+      "items": {
+        "groups": {
+          "title": "Marka grupları",
+          "body": "Kendi markalarınızı ve rakiplerinizi ayrı ayrı kümeleyin, iki tarafı tek görünümde karşılaştırın."
+        },
+        "charts": {
+          "title": "Grafik ve tablo oluşturucu",
+          "body": "İzleme verilerinizden kendi grafik ve tablolarınızı oluşturun, doğrudan raporlarınıza ekleyin."
+        },
+        "credits": {
+          "title": "Takip ettiğiniz kadar ödeyin",
+          "body": "Herkese uyan sabit paketler yerine, gerçekten izlediğiniz anahtar kelimelere göre fiyatlanan bir kredi sistemi."
+        }
+      }
+    },
+    "cta": {
+      "title": "Önce bilin. Nedenini de bilin.",
+      "body": "Bir izleme kurun, ilk bahsetmelerin düşmesini izleyin ve bir günün ne kadar sakinleşebileceğini görün.",
+      "primary": "İzlemeye başla",
+      "secondary": "Bizimle konuşun"
+    }
+  },
+  "devices": {
+    "phone": {
+      "now": "şimdi",
+      "alertKind": "Ani artış uyarısı",
+      "alertTitle": "Marka bahsetmeleri hızla artıyor",
+      "alertBody": "Saatlik hacim, son 24 saatin ortalamasının belirgin biçimde üzerinde.",
+      "mentions": "Son bahsetmeler",
+      "positive": "olumlu",
+      "neutral": "nötr",
+      "negative": "olumsuz",
+      "m1": "Northwind Blog Network yeni bir bölgeye açılıyor",
+      "m2": "Analistler Northwind Blog Network’ün pazar konumunu tartışıyor",
+      "m3": "Müşteriler Northwind Blog Network’ün son güncellemesine tepki veriyor",
+      "m4": "Northwind Blog Network çeyrek sonuçlarını açıkladı"
+    }
+  },
+  "features": {
+    "hero": {
+      "eyebrow": "Özellikler",
+      "title": "Ham haberden karara giden her şey,",
+      "titleAccent": "tek döngüde.",
+      "lead": "Beş aracı ve bir tabloyu birbirine bağlamaktan bıkmış iletişim, PR ve marka ekipleri için."
+    },
+    "rows": {
+      "monitoring": {
+        "title": "İzleme ve sorgu oluşturucu",
+        "body": "Markaları, ürünleri, yöneticileri, rakipleri ve konuları etiket tabanlı basit modla ya da tam Boolean sözdizimiyle takip edin — iki yolla da aynı sorgu. Kaydetmeden önce sorgunun neleri yakalayacağını önizleyin.",
+        "points": ["Dahil etme, hariç tutma ve tam ifadeler", "Haber, web, sosyal medya, video, podcast, forum ve yorumlar", "Sorgu kalitesi önerileri"],
+        "alt": "Yeni izleme formu."
+      },
+      "dedupe": {
+        "title": "Tekilleştirme ve hikâye kümeleme",
+        "body": "30 mecradan çıkan aynı haber, tüm kaynaklarıyla birlikte bir kez görünür — 30 ayrı uyarı olarak değil. Duygu, öncelik, tarih ve sorumluya göre filtreleyin, her şeyin içinde arayın.",
+        "points": ["Tek hikâye, tüm kaynaklar", "Tam metin arama", "Ekip olarak atayın, etiketleyin, yorumlayın"],
+        "alt": "Filtreli bahsetmeler tablosu."
+      },
+      "ai": {
+        "title": "Dayanaklı yapay zekâ içgörüleri",
+        "body": "Yönetici özetleri, risk sinyalleri ve öneriler — her iddia arkasındaki bahsetmelere ve metriklere bağlı, güven ve yöntem gösterilir. Takip sorularını düz dille sorun.",
+        "points": ["Her bahsetmede “Neden eşleşti?”", "Her içgörüde güven, yöntem ve kanıt", "Verilerinize dayalı çok turlu yapay zekâ asistanı"],
+        "alt": "Yapay zekâ özetli bir bahsetme paneli."
+      },
+      "alerts": {
+        "title": "Boşuna alarm çalmayan uyarılar",
+        "body": "Ani artış, duygu değişimi, yükselen konu, rakip ve içerik üreticisi uyarıları; gruplama ve bekleme süreleriyle — uygulama içinde, e-postayla ya da webhook ile Slack ve Teams’e iletilir.",
+        "points": ["Yedi uyarı türü", "Bekleme süreleri ve gruplama", "E-posta, uygulama içi ve webhook iletimi"],
+        "alt": "Yeni uyarı formu."
+      },
+      "analytics": {
+        "title": "“Peki ne olacak?” sorusunu yanıtlayan analitik",
+        "body": "Seçtiğiniz dönemde bahsetme hacmi, duygu trendi, kaynak dağılımı ve konular — ayrıca bir haberin platformlar arasında nasıl yayıldığını gösteren görünüm.",
+        "points": ["Zaman içinde hacim ve duygu", "Kaynak ve konu kırılımları", "Sosyal dinleme panosu"],
+        "alt": "Analitik görünümü."
+      },
+      "reports": {
+        "title": "Raporlar sizin takviminizde",
+        "body": "Günlük özetler, haftalık ya da aylık raporlar; şablonlardan veya tamamen özel rapor oluşturucudan — PDF, CSV ya da XLSX olarak dışa aktarılır, bağlantıyla paylaşılır.",
+        "points": ["PDF, CSV ve XLSX", "Zamanlanmış gönderim", "Paydaşlar için paylaşım bağlantıları"],
+        "alt": "Yeni rapor formu."
+      }
+    },
+    "more": {
+      "title": "Ve gerçek ekipler için işe yarayan ayrıntılar.",
+      "items": [
+        { "title": "Roller ve izinler", "body": "Yerleşik roller ve tanımlayabileceğiniz özel roller." },
+        { "title": "Dahili API anahtarları", "body": "Mediaory’yi yığınızın geri kalanına bağlayın." },
+        { "title": "Webhook’lar", "body": "Uyarıları Slack’e, Teams’e veya kendi sistemlerinize gönderin." },
+        { "title": "Veri saklama", "body": "Bahsetmelerin ne kadar tutulacağını belirleyin, otomatik uygulanır." },
+        { "title": "Komut paleti", "body": "Tek tuşla her yere gidin." },
+        { "title": "Açık ve koyu tema", "body": "Gözünüze ve işletim sisteminize saygı duyan bir çalışma alanı." }
+      ]
+    }
+  },
+  "solutions": {
+    "hero": {
+      "eyebrow": "Çözümler",
+      "title": "Tek platform,",
+      "titleAccent": "önce bilmesi gereken her ekip için.",
+      "lead": "Kurumsal iletişim, PR ajansları ve marka ekipleri aynı soruyu sorar. Mediaory her biri için yanıtlar."
+    },
+    "personas": {
+      "comms": {
+        "title": "Kurumsal iletişim",
+        "body": "Gelişen haberleri erken yakalayın, bir duyurudan sonra duygunun nasıl değiştiğini görün ve yönetimi kaynaklarını gösteren bir raporla bilgilendirin.",
+        "points": ["Ani artış ve duygu değişimlerinde erken uyarı", "Yönetime hazır brifingler ve zamanlanmış raporlar", "Kanıtlı risk sinyalleri"]
+      },
+      "pr": {
+        "title": "PR ve ajanslar",
+        "body": "Birçok müşteriyi tek yerden yönetin. Ayrı projeler, rol tabanlı erişim ve paylaşım bağlantıları her hesabı düzenli, her teslimatı bir tık uzakta tutar.",
+        "points": ["Müşteri başına proje ve roller", "Ek yerine paylaşım bağlantıları", "Mecralar arası yayın takibi"]
+      },
+      "brand": {
+        "title": "Marka ve pazarlama",
+        "body": "Kampanyaları sahada anlayın — kim, hangi platformlarda, hangi tonda konuşuyor — markanızı hiç etiketlemeyen konuşmalar dahil.",
+        "points": ["Kendiliğinden gelişen marka konuşmaları", "Rakip takibi yan yana", "Trend etiketler ve öne çıkan gönderiler"]
+      },
+      "crisis": {
+        "title": "Kriz ve risk",
+        "body": "Dakikaların önemli olduğu anlarda uyarılar doğru kişilere önce ulaşır, bahsetmeler anında atanabilir ve sonraki değerlendirme için her şey kayıt altında kalır.",
+        "points": ["Ani artış ve duygu değişimi uyarıları", "Bağlam içinde atama ve yorum", "Etiket ve yorumlar bahsetmeyle birlikte saklanır"]
+      }
+    },
+    "cta": {
+      "title": "Hangisi size uygun emin değil misiniz?",
+      "body": "Ekibinizin bugün nasıl çalıştığını anlatın, size en kısa yolu gösterelim.",
+      "primary": "Bizimle konuşun",
+      "secondary": "Ücretsiz başlayın"
+    }
+  },
+  "security": {
+    "hero": {
+      "eyebrow": "Güvenlik ve güven",
+      "title": "İstihbaratınız",
+      "titleAccent": "sizin kalır.",
+      "lead": "Mediaory, neyi izlediğinizin, nasıl izlediğinizin ve kimin görebildiğinin sizin kararınız olacağı şekilde tasarlandı."
+    },
+    "pillars": {
+      "tenancy": {
+        "title": "Kiracı izolasyonu",
+        "body": "Her kuruluşun verisi kesin biçimde ayrılır. Kiracılar arası erişim, her değişiklikte çalışan otomatik bir test paketiyle denetlenir."
+      },
+      "rights": {
+        "title": "İçerik hakları",
+        "body": "Mediaory herkese açık içeriği sorumlu biçimde çeker: robots.txt’ye uyar, kendini tanıtır ve yalnızca size sinyali sunmak için gerekeni saklar."
+      },
+      "control": {
+        "title": "Veri kontrolü",
+        "body": "Saklama politikaları belirleyin, verilerinizi dışa aktarın, hesabınızı veya kuruluşunuzu silin. Veri sizin; ayrılmak bir destek talebi değil, bir düğme."
+      },
+      "secure": {
+        "title": "Varsayılan olarak güvenli",
+        "body": "Sertleştirilmiş oturumlar, CSRF koruması, hız sınırlama, SSRF’ye karşı güvenli veri çekme ve rol tabanlı izinler eklenti değil, standart gelir."
+      }
+    },
+    "cta": {
+      "title": "Güvenlik anketiniz mi var?",
+      "body": "Güvenlik ekibinize ayrıntıları memnuniyetle anlatırız.",
+      "primary": "Bize ulaşın"
+    }
+  },
+  "resources": {
+    "hero": {
+      "eyebrow": "Kaynaklar",
+      "title": "Mediaory’den",
+      "titleAccent": "en iyi şekilde yararlanın.",
+      "lead": "İlk girişten güvendiğiniz bir izleme kurulumuna giden yol için rehberler ve başvuru materyalleri."
+    },
+    "items": {
+      "start": {
+        "title": "Başlarken",
+        "body": "İlk izleme sorgunuzu kurun ve canlı sonuçları üç dakikadan kısa sürede görün — kayıttan hemen sonra karşılama akışında adım adım anlatılır."
+      },
+      "syntax": {
+        "title": "Sorgu sözdizimi",
+        "body": "Boolean arama kolaylaştı: hassas izleme sorguları için AND, OR, NOT ve tam ifadeler — ya da etiket modunda kalıp hiç operatör yazmayın."
+      },
+      "api": {
+        "title": "API ve webhook’lar",
+        "body": "Mediaory API’si ve webhook olaylarının başvuru belgeleri, herkese açık API sürümüyle birlikte yayınlanacak.",
+        "badge": "Çok yakında"
+      }
+    }
+  },
+  "pricing": {
+    "hero": {
+      "eyebrow": "Fiyatlandırma",
+      "title": "Gerçekten takip ettiğiniz kadar",
+      "titleAccent": "ödeyin.",
+      "lead": "Sabit paketler yerine basit, kullanıma dayalı bir model üzerinde çalışıyoruz. Erken kullanıcılar şekillendirmeye yardım eder ve yayına girdiğinde ilk sırada yer alır."
+    },
+    "idea": {
+      "title": "Nereye gidiyoruz",
+      "items": {
+        "credits": {
+          "title": "Paket değil, kredi",
+          "body": "İzlediğiniz şeye harcadığınız tek bir kredi havuzu — tek bir ekstra özellik için daha büyük pakete geçmek yok."
+        },
+        "keywords": {
+          "title": "Anahtar kelimeye göre fiyat",
+          "body": "Maliyet takip ettiğiniz anahtar kelimeleri izler; odaklı bir kurulum uygun kalır, geniş bir kurulum öngörülebilir biçimde ölçeklenir."
+        },
+        "free": {
+          "title": "Ücretsiz başlayın",
+          "body": "Fiyatlar açıklanmadan önce bugün hesap oluşturabilir ve ilk projenizi kurabilirsiniz."
+        }
+      }
+    },
+    "cta": {
+      "title": "Şekillendirmek ister misiniz?",
+      "body": "Neyi izlediğinizi ve ne kadar ödemeyi beklediğinizi söyleyin. Her yanıtı okuyoruz.",
+      "primary": "İletişime geçin",
+      "secondary": "Ücretsiz başlayın"
+    }
+  },
+  "contact": {
+    "hero": {
+      "eyebrow": "İletişim",
+      "title": "Bir insanla konuşun,",
+      "titleAccent": "forma değil.",
+      "lead": "Ekibiniz için Mediaory hakkında bir sorunuz, bir güvenlik incelemesi ya da bir fikriniz mi var? Yazın, size dönelim."
+    },
+    "card": {
+      "title": "Bize e-posta gönderin",
+      "body": "Ekibe ulaşmanın en hızlı yolu.",
+      "note": "Yönlendirmeli bir iletişim formu sonraki bir sürümde gelecek."
+    }
+  }
+}

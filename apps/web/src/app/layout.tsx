@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "CiM — Communication Intelligence Platform",
+  title: "Mediaory — Communication Intelligence Platform",
   description:
     "Monitor, understand, and act on what the world is saying about your brand.",
 };

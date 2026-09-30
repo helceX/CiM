@@ -24,7 +24,7 @@ const envSchema = z.object({
   S3_SECRET_ACCESS_KEY: z.string().optional(),
 
   EMAIL_PROVIDER: z.enum(["console", "resend", "ses"]).default("console"),
-  EMAIL_FROM: z.string().default("CiM <no-reply@cim.example>"),
+  EMAIL_FROM: z.string().default("Mediaory <no-reply@mediaory.io>"),
   EMAIL_API_KEY: z.string().optional(),
 
   // "disabled": no enrichment, AI fields stay "Not available" (brief §92).

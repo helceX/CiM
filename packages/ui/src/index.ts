@@ -13,3 +13,4 @@ export * from "./components/dialog";
 export * from "./components/dropdown-menu";
 export * from "./components/sheet";
 export * from "./components/select";
+export * from "./components/wordmark";

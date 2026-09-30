@@ -114,7 +114,7 @@ export async function POST(request: Request) {
   const inviteLink = `${getEnv().APP_URL}/invitations/accept?token=${rawToken}`;
   await sendEmail({
     toEmail: input.email,
-    subject: `You're invited to join ${context.organizationName} on CiM`,
+    subject: `You're invited to join ${context.organizationName} on Mediaory`,
     bodyText: invitationEmailBody(
       context.organizationName,
       `${currentUser.firstName} ${currentUser.lastName}`,

@@ -4,7 +4,7 @@ export default function ResourcesPage() {
   return (
     <MarketingPage
       title="Resources"
-      intro="Guides and reference material for getting the most out of CiM."
+      intro="Guides and reference material for getting the most out of Mediaory."
     >
       <MarketingSection
         title="Getting started"
@@ -16,7 +16,7 @@ export default function ResourcesPage() {
       />
       <MarketingSection
         title="API & webhooks"
-        desc="Reference documentation for the CiM API and webhook events ships alongside the public API release."
+        desc="Reference documentation for the Mediaory API and webhook events ships alongside the public API release."
       />
     </MarketingPage>
   );

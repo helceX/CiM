@@ -23,7 +23,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
     <div className="flex min-h-screen flex-col">
       <header className="flex items-center justify-between border-b border-border px-6 py-4">
         <div>
-          <span className="text-sm font-semibold text-foreground">CiM Admin</span>
+          <span className="text-sm font-semibold text-foreground">Mediaory Admin</span>
           <span className="ml-2 text-xs text-muted-foreground">Platform Super Admin</span>
         </div>
         <span className="text-sm text-muted-foreground">{user.email}</span>

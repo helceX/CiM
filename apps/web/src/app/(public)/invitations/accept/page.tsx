@@ -37,7 +37,7 @@ export default async function AcceptInvitationPage({
       <p className="mb-4 text-sm text-muted-foreground">
         You&apos;ve been invited to join{" "}
         <strong className="text-foreground">{invitation.organizationName}</strong> on
-        CiM as a{" "}
+        Mediaory as a{" "}
         <strong className="text-foreground">
           {ROLE_LABEL[invitation.role] ?? invitation.role}
         </strong>

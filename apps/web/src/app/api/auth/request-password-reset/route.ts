@@ -34,7 +34,7 @@ export async function POST(request: Request) {
     const link = `${getEnv().APP_URL}/reset-password?token=${rawToken}`;
     await sendEmail({
       toEmail: user.email,
-      subject: "Reset your CiM password",
+      subject: "Reset your Mediaory password",
       bodyText: passwordResetEmailBody(link),
       kind: "password_reset",
     });

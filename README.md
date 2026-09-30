@@ -1,4 +1,4 @@
-# CiM — Communication Intelligence Platform
+# Mediaory — Communication Intelligence Platform
 
 A multi-tenant media/communication intelligence SaaS for corporate
 communications, PR, and brand teams. See `docs/product/PRODUCT_VISION.md`

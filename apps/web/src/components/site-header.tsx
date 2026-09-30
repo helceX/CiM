@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Button } from "@cim/ui";
+import { Button, Wordmark } from "@cim/ui";
 
 const NAV_LINKS = [
   { href: "/features", label: "Features" },
@@ -13,8 +13,8 @@ export function SiteHeader() {
   return (
     <header className="border-b border-border">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
-        <Link href="/" className="text-sm font-semibold tracking-tight text-foreground">
-          CiM
+        <Link href="/" aria-label="Mediaory home" className="text-sm text-foreground">
+          <Wordmark />
         </Link>
         <nav className="hidden items-center gap-6 md:flex" aria-label="Main">
           {NAV_LINKS.map((link) => (

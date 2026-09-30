@@ -79,6 +79,7 @@ export function fakeReportData(overrides: Partial<ReportData> = {}): ReportData 
   return {
     templateKey: "weekly_summary",
     sections: null,
+    visuals: {},
     projectName: "Brand Monitoring",
     periodStart: new Date("2026-01-01T00:00:00Z"),
     periodEnd: new Date("2026-01-08T00:00:00Z"),

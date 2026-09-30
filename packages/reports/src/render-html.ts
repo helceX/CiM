@@ -1,5 +1,7 @@
 import type { ReportData } from "./gather-data";
-import { REPORT_SECTION_LABELS, type ReportSectionKey } from "./sections";
+import { MEASURE_LABELS, DIMENSION_LABELS, isTimeDimension } from "@cim/core";
+import type { ReportVisual } from "./gather-data";
+import { REPORT_SECTION_LABELS, isVisualSectionKey, type ReportSectionKey } from "./sections";
 import { getReportTemplate } from "./templates";
 
 const SENTIMENT_BADGE: Record<string, string> = {
@@ -156,14 +158,61 @@ const CUSTOM_SECTION_RENDERERS: Record<ReportSectionKey, (data: ReportData) => s
   recommendations: recommendationsSection,
 };
 
+function formatVisualValue(value: number | null, measure: NonNullable<ReportVisual["measure"]>): string {
+  if (value === null) return "—";
+  return measure === "negative_share" ? `${value}%` : String(value);
+}
+
+/**
+ * A saved visual in a report. Time series get a bar chart; everything else a
+ * table with an inline bar per row. Exact values are always printed, and an
+ * unavailable visual says so instead of silently disappearing.
+ */
+function visualSection(visual: ReportVisual): string {
+  if (!visual.rows || !visual.measure || !visual.dimension || !visual.periodDays) {
+    return `<h2>${escapeHtml(visual.name)}</h2><p class="empty">Not available — this visual could not be produced.</p>`;
+  }
+  const { rows, measure, dimension } = visual;
+  const heading = `<h2>${escapeHtml(visual.name)}</h2><p class="chart-axis" style="justify-content:flex-start;margin:0 0 8px;">${escapeHtml(MEASURE_LABELS[measure])} by ${escapeHtml(DIMENSION_LABELS[dimension].toLowerCase())} · last ${visual.periodDays} days</p>`;
+  if (rows.length === 0) return `${heading}<p class="empty">No data for this period.</p>`;
+
+  if (isTimeDimension(dimension)) {
+    const max = Math.max(1, ...rows.map((r) => r.value ?? 0));
+    const barWidth = 600 / rows.length;
+    const bars = rows
+      .map((row, i) => {
+        const height = Math.round(((row.value ?? 0) / max) * 80);
+        return `<rect x="${i * barWidth + barWidth * 0.15}" y="${90 - height}" width="${barWidth * 0.7}" height="${height}" rx="1" fill="oklch(38% 0.11 260)" />`;
+      })
+      .join("");
+    return `${heading}
+      <svg viewBox="0 0 600 100" width="600" height="100" role="img" aria-label="${escapeHtml(visual.name)}">
+        <line x1="0" y1="90" x2="600" y2="90" stroke="oklch(90% 0.005 260)" stroke-width="1" />${bars}
+      </svg>
+      <div class="chart-axis"><span>${escapeHtml(rows[0]!.label)}</span><span>peak ${formatVisualValue(max, measure)}</span><span>${escapeHtml(rows[rows.length - 1]!.label)}</span></div>`;
+  }
+
+  const max = Math.max(1, ...rows.map((r) => r.value ?? 0));
+  const body = rows
+    .map((row) => {
+      const width = Math.round(((row.value ?? 0) / max) * 100);
+      return `<tr><td>${escapeHtml(row.label)}</td><td style="width:45%"><div style="background:oklch(38% 0.11 260);height:8px;border-radius:2px;width:${width}%"></div></td><td style="text-align:right">${escapeHtml(formatVisualValue(row.value, measure))}</td></tr>`;
+    })
+    .join("");
+  return `${heading}<table><thead><tr><th>${escapeHtml(DIMENSION_LABELS[dimension])}</th><th></th><th style="text-align:right">${escapeHtml(MEASURE_LABELS[measure])}</th></tr></thead><tbody>${body}</tbody></table>`;
+}
+
 function customSections(data: ReportData): string {
   const keys = data.sections ?? [];
   if (keys.length === 0) return `<p class="empty">No sections selected for this report.</p>`;
   return keys
-    .map(
-      (key) =>
-        `<section><h2>${escapeHtml(REPORT_SECTION_LABELS[key])}</h2>${CUSTOM_SECTION_RENDERERS[key](data)}</section>`,
-    )
+    .map((key) => {
+      if (isVisualSectionKey(key)) {
+        const visual = data.visuals[key];
+        return `<section>${visual ? visualSection(visual) : `<p class="empty">Not available.</p>`}</section>`;
+      }
+      return `<section><h2>${escapeHtml(REPORT_SECTION_LABELS[key])}</h2>${CUSTOM_SECTION_RENDERERS[key](data)}</section>`;
+    })
     .join("");
 }
 

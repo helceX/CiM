@@ -7,6 +7,10 @@ export {
   REPORT_SECTION_KEYS,
   REPORT_SECTION_LABELS,
   isReportSectionKey,
+  isReportSection,
+  isVisualSectionKey,
+  visualIdFromSection,
+  type ReportSection,
   type ReportSectionKey,
 } from "./sections";
 export {

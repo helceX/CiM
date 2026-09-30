@@ -15,7 +15,9 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@cim/core": "workspace:*",
     "@cim/db": "workspace:*",
+    "@cim/validation": "workspace:*",
     "exceljs": "^4.4.0",
     "playwright": "1.63.0"
   },

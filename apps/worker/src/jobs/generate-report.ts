@@ -17,7 +17,7 @@ import {
   renderReportCsv,
   renderReportHtml,
   renderReportXlsx,
-  type ReportSectionKey,
+  type ReportSection,
 } from "@cim/reports";
 
 /**
@@ -46,7 +46,7 @@ export async function processGenerateReportJob(
       periodType: report.periodType,
       periodStart: run.periodStart,
       periodEnd: run.periodEnd,
-      sections: report.sections as ReportSectionKey[] | null,
+      sections: report.sections as ReportSection[] | null,
     });
 
     const html = renderReportHtml(data);

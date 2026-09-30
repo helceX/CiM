@@ -211,3 +211,56 @@ describe("renderReportXlsx", () => {
     expect(projectCell).toBe("'=cmd|' /C calc'!A0");
   });
 });
+
+describe("renderReportXlsx — visual sections", () => {
+  const keyA = "visual:22222222-2222-4222-8222-222222222222" as const;
+  const keyB = "visual:33333333-3333-4333-8333-333333333333" as const;
+  const visual = (name: string, rows: { label: string; value: number | null }[]) => ({
+    id: "x",
+    name,
+    measure: "mentions" as const,
+    dimension: "source" as const,
+    periodDays: 30,
+    rows,
+  });
+
+  it("adds one sheet per visual with a legal, unique, <=31-char name and formula-neutral labels", async () => {
+    const workbook = await loadWorkbook(
+      await renderReportXlsx(
+        fakeReportData({
+          templateKey: "custom",
+          sections: [keyA, keyB],
+          visuals: {
+            [keyA]: visual("Q3: board/[review]? a very long visual name indeed", [{ label: "=1+1", value: 3 }]),
+            [keyB]: visual("Q3: board/[review]? a very long visual name indeed", [{ label: "Wire", value: null }]),
+          },
+        }),
+      ),
+    );
+    const names = workbook.worksheets.map((s) => s.name).filter((n) => n.startsWith("Visual"));
+    expect(names).toHaveLength(2);
+    expect(new Set(names).size).toBe(2);
+    for (const name of names) {
+      expect(name.length).toBeLessThanOrEqual(31);
+      expect(name).not.toMatch(/[\\/?*[\]:]/);
+    }
+    const first = workbook.getWorksheet(names[0]!)!;
+    expect(first.getRow(1).getCell(1).value).toBe("Source");
+    expect(first.getRow(2).getCell(1).value).toBe("'=1+1");
+    expect(first.getRow(2).getCell(2).value).toBe(3);
+  });
+
+  it("writes a note for an unavailable visual instead of skipping it", async () => {
+    const workbook = await loadWorkbook(
+      await renderReportXlsx(
+        fakeReportData({
+          templateKey: "custom",
+          sections: [keyA],
+          visuals: { [keyA]: { id: "x", name: "Gone", measure: null, dimension: null, periodDays: null, rows: null } },
+        }),
+      ),
+    );
+    const sheet = workbook.worksheets.find((s) => s.name.startsWith("Visual"))!;
+    expect(String(sheet.getRow(1).getCell(1).value)).toContain("Not available");
+  });
+});

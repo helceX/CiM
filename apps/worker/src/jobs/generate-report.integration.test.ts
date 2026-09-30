@@ -10,12 +10,14 @@ import {
   createMonitoringQuery,
   createReport,
   createReportRun,
+  createSavedVisual,
   db,
   getReportFile,
   getReportRun,
   listNotifications,
   schema,
 } from "@cim/db";
+import { gatherReportData } from "@cim/reports";
 import { processGenerateReportJob } from "./generate-report";
 
 function fakeJob(reportRunId: string): Job<GenerateReportJobData> {
@@ -189,6 +191,71 @@ describe("processGenerateReportJob (integration)", () => {
     expect(pdfFile).toBeDefined();
     expect(pdfFile?.data.subarray(0, 5).toString("ascii")).toBe("%PDF-");
   }, 30_000);
+
+  it("includes a saved visual in a custom report, and never resolves another organization's visual", async () => {
+    const spec = {
+      measure: "mentions" as const,
+      dimension: "source_type" as const,
+      periodDays: 30 as const,
+      filters: {},
+      chartType: "bar" as const,
+      sort: "value_desc" as const,
+      limit: 50,
+    };
+    const own = await createSavedVisual(db, organizationId, { name: "Mentions by type", kind: "chart", spec, createdBy: userId });
+
+    const [otherOrg] = await db
+      .insert(schema.organizations)
+      .values({ name: "Other Report Co", slug: `other-report-${Date.now()}` })
+      .returning();
+    if (!otherOrg) throw new Error("failed to create second organization");
+    const foreign = await createSavedVisual(db, asOrganizationId(otherOrg.id), {
+      name: "Secret visual",
+      kind: "chart",
+      spec,
+      createdBy: null,
+    });
+
+    try {
+      const sections = ["trend", `visual:${own.id}`, `visual:${foreign.id}`] as const;
+      const data = await gatherReportData(db, organizationId, {
+        projectId,
+        projectName: "Report Test Project",
+        templateKey: "custom",
+        periodType: "rolling_7d",
+        periodStart: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+        periodEnd: new Date(),
+        sections: [...sections],
+      });
+      expect(data.visuals[`visual:${own.id}`]).toMatchObject({
+        name: "Mentions by type",
+        rows: [{ label: "news", value: 1 }],
+      });
+      expect(data.visuals[`visual:${foreign.id}`]).toMatchObject({ name: "Visual no longer available", rows: null });
+      expect(JSON.stringify(data.visuals)).not.toContain("Secret visual");
+
+      const report = await createReport(db, organizationId, {
+        projectId,
+        createdByUserId: userId,
+        name: "Custom report with a visual",
+        templateKey: "custom",
+        sections: [...sections],
+        periodType: "rolling_7d",
+      });
+      const run = await createReportRun(db, organizationId, {
+        reportId: report.id,
+        requestedByUserId: userId,
+        periodStart: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+        periodEnd: new Date(),
+      });
+      await processGenerateReportJob(fakeJob(run.id));
+      expect((await getReportRun(db, organizationId, run.id))?.status).toBe("completed");
+      expect((await getReportFile(db, run.id, "pdf"))?.data.subarray(0, 5).toString("ascii")).toBe("%PDF-");
+      expect((await getReportFile(db, run.id, "xlsx"))?.data.subarray(0, 2).toString("ascii")).toBe("PK");
+    } finally {
+      await db.delete(schema.organizations).where(eq(schema.organizations.id, otherOrg.id));
+    }
+  }, 60_000);
 
   it("marks the run failed with a real error and notifies the requester, never a silently missing report", async () => {
     const report = await createReport(db, organizationId, {

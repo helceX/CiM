@@ -19,6 +19,13 @@ export const reportSectionKeySchema = z.enum([
   "ai_insight",
   "recommendations",
 ]);
+// A saved visual placed in a custom report: `visual:<uuid>` (see packages/reports/src/sections.ts).
+export const reportVisualSectionSchema = z
+  .string()
+  .regex(/^visual:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/, "Invalid visual section");
+export const reportSectionSchema = z.union([reportSectionKeySchema, reportVisualSectionSchema]);
+/** Built-in sections plus up to 4 visuals. */
+export const MAX_REPORT_SECTIONS = reportSectionKeySchema.options.length + 4;
 export const reportScheduleFrequencySchema = z.enum([
   "none",
   "weekly",
@@ -36,7 +43,7 @@ export const createReportSchema = z
     projectId: z.uuid(),
     name: z.string().trim().min(1, "Name is required").max(160),
     templateKey: reportTemplateKeySchema,
-    sections: z.array(reportSectionKeySchema).max(reportSectionKeySchema.options.length).optional(),
+    sections: z.array(reportSectionSchema).max(MAX_REPORT_SECTIONS).optional(),
     periodType: reportPeriodTypeSchema,
   })
   .refine(
@@ -47,7 +54,7 @@ export const createReportSchema = z
     // packages/reports/src/render-html.ts's customSections() maps each
     // key straight to a rendered block with no dedup of its own, so a
     // repeated key would render the same section multiple times.
-    (input) => new Set(input.sections ?? []).size === (input.sections ?? []).length,
+    (input) => new Set((input.sections ?? []).map((s) => s.toLowerCase())).size === (input.sections ?? []).length,
     { message: "Each section can only be added once", path: ["sections"] },
   );
 export type CreateReportInput = z.infer<typeof createReportSchema>;

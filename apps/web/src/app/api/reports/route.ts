@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createReportSchema } from "@cim/validation";
-import { createReport, createReportRun, db, getProject, recordAuditLog } from "@cim/db";
+import { createReport, createReportRun, db, getProject, getSavedVisual, recordAuditLog } from "@cim/db";
+import { isVisualSectionKey, visualIdFromSection } from "@cim/reports/sections";
 import { periodTypeToRange } from "@cim/reports/templates";
 import { requirePermission } from "@/lib/tenant";
 import { enqueueReportGeneration } from "@/lib/reports";
@@ -48,6 +49,14 @@ export async function POST(request: Request) {
   const project = await getProject(db, context.organizationId, input.projectId);
   if (!project) {
     return NextResponse.json({ error: "Project not found" }, { status: 404 });
+  }
+
+  // A visual section may only reference a visual of this organization.
+  for (const section of input.templateKey === "custom" ? (input.sections ?? []) : []) {
+    if (!isVisualSectionKey(section)) continue;
+    if (!(await getSavedVisual(db, context.organizationId, visualIdFromSection(section)))) {
+      return NextResponse.json({ error: "Visual not found" }, { status: 404 });
+    }
   }
 
   const report = await createReport(db, context.organizationId, {

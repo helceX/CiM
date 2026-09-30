@@ -72,3 +72,91 @@ describe("renderReportHtml", () => {
     expect(html).toContain("Not available — no AI insight generated for this project yet.");
   });
 });
+
+describe("renderReportHtml — visual sections", () => {
+  const key = "visual:22222222-2222-4222-8222-222222222222" as const;
+  const base = { templateKey: "custom" as const, sections: [key] };
+
+  it("renders a category visual as a table with inline bars and exact values", () => {
+    const html = renderReportHtml(
+      fakeReportData({
+        ...base,
+        visuals: {
+          [key]: {
+            id: "22222222-2222-4222-8222-222222222222",
+            name: "Mentions by source",
+            measure: "mentions",
+            dimension: "source",
+            periodDays: 30,
+            rows: [
+              { label: "Wire", value: 8 },
+              { label: "Blog", value: 2 },
+            ],
+          },
+        },
+      }),
+    );
+    expect(html).toContain("Mentions by source");
+    expect(html).toContain("Mentions by source</h2>");
+    expect(html).toContain("<td>Wire</td>");
+    expect(html).toContain("width:100%");
+    expect(html).toContain("width:25%");
+    expect(html).toContain(">8<");
+  });
+
+  it("renders a time series as an SVG chart and shows an undefined share as a dash", () => {
+    const html = renderReportHtml(
+      fakeReportData({
+        ...base,
+        visuals: {
+          [key]: {
+            id: "x",
+            name: "Negative share",
+            measure: "negative_share",
+            dimension: "day",
+            periodDays: 7,
+            rows: [
+              { label: "2026-01-01", value: 40 },
+              { label: "2026-01-02", value: null },
+            ],
+          },
+        },
+      }),
+    );
+    expect(html).toContain("<svg");
+    expect(html).toContain("peak 40%");
+  });
+
+  it("escapes visual names and labels", () => {
+    const html = renderReportHtml(
+      fakeReportData({
+        ...base,
+        visuals: {
+          [key]: {
+            id: "x",
+            name: "<img src=x onerror=alert(1)>",
+            measure: "mentions",
+            dimension: "source",
+            periodDays: 30,
+            rows: [{ label: "<script>alert(1)</script>", value: 1 }],
+          },
+        },
+      }),
+    );
+    expect(html).not.toContain("<img src=x");
+    expect(html).not.toContain("<script>alert(1)");
+    expect(html).toContain("&lt;script&gt;");
+  });
+
+  it("says so when a visual is unavailable instead of dropping it", () => {
+    const html = renderReportHtml(
+      fakeReportData({
+        ...base,
+        visuals: { [key]: { id: "x", name: "Gone", measure: null, dimension: null, periodDays: null, rows: null } },
+      }),
+    );
+    expect(html).toContain("Not available");
+    const missing = renderReportHtml(fakeReportData({ ...base, visuals: {} }));
+    expect(missing).toContain("Not available");
+  });
+});

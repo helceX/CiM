@@ -4,22 +4,32 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Checkbox, Field, Input, Select } from "@cim/ui";
 import { REPORT_TEMPLATES, type ReportPeriodType, type ReportTemplateKey } from "@cim/reports/templates";
-import { REPORT_SECTION_KEYS, REPORT_SECTION_LABELS, type ReportSectionKey } from "@cim/reports/sections";
+import {
+  REPORT_SECTION_KEYS,
+  REPORT_SECTION_LABELS,
+  isVisualSectionKey,
+  type ReportSection,
+  type VisualSectionKey,
+} from "@cim/reports/sections";
 
 type ProjectOption = { id: string; name: string };
+type VisualOption = { id: string; name: string };
+
+// Keep in step with MAX_REPORT_SECTIONS (@cim/validation): built-in sections + up to 4 visuals.
+const MAX_VISUAL_SECTIONS = 4;
 
 const PERIOD_OPTIONS: { value: string; label: string }[] = [
   { value: "rolling_7d", label: "Last 7 days" },
   { value: "rolling_30d", label: "Last 30 days" },
 ];
 
-export function ReportForm({ projects }: { projects: ProjectOption[] }) {
+export function ReportForm({ projects, visuals = [] }: { projects: ProjectOption[]; visuals?: VisualOption[] }) {
   const router = useRouter();
   const [name, setName] = useState("");
   const [projectId, setProjectId] = useState(projects[0]?.id ?? "");
   const [templateKey, setTemplateKey] = useState<ReportTemplateKey>(REPORT_TEMPLATES[0]!.key);
   const [periodType, setPeriodType] = useState(REPORT_TEMPLATES[0]!.defaultPeriodType);
-  const [sections, setSections] = useState<ReportSectionKey[]>([]);
+  const [sections, setSections] = useState<ReportSection[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -29,7 +39,13 @@ export function ReportForm({ projects }: { projects: ProjectOption[] }) {
     if (template) setPeriodType(template.defaultPeriodType);
   }
 
-  function toggleSection(key: ReportSectionKey) {
+  const visualName = (key: VisualSectionKey) =>
+    visuals.find((v) => `visual:${v.id}` === key)?.name ?? "Visual";
+  const sectionLabel = (key: ReportSection) =>
+    isVisualSectionKey(key) ? `Visual: ${visualName(key)}` : REPORT_SECTION_LABELS[key];
+  const visualCount = sections.filter(isVisualSectionKey).length;
+
+  function toggleSection(key: ReportSection) {
     setSections((current) =>
       current.includes(key) ? current.filter((k) => k !== key) : [...current, key],
     );
@@ -142,10 +158,34 @@ export function ReportForm({ projects }: { projects: ProjectOption[] }) {
             {REPORT_SECTION_KEYS.map((key) => (
               <label key={key} className="flex items-center gap-2 text-sm text-foreground">
                 <Checkbox checked={sections.includes(key)} onCheckedChange={() => toggleSection(key)} />
-                {REPORT_SECTION_LABELS[key]}
+                {sectionLabel(key)}
               </label>
             ))}
           </div>
+          {visuals.length > 0 ? (
+            <fieldset className="flex flex-col gap-2 border-t border-border pt-3">
+              <legend className="text-sm font-medium text-foreground">Your visuals</legend>
+              <p className="text-xs text-muted-foreground">
+                Each visual uses its own period. Up to {MAX_VISUAL_SECTIONS} per report.
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                {visuals.map((visual) => {
+                  const key = `visual:${visual.id}` as VisualSectionKey;
+                  const checked = sections.includes(key);
+                  return (
+                    <label key={visual.id} className="flex items-center gap-2 text-sm text-foreground">
+                      <Checkbox
+                        checked={checked}
+                        disabled={!checked && visualCount >= MAX_VISUAL_SECTIONS}
+                        onCheckedChange={() => toggleSection(key)}
+                      />
+                      {visual.name}
+                    </label>
+                  );
+                })}
+              </div>
+            </fieldset>
+          ) : null}
           {sections.length > 0 ? (
             <ol className="flex flex-col gap-1.5 border-t border-border pt-3">
               {sections.map((key, index) => (
@@ -154,14 +194,14 @@ export function ReportForm({ projects }: { projects: ProjectOption[] }) {
                   className="flex items-center justify-between gap-2 rounded-sm bg-secondary px-2.5 py-1.5 text-sm text-secondary-foreground"
                 >
                   <span>
-                    {index + 1}. {REPORT_SECTION_LABELS[key]}
+                    {index + 1}. {sectionLabel(key)}
                   </span>
                   <span className="flex gap-1">
                     <button
                       type="button"
                       onClick={() => moveSection(index, -1)}
                       disabled={index === 0}
-                      aria-label={`Move ${REPORT_SECTION_LABELS[key]} up`}
+                      aria-label={`Move ${sectionLabel(key)} up`}
                       className="text-muted-foreground hover:text-foreground disabled:opacity-30"
                     >
                       ↑
@@ -170,7 +210,7 @@ export function ReportForm({ projects }: { projects: ProjectOption[] }) {
                       type="button"
                       onClick={() => moveSection(index, 1)}
                       disabled={index === sections.length - 1}
-                      aria-label={`Move ${REPORT_SECTION_LABELS[key]} down`}
+                      aria-label={`Move ${sectionLabel(key)} down`}
                       className="text-muted-foreground hover:text-foreground disabled:opacity-30"
                     >
                       ↓

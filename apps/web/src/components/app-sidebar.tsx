@@ -3,15 +3,15 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { NAV_ITEMS } from "./nav-config";
-import { cn } from "@cim/ui";
+import { cn, Wordmark } from "@cim/ui";
 
 export function AppSidebar() {
   const pathname = usePathname();
   return (
     <aside className="hidden w-56 shrink-0 border-r border-border md:flex md:flex-col">
       <div className="flex h-16 items-center px-5">
-        <Link href="/dashboard" className="text-sm font-semibold tracking-tight text-foreground">
-          CiM
+        <Link href="/dashboard" aria-label="Mediaory dashboard" className="text-sm text-foreground">
+          <Wordmark />
         </Link>
       </div>
       <nav className="flex flex-1 flex-col gap-0.5 px-3" aria-label="Primary">

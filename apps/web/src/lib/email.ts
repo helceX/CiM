@@ -40,7 +40,7 @@ export async function sendEmail(input: {
 
 export function verificationEmailBody(link: string): string {
   return [
-    "Welcome to CiM.",
+    "Welcome to Mediaory.",
     "",
     "Confirm your email address to activate your account:",
     link,
@@ -51,7 +51,7 @@ export function verificationEmailBody(link: string): string {
 
 export function passwordResetEmailBody(link: string): string {
   return [
-    "A password reset was requested for your CiM account.",
+    "A password reset was requested for your Mediaory account.",
     "",
     "Reset your password:",
     link,
@@ -66,7 +66,7 @@ export function invitationEmailBody(
   link: string,
 ): string {
   return [
-    `${inviterName} invited you to join ${organizationName} on CiM.`,
+    `${inviterName} invited you to join ${organizationName} on Mediaory.`,
     "",
     "Accept the invitation and set up your account:",
     link,

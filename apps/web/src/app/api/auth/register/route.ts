@@ -65,7 +65,7 @@ export async function POST(request: Request) {
   const verifyLink = `${getEnv().APP_URL}/verify-email?token=${rawToken}`;
   await sendEmail({
     toEmail: user.email,
-    subject: "Verify your CiM account",
+    subject: "Verify your Mediaory account",
     bodyText: verificationEmailBody(verifyLink),
     kind: "verify_email",
   });

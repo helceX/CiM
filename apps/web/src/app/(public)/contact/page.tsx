@@ -4,7 +4,7 @@ export default function ContactPage() {
   return (
     <MarketingPage
       title="Contact"
-      intro="Have a question about CiM for your team? Reach out and we'll get back to you."
+      intro="Have a question about Mediaory for your team? Reach out and we'll get back to you."
     >
       <p className="text-sm text-muted-foreground">
         Email{" "}

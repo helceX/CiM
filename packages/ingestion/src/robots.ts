@@ -70,7 +70,7 @@ export function isPathAllowedByRobots(robotsTxt: string, userAgent: string, path
   return best ? best.allow : true;
 }
 
-const USER_AGENT = "CiM-Bot";
+const USER_AGENT = "Mediaory-Bot";
 
 /**
  * Fails OPEN (`null` = "no restriction") when robots.txt itself is

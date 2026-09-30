@@ -32,7 +32,7 @@ export default function LandingPage() {
           Understand what the world is saying about your brand — before it becomes a headline.
         </h1>
         <p className="mx-auto mt-5 max-w-2xl text-lg text-muted-foreground">
-          CiM is a communication intelligence platform for corporate communications, PR, and
+          Mediaory is a communication intelligence platform for corporate communications, PR, and
           brand teams. One place to monitor, filter, understand, and act.
         </p>
         <div className="mt-8 flex items-center justify-center gap-3">

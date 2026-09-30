@@ -113,7 +113,7 @@ async function deliverWebhook(
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        text: `CiM alert "${rule.name}": ${triggerSummary}`,
+        text: `Mediaory alert "${rule.name}": ${triggerSummary}`,
         alertEventId,
         alertRuleId: rule.id,
         alertRuleName: rule.name,

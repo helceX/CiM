@@ -122,8 +122,7 @@ test.describe("reports", () => {
     browser,
   }) => {
     // See test.slow()'s comment above — this is the second real
-    // headless-Chromium PDF render in the file, the one CI has actually
-    // observed exceeding even a 15000ms assertion-only timeout.
+    // headless-Chromium PDF render in the file.
     test.slow();
     await page.goto("/reports/new");
     await page.getByLabel("Name").fill("E2E share-link report");
@@ -133,14 +132,29 @@ test.describe("reports", () => {
         response.request().method() === "POST",
     );
     await page.getByRole("button", { name: "Generate report" }).click();
-    const { reportRunId } = await (await createResponse).json();
+    const { reportId, reportRunId } = await (await createResponse).json();
+
+    // Regression: this used to call page.reload() right after reading
+    // reportRunId off the response, with no wait for the client-side
+    // router.push(`/reports/${reportId}`) (report-form.tsx) that only
+    // fires *after* the app's own `await response.json()` — a separate,
+    // async continuation from Playwright's own page.waitForResponse,
+    // which resolves off its own network listener and can settle before
+    // the app has even started that continuation. Depending on timing,
+    // page.reload() could fire while the browser was still on
+    // /reports/new, before the navigation landed — reloading the wrong
+    // page entirely, where "completed" can never appear no matter how
+    // long the assertion below waits. That's the actual root cause of
+    // this test's long-standing "completed" flake — not CI resource
+    // contention, which is what test.slow()/the 30s timeout above were
+    // (harmlessly, but incorrectly) guarding against. Same explicit wait
+    // the first test in this file already has, just missing here.
+    await expect(page).toHaveURL(new RegExp(`/reports/${reportId}$`), {
+      timeout: 5000,
+    });
 
     await simulateReportGeneration(reportRunId);
     await page.reload();
-    // See the identical wait above (line ~66) — the run is already
-    // "completed" in the DB by this point; this is just the reload's own
-    // server round trip, observed here specifically to run slowest since
-    // it's the second heavy headless-Chromium PDF render in this file's run.
     await expect(page.getByText("completed")).toBeVisible({ timeout: 30000 });
 
     const shareResponse = page.waitForResponse(

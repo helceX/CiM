@@ -84,8 +84,14 @@ export const CONNECTOR_CAPABILITIES: Record<string, ConnectorCapabilities> = {
   },
   api: {
     searchPosts: "supported",
-    engagementMetrics: "partial",
-    authorMetrics: "partial",
+    // Neither is actually parsed: the documented ApiItem JSON contract
+    // (api-connector.ts) has no engagement field at all, and `author` is
+    // a plain string with no follower/verified data — the exact same
+    // authorName mechanism RSSConnector uses, correctly rated
+    // "unavailable" below for the same reason. "partial" here would be
+    // the fabricated-capability claim this table exists to rule out.
+    engagementMetrics: "unavailable",
+    authorMetrics: "unavailable",
     historicalSearch: "partial",
     realTimeSearch: "supported",
     officialApi: "supported",

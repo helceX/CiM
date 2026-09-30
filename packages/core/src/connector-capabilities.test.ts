@@ -11,6 +11,12 @@ describe("getConnectorCapabilities", () => {
     expect(caps.engagementMetrics).toBe("unavailable");
   });
 
+  it("reports api as unavailable for engagement/author metrics — RawFetchResult has no field for either, and its author is a plain string with no follower/verified data, same as rss's own authorName", () => {
+    const caps = getConnectorCapabilities("api");
+    expect(caps.engagementMetrics).toBe("unavailable");
+    expect(caps.authorMetrics).toBe("unavailable");
+  });
+
   it("reports every capability as provider_required for a not-yet-implemented platform connector", () => {
     const caps = getConnectorCapabilities("social");
     expect(Object.values(caps).every((status) => status === "provider_required")).toBe(

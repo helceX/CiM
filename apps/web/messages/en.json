@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Mediaory — Communication Intelligence Platform",
-    "description": "Monitor, understand, and act on what the world is saying about your brand."
+    "description": "Monitor, understand, and act on what the world is saying about your brand. News, web and social in one loop: watch, filter, understand, alert, report."
   },
   "nav": {
     "features": "Features",
@@ -11,12 +11,355 @@
     "pricing": "Pricing",
     "signIn": "Sign in",
     "getStarted": "Get started",
-    "home": "Mediaory home"
+    "home": "Mediaory home",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "skip": "Skip to content",
+    "language": "Language"
   },
   "footer": {
     "rights": "All rights reserved.",
     "security": "Security",
     "resources": "Resources",
-    "contact": "Contact"
+    "contact": "Contact",
+    "tagline": "Communication intelligence for teams that need to know first — and know why.",
+    "product": "Product",
+    "trust": "Company",
+    "account": "Account"
+  },
+  "common": {
+    "startMonitoring": "Start monitoring",
+    "seeHowItWorks": "See how it works",
+    "talkToUs": "Talk to us",
+    "comingSoon": "Coming soon",
+    "learnMore": "Learn more",
+    "exploreFeatures": "Explore all features"
+  },
+  "home": {
+    "hero": {
+      "eyebrow": "Communication intelligence platform",
+      "titleA": "See the story",
+      "titleB": "before it becomes the headline.",
+      "subtitle": "Mediaory watches news, web and social around the clock, folds the noise into stories, and tells your team what matters — with the evidence attached.",
+      "note": "Set up your first monitor in under three minutes.",
+      "screenAlt": "The Mediaory dashboard showing mention totals, an AI summary of the last 24 hours and a mention trend.",
+      "chipMentions": "38 mentions · last 7 days",
+      "chipAi": "AI summary · 90% confidence"
+    },
+    "sources": {
+      "label": "Watches the places your audience actually talks",
+      "items": ["News", "Web", "RSS feeds", "Sitemaps", "Social", "Video", "Podcasts", "Forums", "Comments", "Custom APIs"]
+    },
+    "story": {
+      "eyebrow": "One continuous loop",
+      "title": "From noise to a decision,",
+      "titleAccent": "in five moves.",
+      "lead": "Scroll through how a single question — “what is being said about us?” — becomes an answer your leadership can act on.",
+      "listLabel": "How Mediaory works, step by step",
+      "steps": {
+        "watch": {
+          "kicker": "Watch",
+          "title": "Tell it what to watch.",
+          "body": "Brands, executives, competitors, campaigns. Build a query with simple chips or full Boolean syntax — it is the same query either way — and pick your sources.",
+          "alt": "The new monitoring form with include, exclude and exact-phrase fields and source checkboxes."
+        },
+        "filter": {
+          "kicker": "Filter",
+          "title": "Cut the noise, keep the signal.",
+          "body": "Filter by sentiment, priority, date and owner. Duplicates collapse, so one story carried by thirty outlets shows up once — with every source attached.",
+          "alt": "The mentions table with search and sentiment, priority, date and assignment filters."
+        },
+        "understand": {
+          "kicker": "Understand",
+          "title": "Know why it matched — and what it means.",
+          "body": "Every mention explains why it was picked up and carries an AI summary with its confidence and method. No black boxes, no unsupported claims.",
+          "alt": "A mention detail drawer showing why it matched, sentiment, an AI summary with confidence, tags and feedback."
+        },
+        "alert": {
+          "kicker": "Alert",
+          "title": "Get pinged for what matters.",
+          "body": "Keyword, high relevance, spike, sentiment shift, emerging topic, competitor and creator alerts — with cooldowns, so the inbox stays calm.",
+          "alt": "The new alert form listing keyword, high relevance, spike, sentiment shift, emerging topic and competitor alert types."
+        },
+        "report": {
+          "kicker": "Report",
+          "title": "Hand leadership a finished report.",
+          "body": "Weekly summaries, monitoring overviews, or a custom build. Export to PDF, CSV or XLSX, or put it on a schedule and forget it.",
+          "alt": "The new report form with weekly summary, monitoring overview and custom templates."
+        }
+      }
+    },
+    "why": {
+      "eyebrow": "Built on trust",
+      "title": "Intelligence you can defend in the boardroom.",
+      "lead": "Speed is easy. Being right — and showing your work — is the product.",
+      "cards": {
+        "grounded": {
+          "title": "Grounded AI",
+          "body": "Every insight ships with evidence, sources and a confidence score. If the data does not support a claim, Mediaory does not make it.",
+          "meta": "Confidence 90% · Based on 21 mentions"
+        },
+        "honest": {
+          "title": "Honest data",
+          "body": "Reach and engagement show as “Not available” when a source does not report them. Never estimated silently.",
+          "pill": "Not available"
+        },
+        "alerts": {
+          "title": "Alerts that do not cry wolf",
+          "body": "Grouping, thresholds and cooldowns turn a flood of duplicates into a handful of signals worth opening."
+        },
+        "teams": {
+          "title": "Built for teams",
+          "body": "Organizations, projects and role-based access. Assign mentions, comment, tag and hand off — from analysts to executives."
+        },
+        "social": {
+          "title": "Social listening",
+          "body": "Conversations, authors and hashtags in one view — including the unprompted brand chatter that never tags you."
+        },
+        "control": {
+          "title": "Your data, your control",
+          "body": "Tenant isolation, retention policies, data export and deletion — privacy is a feature you can operate, not a promise."
+        }
+      }
+    },
+    "devices": {
+      "eyebrow": "Everywhere you work",
+      "title": "At the desk. In the room. On the move.",
+      "lead": "The same signal follows you from a wide analyst workspace to the phone in your pocket when something breaks after hours.",
+      "laptopAlt": "The Mediaory analytics view with mention volume and sentiment trend charts.",
+      "note": "Phone screen is illustrative."
+    },
+    "soon": {
+      "eyebrow": "On the roadmap",
+      "title": "Where Mediaory goes next.",
+      "lead": "We build in the open with our users. These are in design now — tell us what would make them useful for you.",
+      "items": {
+        "groups": {
+          "title": "Brand groups",
+          "body": "Cluster your own brands and your competitors separately, then compare the two sides in one view."
+        },
+        "charts": {
+          "title": "Chart & table builder",
+          "body": "Build your own charts and tables from your monitoring data and drop them straight into reports."
+        },
+        "credits": {
+          "title": "Pay for what you track",
+          "body": "A credit system priced by the keywords you actually monitor, instead of one-size-fits-all tiers."
+        }
+      }
+    },
+    "cta": {
+      "title": "Know first. Know why.",
+      "body": "Set up a monitor, watch the first mentions land, and see how much quieter a day can be.",
+      "primary": "Start monitoring",
+      "secondary": "Talk to us"
+    }
+  },
+  "devices": {
+    "phone": {
+      "now": "now",
+      "alertKind": "Spike alert",
+      "alertTitle": "Brand mentions are surging",
+      "alertBody": "Hourly volume is well above the trailing 24-hour baseline.",
+      "mentions": "Latest mentions",
+      "positive": "positive",
+      "neutral": "neutral",
+      "negative": "negative",
+      "m1": "Northwind Blog Network expands into a new region",
+      "m2": "Analysts discuss Northwind Blog Network’s market position",
+      "m3": "Customers react to Northwind Blog Network’s latest update",
+      "m4": "Northwind Blog Network announces quarterly results"
+    }
+  },
+  "features": {
+    "hero": {
+      "eyebrow": "Features",
+      "title": "Everything from raw coverage to a decision,",
+      "titleAccent": "in one loop.",
+      "lead": "Built for communications, PR and brand teams who are done stitching together five tools and a spreadsheet."
+    },
+    "rows": {
+      "monitoring": {
+        "title": "Monitoring & query builder",
+        "body": "Track brands, products, executives, competitors and topics with a chip-based simple mode or full Boolean syntax — the same query, either way. Preview what a query would have matched before you save it.",
+        "points": ["Include, exclude and exact phrases", "News, web, social, video, podcasts, forums and comments", "Query quality suggestions"],
+        "alt": "The new monitoring form."
+      },
+      "dedupe": {
+        "title": "Deduplication & story clustering",
+        "body": "The same story from 30 outlets shows up once, with every source attached — not 30 separate alerts. Filter by sentiment, priority, date and owner, and search across everything.",
+        "points": ["One story, every source", "Full-text search", "Assign, tag and comment as a team"],
+        "alt": "The mentions table with filters."
+      },
+      "ai": {
+        "title": "Grounded AI insights",
+        "body": "Executive summaries, risk signals and recommendations — every claim linked to the mentions and metrics behind it, with confidence and method shown. Ask follow-up questions in plain language.",
+        "points": ["“Why did this match?” on every mention", "Confidence, method and evidence on every insight", "Multi-turn AI assistant grounded in your data"],
+        "alt": "A mention drawer with an AI summary."
+      },
+      "alerts": {
+        "title": "Alerts that do not cry wolf",
+        "body": "Spike, sentiment-shift, emerging-topic, competitor and creator alerts with grouping and cooldowns — delivered in-app, by email or to Slack and Teams through webhooks.",
+        "points": ["Seven alert types", "Cooldowns and grouping", "Email, in-app and webhook delivery"],
+        "alt": "The new alert form."
+      },
+      "analytics": {
+        "title": "Analytics that answer “so what?”",
+        "body": "Mention volume, sentiment trend, source distribution and topics over the period you choose — plus a cross-platform view of how a story travels.",
+        "points": ["Volume and sentiment over time", "Source and topic breakdowns", "Social listening dashboard"],
+        "alt": "The analytics view."
+      },
+      "reports": {
+        "title": "Reports on your schedule",
+        "body": "Daily digests and weekly or monthly reports, from templates or a fully custom report builder — exported to PDF, CSV or XLSX and shareable with a link.",
+        "points": ["PDF, CSV and XLSX", "Scheduled delivery", "Share links for stakeholders"],
+        "alt": "The new report form."
+      }
+    },
+    "more": {
+      "title": "And the details that make it work for real teams.",
+      "items": [
+        { "title": "Roles & permissions", "body": "Built-in roles plus custom ones you define." },
+        { "title": "Internal API keys", "body": "Connect Mediaory to the rest of your stack." },
+        { "title": "Webhooks", "body": "Push alerts into Slack, Teams or your own systems." },
+        { "title": "Data retention", "body": "Set how long mentions are kept, automatically enforced." },
+        { "title": "Command palette", "body": "Jump anywhere with a keystroke." },
+        { "title": "Light & dark", "body": "A workspace that respects your eyes and your OS." }
+      ]
+    }
+  },
+  "solutions": {
+    "hero": {
+      "eyebrow": "Solutions",
+      "title": "One platform,",
+      "titleAccent": "every team that has to know first.",
+      "lead": "Corporate communications, PR agencies and brand teams all ask the same question. Mediaory answers it for each of them."
+    },
+    "personas": {
+      "comms": {
+        "title": "Corporate communications",
+        "body": "Catch developing stories early, see how sentiment moves after an announcement, and brief the executive team with a report that cites its sources.",
+        "points": ["Early warning on spikes and sentiment shifts", "Executive-ready briefs and scheduled reports", "Risk signals with evidence"]
+      },
+      "pr": {
+        "title": "PR & agencies",
+        "body": "Run many clients from one place. Separate projects, role-based access and share links keep every account organized and every deliverable one click away.",
+        "points": ["Projects and roles per client", "Share links instead of attachments", "Coverage tracking across outlets"]
+      },
+      "brand": {
+        "title": "Brand & marketing",
+        "body": "Understand campaigns in the wild — who is talking, on which platforms, and in what tone — including the conversations that never tag your brand.",
+        "points": ["Unprompted brand conversations", "Competitor tracking side by side", "Trending hashtags and top posts"]
+      },
+      "crisis": {
+        "title": "Crisis & risk",
+        "body": "When minutes matter, alerts reach the right people first, mentions can be assigned on the spot, and everything is logged for the review afterwards.",
+        "points": ["Spike and sentiment-shift alerts", "Assign and comment in context", "Tags and comments kept with the mention"]
+      }
+    },
+    "cta": {
+      "title": "Not sure which fits?",
+      "body": "Tell us how your team works today and we will show you the shortest path.",
+      "primary": "Talk to us",
+      "secondary": "Start free"
+    }
+  },
+  "security": {
+    "hero": {
+      "eyebrow": "Security & trust",
+      "title": "Your intelligence stays",
+      "titleAccent": "yours.",
+      "lead": "Mediaory is designed so that what you monitor, how you monitor it and who can see it are decisions you control."
+    },
+    "pillars": {
+      "tenancy": {
+        "title": "Tenant isolation",
+        "body": "Every organization’s data is strictly separated. Cross-tenant access is covered by an automated test suite that runs on every change."
+      },
+      "rights": {
+        "title": "Content rights",
+        "body": "Mediaory fetches public content responsibly: it respects robots.txt, identifies itself, and stores what is needed to give you the signal."
+      },
+      "control": {
+        "title": "Data control",
+        "body": "Set retention policies, export your data, and delete your account or organization. It is your data, and leaving is a button, not a support ticket."
+      },
+      "secure": {
+        "title": "Secure by default",
+        "body": "Hardened sessions, CSRF protection, rate limiting, SSRF-safe fetching and role-based permissions come standard — not as add-ons."
+      }
+    },
+    "cta": {
+      "title": "Have a security questionnaire?",
+      "body": "We are happy to walk your security team through the details.",
+      "primary": "Contact us"
+    }
+  },
+  "resources": {
+    "hero": {
+      "eyebrow": "Resources",
+      "title": "Get the most out of",
+      "titleAccent": "Mediaory.",
+      "lead": "Guides and reference material for going from first login to a monitoring setup you trust."
+    },
+    "items": {
+      "start": {
+        "title": "Getting started",
+        "body": "Set up your first monitoring query and see live results in under three minutes — covered step by step in onboarding right after you sign up."
+      },
+      "syntax": {
+        "title": "Query syntax",
+        "body": "Boolean search made simple: AND, OR, NOT and exact phrases for precise monitoring queries — or stay in chip mode and never type an operator."
+      },
+      "api": {
+        "title": "API & webhooks",
+        "body": "Reference documentation for the Mediaory API and webhook events ships alongside the public API release.",
+        "badge": "Coming soon"
+      }
+    }
+  },
+  "pricing": {
+    "hero": {
+      "eyebrow": "Pricing",
+      "title": "Pay for what you",
+      "titleAccent": "actually track.",
+      "lead": "We are finalizing a simple, usage-based model instead of fixed tiers. Early users help shape it — and are first in line when it launches."
+    },
+    "idea": {
+      "title": "Where we are heading",
+      "items": {
+        "credits": {
+          "title": "Credits, not tiers",
+          "body": "A single pool of credits you spend on what you monitor — no jumping to a bigger plan for one extra feature."
+        },
+        "keywords": {
+          "title": "Priced by keyword",
+          "body": "Cost follows the keywords you track, so a focused setup stays affordable and a broad one scales predictably."
+        },
+        "free": {
+          "title": "Start free",
+          "body": "You can create an account and set up your first project today, before pricing is announced."
+        }
+      }
+    },
+    "cta": {
+      "title": "Want to shape it?",
+      "body": "Tell us what you monitor and what you would expect to pay. We read every reply.",
+      "primary": "Get in touch",
+      "secondary": "Start free"
+    }
+  },
+  "contact": {
+    "hero": {
+      "eyebrow": "Contact",
+      "title": "Talk to a human,",
+      "titleAccent": "not a form.",
+      "lead": "Have a question about Mediaory for your team, a security review, or an idea? Reach out and we will get back to you."
+    },
+    "card": {
+      "title": "Email us",
+      "body": "The fastest way to reach the team.",
+      "note": "A contact form with routing ships in a later release."
+    }
   }
 }

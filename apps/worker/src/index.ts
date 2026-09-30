@@ -35,6 +35,14 @@ import { evaluateCompetitorAlerts } from "./alerts/evaluate-competitor";
 import { evaluateCreatorSpikeAlerts } from "./alerts/evaluate-creator-spike";
 import { processAiEnrichJob } from "./ai/enrich";
 import { processInsightGenerateJob } from "./ai/generate-insight";
+import { applyMigrations } from "@cim/db/migrate-runner";
+
+// Nothing else applies migrations to the production database (the deploy
+// host builds and starts images but has no release step here), so the
+// worker does it before touching any queue. A failure crashes the boot
+// loudly instead of running against an unmigrated schema.
+await applyMigrations();
+console.log("Database migrations are up to date.");
 
 /**
  * One BullMQ Worker per queue (docs/architecture/ARCHITECTURE.md — worker

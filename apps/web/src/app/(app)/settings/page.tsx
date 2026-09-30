@@ -1,6 +1,8 @@
 import {
   db,
+  getCreditSummary,
   getLatestFeatureUsage,
+  getTrackedKeywordCount,
   getOrganizationWebhookUrl,
   getRetentionPolicy,
   getSubscription,
@@ -38,6 +40,8 @@ export default async function SettingsPage() {
     brandGroups,
     queries,
     projects,
+    trackedKeywords,
+    credits,
   ] = await Promise.all([
     listMembersForOrganization(db, context.organizationId),
     listCustomRolesForOrganization(db, context.organizationId),
@@ -49,6 +53,8 @@ export default async function SettingsPage() {
     listBrandGroups(db, context.organizationId),
     listMonitoringQueries(db, context.organizationId),
     listProjects(db, context.organizationId),
+    getTrackedKeywordCount(db, context.organizationId),
+    getCreditSummary(db, context.organizationId),
   ]);
   const canManageMembers = context.permissions.includes("org:manage_members");
   const canManageSettings = context.permissions.includes("org:manage_settings");
@@ -110,7 +116,12 @@ export default async function SettingsPage() {
         canManageSettings={canManageSettings}
       />
 
-      <UsageSection plan={subscription.plan} usage={usage} />
+      <UsageSection
+        plan={subscription.plan}
+        usage={usage}
+        trackedKeywords={trackedKeywords}
+        credits={credits}
+      />
 
       <ApiKeysSection
         // Only ever sent to the browser when the viewer can manage keys —

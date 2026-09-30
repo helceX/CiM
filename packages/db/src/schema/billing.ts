@@ -1,4 +1,5 @@
-import { index, integer, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+import { index, integer, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import { organizations } from "./organizations";
 
 /**
@@ -51,4 +52,38 @@ export const featureUsageSnapshots = pgTable(
     usersCount: integer("users_count").notNull(),
   },
   (table) => [index("feature_usage_snapshots_org_captured_idx").on(table.organizationId, table.capturedAt)],
+);
+
+export const CREDIT_LEDGER_KINDS = ["grant", "keyword_day", "ai_call", "adjustment"] as const;
+export type CreditLedgerKind = (typeof CREDIT_LEDGER_KINDS)[number];
+
+/**
+ * docs/product/NEXT_FEATURES_SPEC.md §3 — append-only credit ledger. Rows
+ * are never updated or deleted (a correction is a new `adjustment` row), so
+ * the balance is always `SUM(amount)` and history is auditable. Debits are
+ * negative, grants positive. Metering is measure-only for now: nothing
+ * blocks on the balance and no price is attached to a credit.
+ *
+ * `ref_id` makes writers idempotent: the daily keyword meter uses the date
+ * ("2026-09-30"), so running the job twice cannot double-charge a day.
+ */
+export const creditLedger = pgTable(
+  "credit_ledger",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull().defaultNow(),
+    kind: text("kind").$type<CreditLedgerKind>().notNull(),
+    amount: integer("amount").notNull(),
+    reason: text("reason").notNull().default(""),
+    refId: text("ref_id"),
+  },
+  (table) => [
+    index("credit_ledger_org_occurred_idx").on(table.organizationId, table.occurredAt),
+    uniqueIndex("credit_ledger_org_kind_ref_uniq")
+      .on(table.organizationId, table.kind, table.refId)
+      .where(sql`${table.refId} is not null`),
+  ],
 );

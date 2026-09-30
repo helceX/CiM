@@ -79,6 +79,8 @@ axe scan on the builder, e2e build → save → add to report → PDF contains i
 
 ## 3. Credit metering (per-keyword pricing)
 
+> **Status: measure-only v1 shipped.** Tracked-keyword counting, the append-only `credit_ledger`, an idempotent daily `keyword_day` debit (inside the existing daily usage job) and a Settings usage view. **Not built, by design, until the open decisions below are answered:** grants/allowances per plan, the `ai_call` debit, low-balance banners, blocking new keywords at 100 %, admin grant UI, and any payment provider.
+
 **Problem.** Pricing is intentionally not fixed yet; the direction is a credit
 pool priced by the keywords a customer actually tracks. Before any price is
 announced the product must be able to *measure and (optionally) limit* usage

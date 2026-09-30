@@ -1,4 +1,4 @@
-import type { FeatureUsageSnapshot } from "@cim/db";
+import type { CreditSummary, FeatureUsageSnapshot } from "@cim/db";
 
 /**
  * docs/architecture/DATA_MODEL.md "Subscription / FeatureUsage" +
@@ -13,9 +13,13 @@ import type { FeatureUsageSnapshot } from "@cim/db";
 export function UsageSection({
   plan,
   usage,
+  trackedKeywords,
+  credits,
 }: {
   plan: string;
   usage: FeatureUsageSnapshot | undefined;
+  trackedKeywords: number;
+  credits: CreditSummary;
 }) {
   return (
     <section>
@@ -27,7 +31,7 @@ export function UsageSection({
         <>
           <dl className="mt-3 grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:grid-cols-3">
             <div>
-              <dt className="text-xs text-muted-foreground">Keywords</dt>
+              <dt className="text-xs text-muted-foreground">Monitoring queries</dt>
               <dd className="text-foreground">{usage.keywordsCount}</dd>
             </div>
             <div>
@@ -60,6 +64,37 @@ export function UsageSection({
           Not captured yet — usage snapshots are captured daily.
         </p>
       )}
+
+      <div className="mt-5 border-t border-border pt-4">
+        <h3 className="text-sm font-medium text-foreground">Credits</h3>
+        <dl className="mt-2 grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:grid-cols-3">
+          <div>
+            <dt className="text-xs text-muted-foreground">Tracked keywords now</dt>
+            <dd className="text-foreground">{trackedKeywords}</dd>
+          </div>
+          <div>
+            <dt className="text-xs text-muted-foreground">Used, last {credits.windowDays} days</dt>
+            <dd className="text-foreground">{credits.usedInWindow}</dd>
+          </div>
+          <div>
+            <dt className="text-xs text-muted-foreground">Average per day</dt>
+            <dd className="text-foreground">
+              {credits.averageDailyUse === null ? "—" : Math.round(credits.averageDailyUse * 10) / 10}
+            </dd>
+          </div>
+          {credits.grantedTotal > 0 ? (
+            <div>
+              <dt className="text-xs text-muted-foreground">Balance</dt>
+              <dd className="text-foreground">{credits.balance}</dd>
+            </div>
+          ) : null}
+        </dl>
+        <p className="mt-2 text-xs text-muted-foreground">
+          One credit per tracked keyword per day. A keyword is a distinct include term or exact
+          phrase across your active queries; exclusions are free. Credits are measured only — nothing
+          is charged or limited yet.
+        </p>
+      </div>
     </section>
   );
 }

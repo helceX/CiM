@@ -1,0 +1,41 @@
+{
+  "name": "cim",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "packageManager": "pnpm@10.33.0",
+  "scripts": {
+    "dev": "pnpm --filter @cim/web dev",
+    "dev:worker": "pnpm --filter @cim/worker dev",
+    "build": "pnpm --filter @cim/web build && pnpm --filter @cim/worker build",
+    "typecheck": "pnpm -r run typecheck",
+    "lint": "eslint .",
+    "format": "prettier --check .",
+    "format:write": "prettier --write .",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "db:generate": "pnpm --filter @cim/db generate",
+    "db:migrate": "pnpm --filter @cim/db migrate",
+    "db:seed": "pnpm --filter @cim/db seed"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild", "msgpackr-extract"]
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.10.2",
+    "@cim/db": "workspace:*",
+    "@cim/ingestion": "workspace:*",
+    "drizzle-orm": "0.45.2",
+    "@playwright/test": "1.63.0",
+    "@types/node": "22.15.0",
+    "eslint": "10.11.0",
+    "@eslint/js": "10.0.1",
+    "typescript-eslint": "8.70.0",
+    "prettier": "3.6.2",
+    "typescript": "6.0.3",
+    "vitest": "5.0.1"
+  }
+}

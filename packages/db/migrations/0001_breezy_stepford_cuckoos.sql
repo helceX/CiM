@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "mentions_query_article_uidx" ON "mentions" USING btree ("query_id","article_id");

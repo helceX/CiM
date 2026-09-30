@@ -1,0 +1,59 @@
+import { defineConfig } from "vitest/config";
+
+// Integration tests (packages/db, packages/ingestion) need DATABASE_URL /
+// REDIS_URL / SESSION_SECRET. CI sets these as job-level env vars; for
+// local `pnpm test`, load them from the same dev env file `pnpm db:migrate`
+// already uses. process.loadEnvFile never overrides a var already set, so
+// CI's explicit env always wins.
+try {
+  process.loadEnvFile(new URL("./packages/db/.env.local", import.meta.url));
+} catch {
+  // No local env file (e.g. a fresh checkout before `cp .env.example .env.local`)
+  // — fine, integration tests that need it will report a clear config error.
+}
+
+export default defineConfig({
+  resolve: {
+    // apps/web's server-only modules (session/redis/rate-limit/…) import
+    // the "server-only" marker package, whose default export throws and
+    // only resolves to a no-op under the "react-server" export condition
+    // — the one Next.js's own server bundler sets. Vitest doesn't set it
+    // by default, so tests importing those modules need it here too.
+    // Vite resolves SSR/Node code (what Vitest's "node" environment runs)
+    // through the separate `ssr.resolve` conditions, not the top-level
+    // (client-bundle) ones — both are set so this holds regardless of
+    // which path a given test file's imports take.
+    conditions: ["react-server"],
+  },
+  ssr: {
+    resolve: {
+      conditions: ["react-server"],
+    },
+  },
+  test: {
+    environment: "node",
+    // packages/*.tsx (currently only packages/ui) set tsconfig's jsx to
+    // "react-jsx", so esbuild can transform their .test.tsx files
+    // directly — unlike apps/web, whose Next.js "preserve" setting needs
+    // a JSX-transform plugin this project doesn't configure (see any
+    // commit mentioning that gap). Only packages/*, not apps/*, until
+    // that's addressed.
+    include: [
+      "packages/*/src/**/*.test.ts",
+      "packages/*/src/**/*.test.tsx",
+      "apps/*/src/**/*.test.ts",
+    ],
+    exclude: ["**/node_modules/**", "**/dist/**", "**/.next/**"],
+    // Integration test files share one real Postgres instance with no
+    // transactional isolation between files, and the ingestion pipeline
+    // deliberately reads across every organization's active monitoring
+    // queries (ADR-001's one documented cross-tenant read) — so one
+    // file's ingestSource() can legitimately match and insert a Mention
+    // against another file's org. Running files in parallel let that
+    // insert race a concurrent file's afterAll() cleanup, which deletes
+    // the org out from under it and fails on a foreign-key violation.
+    // The suite is small enough (a few seconds) that serializing files
+    // costs nothing and removes the whole class of race.
+    fileParallelism: false,
+  },
+});

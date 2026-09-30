@@ -1,0 +1,152 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+env:
+  DATABASE_URL: postgres://cim:cim@localhost:5432/cim
+  REDIS_URL: redis://localhost:6379
+  SESSION_SECRET: ci-only-session-secret-0123456789abcdef0123456789abcdef
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_USER: cim
+          POSTGRES_PASSWORD: cim
+          POSTGRES_DB: cim
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U cim -d cim"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:8-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.12"
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright Chromium
+        # packages/reports renders PDFs via headless Chromium (real
+        # Chromium tests + the actual generate_report worker job) — the
+        # runner has no browser installed until this step provisions one.
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Apply migrations
+        run: pnpm db:migrate
+
+      - name: Unit tests
+        run: pnpm test
+
+      - name: Build
+        run: pnpm build
+
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      web: ${{ steps.filter.outputs.web }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            web:
+              - 'apps/web/**'
+              - 'packages/ui/**'
+
+  e2e:
+    needs: changes
+    # docs/testing/TEST_STRATEGY.md — "E2E and a11y suites run on PRs
+    # touching apps/web or packages/ui," not on every PR (they exercise
+    # the whole app through a real browser, real Postgres/Redis, and a
+    # real headless-Chromium report render — meaningfully slower than
+    # the unconditional checks job above).
+    if: needs.changes.outputs.web == 'true'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_USER: cim
+          POSTGRES_PASSWORD: cim
+          POSTGRES_DB: cim
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U cim -d cim"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:8-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.12"
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Apply migrations
+        run: pnpm db:migrate
+
+      - name: Seed demo data
+        # e2e/simulate.ts's crawl simulation targets the seeded "Daily
+        # Tech Wire" source by name (packages/db/src/seed.ts) — without
+        # this, every E2E test that needs a real mention has nothing to
+        # crawl.
+        run: pnpm db:seed
+
+      - name: E2E + accessibility tests
+        run: pnpm test:e2e
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7

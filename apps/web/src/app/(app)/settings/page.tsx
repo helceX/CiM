@@ -1,5 +1,6 @@
 import {
   db,
+  getBillingProfile,
   getCreditSummary,
   getLatestFeatureUsage,
   getTrackedKeywordCount,
@@ -26,6 +27,7 @@ import { WebhookSection } from "./webhook-section";
 import { ApiKeysSection } from "./api-keys-section";
 import { UsageSection } from "./usage-section";
 import { BrandGroupsSection } from "./brand-groups-section";
+import { BillingProfileSection } from "./billing-profile-section";
 
 export default async function SettingsPage() {
   const context = await requireOrgContext();
@@ -42,6 +44,7 @@ export default async function SettingsPage() {
     projects,
     trackedKeywords,
     credits,
+    billingProfile,
   ] = await Promise.all([
     listMembersForOrganization(db, context.organizationId),
     listCustomRolesForOrganization(db, context.organizationId),
@@ -55,10 +58,15 @@ export default async function SettingsPage() {
     listProjects(db, context.organizationId),
     getTrackedKeywordCount(db, context.organizationId),
     getCreditSummary(db, context.organizationId),
+    // Only fetched for members who may see it; never passed to anyone else.
+    context.permissions.includes("org:manage_billing")
+      ? getBillingProfile(db, context.organizationId)
+      : Promise.resolve(undefined),
   ]);
   const canManageMembers = context.permissions.includes("org:manage_members");
   const canManageSettings = context.permissions.includes("org:manage_settings");
   const canManageApiKeys = context.permissions.includes("api_keys:manage");
+  const canManageBilling = context.permissions.includes("org:manage_billing");
   const canManageBrandGroups = context.permissions.includes("monitoring:write");
 
   return (
@@ -122,6 +130,26 @@ export default async function SettingsPage() {
         trackedKeywords={trackedKeywords}
         credits={credits}
       />
+
+      {canManageBilling ? (
+        <BillingProfileSection
+          profile={
+            billingProfile
+              ? {
+                  legalName: billingProfile.legalName,
+                  taxOffice: billingProfile.taxOffice,
+                  taxId: billingProfile.taxId,
+                  taxIdKind: billingProfile.taxIdKind,
+                  addressLine: billingProfile.addressLine,
+                  district: billingProfile.district,
+                  city: billingProfile.city,
+                  postalCode: billingProfile.postalCode,
+                  invoiceEmail: billingProfile.invoiceEmail,
+                }
+              : null
+          }
+        />
+      ) : null}
 
       <ApiKeysSection
         // Only ever sent to the browser when the viewer can manage keys —

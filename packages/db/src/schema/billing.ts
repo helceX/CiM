@@ -87,3 +87,29 @@ export const creditLedger = pgTable(
       .where(sql`${table.refId} is not null`),
   ],
 );
+
+/**
+ * Legal invoicing details for an organization (docs/product/BILLING_DECISION.md
+ * — customers are companies and need a proper fatura). One row per org,
+ * created on first save. `tax_id` is a validated 10-digit VKN (company) or
+ * 11-digit TCKN (sole proprietor); `tax_id_kind` records which.
+ */
+export const billingProfiles = pgTable("billing_profiles", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  organizationId: uuid("organization_id")
+    .notNull()
+    .unique()
+    .references(() => organizations.id, { onDelete: "cascade" }),
+  legalName: text("legal_name").notNull(),
+  taxOffice: text("tax_office").notNull(),
+  taxId: text("tax_id").notNull(),
+  taxIdKind: text("tax_id_kind").$type<"vkn" | "tckn">().notNull(),
+  addressLine: text("address_line").notNull(),
+  district: text("district").notNull().default(""),
+  city: text("city").notNull(),
+  postalCode: text("postal_code").notNull().default(""),
+  country: text("country").notNull().default("TR"),
+  invoiceEmail: text("invoice_email").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});

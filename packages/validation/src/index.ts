@@ -12,3 +12,4 @@ export * from "./mentions";
 export * from "./assistant";
 export * from "./api-keys";
 export * from "./brand-groups";
+export * from "./billing-profile";

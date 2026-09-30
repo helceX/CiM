@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Mediaory — Communication Intelligence Platform",
-    "description": "Monitor, understand, and act on what the world is saying about your brand. News, web and social in one loop: watch, filter, understand, alert, report."
+    "description": "Monitor, understand, and act on what the world is saying about your brand. News and the open web today, social, video and broadcast next: watch, filter, understand, alert, report."
   },
   "nav": {
     "features": "Features",
@@ -40,25 +40,24 @@
       "eyebrow": "Communication intelligence platform",
       "titleA": "See the story",
       "titleB": "before it becomes the headline.",
-      "subtitle": "Mediaory watches news, web and social around the clock, folds the noise into stories, and tells your team what matters — with the evidence attached.",
+      "subtitle": "Mediaory watches news sites and the open web around the clock, folds the noise into stories, and tells your team what matters — with the evidence attached.",
       "note": "Set up your first monitor in under three minutes.",
       "screenAlt": "The Mediaory dashboard showing mention totals, an AI summary of the last 24 hours and a mention trend.",
       "chipMentions": "38 mentions · last 7 days",
       "chipAi": "AI summary · 90% confidence"
     },
     "sources": {
-      "label": "Watches the places your audience actually talks",
+      "label": "Watches the places your audience reads — and more on the way",
       "items": [
-        "News",
-        "Web",
+        "News sites",
+        "Web pages",
         "RSS feeds",
         "Sitemaps",
-        "Social",
-        "Video",
-        "Podcasts",
-        "Forums",
-        "Comments",
-        "Custom APIs"
+        "Custom APIs",
+        "Social · coming soon",
+        "Video · coming soon",
+        "Podcasts · coming soon",
+        "TV & radio · coming soon"
       ]
     },
     "story": {
@@ -77,7 +76,7 @@
         "filter": {
           "kicker": "Filter",
           "title": "Cut the noise, keep the signal.",
-          "body": "Filter by sentiment, priority, date and owner. Duplicates collapse, so one story carried by thirty outlets shows up once — with every source attached.",
+          "body": "Filter by sentiment, priority, date and owner. Duplicates collapse, so one story carried by dozens of outlets shows up once — with every source attached.",
           "alt": "The mentions table with search and sentiment, priority, date and assignment filters."
         },
         "understand": {
@@ -124,8 +123,8 @@
           "body": "Organizations, projects and role-based access. Assign mentions, comment, tag and hand off — from analysts to executives."
         },
         "social": {
-          "title": "Social listening",
-          "body": "Conversations, authors and hashtags in one view — including the unprompted brand chatter that never tags you."
+          "title": "Social listening (live data coming soon)",
+          "body": "Conversations, authors and hashtags in one view — including the unprompted brand chatter that never tags you. The view is built; connecting live platform data is next."
         },
         "control": {
           "title": "Your data, your control",
@@ -191,14 +190,14 @@
         "body": "Track brands, products, executives, competitors and topics with a chip-based simple mode or full Boolean syntax — the same query, either way. Preview what a query would have matched before you save it.",
         "points": [
           "Include, exclude and exact phrases",
-          "News, web, social, video, podcasts, forums and comments",
+          "News sites, web pages, RSS feeds, sitemaps and custom APIs — social, video, podcast and broadcast sources are coming soon",
           "Query quality suggestions"
         ],
         "alt": "The new monitoring form."
       },
       "dedupe": {
         "title": "Deduplication & story clustering",
-        "body": "The same story from 30 outlets shows up once, with every source attached — not 30 separate alerts. Filter by sentiment, priority, date and owner, and search across everything.",
+        "body": "The same story carried by dozens of outlets shows up once, with every source attached — not dozens of separate alerts. Filter by sentiment, priority, date and owner, and search across everything.",
         "points": [
           "One story, every source",
           "Full-text search",
@@ -232,7 +231,7 @@
         "points": [
           "Volume and sentiment over time",
           "Source and topic breakdowns",
-          "Social listening dashboard"
+          "Social listening dashboard (live platform data coming soon)"
         ],
         "alt": "The analytics view."
       },

@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { isSameOrigin } from "@/lib/same-origin";
 
 /**
  * Cookie-presence check only — a fast, edge-safe redirect for UX. The
@@ -37,19 +38,15 @@ const MUTATING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
  * or a mismatched one, fails closed rather than being assumed safe.
  */
 function isSameOriginRequest(request: NextRequest): boolean {
-  const appOrigin = request.nextUrl.origin;
-  const origin = request.headers.get("origin");
-  if (origin) return origin === appOrigin;
-
-  const referer = request.headers.get("referer");
-  if (referer) {
-    try {
-      return new URL(referer).origin === appOrigin;
-    } catch {
-      return false;
-    }
-  }
-  return false;
+  return isSameOrigin({
+    origin: request.headers.get("origin"),
+    referer: request.headers.get("referer"),
+    host: request.headers.get("host"),
+    forwardedHost: request.headers.get("x-forwarded-host"),
+    forwardedProto: request.headers.get("x-forwarded-proto"),
+    nextOrigin: request.nextUrl.origin,
+    appUrl: process.env.APP_URL,
+  });
 }
 
 export function proxy(request: NextRequest) {

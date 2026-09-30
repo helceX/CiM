@@ -24,7 +24,7 @@
   --warning-foreground: oklch(20% 0.02 80);
   --danger: oklch(52% 0.19 25);
   --danger-foreground: oklch(98% 0.01 25);
-  --info: oklch(52% 0.11 240);
+  --info: oklch(47% 0.11 240);
   --info-foreground: oklch(98% 0.01 240);
 
   /* Categorical series colours (brand groups, chart series) — fixed order,

@@ -61,7 +61,8 @@ export async function registerAndOnboard(
   await page.getByRole("button", { name: "Continue" }).click(); // step 4: notification preference
   await page.getByRole("button", { name: "Go to dashboard" }).click(); // step 5: project name
 
-  await expect(page).toHaveURL(/\/dashboard/, { timeout: 5000 });
+  // Onboarding completion is a real server round trip; on a loaded CI runner it can exceed 5s.
+  await expect(page).toHaveURL(/\/dashboard/, { timeout: 20_000 });
 
   return { email, password, companyName, keyword };
 }
@@ -71,5 +72,6 @@ export async function login(page: Page, email: string, password: string): Promis
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(password);
   await page.getByRole("button", { name: "Sign in" }).click();
-  await expect(page).toHaveURL(/\/dashboard/, { timeout: 5000 });
+  // Sign-in is a real server round trip; on a loaded CI runner it can exceed 5s.
+  await expect(page).toHaveURL(/\/dashboard/, { timeout: 20_000 });
 }

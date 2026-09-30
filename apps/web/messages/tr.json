@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Mediaory — İletişim İstihbaratı Platformu",
-    "description": "Dünyanın markanız hakkında söylediklerini izleyin, anlayın ve harekete geçin. Haber, web ve sosyal medya tek döngüde: izle, filtrele, anla, uyar, raporla."
+    "description": "Dünyanın markanız hakkında söylediklerini izleyin, anlayın ve harekete geçin. Bugün haber ve açık web, sırada sosyal medya, video ve yayın: izleyin, filtreleyin, anlayın, uyarın, raporlayın."
   },
   "nav": {
     "features": "Özellikler",
@@ -40,25 +40,24 @@
       "eyebrow": "İletişim istihbaratı platformu",
       "titleA": "Hikâyeyi görün,",
       "titleB": "manşet olmadan önce.",
-      "subtitle": "Mediaory haber, web ve sosyal medyayı günün her saati izler, gürültüyü hikâyelere dönüştürür ve ekibinize neyin önemli olduğunu kanıtlarıyla birlikte söyler.",
+      "subtitle": "Mediaory haber sitelerini ve açık web’i günün her saati izler, gürültüyü hikâyelere dönüştürür ve ekibinize neyin önemli olduğunu kanıtlarıyla birlikte söyler.",
       "note": "İlk izlemenizi üç dakikadan kısa sürede kurun.",
       "screenAlt": "Mediaory panosu: bahsetme toplamları, son 24 saatin yapay zekâ özeti ve bahsetme trendi.",
       "chipMentions": "38 bahsetme · son 7 gün",
       "chipAi": "Yapay zekâ özeti · %90 güven"
     },
     "sources": {
-      "label": "Kitlenizin gerçekten konuştuğu yerleri izler",
+      "label": "Kitlenizin okuduğu yerleri izler — yenileri yolda",
       "items": [
-        "Haber",
-        "Web",
+        "Haber siteleri",
+        "Web sayfaları",
         "RSS akışları",
         "Site haritaları",
-        "Sosyal medya",
-        "Video",
-        "Podcast",
-        "Forumlar",
-        "Yorumlar",
-        "Özel API’ler"
+        "Özel API’ler",
+        "Sosyal medya · yakında",
+        "Video · yakında",
+        "Podcast · yakında",
+        "TV ve radyo · yakında"
       ]
     },
     "story": {
@@ -77,7 +76,7 @@
         "filter": {
           "kicker": "Filtrele",
           "title": "Gürültüyü eleyin, sinyali tutun.",
-          "body": "Duygu, öncelik, tarih ve sorumluya göre filtreleyin. Yinelenenler tek satırda toplanır; otuz mecrada çıkan haber tüm kaynaklarıyla birlikte bir kez görünür.",
+          "body": "Duygu, öncelik, tarih ve sorumluya göre filtreleyin. Yinelenenler tek satırda toplanır; onlarca mecrada çıkan haber tüm kaynaklarıyla birlikte bir kez görünür.",
           "alt": "Arama ile duygu, öncelik, tarih ve atama filtrelerini içeren bahsetmeler tablosu."
         },
         "understand": {
@@ -124,8 +123,8 @@
           "body": "Kuruluşlar, projeler ve rol tabanlı erişim. Bahsetmeleri atayın, yorumlayın, etiketleyin ve devredin — analistten yöneticiye."
         },
         "social": {
-          "title": "Sosyal dinleme",
-          "body": "Konuşmalar, yazarlar ve etiketler tek görünümde — sizi hiç etiketlemeyen, kendiliğinden gelişen marka konuşmaları da dahil."
+          "title": "Sosyal dinleme (canlı veri yakında)",
+          "body": "Konuşmalar, yazarlar ve etiketler tek görünümde — sizi hiç etiketlemeyen, kendiliğinden gelişen marka konuşmaları da dahil. Ekran hazır; canlı platform verisini bağlamak sırada."
         },
         "control": {
           "title": "Verileriniz, sizin kontrolünüzde",
@@ -191,14 +190,14 @@
         "body": "Markaları, ürünleri, yöneticileri, rakipleri ve konuları etiket tabanlı basit modla ya da tam Boolean sözdizimiyle takip edin — iki yolla da aynı sorgu. Kaydetmeden önce sorgunun neleri yakalayacağını önizleyin.",
         "points": [
           "Dahil etme, hariç tutma ve tam ifadeler",
-          "Haber, web, sosyal medya, video, podcast, forum ve yorumlar",
+          "Haber siteleri, web sayfaları, RSS akışları, site haritaları ve özel API’ler — sosyal medya, video, podcast ve yayın kaynakları yakında",
           "Sorgu kalitesi önerileri"
         ],
         "alt": "Yeni izleme formu."
       },
       "dedupe": {
         "title": "Tekilleştirme ve hikâye kümeleme",
-        "body": "30 mecradan çıkan aynı haber, tüm kaynaklarıyla birlikte bir kez görünür — 30 ayrı uyarı olarak değil. Duygu, öncelik, tarih ve sorumluya göre filtreleyin, her şeyin içinde arayın.",
+        "body": "Onlarca mecradan çıkan aynı haber, tüm kaynaklarıyla birlikte bir kez görünür — onlarca ayrı uyarı olarak değil. Duygu, öncelik, tarih ve sorumluya göre filtreleyin, her şeyin içinde arayın.",
         "points": [
           "Tek hikâye, tüm kaynaklar",
           "Tam metin arama",
@@ -232,7 +231,7 @@
         "points": [
           "Zaman içinde hacim ve duygu",
           "Kaynak ve konu kırılımları",
-          "Sosyal dinleme panosu"
+          "Sosyal dinleme panosu (canlı platform verisi yakında)"
         ],
         "alt": "Analitik görünümü."
       },

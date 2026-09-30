@@ -3,6 +3,7 @@
 import { useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Checkbox, Field, Input } from "@cim/ui";
+import { mergeKeywords, parseKeywordList } from "@cim/core";
 import type {
   CompleteOnboardingInput,
   NotificationPreference,
@@ -44,12 +45,13 @@ export function OnboardingWizard() {
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // One keyword = one comma-separated item (a word or a whole sentence).
   function addKeyword() {
-    const value = keywordInput.trim();
-    if (!value || keywords.includes(value)) return;
-    setKeywords([...keywords, value]);
+    const additions = parseKeywordList(keywordInput);
+    if (additions.length === 0) return;
+    setKeywords(mergeKeywords(keywords, additions));
     setKeywordInput("");
-    if (!projectName) setProjectName(value);
+    if (!projectName) setProjectName(additions[0] ?? "");
   }
 
   function removeKeyword(value: string) {
@@ -133,18 +135,22 @@ export function OnboardingWizard() {
               value={keywordInput}
               onChange={(e) => setKeywordInput(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === "Enter") {
+                if (e.key === "Enter" || e.key === ",") {
                   e.preventDefault();
                   addKeyword();
                 }
               }}
-              placeholder="e.g. your company name"
+              placeholder="e.g. your company name, new product launch"
               aria-label="Keyword"
             />
             <Button type="button" variant="secondary" onClick={addKeyword}>
               Add
             </Button>
           </div>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Separate keywords with commas. A keyword can be a single word or a whole phrase, and is
+            searched exactly as you write it.
+          </p>
           {keywords.length > 0 ? (
             <ul className="mt-3 flex flex-wrap gap-2">
               {keywords.map((keyword) => (

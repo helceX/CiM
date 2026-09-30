@@ -16,8 +16,9 @@ describe("countTrackedKeywords", () => {
     expect(countTrackedKeywords([ast(["Acme"], [], ["job", "hiring"])])).toBe(1);
   });
 
-  it("treats an exact phrase as different from the same words as a term", () => {
-    expect(countTrackedKeywords([ast(["acme corp"], ["Acme Corp"])])).toBe(2);
+  it("counts the same text once whether it was entered as a term or an exact phrase", () => {
+    expect(countTrackedKeywords([ast(["acme corp"], ["Acme Corp"])])).toBe(1);
+    expect(countTrackedKeywords([ast(["acme"], ["acme corp"])])).toBe(2);
   });
 
   it("folds case and whitespace, Turkish-aware", () => {

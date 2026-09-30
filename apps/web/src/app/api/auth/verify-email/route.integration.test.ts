@@ -107,4 +107,31 @@ describe("POST /api/auth/verify-email (integration)", () => {
     // Must not stamp a fresh emailVerifiedAt onto an anonymized row.
     expect(row?.emailVerifiedAt).toBeNull();
   });
+
+  it("lets exactly one of several simultaneous requests use a link, and mints exactly one session", async () => {
+    const rawToken = "concurrent-verify-token";
+    await createEmailVerificationToken(db, {
+      userId: activeUserId,
+      tokenHash: hashToken(rawToken),
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+    });
+    createUserSession.mockClear();
+
+    const responses = await Promise.all(Array.from({ length: 8 }, () => POST(makeRequest(rawToken))));
+    const statuses = responses.map((r) => r.status).sort();
+    expect(statuses.filter((s) => s === 200)).toHaveLength(1);
+    expect(statuses.filter((s) => s === 400)).toHaveLength(7);
+    expect(createUserSession).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects an expired link without consuming it differently from an unknown one", async () => {
+    const rawToken = "expired-verify-token";
+    await createEmailVerificationToken(db, {
+      userId: activeUserId,
+      tokenHash: hashToken(rawToken),
+      expiresAt: new Date(Date.now() - 1000),
+    });
+    expect((await POST(makeRequest(rawToken))).status).toBe(400);
+    expect((await POST(makeRequest("never-issued-token"))).status).toBe(400);
+  });
 });

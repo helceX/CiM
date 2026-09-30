@@ -95,4 +95,53 @@ describe("POST /api/auth/reset-password (integration)", () => {
     // never overwrite it with a real, working password hash.
     expect(row?.passwordHash).toBe("deleted-account-no-login");
   });
+
+  it("lets exactly one of several simultaneous requests use a link", async () => {
+    const rawToken = "concurrent-reset-token";
+    await createPasswordResetToken(db, {
+      userId: activeUserId,
+      tokenHash: hashToken(rawToken),
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+    });
+
+    const responses = await Promise.all(
+      Array.from({ length: 6 }, (_, i) => POST(makeRequest(rawToken, `NewPassw0rd!${i}`))),
+    );
+    const statuses = responses.map((r) => r.status);
+    expect(statuses.filter((s) => s === 200)).toHaveLength(1);
+    expect(statuses.filter((s) => s === 400)).toHaveLength(5);
+  });
+
+  it("a successful reset also burns the user's other outstanding reset links and revokes sessions", async () => {
+    const older = "older-reset-token";
+    const newer = "newer-reset-token";
+    for (const token of [older, newer]) {
+      await createPasswordResetToken(db, {
+        userId: activeUserId,
+        tokenHash: hashToken(token),
+        expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+      });
+    }
+    const [session] = await db
+      .insert(schema.sessions)
+      .values({ userId: activeUserId, expiresAt: new Date(Date.now() + 60 * 60 * 1000) })
+      .returning();
+
+    expect((await POST(makeRequest(newer, "NewPassw0rd!"))).status).toBe(200);
+    expect((await POST(makeRequest(older, "AttackerPassw0rd!"))).status).toBe(400);
+
+    const [after] = await db.select().from(schema.sessions).where(eq(schema.sessions.id, session!.id));
+    expect(after?.revokedAt).not.toBeNull();
+  });
+
+  it("rejects an expired or unknown link", async () => {
+    const rawToken = "expired-reset-token";
+    await createPasswordResetToken(db, {
+      userId: activeUserId,
+      tokenHash: hashToken(rawToken),
+      expiresAt: new Date(Date.now() - 1000),
+    });
+    expect((await POST(makeRequest(rawToken, "NewPassw0rd!"))).status).toBe(400);
+    expect((await POST(makeRequest("never-issued-token", "NewPassw0rd!"))).status).toBe(400);
+  });
 });

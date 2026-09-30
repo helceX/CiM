@@ -12,3 +12,4 @@ export * from "./brand-groups";
 export * from "./tracked-keywords";
 export * from "./keyword-list";
 export * from "./tax-id";
+export * from "./visuals";

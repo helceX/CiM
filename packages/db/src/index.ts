@@ -34,4 +34,5 @@ export * from "./repositories/social-profiles";
 export * from "./repositories/social-listening";
 export * from "./search/postgres-search-index";
 export * from "./repositories/brand-groups";
+export * from "./repositories/visuals";
 export * from "./repositories/credits";

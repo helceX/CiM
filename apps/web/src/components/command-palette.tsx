@@ -80,8 +80,8 @@ export function CommandPalette() {
         aria-label="Open command palette"
       >
         <Search className="size-3.5" aria-hidden="true" />
-        Search
-        <kbd className="ml-4 rounded-sm border border-border-strong px-1 text-[10px]">
+        <span className="hidden sm:inline">Search</span>
+        <kbd className="ml-4 hidden sm:inline rounded-sm border border-border-strong px-1 text-[10px]">
           ⌘K
         </kbd>
       </DialogPrimitive.Trigger>

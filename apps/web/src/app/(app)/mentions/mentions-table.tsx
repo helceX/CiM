@@ -106,7 +106,7 @@ export function MentionsTable({
           description="Try widening the date range or clearing a filter."
         />
       ) : (
-        <div className="overflow-hidden rounded-lg border border-border">
+        <div className="overflow-x-auto rounded-lg border border-border">
           <table className="w-full text-sm">
             <thead className="border-b border-border bg-surface-muted text-left text-xs text-muted-foreground">
               <tr>

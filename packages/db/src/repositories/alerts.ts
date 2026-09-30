@@ -177,6 +177,41 @@ export async function createAlertEvent(
   return event;
 }
 
+/**
+ * findRecentAlertEvent + createAlertEvent, atomically — plain
+ * check-then-act (fireAlert's own previous sequence) is a race the same
+ * shape as createMonitoringQueryWithPlanLimit's own documented one
+ * (billing.ts): apps/worker/src/index.ts runs crawl_source jobs at
+ * concurrency 5, and crawl-scheduler.ts fans out one job per active
+ * source every tick, so two different sources matching the same
+ * monitoring query in the same tick each call fireAlert independently.
+ * Both can read "no recent event" before either INSERT commits, firing
+ * duplicate email/in_app/webhook notifications for what the rule's
+ * cooldown (alert fatigue, brief §19–20) exists to collapse into one. A
+ * Postgres advisory lock scoped to the rule id serializes concurrent
+ * callers for the duration of the check + insert.
+ */
+export async function createAlertEventIfNotInCooldown(
+  db: Db,
+  organizationId: OrganizationId,
+  rule: { id: string; cooldownMinutes: number },
+  input: { triggerSummary: string; mentionIds: string[] },
+) {
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${rule.id}))`);
+
+    const txDb = tx as unknown as Db;
+    const inCooldown = await findRecentAlertEvent(txDb, rule.id, rule.cooldownMinutes);
+    if (inCooldown) return null;
+
+    return createAlertEvent(txDb, organizationId, {
+      alertRuleId: rule.id,
+      triggerSummary: input.triggerSummary,
+      mentionIds: input.mentionIds,
+    });
+  });
+}
+
 export async function listAlertEventsForRule(db: Db, alertRuleId: string, limit = 20) {
   return db
     .select()

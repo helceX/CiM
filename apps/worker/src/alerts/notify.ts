@@ -3,10 +3,9 @@ import { getEnv } from "@cim/config";
 import type { SendEmailJobData } from "@cim/core";
 import {
   asOrganizationId,
-  createAlertEvent,
+  createAlertEventIfNotInCooldown,
   createNotificationForOrgMembers,
   db,
-  findRecentAlertEvent,
   getOrganizationWebhookUrl,
   listActiveMemberEmails,
 } from "@cim/db";
@@ -15,25 +14,22 @@ import { safeFetch } from "@cim/ingestion";
 import { queueOutboxEmail } from "../email";
 
 /**
- * Fires one alert rule: cooldown check (brief §19–20 alert fatigue) ->
- * one AlertEvent -> fan out to whichever channels the rule has enabled.
- * Returns false without any side effect if the rule is still in its
- * cooldown window — callers don't need to know why nothing happened.
+ * Fires one alert rule: atomic cooldown check + AlertEvent insert (brief
+ * §19–20 alert fatigue — createAlertEventIfNotInCooldown serializes
+ * concurrent callers for the same rule, since crawlSourceWorker runs
+ * several crawl_source jobs at once) -> fan out to whichever channels
+ * the rule has enabled. Returns false without any side effect if the
+ * rule is still in its cooldown window — callers don't need to know why
+ * nothing happened.
  */
 export async function fireAlert(
   emailQueue: Queue<SendEmailJobData>,
   rule: AlertRule,
   input: { triggerSummary: string; mentionIds: string[] },
 ): Promise<boolean> {
-  const inCooldown = await findRecentAlertEvent(db, rule.id, rule.cooldownMinutes);
-  if (inCooldown) return false;
-
   const organizationId = asOrganizationId(rule.organizationId);
-  const event = await createAlertEvent(db, organizationId, {
-    alertRuleId: rule.id,
-    triggerSummary: input.triggerSummary,
-    mentionIds: input.mentionIds,
-  });
+  const event = await createAlertEventIfNotInCooldown(db, organizationId, rule, input);
+  if (!event) return false;
 
   if (rule.channels.includes("in_app")) {
     // Isolated like the email/webhook channels below (commit f3753d6) —

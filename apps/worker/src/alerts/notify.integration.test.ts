@@ -1,4 +1,5 @@
 import { beforeAll, describe, expect, it, vi } from "vitest";
+import { eq } from "drizzle-orm";
 import type { Queue } from "bullmq";
 import type { SendEmailJobData } from "@cim/core";
 import {
@@ -310,5 +311,49 @@ describe("fireAlert — webhook channel (integration)", () => {
     // Both org members (owner + second member) are attempted, not just
     // however many came before the failing one.
     expect(calls).toBe(2);
+  });
+
+  /**
+   * Regression: fireAlert's cooldown check (findRecentAlertEvent) and its
+   * AlertEvent insert used to be two separate statements — a plain
+   * check-then-act race the same shape as createMonitoringQueryWithPlanLimit's
+   * own documented one (billing.ts). apps/worker/src/index.ts runs
+   * crawl_source jobs at concurrency 5, and crawl-scheduler.ts fans out
+   * one job per active source every tick, so two different sources
+   * matching the same monitoring query in the same tick each call
+   * fireAlert for the same rule independently — both could read "no
+   * recent event" before either INSERT committed, firing duplicate
+   * notifications for exactly what the rule's cooldown exists to
+   * collapse into one. Proves createAlertEventIfNotInCooldown's
+   * per-rule advisory lock holds under real concurrency, not just
+   * sequential calls.
+   */
+  it("lets exactly one of several concurrent fireAlert calls for the same rule through its cooldown", async () => {
+    const rule = await createAlertRule(db, organizationId, {
+      projectId,
+      queryId,
+      createdByUserId: userId,
+      name: "Concurrent cooldown race rule",
+      type: "keyword",
+      channels: ["in_app"],
+      cooldownMinutes: 60,
+    });
+
+    const attempts = await Promise.all(
+      Array.from({ length: 5 }, (_, i) =>
+        fireAlert(emailQueue, rule, {
+          triggerSummary: `concurrent attempt ${i}`,
+          mentionIds: [],
+        }),
+      ),
+    );
+
+    expect(attempts.filter((fired) => fired)).toHaveLength(1);
+
+    const events = await db
+      .select()
+      .from(schema.alertEvents)
+      .where(eq(schema.alertEvents.alertRuleId, rule.id));
+    expect(events).toHaveLength(1);
   });
 });

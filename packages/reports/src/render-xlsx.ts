@@ -1,6 +1,8 @@
 import ExcelJS from "exceljs";
 import type { ReportData } from "./gather-data";
-import type { ReportSectionKey } from "./sections";
+import { DIMENSION_LABELS, MEASURE_LABELS } from "@cim/core";
+import { isVisualSectionKey, type ReportSectionKey } from "./sections";
+import type { ReportVisual } from "./gather-data";
 import { sanitizeCellValue } from "./sanitize-cell";
 
 function formatDate(date: Date): string {
@@ -198,6 +200,31 @@ function addRecommendationsSheet(workbook: ExcelJS.Workbook, data: ReportData): 
   );
 }
 
+/** Excel forbids these in sheet names and caps them at 31 characters; names must also be unique. */
+function visualSheetName(workbook: ExcelJS.Workbook, name: string): string {
+  const base = `Visual - ${name}`.replace(/[\\/?*[\]:]/g, " ").replace(/\s+/g, " ").trim().slice(0, 31) || "Visual";
+  let candidate = base;
+  for (let n = 2; workbook.getWorksheet(candidate); n += 1) {
+    candidate = `${base.slice(0, 31 - String(n).length - 1)} ${n}`;
+  }
+  return candidate;
+}
+
+/** Labels are external text (source names…): neutralise leading formula characters like the other sheets do. */
+function addVisualSheet(workbook: ExcelJS.Workbook, visual: ReportVisual): void {
+  const sheet = workbook.addWorksheet(visualSheetName(workbook, visual.name));
+  if (!visual.rows || !visual.measure || !visual.dimension) {
+    sheet.addRow(["Not available — this visual could not be produced."]);
+    return;
+  }
+  sheet.columns = [
+    { header: DIMENSION_LABELS[visual.dimension], key: "label", width: 32 },
+    { header: MEASURE_LABELS[visual.measure], key: "value", width: 18 },
+  ];
+  styleHeaderRow(sheet.getRow(1));
+  sheet.addRows(visual.rows.map((row) => ({ label: sanitizeCellValue(row.label), value: row.value })));
+}
+
 const SECTION_SHEET_BUILDERS: Record<
   ReportSectionKey,
   (workbook: ExcelJS.Workbook, data: ReportData) => void
@@ -244,12 +271,17 @@ export async function renderReportXlsx(data: ReportData): Promise<Buffer> {
 
   addSummarySheet(workbook, data);
 
-  const sections: ReportSectionKey[] =
+  const sections =
     data.templateKey === "custom"
       ? (data.sections ?? [])
       : FIXED_TEMPLATE_SECTIONS[data.templateKey];
 
   for (const key of sections) {
+    if (isVisualSectionKey(key)) {
+      const visual = data.visuals[key];
+      if (visual) addVisualSheet(workbook, visual);
+      continue;
+    }
     SECTION_SHEET_BUILDERS[key](workbook, data);
   }
 

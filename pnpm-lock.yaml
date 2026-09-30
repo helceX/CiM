@@ -312,9 +312,15 @@ importers:
 
   packages/reports:
     dependencies:
+      '@cim/core':
+        specifier: workspace:*
+        version: link:../core
       '@cim/db':
         specifier: workspace:*
         version: link:../db
+      '@cim/validation':
+        specifier: workspace:*
+        version: link:../validation
       exceljs:
         specifier: ^4.4.0
         version: 4.4.0

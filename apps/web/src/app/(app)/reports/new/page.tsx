@@ -1,10 +1,13 @@
-import { db, listProjects } from "@cim/db";
+import { db, listProjects, listSavedVisuals } from "@cim/db";
 import { requireOrgContext } from "@/lib/tenant";
 import { ReportForm } from "./report-form";
 
 export default async function NewReportPage() {
   const context = await requireOrgContext();
-  const projects = await listProjects(db, context.organizationId);
+  const [projects, visuals] = await Promise.all([
+    listProjects(db, context.organizationId),
+    listSavedVisuals(db, context.organizationId),
+  ]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -14,7 +17,10 @@ export default async function NewReportPage() {
           Pick a template — or build a custom one — and a period. Generation runs in the background.
         </p>
       </div>
-      <ReportForm projects={projects.map((p) => ({ id: p.id, name: p.name }))} />
+      <ReportForm
+        projects={projects.map((p) => ({ id: p.id, name: p.name }))}
+        visuals={visuals.map((v) => ({ id: v.id, name: v.name }))}
+      />
     </div>
   );
 }

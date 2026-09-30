@@ -33,3 +33,25 @@ export const REPORT_SECTION_LABELS: Record<ReportSectionKey, string> = {
 export function isReportSectionKey(value: string): value is ReportSectionKey {
   return (REPORT_SECTION_KEYS as readonly string[]).includes(value);
 }
+
+/**
+ * A custom report can also include saved visuals (docs/product/NEXT_FEATURES_SPEC.md §2).
+ * They share the ordered `sections` list as `visual:<uuid>`; the id is always
+ * re-resolved against the report's organization when the report is generated.
+ */
+export type VisualSectionKey = `visual:${string}`;
+export type ReportSection = ReportSectionKey | VisualSectionKey;
+
+const VISUAL_SECTION = /^visual:([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$/;
+
+export function isVisualSectionKey(value: string): value is VisualSectionKey {
+  return VISUAL_SECTION.test(value);
+}
+
+export function visualIdFromSection(key: VisualSectionKey): string {
+  return key.slice("visual:".length);
+}
+
+export function isReportSection(value: string): value is ReportSection {
+  return isReportSectionKey(value) || isVisualSectionKey(value);
+}

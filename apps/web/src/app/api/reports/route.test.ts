@@ -16,6 +16,7 @@ const createReport = vi.fn();
 const createReportRun = vi.fn();
 const enqueueReportGeneration = vi.fn();
 const recordAuditLog = vi.fn();
+const getSavedVisual = vi.fn();
 
 vi.mock("@/lib/tenant", () => ({
   requirePermission: (...args: unknown[]) => requirePermission(...args),
@@ -32,6 +33,7 @@ vi.mock("@cim/db", () => ({
   createReport: (...args: unknown[]) => createReport(...args),
   createReportRun: (...args: unknown[]) => createReportRun(...args),
   recordAuditLog: (...args: unknown[]) => recordAuditLog(...args),
+  getSavedVisual: (...args: unknown[]) => getSavedVisual(...args),
 }));
 
 const { POST } = await import("./route");
@@ -74,5 +76,38 @@ describe("POST /api/reports — requires reports:write", () => {
     const response = await POST(makeRequest(basePayload));
     expect(response.status).toBe(200);
     expect(enqueueReportGeneration).toHaveBeenCalledWith("run-1");
+  });
+});
+
+describe("POST /api/reports — visual sections", () => {
+  const visualId = "22222222-2222-4222-8222-222222222222";
+  const custom = { ...basePayload, templateKey: "custom", sections: ["trend", `visual:${visualId}`] };
+
+  it("404s a visual that is not in the caller's organization and creates nothing", async () => {
+    vi.clearAllMocks();
+    requirePermission.mockResolvedValueOnce({ organizationId: "org-1", userId: "user-1" });
+    checkRateLimit.mockResolvedValueOnce({ allowed: true });
+    getProject.mockResolvedValueOnce({ id: basePayload.projectId });
+    getSavedVisual.mockResolvedValueOnce(undefined);
+
+    const response = await POST(makeRequest(custom));
+    expect(response.status).toBe(404);
+    expect(getSavedVisual).toHaveBeenCalledWith({}, "org-1", visualId);
+    expect(createReport).not.toHaveBeenCalled();
+    expect(enqueueReportGeneration).not.toHaveBeenCalled();
+  });
+
+  it("stores the visual section in order when the visual belongs to the organization", async () => {
+    vi.clearAllMocks();
+    requirePermission.mockResolvedValueOnce({ organizationId: "org-1", userId: "user-1" });
+    checkRateLimit.mockResolvedValueOnce({ allowed: true });
+    getProject.mockResolvedValueOnce({ id: basePayload.projectId });
+    getSavedVisual.mockResolvedValueOnce({ id: visualId });
+    createReport.mockResolvedValueOnce({ id: "report-2" });
+    createReportRun.mockResolvedValueOnce({ id: "run-2" });
+
+    const response = await POST(makeRequest(custom));
+    expect(response.status).toBe(200);
+    expect(createReport.mock.calls[0]![2].sections).toEqual(["trend", `visual:${visualId}`]);
   });
 });

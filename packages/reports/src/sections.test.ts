@@ -14,3 +14,17 @@ describe("sections", () => {
     expect(isReportSectionKey("not-a-real-section")).toBe(false);
   });
 });
+
+describe("visual sections", () => {
+  const id = "22222222-2222-4222-8222-222222222222";
+  it("recognises visual:<uuid> only, and reads the id back", async () => {
+    const { isVisualSectionKey, isReportSection, visualIdFromSection } = await import("./sections");
+    expect(isVisualSectionKey(`visual:${id}`)).toBe(true);
+    expect(visualIdFromSection(`visual:${id}`)).toBe(id);
+    expect(isVisualSectionKey("visual:nope")).toBe(false);
+    expect(isVisualSectionKey(`visual:${id} `)).toBe(false);
+    expect(isReportSection("trend")).toBe(true);
+    expect(isReportSection(`visual:${id}`)).toBe(true);
+    expect(isReportSection("made-up")).toBe(false);
+  });
+});

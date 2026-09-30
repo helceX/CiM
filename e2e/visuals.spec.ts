@@ -94,3 +94,24 @@ test("pin a visual to the Dashboard, export it as CSV, edit it, unpin it", async
   await page.goto("/dashboard");
   await expect(page.getByRole("heading", { name: "Your visuals" })).toHaveCount(0);
 });
+
+test("a saved visual can be added to a custom report", async ({ page }) => {
+  await registerAndOnboard(page);
+  await page.goto("/visuals/new");
+  await expect(page.getByText("Computing…")).toBeHidden({ timeout: 10_000 });
+  await page.getByLabel("Name").fill("Volume for the board");
+  await page.getByRole("button", { name: "Save visual" }).click();
+  await expect(page).toHaveURL(/\/visuals\/[0-9a-f-]{36}$/);
+
+  await page.goto("/reports/new");
+  await page.getByLabel("Name").fill("Board report");
+  await page.getByRole("radio", { name: /Custom/ }).check();
+  await page.getByRole("group", { name: "Your visuals" }).getByLabel("Volume for the board").check();
+  await expect(page.getByText("1. Visual: Volume for the board")).toBeVisible();
+
+  const created = page.waitForResponse(
+    (response) => response.url().endsWith("/api/reports") && response.request().method() === "POST",
+  );
+  await page.getByRole("button", { name: "Generate report" }).click();
+  expect((await created).status()).toBe(200);
+});

@@ -1,0 +1,22 @@
+{
+  "meta": {
+    "title": "Mediaory — Communication Intelligence Platform",
+    "description": "Monitor, understand, and act on what the world is saying about your brand."
+  },
+  "nav": {
+    "features": "Features",
+    "solutions": "Solutions",
+    "security": "Security",
+    "resources": "Resources",
+    "pricing": "Pricing",
+    "signIn": "Sign in",
+    "getStarted": "Get started",
+    "home": "Mediaory home"
+  },
+  "footer": {
+    "rights": "All rights reserved.",
+    "security": "Security",
+    "resources": "Resources",
+    "contact": "Contact"
+  }
+}

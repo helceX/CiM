@@ -5,6 +5,7 @@ import { Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMe
 import { LogOut, User } from "lucide-react";
 import { CommandPalette } from "./command-palette";
 import { NotificationBell } from "./notification-bell";
+import { MobileNav } from "./mobile-nav";
 
 export function AppTopbar({
   organizationName,
@@ -24,18 +25,19 @@ export function AppTopbar({
   }
 
   return (
-    <header className="flex h-16 items-center justify-between border-b border-border px-6">
-      <div className="text-sm text-muted-foreground">
-        <span className="font-medium text-foreground">{organizationName}</span>
+    <header className="flex h-16 items-center justify-between gap-2 border-b border-border px-3 md:px-6">
+      <div className="flex min-w-0 items-center gap-1 text-sm text-muted-foreground">
+        <MobileNav />
+        <span className="truncate font-medium text-foreground">{organizationName}</span>
       </div>
-      <div className="flex items-center gap-3">
+      <div className="flex shrink-0 items-center gap-1 sm:gap-3">
         <CommandPalette />
         <NotificationBell initialUnreadCount={initialUnreadCount} />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="sm" aria-label="Account menu">
               <User className="size-4" aria-hidden="true" />
-              {userLabel}
+              <span className="hidden sm:inline">{userLabel}</span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">

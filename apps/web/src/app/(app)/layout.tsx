@@ -17,13 +17,13 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   return (
     <div lang="en" className="flex min-h-screen">
       <AppSidebar />
-      <div className="flex flex-1 flex-col">
+      <div className="flex min-w-0 flex-1 flex-col">
         <AppTopbar
           organizationName={context.organizationName}
           userLabel={`${user.firstName} ${user.lastName}`}
           initialUnreadCount={unreadCount}
         />
-        <main className="flex-1 px-6 py-8">{children}</main>
+        <main className="flex-1 px-4 py-6 md:px-6 md:py-8">{children}</main>
       </div>
     </div>
   );

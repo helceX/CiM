@@ -23,6 +23,14 @@ export async function registerAndOnboard(
   options: { keyword?: string } = {},
 ): Promise<OnboardedAccount> {
   const unique = `${Date.now()}-${Math.floor(Math.random() * 100000)}`;
+  // Registration is rate-limited to 10 per client IP per hour
+  // (api/auth/register), and every E2E test registers its own account
+  // from the same runner IP — so the suite would trip the limit as it
+  // grows. Give each browser context its own (fake) client IP; the app
+  // takes the last X-Forwarded-For hop, which is what a proxy would set.
+  await page.context().setExtraHTTPHeaders({
+    "x-forwarded-for": `10.${Math.floor(Math.random() * 256)}.${Math.floor(Math.random() * 256)}.${Math.floor(Math.random() * 254) + 1}`,
+  });
   const email = `e2e-${unique}@example.com`;
   const password = "Sup3rSecret!";
   const companyName = `E2E Co ${unique}`;

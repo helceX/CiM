@@ -82,6 +82,16 @@ export default async function DashboardPage() {
   const hasCompetitor = competitorComparison.some(
     (row) => row.trackingTarget === "competitor",
   );
+  // AI_ARCHITECTURE.md Trust Layer — an Insight with zero evidence rows is
+  // never rendered (send-executive-brief.ts applies the same filter to
+  // "whats_changed" before emailing it). Reachable here too: evidence rows
+  // cascade-delete with their Mention (schema/ai.ts), and unlike "risk"'s
+  // own 24h freshness window, a recommendation has no staleness bound —
+  // a dormant project's months-old recommendation can outlive its own
+  // evidence once retention (30+ days minimum) catches up to it.
+  const evidencedRecommendations = recommendations.filter(
+    (item) => item.evidence.length > 0,
+  );
 
   return (
     <div className="flex flex-col gap-8">
@@ -106,9 +116,9 @@ export default async function DashboardPage() {
         ]}
       />
 
-      {risk ? <RiskBanner risk={risk} /> : null}
+      {risk && risk.evidence.length > 0 ? <RiskBanner risk={risk} /> : null}
 
-      {insight ? (
+      {insight && insight.evidence.length > 0 ? (
         <section className="rounded-lg border border-border p-4">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold text-foreground">Since yesterday</h2>
@@ -126,8 +136,8 @@ export default async function DashboardPage() {
         </section>
       ) : null}
 
-      {recommendations.length > 0 ? (
-        <RecommendationsSection items={recommendations} />
+      {evidencedRecommendations.length > 0 ? (
+        <RecommendationsSection items={evidencedRecommendations} />
       ) : null}
 
       <AiAssistantPanel />

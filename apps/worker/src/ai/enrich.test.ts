@@ -102,4 +102,64 @@ describe("processAiEnrichJob — entity/topic write failure isolation", () => {
     const completedCallOrder = markMentionEnrichmentCompleted.mock.invocationCallOrder[0]!;
     expect(completedCallOrder).toBeGreaterThan(entityCallOrder);
   });
+
+  /**
+   * Regression: the cached-enrichment path (findCompletedEnrichmentForArticle
+   * hit) used to call markMentionEnrichmentCompleted *before*
+   * copyMentionEnrichmentAssignments, with no try/catch around either —
+   * the opposite of the "completed last" discipline the two tests above
+   * already enforce for the non-cached path, and inconsistent with every
+   * other per-candidate isolation in this codebase. A copy failure left
+   * the mention permanently marked 'completed' with no entities/topics
+   * ever copied (unretryable, since aiStatus='completed' excludes it from
+   * listPendingEnrichmentMentions forever), and — uncaught — aborted the
+   * whole batch, silently starving every other pending mention that tick.
+   */
+  it("does not mark the mention completed when the cached-path entity/topic copy fails, and still processes the rest of the batch", async () => {
+    listPendingEnrichmentMentions.mockResolvedValueOnce([
+      {
+        mentionId: "mention-3",
+        organizationId: "org-1",
+        articleId: "article-3",
+        title: "Acme, cached",
+        excerpt: "Same article as an already-enriched mention.",
+        sourceCanProcessAi: true,
+      },
+      {
+        mentionId: "mention-4",
+        organizationId: "org-1",
+        articleId: "article-4",
+        title: "Acme, fresh",
+        excerpt: "A different article entirely.",
+        sourceCanProcessAi: true,
+      },
+    ]);
+    findCompletedEnrichmentForArticle.mockResolvedValueOnce({
+      mentionId: "mention-0",
+      sentiment: "positive",
+      sentimentConfidence: "0.8",
+      aiSummary: "Cached summary.",
+      aiMethod: "mock",
+    });
+    copyMentionEnrichmentAssignments.mockRejectedValueOnce(new Error("transient DB error"));
+    findCompletedEnrichmentForArticle.mockResolvedValueOnce(undefined);
+    findOrCreateEntity.mockResolvedValueOnce("entity-1");
+    addMentionEntity.mockResolvedValueOnce(undefined);
+
+    await processAiEnrichJob();
+
+    expect(markMentionEnrichmentCompleted).not.toHaveBeenCalledWith(
+      expect.anything(),
+      "mention-3",
+      expect.anything(),
+    );
+    expect(markMentionEnrichmentFailed).toHaveBeenCalledWith(expect.anything(), "mention-3");
+    // The second candidate in the batch still gets processed — one
+    // candidate's uncaught failure no longer aborts the whole tick.
+    expect(markMentionEnrichmentCompleted).toHaveBeenCalledWith(
+      expect.anything(),
+      "mention-4",
+      expect.objectContaining({ sentiment: "neutral" }),
+    );
+  });
 });

@@ -44,14 +44,29 @@ export async function processAiEnrichJob(): Promise<{ processed: number; skipped
 
     const cached = await findCompletedEnrichmentForArticle(db, candidate.articleId);
     if (cached && cached.sentiment) {
-      await markMentionEnrichmentCompleted(db, candidate.mentionId, {
-        sentiment: cached.sentiment,
-        sentimentConfidence: cached.sentimentConfidence ? Number(cached.sentimentConfidence) : 0,
-        aiSummary: cached.aiSummary ?? "",
-        aiMethod: cached.aiMethod ?? "",
-      });
-      await copyMentionEnrichmentAssignments(db, cached.mentionId, candidate.mentionId);
-      processed += 1;
+      try {
+        // Same "completed last" ordering as the non-cached path below, for
+        // the same reason (its own comment): copying entities/topics first
+        // means a failure here leaves the mention correctly still
+        // 'pending' — never marked 'completed' with the copy silently
+        // never having happened, which would otherwise be a permanent,
+        // unretryable gap (aiStatus='completed' excludes it from
+        // listPendingEnrichmentMentions forever). Also isolated per
+        // candidate like every other branch/job in this codebase — an
+        // uncaught throw here used to abort the whole batch, starving
+        // every other pending mention in it for this tick.
+        await copyMentionEnrichmentAssignments(db, cached.mentionId, candidate.mentionId);
+        await markMentionEnrichmentCompleted(db, candidate.mentionId, {
+          sentiment: cached.sentiment,
+          sentimentConfidence: cached.sentimentConfidence ? Number(cached.sentimentConfidence) : 0,
+          aiSummary: cached.aiSummary ?? "",
+          aiMethod: cached.aiMethod ?? "",
+        });
+        processed += 1;
+      } catch (error) {
+        console.error(`[worker] ai_enrich cache copy failed for mention ${candidate.mentionId}:`, error);
+        await markMentionEnrichmentFailed(db, candidate.mentionId);
+      }
       continue;
     }
 

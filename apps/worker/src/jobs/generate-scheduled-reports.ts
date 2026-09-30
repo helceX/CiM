@@ -5,6 +5,7 @@ import {
   db,
   getReportsDueForScheduledRun,
   markReportScheduledRun,
+  type Db,
 } from "@cim/db";
 import { periodTypeToRange } from "@cim/reports/templates";
 
@@ -33,11 +34,26 @@ export async function processGenerateScheduledReportsJob(
     try {
       const { periodStart, periodEnd } = periodTypeToRange(report.periodType);
 
-      const run = await createReportRun(db, report.organizationId, {
-        reportId: report.id,
-        requestedByUserId: report.createdByUserId,
-        periodStart,
-        periodEnd,
+      // Regression: createReportRun and markReportScheduledRun used to be
+      // two separate statements with the queue add in between — a
+      // transient failure in either the add() or markReportScheduledRun
+      // (already-created run, mark never lands) left lastScheduledRunAt
+      // un-advanced, so this same report reads as still "due" and gets a
+      // *second* ReportRun + generation job on the very next daily tick,
+      // spamming a "weekly"/"monthly"/"yearly" report on back-to-back
+      // days. One transaction means the run and the mark commit together
+      // or neither does — a failure here leaves no orphaned run and the
+      // report legitimately still "due" for the next tick to pick up.
+      const run = await db.transaction(async (tx) => {
+        const txDb = tx as unknown as Db;
+        const created = await createReportRun(txDb, report.organizationId, {
+          reportId: report.id,
+          requestedByUserId: report.createdByUserId,
+          periodStart,
+          periodEnd,
+        });
+        await markReportScheduledRun(txDb, report.id);
+        return created;
       });
 
       await generateReportQueue.add(
@@ -45,8 +61,6 @@ export async function processGenerateScheduledReportsJob(
         { reportRunId: run.id },
         { attempts: 2, backoff: { type: "exponential", delay: 5000 } },
       );
-
-      await markReportScheduledRun(db, report.id);
     } catch (error) {
       console.error(`[worker] generate_scheduled_reports failed for report ${report.id}:`, error);
     }

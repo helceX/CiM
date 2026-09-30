@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import {
   BarChart3,
+  ChartColumn,
   BellRing,
   FileText,
   Inbox,
@@ -23,6 +24,7 @@ export const NAV_ITEMS: { href: string; label: string; icon: LucideIcon }[] = [
   { href: "/social", label: "Social", icon: Share2 },
   { href: "/alerts", label: "Alerts", icon: BellRing },
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
+  { href: "/visuals", label: "Visuals", icon: ChartColumn },
   { href: "/reports", label: "Reports", icon: FileText },
   { href: "/settings", label: "Settings", icon: Settings },
 ];

@@ -314,6 +314,8 @@ function RevokeMemberDialog({
       }
       setOpen(false);
       router.refresh();
+    } catch {
+      setError("Something went wrong. Please try again.");
     } finally {
       setIsSubmitting(false);
     }

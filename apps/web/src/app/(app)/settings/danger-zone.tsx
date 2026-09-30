@@ -6,12 +6,17 @@ import { Button, Dialog, DialogContent, DialogTrigger, Field, Input } from "@cim
 
 export function DataExportButton() {
   const [isExporting, setIsExporting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleExport() {
+    setError(null);
     setIsExporting(true);
     try {
       const response = await fetch("/api/account/export");
-      if (!response.ok) return;
+      if (!response.ok) {
+        setError("Something went wrong. Please try again.");
+        return;
+      }
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
@@ -19,15 +24,24 @@ export function DataExportButton() {
       link.download = "cim-account-export.json";
       link.click();
       URL.revokeObjectURL(url);
+    } catch {
+      setError("Something went wrong. Please try again.");
     } finally {
       setIsExporting(false);
     }
   }
 
   return (
-    <Button type="button" variant="secondary" onClick={handleExport} disabled={isExporting}>
-      {isExporting ? "Preparing export…" : "Export my data"}
-    </Button>
+    <div className="flex flex-col items-start gap-1">
+      <Button type="button" variant="secondary" onClick={handleExport} disabled={isExporting}>
+        {isExporting ? "Preparing export…" : "Export my data"}
+      </Button>
+      {error ? (
+        <p role="alert" className="text-xs text-danger">
+          {error}
+        </p>
+      ) : null}
+    </div>
   );
 }
 

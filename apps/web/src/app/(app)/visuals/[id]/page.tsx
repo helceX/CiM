@@ -5,7 +5,9 @@ import { DIMENSION_LABELS, MEASURE_LABELS } from "@cim/core";
 import { visualSpecSchema } from "@cim/validation";
 import { VisualView } from "@/components/charts/visual-view";
 import { requireOrgContext } from "@/lib/tenant";
+import { Button } from "@cim/ui";
 import { DeleteVisualButton } from "./delete-button";
+import { PinButton } from "./pin-button";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -45,7 +47,24 @@ export default async function VisualPage({ params }: { params: Promise<{ id: str
             </p>
           ) : null}
         </div>
-        {canWrite ? <DeleteVisualButton id={visual.id} /> : null}
+        <div className="flex flex-wrap items-start gap-2">
+          {parsed.success ? (
+            <Button asChild variant="secondary" size="sm">
+              <a href={`/api/visuals/${visual.id}/export`} download>
+                Export CSV
+              </a>
+            </Button>
+          ) : null}
+          {canWrite ? (
+            <>
+              <Button asChild variant="secondary" size="sm">
+                <Link href={`/visuals/${visual.id}/edit`}>Edit</Link>
+              </Button>
+              <PinButton id={visual.id} pinned={visual.pinnedAt !== null} />
+              <DeleteVisualButton id={visual.id} />
+            </>
+          ) : null}
+        </div>
       </div>
 
       <div className="rounded-lg border border-border p-4">

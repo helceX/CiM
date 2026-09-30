@@ -211,6 +211,13 @@
       "when": 1790790090671,
       "tag": "0029_wakeful_penance",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1790791388333,
+      "tag": "0030_natural_kinsey_walden",
+      "breakpoints": true
     }
   ]
 }

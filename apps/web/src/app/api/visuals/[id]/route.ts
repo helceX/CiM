@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { VISUAL_MAX_PINNED } from "@cim/core";
 import { updateVisualSchema } from "@cim/validation";
 import { db, deleteSavedVisual, getProject, recordAuditLog, updateSavedVisual } from "@cim/db";
 import { authorize } from "../auth";
@@ -19,15 +20,23 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     return NextResponse.json({ error: "Project not found" }, { status: 404 });
   }
 
-  const visual = await updateSavedVisual(db, context.organizationId, id, parsed.data);
-  if (!visual) return NextResponse.json({ error: "Visual not found" }, { status: 404 });
+  const result = await updateSavedVisual(db, context.organizationId, id, parsed.data);
+  if (!result.ok) {
+    return result.reason === "pin_limit"
+      ? NextResponse.json(
+          { error: `You can pin up to ${VISUAL_MAX_PINNED} visuals to the Dashboard. Unpin one first.` },
+          { status: 409 },
+        )
+      : NextResponse.json({ error: "Visual not found" }, { status: 404 });
+  }
+  const { visual } = result;
 
   await recordAuditLog(db, context.organizationId, {
     actorUserId: context.userId,
     action: "visual.updated",
     targetType: "saved_visual",
     targetId: id,
-    metadata: { name: visual.name },
+    metadata: { name: visual.name, ...(parsed.data.pinned === undefined ? {} : { pinned: parsed.data.pinned }) },
   });
   return NextResponse.json({ ok: true });
 }

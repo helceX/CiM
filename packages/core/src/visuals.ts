@@ -17,6 +17,8 @@ export type VisualChartType = (typeof VISUAL_CHART_TYPES)[number];
 export const VISUAL_PERIOD_DAYS = [7, 30, 90, 180, 365] as const;
 export const VISUAL_MAX_ROWS = 1000;
 export const VISUAL_PIE_MAX_SLICES = 6;
+/** How many visuals can sit on the Dashboard at once. */
+export const VISUAL_MAX_PINNED = 4;
 
 export const MEASURE_LABELS: Record<VisualMeasure, string> = {
   mentions: "Mentions",
@@ -95,4 +97,27 @@ export function suggestChartTypes(spec: { dimension: VisualDimension; measure: V
   }
   suggestions.push("table");
   return suggestions;
+}
+
+/**
+ * Labels are source names, query names and group names — text that can be
+ * attacker-influenced (a source called `=HYPERLINK(...)`). Spreadsheet apps
+ * evaluate a leading = + - @ as a formula (CWE-1236), so such cells get a
+ * leading apostrophe, the same mitigation the report exports use.
+ */
+function csvCell(value: string): string {
+  const safe = /^[=+\-@\t\r]/.test(value) ? `'${value}` : value;
+  return `"${safe.replaceAll('"', '""')}"`;
+}
+
+/** RFC 4180 CSV (CRLF) of a computed visual; an undefined share is an empty cell, not 0. */
+export function renderVisualCsv(
+  rows: VisualRow[],
+  spec: { measure: VisualMeasure; dimension: VisualDimension },
+): string {
+  const lines = [`${csvCell(DIMENSION_LABELS[spec.dimension])},${csvCell(MEASURE_LABELS[spec.measure])}`];
+  for (const row of rows) {
+    lines.push(`${csvCell(row.label)},${row.value === null ? "" : row.value}`);
+  }
+  return lines.join("\r\n") + "\r\n";
 }

@@ -52,6 +52,11 @@ export const createVisualSchema = z.object({
 export type CreateVisualInput = z.infer<typeof createVisualSchema>;
 
 export const updateVisualSchema = z
-  .object({ name: nameSchema.optional(), kind: z.enum(VISUAL_KINDS).optional(), spec: visualSpecSchema.optional() })
+  .object({
+    name: nameSchema.optional(),
+    kind: z.enum(VISUAL_KINDS).optional(),
+    spec: visualSpecSchema.optional(),
+    pinned: z.boolean().optional(),
+  })
   .refine((value) => Object.keys(value).length > 0, "Nothing to update");
 export type UpdateVisualInput = z.infer<typeof updateVisualSchema>;

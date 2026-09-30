@@ -31,14 +31,24 @@ const CHART_LABELS: Record<VisualChartType, string> = {
 
 type Preview = { rows: VisualRow[]; truncated: boolean };
 
-export function VisualBuilder() {
+export type VisualBuilderInitial = {
+  id: string;
+  name: string;
+  measure: VisualMeasure;
+  dimension: VisualDimension;
+  periodDays: number;
+  sentiments: Sentiment[];
+  chartType: VisualChartType;
+};
+
+export function VisualBuilder({ initial }: { initial?: VisualBuilderInitial }) {
   const router = useRouter();
-  const [name, setName] = useState("");
-  const [measure, setMeasure] = useState<VisualMeasure>("mentions");
-  const [dimension, setDimension] = useState<VisualDimension>("day");
-  const [periodDays, setPeriodDays] = useState<number>(30);
-  const [sentiments, setSentiments] = useState<Sentiment[]>([]);
-  const [chartType, setChartType] = useState<VisualChartType>("line");
+  const [name, setName] = useState(initial?.name ?? "");
+  const [measure, setMeasure] = useState<VisualMeasure>(initial?.measure ?? "mentions");
+  const [dimension, setDimension] = useState<VisualDimension>(initial?.dimension ?? "day");
+  const [periodDays, setPeriodDays] = useState<number>(initial?.periodDays ?? 30);
+  const [sentiments, setSentiments] = useState<Sentiment[]>(initial?.sentiments ?? []);
+  const [chartType, setChartType] = useState<VisualChartType>(initial?.chartType ?? "line");
   const [preview, setPreview] = useState<Preview | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
@@ -107,8 +117,8 @@ export function VisualBuilder() {
     }
     setIsSaving(true);
     try {
-      const response = await fetch("/api/visuals", {
-        method: "POST",
+      const response = await fetch(initial ? `/api/visuals/${initial.id}` : "/api/visuals", {
+        method: initial ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, kind: chartType === "table" ? "table" : "chart", spec }),
       });
@@ -117,7 +127,7 @@ export function VisualBuilder() {
         setSaveError(data.error ?? "Something went wrong. Please try again.");
         return;
       }
-      router.push(`/visuals/${data.visualId}`);
+      router.push(`/visuals/${initial ? initial.id : data.visualId}`);
       router.refresh();
     } catch {
       setSaveError("Something went wrong. Please try again.");
@@ -215,7 +225,7 @@ export function VisualBuilder() {
         ) : null}
         <div className="flex justify-end">
           <Button type="button" onClick={handleSave} disabled={isSaving}>
-            {isSaving ? "Saving…" : "Save visual"}
+            {isSaving ? "Saving…" : initial ? "Save changes" : "Save visual"}
           </Button>
         </div>
       </div>

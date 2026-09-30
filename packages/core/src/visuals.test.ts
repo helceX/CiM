@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fillTimeBuckets, suggestChartTypes } from "./visuals";
+import { fillTimeBuckets, renderVisualCsv, suggestChartTypes } from "./visuals";
 
 const today = new Date("2026-09-30T15:00:00Z");
 
@@ -49,5 +49,37 @@ describe("suggestChartTypes", () => {
   it("never offers a pie for non-additive measures", () => {
     expect(suggestChartTypes({ dimension: "sentiment", measure: "negative_share" }, 3)).not.toContain("pie");
     expect(suggestChartTypes({ dimension: "sentiment", measure: "unique_sources" }, 3)).not.toContain("pie");
+  });
+});
+
+describe("renderVisualCsv", () => {
+  it("writes a header and one row per label with CRLF line endings", () => {
+    const csv = renderVisualCsv(
+      [
+        { label: "News", value: 4 },
+        { label: "Blog", value: 0 },
+      ],
+      { measure: "mentions", dimension: "source_type" },
+    );
+    expect(csv).toBe('"Source type","Mentions"\r\n"News",4\r\n"Blog",0\r\n');
+  });
+
+  it("leaves an undefined share empty rather than 0", () => {
+    const csv = renderVisualCsv([{ label: "2026-09-30", value: null }], { measure: "negative_share", dimension: "day" });
+    expect(csv).toContain('"2026-09-30",\r\n');
+  });
+
+  it("neutralises spreadsheet formulas and escapes quotes in labels", () => {
+    const csv = renderVisualCsv(
+      [
+        { label: '=HYPERLINK("http://evil.example","x")', value: 1 },
+        { label: "+1-555", value: 2 },
+        { label: 'He said "hi"', value: 3 },
+      ],
+      { measure: "mentions", dimension: "source" },
+    );
+    expect(csv).toContain(`"'=HYPERLINK(""http://evil.example"",""x"")",1`);
+    expect(csv).toContain(`"'+1-555",2`);
+    expect(csv).toContain('"He said ""hi""",3');
   });
 });

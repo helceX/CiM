@@ -1,5 +1,5 @@
-import { and, desc, eq, inArray, isNull, sql, type SQL } from "drizzle-orm";
-import { fillTimeBuckets, type VisualDimension, type VisualMeasure, type VisualRow } from "@cim/core";
+import { and, asc, desc, eq, inArray, isNotNull, isNull, sql, type SQL } from "drizzle-orm";
+import { fillTimeBuckets, VISUAL_MAX_PINNED, type VisualDimension, type VisualMeasure, type VisualRow } from "@cim/core";
 import { visualSpecSchema, type VisualSpec } from "@cim/validation";
 import type { Db } from "../client";
 import { articles, mentions, sources } from "../schema/content";
@@ -136,24 +136,72 @@ export async function getSavedVisual(db: Db, organizationId: OrganizationId, id:
   return visual;
 }
 
+export type UpdateSavedVisualResult =
+  | { ok: true; visual: typeof savedVisuals.$inferSelect }
+  | { ok: false; reason: "not_found" | "pin_limit" };
+
+/**
+ * Patches a visual. Pinning is capped at VISUAL_MAX_PINNED per organization;
+ * the count check and the update share one transaction holding a row lock
+ * on the organization's pinned set, so two concurrent pins can't both pass.
+ */
 export async function updateSavedVisual(
   db: Db,
   organizationId: OrganizationId,
   id: string,
-  patch: { name?: string; kind?: "chart" | "table"; spec?: VisualSpec },
-) {
-  const [visual] = await db
-    .update(savedVisuals)
-    .set({
-      ...patch,
-      ...(patch.spec ? { projectId: patch.spec.filters.projectId ?? null } : {}),
-      updatedAt: new Date(),
-    })
+  patch: { name?: string; kind?: "chart" | "table"; spec?: VisualSpec; pinned?: boolean },
+): Promise<UpdateSavedVisualResult> {
+  return db.transaction(async (tx) => {
+    const where = and(
+      eq(savedVisuals.organizationId, organizationId),
+      eq(savedVisuals.id, id),
+      isNull(savedVisuals.deletedAt),
+    );
+    if (patch.pinned === true) {
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`visual-pins:${organizationId}`}))`);
+      const pinned = await tx
+        .select({ id: savedVisuals.id })
+        .from(savedVisuals)
+        .where(
+          and(
+            eq(savedVisuals.organizationId, organizationId),
+            isNull(savedVisuals.deletedAt),
+            isNotNull(savedVisuals.pinnedAt),
+          ),
+        );
+      if (pinned.length >= VISUAL_MAX_PINNED && !pinned.some((row) => row.id === id)) {
+        return { ok: false, reason: "pin_limit" } as const;
+      }
+    }
+    const { pinned, ...fields } = patch;
+    const [visual] = await tx
+      .update(savedVisuals)
+      .set({
+        ...fields,
+        ...(patch.spec ? { projectId: patch.spec.filters.projectId ?? null } : {}),
+        // Pinning is idempotent: an already pinned visual keeps its place.
+        ...(pinned === undefined ? {} : { pinnedAt: pinned ? sql`coalesce(${savedVisuals.pinnedAt}, now())` : null }),
+        updatedAt: new Date(),
+      })
+      .where(where)
+      .returning();
+    return visual ? ({ ok: true, visual } as const) : ({ ok: false, reason: "not_found" } as const);
+  });
+}
+
+export async function listPinnedVisuals(db: Db, organizationId: OrganizationId) {
+  return db
+    .select()
+    .from(savedVisuals)
     .where(
-      and(eq(savedVisuals.organizationId, organizationId), eq(savedVisuals.id, id), isNull(savedVisuals.deletedAt)),
+      and(
+        eq(savedVisuals.organizationId, organizationId),
+        isNull(savedVisuals.deletedAt),
+        isNotNull(savedVisuals.pinnedAt),
+      ),
     )
-    .returning();
-  return visual;
+    .orderBy(asc(savedVisuals.pinnedAt))
+    .limit(VISUAL_MAX_PINNED);
 }
 
 export async function deleteSavedVisual(db: Db, organizationId: OrganizationId, id: string) {

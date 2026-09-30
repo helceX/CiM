@@ -119,8 +119,19 @@ describe("visuals API behaviour", () => {
     expect(JSON.stringify(await res.json())).not.toContain("secret_table");
   });
 
+  it("answers 409 when pinning beyond the dashboard limit and audits a successful pin", async () => {
+    updateSavedVisual.mockResolvedValue({ ok: false, reason: "pin_limit" });
+    const limited = await item.PATCH(json("PATCH", { pinned: true }), params(uuid));
+    expect(limited.status).toBe(409);
+    expect(recordAuditLog).not.toHaveBeenCalled();
+
+    updateSavedVisual.mockResolvedValue({ ok: true, visual: { name: "V" } });
+    expect((await item.PATCH(json("PATCH", { pinned: true }), params(uuid))).status).toBe(200);
+    expect(recordAuditLog.mock.calls[0]![2].metadata).toEqual({ name: "V", pinned: true });
+  });
+
   it("maps a missing visual to 404 on update and delete (other org's ids look the same)", async () => {
-    updateSavedVisual.mockResolvedValue(undefined);
+    updateSavedVisual.mockResolvedValue({ ok: false, reason: "not_found" });
     deleteSavedVisual.mockResolvedValue(false);
     expect((await item.PATCH(json("PATCH", { name: "Z" }), params(uuid))).status).toBe(404);
     expect((await item.DELETE(json("DELETE"), params(uuid))).status).toBe(404);

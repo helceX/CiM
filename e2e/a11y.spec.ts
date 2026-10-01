@@ -58,6 +58,7 @@ const AUTHENTICATED_PATHS = [
   "/monitoring",
   "/monitoring/new",
   "/mentions",
+  "/mentions?view=list",
   "/social",
   "/alerts",
   "/alerts/new",
@@ -138,7 +139,7 @@ test.describe("a11y + keyboard operability: overlays and nav", () => {
   test.use({ storageState: storageStatePath });
 
   test("mention detail drawer has no violations while open", async ({ page }) => {
-    await page.goto("/mentions");
+    await page.goto("/mentions?view=list");
     await page.getByLabel("Search").fill("Daily Tech Wire");
     await page.getByLabel("Search").press("Enter");
     await page
@@ -146,6 +147,16 @@ test.describe("a11y + keyboard operability: overlays and nav", () => {
       .first()
       .click();
     await expect(page.getByRole("dialog")).toBeVisible();
+
+    const violations = await scan(page);
+    expect(violations, formatViolations(violations)).toEqual([]);
+  });
+
+  test("an opened day on the by-day Mentions view has no violations", async ({ page }) => {
+    await page.goto("/mentions");
+    const dayButton = page.locator("main button[aria-expanded]").first();
+    await dayButton.click();
+    await expect(page.getByText("News & press", { exact: true }).first()).toBeVisible();
 
     const violations = await scan(page);
     expect(violations, formatViolations(violations)).toEqual([]);
@@ -170,7 +181,7 @@ test.describe("a11y + keyboard operability: overlays and nav", () => {
   test("mentions table rows open the detail drawer via keyboard, not just a mouse click", async ({
     page,
   }) => {
-    await page.goto("/mentions");
+    await page.goto("/mentions?view=list");
     await page.getByLabel("Search").fill("Daily Tech Wire");
     await page.getByLabel("Search").press("Enter");
 

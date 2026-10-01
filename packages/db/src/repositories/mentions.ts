@@ -266,6 +266,104 @@ export async function listMentionsFiltered(
   };
 }
 
+/**
+ * The day a story belongs to. Bucketed in Türkiye time (not UTC) so a story
+ * published at 01:00 local lands on the day readers expect; the publication
+ * date wins, and the time we found it is the fallback for sources that carry none.
+ */
+export const MENTION_DAY_TIMEZONE = "Europe/Istanbul";
+const mentionDay = sql<string>`to_char((coalesce(${articles.publishedAt}, ${mentions.createdAt}) at time zone ${sql.raw(`'${MENTION_DAY_TIMEZONE}'`)})::date, 'YYYY-MM-DD')`;
+
+export type MentionDaySummary = {
+  /** YYYY-MM-DD */
+  day: string;
+  total: number;
+  /** Mentions per `Source.type`, for the badges on a collapsed day. */
+  byType: Record<string, number>;
+};
+
+async function resolveSearchIds(db: Db, organizationId: OrganizationId, filters: MentionFilters) {
+  if (!filters.search) return undefined;
+  const searchIndex = new PostgresSearchIndex(db);
+  const result = await searchIndex.search({ text: filters.search }, { organizationId });
+  return result.items.map((item) => item.articleId);
+}
+
+/**
+ * One row per day that has mentions (newest first), with how many came from
+ * each kind of source — what the collapsed day buttons show. Paged by day, so
+ * years of history stay cheap: opening a day loads only that day.
+ */
+export async function listMentionDays(
+  db: Db,
+  organizationId: OrganizationId,
+  filters: MentionFilters,
+  pagination: { page: number; pageSize: number },
+): Promise<{ days: MentionDaySummary[]; totalDays: number }> {
+  const where = mentionFiltersToWhere(organizationId, filters, await resolveSearchIds(db, organizationId, filters));
+  const offset = (pagination.page - 1) * pagination.pageSize;
+
+  const dayRows = await db
+    .select({ day: mentionDay, total: count() })
+    .from(mentions)
+    .innerJoin(articles, eq(articles.id, mentions.articleId))
+    .where(where)
+    .groupBy(mentionDay)
+    .orderBy(desc(mentionDay))
+    .limit(pagination.pageSize)
+    .offset(offset);
+
+  const [{ totalDays } = { totalDays: 0 }] = await db
+    .select({ totalDays: sql<number>`count(distinct ${mentionDay})::int` })
+    .from(mentions)
+    .innerJoin(articles, eq(articles.id, mentions.articleId))
+    .where(where);
+
+  if (dayRows.length === 0) return { days: [], totalDays: Number(totalDays) };
+
+  const days = dayRows.map((row) => row.day);
+  const typeRows = await db
+    .select({ day: mentionDay, type: sources.type, total: count() })
+    .from(mentions)
+    .innerJoin(articles, eq(articles.id, mentions.articleId))
+    .innerJoin(sources, eq(sources.id, articles.sourceId))
+    .where(and(where, inArray(mentionDay, days)))
+    .groupBy(mentionDay, sources.type);
+
+  return {
+    totalDays: Number(totalDays),
+    days: dayRows.map((row) => ({
+      day: row.day,
+      total: Number(row.total),
+      byType: Object.fromEntries(typeRows.filter((t) => t.day === row.day).map((t) => [t.type, Number(t.total)])),
+    })),
+  };
+}
+
+/** Every mention of one day (capped), newest first — loaded when the day is opened. */
+export async function listMentionsForDay(
+  db: Db,
+  organizationId: OrganizationId,
+  filters: MentionFilters,
+  day: string,
+  limit = 300,
+): Promise<{ items: MentionListItem[]; truncated: boolean }> {
+  const where = and(
+    mentionFiltersToWhere(organizationId, filters, await resolveSearchIds(db, organizationId, filters)),
+    sql`${mentionDay} = ${day}`,
+  );
+  const items = await db
+    .select({ mention: mentions, article: articles, source: sources, assigneeName: assigneeNameColumn })
+    .from(mentions)
+    .innerJoin(articles, eq(articles.id, mentions.articleId))
+    .innerJoin(sources, eq(sources.id, articles.sourceId))
+    .leftJoin(users, eq(users.id, mentions.assignedToUserId))
+    .where(where)
+    .orderBy(desc(sql`coalesce(${articles.publishedAt}, ${mentions.createdAt})`), desc(mentions.id))
+    .limit(limit + 1);
+  return { items: items.slice(0, limit), truncated: items.length > limit };
+}
+
 export type MentionSocialAuthor = {
   platform: string;
   handle: string;

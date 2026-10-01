@@ -196,8 +196,10 @@ export function AddSourceForm() {
           value={form.type}
           onChange={(e) => update("type", e.target.value)}
         >
-          <option value="news">News</option>
-          <option value="press">Press agency</option>
+          <option value="news">Digital news</option>
+          <option value="newspaper">Newspaper</option>
+          <option value="magazine">Magazine</option>
+          <option value="press">News agency</option>
           <option value="blog">Blog</option>
           <option value="website">Website</option>
           <option value="forum">Forum</option>

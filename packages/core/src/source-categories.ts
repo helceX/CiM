@@ -9,7 +9,7 @@
  * (packages/db/repositories/monitoring-queries.ts) never has to guess.
  */
 export const SOURCE_CATEGORY_TO_SOURCE_TYPES: Record<string, readonly string[]> = {
-  news: ["news", "press"],
+  news: ["news", "press", "newspaper", "magazine"],
   web: ["website", "blog"],
   social: ["social"],
   video: ["youtube", "tv"],
@@ -18,6 +18,8 @@ export const SOURCE_CATEGORY_TO_SOURCE_TYPES: Record<string, readonly string[]> 
   comments: ["comments"],
   all: [
     "news",
+    "newspaper",
+    "magazine",
     "website",
     "blog",
     "press",
@@ -50,11 +52,13 @@ export function expandSourceCategoriesToTypes(categories: string[]): string[] {
  * place so the Sources screen's filters and clusters always agree.
  */
 export const SOURCE_KINDS = [
-  { key: "news", label: "News sites", types: ["news", "press", "tv", "radio"] },
+  // One cluster for all of the press: digital news sites, agencies, printed
+  // newspapers and magazines sit together, each carrying its own badge.
+  { key: "news", label: "News & press", types: ["news", "press", "newspaper", "magazine"] },
   { key: "blogs", label: "Blogs & websites", types: ["blog", "website"] },
   { key: "forums", label: "Forums & comments", types: ["forum", "comments"] },
   { key: "social", label: "Social", types: ["social"] },
-  { key: "media", label: "Video & podcasts", types: ["youtube", "podcast"] },
+  { key: "media", label: "TV, radio, video & podcasts", types: ["tv", "radio", "youtube", "podcast"] },
   { key: "feeds", label: "Feeds, APIs & other", types: ["rss", "api", "other"] },
 ] as const;
 export type SourceKindKey = (typeof SOURCE_KINDS)[number]["key"];
@@ -66,3 +70,34 @@ export function sourceKindOfType(type: string): SourceKindKey {
 export function sourceKindLabel(key: string): string {
   return SOURCE_KINDS.find((kind) => kind.key === key)?.label ?? key;
 }
+
+/**
+ * The marker shown next to a story so you can tell at a glance what kind of
+ * place it came from — "Digital news", "Newspaper", "Magazine" … Print titles
+ * (newspaper, magazine) are the ones that can carry a scanned page.
+ */
+export const SOURCE_TYPE_BADGES: Record<string, string> = {
+  news: "Digital news",
+  press: "News agency",
+  newspaper: "Newspaper",
+  magazine: "Magazine",
+  blog: "Blog",
+  website: "Website",
+  forum: "Forum",
+  comments: "Comments",
+  social: "Social",
+  youtube: "YouTube",
+  podcast: "Podcast",
+  tv: "TV",
+  radio: "Radio",
+  rss: "Feed",
+  api: "Feed",
+  other: "Other",
+};
+
+export function sourceTypeBadge(type: string): string {
+  return SOURCE_TYPE_BADGES[type] ?? "Other";
+}
+
+/** Source types whose stories may come from the printed edition. */
+export const PRINT_CAPABLE_TYPES = ["newspaper", "magazine"] as const;

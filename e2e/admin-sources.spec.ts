@@ -53,7 +53,7 @@ test("a platform admin browses sources by region and kind and pauses a slice", a
 
   // World shows all three; the kind chips cluster them.
   await expect(page.getByRole("button", { name: /^World 3$/ })).toBeVisible();
-  await expect(page.getByText("News sites", { exact: false }).first()).toBeVisible();
+  await expect(page.getByText("News & press", { exact: false }).first()).toBeVisible();
 
   // Continent → country narrows the list (Türkiye is under both Europe and Asia).
   await page.getByRole("button", { name: /^Europe 3$/ }).click();

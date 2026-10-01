@@ -17,6 +17,7 @@ import {
   type InsightGenerateJobData,
   type SendEmailJobData,
   type SendExecutiveBriefJobData,
+  type SyncSocialConnectionsJobData,
   captureException,
   configureErrorReporting,
 } from "@cim/core";
@@ -30,6 +31,7 @@ import { processGenerateScheduledReportsJob } from "./jobs/generate-scheduled-re
 import { processEnforceRetentionJob } from "./jobs/enforce-retention";
 import { processCaptureFeatureUsageJob } from "./jobs/capture-feature-usage";
 import { processSendExecutiveBriefJob } from "./jobs/send-executive-brief";
+import { processSyncSocialConnectionsJob } from "./jobs/sync-social-connections";
 import { evaluateSpikeAlerts } from "./alerts/evaluate-spikes";
 import { evaluateSentimentShiftAlerts } from "./alerts/evaluate-sentiment-shift";
 import { evaluateEmergingTopicAlerts } from "./alerts/evaluate-emerging-topics";
@@ -250,6 +252,16 @@ const sendExecutiveBriefWorker = new Worker<SendExecutiveBriefJobData>(
   { connection, concurrency: 1 },
 );
 
+const syncSocialConnectionsQueue = new Queue<SyncSocialConnectionsJobData>(
+  QUEUE_NAMES.syncSocialConnections,
+  { connection, defaultJobOptions: DEFAULT_JOB_OPTIONS },
+);
+const syncSocialConnectionsWorker = new Worker<SyncSocialConnectionsJobData>(
+  QUEUE_NAMES.syncSocialConnections,
+  () => processSyncSocialConnectionsJob(),
+  { connection, concurrency: 1 },
+);
+
 const allWorkers = [
   sendEmailWorker,
   crawlSourceWorker,
@@ -267,6 +279,7 @@ const allWorkers = [
   enforceRetentionWorker,
   captureFeatureUsageWorker,
   sendExecutiveBriefWorker,
+  syncSocialConnectionsWorker,
 ];
 // Off unless SENTRY_DSN is set. Tags carry only the queue and job id — never job data.
 configureErrorReporting({
@@ -383,12 +396,19 @@ async function scheduleRepeatingJobs() {
     { pattern: "0 9 * * *" },
     { name: QUEUE_NAMES.sendExecutiveBrief, data: {} },
   );
+  // Customers' connected social accounts: every 5 minutes the job checks which
+  // are due (each platform has its own minimum interval inside the job).
+  await syncSocialConnectionsQueue.upsertJobScheduler(
+    "sync-social-connections-repeat",
+    { every: 5 * 60_000 },
+    { name: QUEUE_NAMES.syncSocialConnections, data: {} },
+  );
   console.log(
     "Schedulers registered: source crawl (30s), spike alert check (60s), " +
       "sentiment shift alert check (60s), emerging topic alert check (60s), " +
       "creator spike alert check (60s), " +
       "AI enrichment (20s), insight generation (2m), " +
-      "daily digest (08:00 UTC), scheduled reports (08:15 UTC), retention enforcement (08:30 UTC), " +
+      "connected social accounts (5m), daily digest (08:00 UTC), scheduled reports (08:15 UTC), retention enforcement (08:30 UTC), " +
       "feature usage capture (08:45 UTC), executive brief delivery (09:00 UTC).",
   );
 }
@@ -421,6 +441,7 @@ async function shutdown() {
   await enforceRetentionQueue.close();
   await captureFeatureUsageQueue.close();
   await sendExecutiveBriefQueue.close();
+  await syncSocialConnectionsQueue.close();
   process.exit(0);
 }
 

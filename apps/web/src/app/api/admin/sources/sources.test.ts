@@ -110,6 +110,14 @@ describe("admin source API", () => {
     });
   });
 
+  it("stores a social feed as a global youtube/social source", async () => {
+    testSourceUrl.mockResolvedValue({ ok: true, itemCount: 3, sampleTitles: [] });
+    createSource.mockResolvedValue({ ok: true, id: uuid });
+    const response = await sources.POST(json({ ...valid, type: "youtube", country: "ZZ", language: "other" }));
+    expect(response.status).toBe(201);
+    expect(createSource.mock.calls[0]![1]).toMatchObject({ type: "youtube", country: "ZZ", language: "other" });
+  });
+
   it("never fetches a blocked publisher or an unlicensed agency", async () => {
     checkSourcePolicy.mockResolvedValueOnce("blocked");
     const blocked = await sources.POST(json(valid));

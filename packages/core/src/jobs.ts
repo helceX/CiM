@@ -22,6 +22,7 @@ export const QUEUE_NAMES = {
   enforceRetention: "enforce_retention",
   captureFeatureUsage: "capture_feature_usage",
   sendExecutiveBrief: "send_executive_brief",
+  syncSocialConnections: "sync_social_connections",
 } as const;
 
 export type SendEmailJobData = {
@@ -61,3 +62,5 @@ export type EnforceRetentionJobData = Record<string, never>;
 export type CaptureFeatureUsageJobData = Record<string, never>;
 
 export type SendExecutiveBriefJobData = Record<string, never>;
+
+export type SyncSocialConnectionsJobData = Record<string, never>;

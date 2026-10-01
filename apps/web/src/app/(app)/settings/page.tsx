@@ -12,7 +12,9 @@ import {
   listBrandGroups,
   listMonitoringQueries,
   listProjects,
+  listSocialConnections,
 } from "@cim/db";
+import { PLANNED_SOCIAL_PLATFORMS, SOCIAL_PROVIDERS, configuredSocialProviders } from "@cim/ingestion";
 import { requireOrgContext } from "@/lib/tenant";
 import {
   DataExportButton,
@@ -25,6 +27,7 @@ import { ApiKeysSection } from "./api-keys-section";
 import { UsageSection } from "./usage-section";
 import { BrandGroupsSection } from "./brand-groups-section";
 import { BillingProfileSection } from "./billing-profile-section";
+import { ConnectedAccountsSection } from "./connected-accounts-section";
 
 const TABS = [
   { key: "general", label: "General" },
@@ -55,6 +58,7 @@ export default async function SettingsPage({
     trackedKeywords,
     credits,
     billingProfile,
+    socialConnections,
   ] = await Promise.all([
     getRetentionPolicy(db, context.organizationId),
     getOrganizationWebhookUrl(db, context.organizationId),
@@ -70,7 +74,11 @@ export default async function SettingsPage({
     context.permissions.includes("org:manage_billing")
       ? getBillingProfile(db, context.organizationId)
       : Promise.resolve(undefined),
+    listSocialConnections(db, context.organizationId),
   ]);
+  const rawSocial = (await searchParams).social;
+  const socialNotice = Array.isArray(rawSocial) ? (rawSocial[0] ?? null) : (rawSocial ?? null);
+  const configuredPlatforms = configuredSocialProviders(process.env);
   const canManageSettings = context.permissions.includes("org:manage_settings");
   const canManageApiKeys = context.permissions.includes("api_keys:manage");
   const canManageBilling = context.permissions.includes("org:manage_billing");
@@ -141,6 +149,28 @@ export default async function SettingsPage({
         webhookUrl={canManageSettings ? webhookUrl : null}
         hasWebhookUrl={webhookUrl !== null}
         canManageSettings={canManageSettings}
+      />
+
+      <ConnectedAccountsSection
+        accounts={socialConnections.map((connection) => ({
+          id: connection.id,
+          platform: connection.platform,
+          platformLabel: SOCIAL_PROVIDERS.find((provider) => provider.key === connection.platform)?.label ?? connection.platform,
+          handle: connection.handle,
+          displayName: connection.displayName,
+          status: connection.status,
+          lastSyncAt: connection.lastSyncAt ? connection.lastSyncAt.toISOString() : null,
+          lastError: connection.lastError,
+        }))}
+        platforms={configuredPlatforms.map((provider) => ({
+          key: provider.key,
+          label: provider.label,
+          reads: provider.reads,
+          connected: socialConnections.some((connection) => connection.platform === provider.key),
+        }))}
+        planned={PLANNED_SOCIAL_PLATFORMS}
+        canManage={canManageSettings}
+        notice={socialNotice}
       />
 
         </>

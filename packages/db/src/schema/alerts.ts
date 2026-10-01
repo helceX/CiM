@@ -77,6 +77,8 @@ export const notifications = pgTable(
     kind: text("kind").notNull(), // alert | system
     title: text("title").notNull(),
     body: text("body").notNull(),
+    // Where "Open" should go — e.g. the post a connected account was tagged in. https only.
+    linkUrl: text("link_url"),
     relatedAlertEventId: uuid("related_alert_event_id").references(() => alertEvents.id, {
       onDelete: "set null",
     }),

@@ -20,3 +20,4 @@ export * from "./keyword-list";
 export * from "./tax-id";
 export * from "./visuals";
 export * from "./source-catalog";
+export * from "./social-feeds";

@@ -9,6 +9,8 @@ env:
   DATABASE_URL: postgres://cim:cim@localhost:5432/cim
   REDIS_URL: redis://localhost:6379
   SESSION_SECRET: ci-only-session-secret-0123456789abcdef0123456789abcdef
+  # The built-in demo "network" for connecting an account in tests (never set in production).
+  SOCIAL_MOCK_PROVIDER: "1"
 
 jobs:
   checks:

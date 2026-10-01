@@ -60,6 +60,7 @@ const AUTHENTICATED_PATHS = [
   "/mentions",
   "/mentions?view=list",
   "/social",
+  "/social/mentions",
   "/alerts",
   "/alerts/new",
   "/reports",

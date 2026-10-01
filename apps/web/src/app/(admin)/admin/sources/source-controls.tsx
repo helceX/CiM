@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Input, Label } from "@cim/ui";
-import { COUNTRIES, type CatalogSource } from "@cim/core";
+import { COUNTRIES, SOCIAL_FEED_PLATFORMS, buildSocialFeed, type CatalogSource } from "@cim/core";
 
 type NewSource = {
   name: string;
@@ -297,6 +297,143 @@ export function AddSourceForm({ countryCodes, defaultCountry = "TR" }: { country
           Mediaory holds a written licence from this news agency that allows this use.
         </label>
       ) : null}
+      {message ? (
+        <p
+          role={message.tone === "error" ? "alert" : "status"}
+          className={`text-sm sm:col-span-2 ${message.tone === "error" ? "text-danger" : "text-success"}`}
+        >
+          {message.text}
+        </p>
+      ) : null}
+    </form>
+  );
+}
+
+/**
+ * Follow a public social feed: pick the platform and what to follow, and the
+ * feed address is built for you. The address is fetch-tested before anything is
+ * stored, exactly like any other source.
+ */
+export function AddSocialFeedForm() {
+  const router = useRouter();
+  const [platformKey, setPlatformKey] = useState(SOCIAL_FEED_PLATFORMS[0]!.key);
+  const platform = SOCIAL_FEED_PLATFORMS.find((entry) => entry.key === platformKey)!;
+  const [kindKey, setKindKey] = useState(platform.kinds[0]!.key);
+  const kind = platform.kinds.find((entry) => entry.key === kindKey) ?? platform.kinds[0]!;
+  const [value, setValue] = useState("");
+  const [instance, setInstance] = useState("");
+  const [language, setLanguage] = useState("other");
+  const [country, setCountry] = useState("ZZ");
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
+
+  const select = "h-9 rounded-md border border-border bg-background px-2 text-sm text-foreground";
+
+  function changePlatform(key: string) {
+    setPlatformKey(key);
+    setKindKey(SOCIAL_FEED_PLATFORMS.find((entry) => entry.key === key)!.kinds[0]!.key);
+    setMessage(null);
+  }
+
+  async function add(event: React.FormEvent) {
+    event.preventDefault();
+    const built = buildSocialFeed({ platform: platformKey, kind: kind.key, value, instance });
+    if (!built.ok) {
+      setMessage({ tone: "error", text: built.error });
+      return;
+    }
+    setBusy(true);
+    setMessage(null);
+    try {
+      const { ok, data } = await post("/api/admin/sources", {
+        name: built.name,
+        url: built.url,
+        connector: "rss",
+        type: built.sourceType,
+        language,
+        country,
+      });
+      if (!ok) {
+        setMessage({ tone: "error", text: data.error ?? "Could not add." });
+        return;
+      }
+      setMessage({ tone: "ok", text: `Added (${data.itemCount} items found).` });
+      setValue("");
+      router.refresh();
+    } catch {
+      setMessage({ tone: "error", text: "Could not add." });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <form onSubmit={add} className="grid max-w-2xl gap-3 sm:grid-cols-2">
+      <div className="flex flex-col gap-1">
+        <Label htmlFor="social-platform">Platform</Label>
+        <select id="social-platform" className={select} value={platformKey} onChange={(e) => changePlatform(e.target.value)}>
+          {SOCIAL_FEED_PLATFORMS.map((entry) => (
+            <option key={entry.key} value={entry.key}>
+              {entry.label}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="flex flex-col gap-1">
+        <Label htmlFor="social-kind">Follow</Label>
+        <select id="social-kind" className={select} value={kind.key} onChange={(e) => setKindKey(e.target.value)}>
+          {platform.kinds.map((entry) => (
+            <option key={entry.key} value={entry.key}>
+              {entry.label}
+            </option>
+          ))}
+        </select>
+      </div>
+      {kind.needsInstance ? (
+        <div className="flex flex-col gap-1">
+          <Label htmlFor="social-instance">{kind.instanceLabel}</Label>
+          <Input
+            id="social-instance"
+            value={instance}
+            onChange={(e) => setInstance(e.target.value)}
+            placeholder={platform.key === "rsshub" ? "rsshub.example.com" : "mastodon.social"}
+            required
+          />
+        </div>
+      ) : null}
+      <div className="flex flex-col gap-1">
+        <Label htmlFor="social-value">{kind.valueLabel}</Label>
+        <Input id="social-value" value={value} onChange={(e) => setValue(e.target.value)} placeholder={kind.placeholder} required />
+      </div>
+      <div className="flex flex-col gap-1">
+        <Label htmlFor="social-country">Audience region</Label>
+        <select id="social-country" className={select} value={country} onChange={(e) => setCountry(e.target.value)}>
+          <option value="ZZ">Global (no country)</option>
+          {COUNTRIES.map((entry) => (
+            <option key={entry.code} value={entry.code}>
+              {entry.name}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="flex flex-col gap-1">
+        <Label htmlFor="social-language">Feed language</Label>
+        <select id="social-language" className={select} value={language} onChange={(e) => setLanguage(e.target.value)}>
+          <option value="other">Mixed / other</option>
+          <option value="tr">Turkish</option>
+          <option value="en">English</option>
+          <option value="de">German</option>
+          <option value="fr">French</option>
+          <option value="es">Spanish</option>
+          <option value="ar">Arabic</option>
+          <option value="ru">Russian</option>
+        </select>
+      </div>
+      <div className="flex items-end">
+        <Button type="submit" disabled={busy}>
+          {busy ? "Testing…" : "Follow feed"}
+        </Button>
+      </div>
       {message ? (
         <p
           role={message.tone === "error" ? "alert" : "status"}

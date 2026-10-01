@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Badge, EmptyState } from "@cim/ui";
 import { Share2 } from "lucide-react";
 import {
@@ -67,7 +68,12 @@ export default async function SocialListeningPage({
             Conversations, authors, and hashtags from social sources.
           </p>
         </div>
-        <RangeSelect current={sinceDays} />
+        <div className="flex flex-wrap items-center gap-3">
+          <Link href="/social/mentions" className="text-sm text-primary underline underline-offset-2">
+            Mentions &amp; tags of your accounts
+          </Link>
+          <RangeSelect current={sinceDays} />
+        </div>
       </div>
 
       {overview.totalConversations === 0 ? (

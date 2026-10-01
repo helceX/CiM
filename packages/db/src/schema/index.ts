@@ -12,3 +12,4 @@ export * from "./billing";
 export * from "./social";
 export * from "./visuals";
 export * from "./compliance";
+export * from "./teams";

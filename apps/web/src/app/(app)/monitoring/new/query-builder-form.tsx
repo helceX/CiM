@@ -3,7 +3,14 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Checkbox, Field, Input, Select, Textarea } from "@cim/ui";
-import { astToBooleanQuery, mergeKeywords, parseBooleanQuery, parseKeywordList, type QueryAst } from "@cim/core";
+import {
+  astToBooleanQuery,
+  mergeKeywords,
+  parseBooleanQuery,
+  parseKeywordList,
+  parseKeywordSpec,
+  type QueryAst,
+} from "@cim/core";
 import type { TrackingTarget } from "@cim/validation";
 import { TRACKING_TARGET_OPTIONS } from "@/lib/tracking-targets";
 
@@ -32,12 +39,15 @@ function ChipInput({
   values,
   onChange,
   placeholder,
+  hint,
 }: {
   label: string;
   values: string[];
   onChange: (next: string[]) => void;
   placeholder?: string;
+  hint?: string;
 }) {
+  const hintId = hint ? `${label.toLowerCase().replace(/\s+/g, "-")}-hint` : undefined;
   const [draft, setDraft] = useState("");
 
   // One keyword = one comma-separated item (a word or a whole sentence);
@@ -57,6 +67,7 @@ function ChipInput({
           value={draft}
           placeholder={placeholder}
           aria-label={label}
+          aria-describedby={hintId}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter" || e.key === ",") {
@@ -69,14 +80,36 @@ function ChipInput({
           Add
         </Button>
       </div>
+      {hint ? (
+        <p id={hintId} className="text-xs text-muted-foreground">
+          {hint}
+        </p>
+      ) : null}
       {values.length > 0 ? (
         <ul className="flex flex-wrap gap-2">
-          {values.map((value) => (
+          {values.map((value) => {
+            const spec = parseKeywordSpec(value);
+            const rule = spec.caseSensitive
+              ? "exact capitals, whole word"
+              : spec.prefix
+                ? "word starts with"
+                : null;
+            return (
             <li
               key={value}
+              title={
+                spec.caseSensitive
+                  ? "Short all-caps abbreviation: matched as the whole word, with exactly these capitals."
+                  : spec.prefix
+                    ? "Matches words that start with this (any ending)."
+                    : "Matches this whole word or phrase only."
+              }
               className="flex items-center gap-2 rounded-sm bg-secondary px-2.5 py-1 text-sm text-secondary-foreground"
             >
               {value}
+              {rule ? (
+                <span className="rounded-sm bg-background/60 px-1.5 text-[11px] text-muted-foreground">{rule}</span>
+              ) : null}
               <button
                 type="button"
                 onClick={() => onChange(values.filter((v) => v !== value))}
@@ -86,7 +119,8 @@ function ChipInput({
                 &times;
               </button>
             </li>
-          ))}
+            );
+          })}
         </ul>
       ) : null}
     </div>
@@ -259,12 +293,14 @@ export function QueryBuilderForm({ projects }: { projects: Project[] }) {
               values={include}
               onChange={setInclude}
               placeholder="e.g. your brand, brand + product name"
+              hint="Matched as whole words: “THY” finds THY, THY'nin, THY ile — never the inside of a longer word. A short ALL-CAPS abbreviation also keeps its capitals (“AK” ≠ “ak”). Add * to match endings: banka* finds bankalar, bankası."
             />
             <ChipInput
               label="Exclude"
               values={exclude}
               onChange={setExclude}
               placeholder="e.g. job posting"
+              hint="Stories containing these words are left out. Same whole-word rules."
             />
             <ChipInput
               label="Exact phrase"
@@ -277,7 +313,7 @@ export function QueryBuilderForm({ projects }: { projects: Project[] }) {
           <Field
             id="advanced"
             label="Boolean query"
-            hint='Supports AND, OR, NOT, and "exact phrases".'
+            hint='Supports AND, OR, NOT, and "exact phrases". Words match whole words only; end a word with * to match endings (banka*).'
           >
             <Textarea
               value={advancedText}

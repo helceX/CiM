@@ -85,3 +85,16 @@ queries, e.g. a bare brand name that collides with a dictionary word) can
 suggest disambiguation; this is a rule-based/AI-assisted *suggestion*
 layer on top of the parser, never a modification of the saved query
 without explicit user action.
+
+## Keyword matching rules (ingestion + preview)
+Implemented in `packages/core/src/keyword-match.ts`; one function is used by ingestion, query preview and
+exclusions so they cannot disagree.
+- **Whole word, never a substring.** A keyword must not touch another letter/digit on either side: "THY" matches
+  "THY", "THY'nin", "(THY)" but not "ARTHYMIA"; "kent" does not match "Kentsel". Apostrophes, hyphens, spaces and
+  punctuation are boundaries, so the Turkish proper-noun suffix keeps working.
+- **Phrases** match as a unit with any whitespace between the words ("yapay zeka" ≠ "yapay bir zeka").
+- **Short ALL-CAPS abbreviations** (2-6 letters/digits, e.g. THY, AK, BDDK, G20) match **case-exactly**, so "AK" does
+  not match the word "ak". Typing the keyword in another case ("Ak") gives a normal case-insensitive whole-word match.
+- **Trailing `*`** opens the ending: `banka*` matches banka, bankalar, bankası (never the middle of a word).
+- Everything else is case-insensitive with Turkish-aware folding (İ/I, ı/i).
+- Matching runs on the article title today (not the excerpt); mentions created before this change keep their rows.

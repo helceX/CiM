@@ -28,6 +28,7 @@ demo data behind it). The site copy now says so ("coming soon").
 A fresh production database has no real sources until some are registered: **/admin/sources** has a
 Türkiye catalog (18 well-known outlets; each is fetch-tested when added, since feed URLs change) and a
 custom RSS/sitemap form. Nothing is stored unless the feed was actually readable.
+Polling is polite: RSS every 10 min, API 15 min, sitemap/web 30 min (never the 30 s scheduler tick).
 
 ## 3. "The whole internet" — why it is not how anyone does it
 No media-monitoring product crawls the entire web itself. Practical ways to get broad coverage:

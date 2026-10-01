@@ -1,15 +1,18 @@
 import type { Queue } from "bullmq";
-import { QUEUE_NAMES, type CrawlSourceJobData } from "@cim/core";
+import { QUEUE_NAMES, isSourceDue, type CrawlSourceJobData } from "@cim/core";
 import { db, listActiveSources } from "@cim/db";
 
 /**
- * Fans out one `crawl_source` job per active, healthy Source. A
- * deterministic jobId per source+tick means a scheduler tick that fires
- * while the previous one's jobs are still queued/active doesn't pile up
- * duplicate work for the same source (BullMQ dedupes by jobId).
+ * Fans out one `crawl_source` job per active Source that is DUE (see
+ * crawl-interval.ts — the tick is every 30 s, a real site is fetched every
+ * 10-30 minutes at most). A deterministic jobId per source+tick means a
+ * scheduler tick that fires while the previous one's jobs are still
+ * queued/active doesn't pile up duplicate work for the same source (BullMQ
+ * dedupes by jobId).
  */
 export async function processCrawlSchedulerJob(crawlSourceQueue: Queue<CrawlSourceJobData>): Promise<void> {
-  const sources = await listActiveSources(db);
+  const now = new Date();
+  const sources = (await listActiveSources(db)).filter((source) => isSourceDue(source, now));
   const tickBucket = Math.floor(Date.now() / 30_000);
 
   // Isolated per source (the established fan-out pattern, generate-insight.ts)

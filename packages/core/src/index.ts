@@ -10,6 +10,7 @@ export * from "./restricted-publishers";
 export * from "./crawl-interval";
 export * from "./error-reporting";
 export * from "./source-categories";
+export * from "./regions";
 export * from "./connector-capabilities";
 export * from "./plan-limits";
 export * from "./brand-groups";

@@ -43,3 +43,26 @@ export function expandSourceCategoriesToTypes(categories: string[]): string[] {
   }
   return [...expanded];
 }
+
+/**
+ * How the admin groups `Source.type` values into the kinds of place a story
+ * comes from — news sites, blogs, forums, social, audio/video, feeds. One
+ * place so the Sources screen's filters and clusters always agree.
+ */
+export const SOURCE_KINDS = [
+  { key: "news", label: "News sites", types: ["news", "press", "tv", "radio"] },
+  { key: "blogs", label: "Blogs & websites", types: ["blog", "website"] },
+  { key: "forums", label: "Forums & comments", types: ["forum", "comments"] },
+  { key: "social", label: "Social", types: ["social"] },
+  { key: "media", label: "Video & podcasts", types: ["youtube", "podcast"] },
+  { key: "feeds", label: "Feeds, APIs & other", types: ["rss", "api", "other"] },
+] as const;
+export type SourceKindKey = (typeof SOURCE_KINDS)[number]["key"];
+
+export function sourceKindOfType(type: string): SourceKindKey {
+  return SOURCE_KINDS.find((kind) => (kind.types as readonly string[]).includes(type))?.key ?? "feeds";
+}
+
+export function sourceKindLabel(key: string): string {
+  return SOURCE_KINDS.find((kind) => kind.key === key)?.label ?? key;
+}

@@ -113,6 +113,10 @@ export default async function AdminOverviewPage() {
           <Link href="/admin/email" className="text-primary underline underline-offset-2">
             Email delivery &amp; unverified accounts
           </Link>
+          {" · "}
+          <Link href="/admin/sources" className="text-primary underline underline-offset-2">
+            Crawl sources &amp; Türkiye catalog
+          </Link>
         </p>
       </div>
 

@@ -1,9 +1,11 @@
 import { Mail, ShieldCheck, Users } from "lucide-react";
-import { db, listCustomRolesForOrganization, listMembersForOrganization } from "@cim/db";
+import { db, listCustomRolesForOrganization, listMembersForOrganization, listTeams } from "@cim/db";
 import { requireOrgContext } from "@/lib/tenant";
 import { getCurrentUser } from "@/lib/session";
 import { CustomRolesSection } from "./custom-roles-section";
 import { MembersSection } from "./members-section";
+import { TeamsSection } from "./teams-section";
+import { canCreateTeams } from "@/lib/team-auth";
 
 function roleLabel(role: string | null, customRoleName: string | null): string {
   if (customRoleName) return `${customRoleName} (custom)`;
@@ -22,10 +24,16 @@ function roleLabel(role: string | null, customRoleName: string | null): string {
  */
 export default async function TeamPage() {
   const [context, user] = await Promise.all([requireOrgContext(), getCurrentUser()]);
-  const [members, customRoles] = await Promise.all([
+  const [members, customRoles, teams] = await Promise.all([
     listMembersForOrganization(db, context.organizationId),
     listCustomRolesForOrganization(db, context.organizationId),
+    listTeams(db, context.organizationId),
   ]);
+  const canManageAll = context.permissions.includes("org:manage_members");
+  const myTeams = teams.filter((team) => team.members.some((member) => member.userId === context.userId));
+  const people = members
+    .filter((member) => member.status === "active")
+    .map((member) => ({ userId: member.userId, name: `${member.firstName} ${member.lastName}`.trim() || member.email }));
   const canManageMembers = context.permissions.includes("org:manage_members");
   const active = members.filter((member) => member.status === "active");
   const me = members.find((member) => member.userId === context.userId);
@@ -67,9 +75,37 @@ export default async function TeamPage() {
                 {me ? ` · joined ${new Date(me.createdAt).toLocaleDateString()}` : ""}
               </span>
             </p>
+            {myTeams.length > 0 ? (
+              <p className="mt-2 flex flex-wrap items-center gap-2 text-sm">
+                <span className="text-muted-foreground">Your teams:</span>
+                {myTeams.map((team) => (
+                  <span key={team.id} className="rounded-full bg-secondary px-2.5 py-0.5 text-xs font-semibold text-secondary-foreground">
+                    {team.name}
+                  </span>
+                ))}
+              </p>
+            ) : null}
           </div>
         </div>
       </section>
+
+      <TeamsSection
+        teams={teams.map((team) => ({
+          id: team.id,
+          name: team.name,
+          description: team.description,
+          canManage: canManageAll || team.members.some((member) => member.userId === context.userId && member.role === "lead"),
+          members: team.members.map((member) => ({
+            userId: member.userId,
+            name: `${member.firstName} ${member.lastName}`.trim() || member.email,
+            email: member.email,
+            role: member.role,
+          })),
+        }))}
+        people={people}
+        currentUserId={context.userId}
+        canCreate={canCreateTeams(context)}
+      />
 
       <MembersSection
         members={members}

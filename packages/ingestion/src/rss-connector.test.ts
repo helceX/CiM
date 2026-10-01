@@ -22,6 +22,12 @@ vi.mock("./safe-fetch", async (importOriginal) => {
   };
 });
 
+// robots.txt is covered by robots.test.ts; here only how the connector reacts to it.
+const explicitlyBlockedByRobots = vi.fn<(url: string) => Promise<boolean>>().mockResolvedValue(false);
+vi.mock("./robots", () => ({
+  isExplicitlyBlockedByRobots: (url: string) => explicitlyBlockedByRobots(url),
+}));
+
 const { RSSConnector } = await import("./rss-connector");
 
 function fakeSource(overrides: Partial<Source> = {}): Source {
@@ -90,6 +96,15 @@ describe("RSSConnector", () => {
     await expect(new RSSConnector().fetch(fakeSource({ url: null }))).rejects.toThrow(
       /no feed URL/i,
     );
+    expect(safeFetchMock).not.toHaveBeenCalled();
+  });
+
+  it("honours a robots.txt rule that names Mediaory-Bot: no fetch, health blocked", async () => {
+    safeFetchMock.mockClear();
+    explicitlyBlockedByRobots.mockResolvedValueOnce(true);
+    expect((await new RSSConnector().healthCheck(fakeSource())).status).toBe("blocked");
+    explicitlyBlockedByRobots.mockResolvedValueOnce(true);
+    await expect(new RSSConnector().fetch(fakeSource())).rejects.toThrow(/robots\.txt/);
     expect(safeFetchMock).not.toHaveBeenCalled();
   });
 

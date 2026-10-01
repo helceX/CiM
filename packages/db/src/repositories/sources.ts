@@ -1,6 +1,8 @@
 import { eq, ne, sql } from "drizzle-orm";
+import { hostOfUrl, isLicenseRequiredHost } from "@cim/core";
 import type { Db } from "../client";
 import { sources } from "../schema/content";
+import { isHostBlocked } from "./compliance";
 
 /** Sources are global/reference data (ADR-001) — no tenant scoping here. */
 
@@ -37,7 +39,28 @@ export type NewSourceInput = {
   type: string;
   language: string;
   country: string;
+  /** The admin states Mediaory holds a written licence from this agency. */
+  licenseConfirmed?: boolean;
 };
+
+export type SourcePolicyFailure = "invalid_url" | "blocked" | "license_required";
+
+/**
+ * Whether we may even contact this address: not a blocked publisher, and an
+ * agency only with a confirmed licence. The admin routes call this BEFORE
+ * fetching anything, so a publisher who asked us to stop is never requested again.
+ */
+export async function checkSourcePolicy(
+  db: Db,
+  url: string,
+  licenseConfirmed = false,
+): Promise<SourcePolicyFailure | null> {
+  const host = hostOfUrl(url);
+  if (!host) return "invalid_url";
+  if (await isHostBlocked(db, host)) return "blocked";
+  if (isLicenseRequiredHost(host) && !licenseConfirmed) return "license_required";
+  return null;
+}
 
 /**
  * Adds an operator-defined crawl source. Hand-added sources always store
@@ -49,13 +72,12 @@ export type NewSourceInput = {
 export async function createSource(
   db: Db,
   input: NewSourceInput,
-): Promise<{ ok: true; id: string } | { ok: false; reason: "duplicate" | "invalid_url" }> {
-  let host: string;
-  try {
-    host = new URL(input.url).hostname.replace(/^www\./, "").toLowerCase();
-  } catch {
-    return { ok: false, reason: "invalid_url" };
-  }
+): Promise<
+  { ok: true; id: string } | { ok: false; reason: "duplicate" | "invalid_url" | "blocked" | "license_required" }
+> {
+  const failure = await checkSourcePolicy(db, input.url, input.licenseConfirmed);
+  if (failure) return { ok: false, reason: failure };
+  const host = hostOfUrl(input.url)!;
   return db.transaction(async (tx) => {
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext('sources:create'))`);
     const [existing] = await tx
@@ -98,6 +120,11 @@ export async function setSourceCrawlEnabled(
   sourceId: string,
   enabled: boolean,
 ): Promise<boolean> {
+  if (enabled) {
+    // A blocked publisher's sources can never be resumed (see blockDomain).
+    const [source] = await db.select({ domain: sources.domain }).from(sources).where(eq(sources.id, sourceId));
+    if (source && (await isHostBlocked(db, source.domain))) return false;
+  }
   const rows = await db
     .update(sources)
     .set({ status: enabled ? "delayed" : "unavailable", updatedAt: new Date() })

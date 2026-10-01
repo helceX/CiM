@@ -73,6 +73,26 @@ export function isPathAllowedByRobots(robotsTxt: string, userAgent: string, path
 const USER_AGENT = "Mediaory-Bot";
 
 /**
+ * Feeds are published to be fetched, so a generic `User-agent: *` rule (often
+ * written for scrapers) must not switch them off — but a publisher who names
+ * us ("User-agent: Mediaory-Bot") is talking to us, and we honour that. Pure.
+ */
+export function isDisallowedForBotByName(robotsTxt: string, userAgent: string, path: string): boolean {
+  const ua = userAgent.toLowerCase();
+  const group = parseGroups(robotsTxt).find((g) => g.userAgents.some((a) => a !== "*" && ua.includes(a)));
+  if (!group) return false;
+  return !isPathAllowedByRobots(robotsTxt, userAgent, path);
+}
+
+/** True only when robots.txt explicitly tells Mediaory-Bot (by name) to stay away from this URL. */
+export async function isExplicitlyBlockedByRobots(targetUrl: string): Promise<boolean> {
+  const parsed = new URL(targetUrl);
+  const body = await fetchRobotsTxt(parsed.protocol, parsed.host);
+  if (body === null) return false;
+  return isDisallowedForBotByName(body, USER_AGENT, parsed.pathname || "/");
+}
+
+/**
  * Fails OPEN (`null` = "no restriction") when robots.txt itself is
  * unreachable or absent — that mirrors every real crawler's behavior
  * and is a politeness/compliance check, not the SSRF security boundary

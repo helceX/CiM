@@ -429,5 +429,129 @@
       "body": "The fastest way to reach the team.",
       "note": "A contact form with routing ships in a later release."
     }
+  },
+  "legal": {
+    "updated": "Last updated: 1 October 2026",
+    "terms": {
+      "eyebrow": "Legal",
+      "title": "Terms of",
+      "accent": "Service",
+      "lead": "The rules for using Mediaory — in plain language. Please read the section on sources and content: it explains what we show, what we do not, and how publishers can reach us.",
+      "sections": [
+        {
+          "title": "About the service",
+          "body": [
+            "Mediaory is a media and web monitoring service. It indexes publicly available sources and lets you search, track and report on mentions of the keywords you choose."
+          ]
+        },
+        {
+          "title": "Your account",
+          "body": [
+            "Give us accurate information, keep your sign-in details safe, and tell us if you think your account was accessed without permission. You are responsible for activity under your account and for the people you invite to your organization."
+          ]
+        },
+        {
+          "title": "Sources and content",
+          "body": [
+            "Mediaory is a search and indexing service for publicly available sources. For each result we show a headline, a short excerpt and a link to the original page. We do not republish articles — to read the full text you go to the publisher's own site.",
+            "All rights in the content we link to belong to its publishers and authors. Excerpts, reports and exports are provided for your organization's own monitoring and reporting; any further use is subject to the publisher's terms and applicable law.",
+            "Third-party content is provided as is. We are not responsible for its accuracy, completeness, timeliness or copyright status, and it may change or be removed at its source at any time. Sentiment labels, summaries and other AI-generated analysis are automated and can be wrong — check the original before you rely on it.",
+            "Publishers can ask us to stop indexing their site at any time using the takedown request form. We act on these requests promptly."
+          ]
+        },
+        {
+          "title": "Acceptable use",
+          "body": [
+            "Do not use Mediaory unlawfully, to harass anyone, or to disrupt the service. Do not scrape, resell or redistribute the service or its data except as we agree in writing. Respect rate limits and the limits of your plan."
+          ]
+        },
+        {
+          "title": "Plans and fees",
+          "body": [
+            "Where a paid plan is offered, its price, billing period and invoice details are shown before you buy. Invoices are issued to the company details you enter in your organization's billing profile."
+          ]
+        },
+        {
+          "title": "Availability and changes",
+          "body": [
+            "We work to keep Mediaory available but do not promise uninterrupted service. We may change or retire features; we will give reasonable notice of changes that materially affect you."
+          ]
+        },
+        {
+          "title": "Liability",
+          "body": [
+            "To the extent the law allows, Mediaory is not liable for indirect or consequential loss, or for decisions you make based on monitoring results. Nothing in these terms limits liability that cannot be limited by law."
+          ]
+        },
+        {
+          "title": "Contact",
+          "body": [
+            "Questions about these terms: use the contact page. Publishers: use the takedown request form."
+          ]
+        }
+      ]
+    },
+    "bot": {
+      "eyebrow": "For publishers",
+      "title": "Meet",
+      "accent": "Mediaory-Bot",
+      "lead": "Mediaory-Bot is the crawler behind Mediaory, a media-monitoring service for businesses. This page explains what it does and how to ask it to stop.",
+      "sections": [
+        {
+          "title": "How it identifies itself",
+          "body": [
+            "Every request carries this User-Agent: Mediaory-Bot/1.0 (+https://mediaory.io/bot). We do not disguise the crawler as a browser. Our requests come from cloud hosting and do not use a fixed IP address, so the User-Agent is the reliable way to recognise us."
+          ]
+        },
+        {
+          "title": "What it fetches",
+          "body": [
+            "Public RSS/Atom feeds and sitemaps, and — only where your robots.txt allows it — public pages. It never signs in, never bypasses a paywall and never fetches private areas."
+          ]
+        },
+        {
+          "title": "What we keep",
+          "body": [
+            "A headline, the link, the publication time and an excerpt of at most 200 characters. We do not store full article text or images. Every result shown to a customer links back to your original page."
+          ]
+        },
+        {
+          "title": "How often",
+          "body": [
+            "Each RSS feed is read at most every 10 minutes; sitemaps and pages at most every 30 minutes."
+          ]
+        },
+        {
+          "title": "Opting out",
+          "body": [
+            "Any of these works:",
+            "1) Send a takedown request with the form linked below — we block your domain, stop crawling it and, if you ask, delete what we stored.",
+            "2) Add a rule that names our crawler to your robots.txt: User-agent: Mediaory-Bot / Disallow: /. We honour rules that name Mediaory-Bot for feeds, and all applicable rules for pages and sitemaps.",
+            "We aim to answer requests within two business days."
+          ]
+        }
+      ],
+      "cta": "Send a takedown request"
+    },
+    "takedown": {
+      "eyebrow": "For publishers",
+      "title": "Takedown",
+      "accent": "request",
+      "lead": "If you publish a site we index and want us to stop, tell us here. We will block the domain, stop crawling it and, on request, delete what we stored.",
+      "name": "Your name",
+      "email": "Your email",
+      "publisher": "Publisher or site name",
+      "targets": "Site or page addresses",
+      "targetsHint": "For example: example.com, or the full address of a page.",
+      "message": "Anything else we should know (optional)",
+      "authority": "I am authorized to make this request for the publisher named above.",
+      "submit": "Send request",
+      "sending": "Sending…",
+      "doneTitle": "Request received",
+      "doneBody": "Thank you. We will review it and reply by email, normally within two business days.",
+      "error": "We could not send your request. Please check the form and try again."
+    },
+    "footerTerms": "Terms of Service",
+    "footerBot": "For publishers"
   }
 }

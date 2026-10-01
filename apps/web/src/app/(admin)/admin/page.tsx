@@ -3,6 +3,7 @@ import { Badge } from "@cim/ui";
 import { getConnectorCapabilities } from "@cim/core";
 import {
   checkDatabaseHealth,
+  countOpenTakedownRequests,
   db,
   getPlatformTotals,
   listOrganizationsForAdmin,
@@ -95,6 +96,7 @@ export default async function AdminOverviewPage() {
           return { ok: false as const, sources: [] };
         }),
     ]);
+  const openTakedowns = await countOpenTakedownRequests(db).catch(() => 0);
   const totals = totalsResult.totals;
   const redisHealthy = queueResult.ok;
   const queues = queueResult.rows;
@@ -116,6 +118,10 @@ export default async function AdminOverviewPage() {
           {" · "}
           <Link href="/admin/sources" className="text-primary underline underline-offset-2">
             Crawl sources &amp; Türkiye catalog
+          </Link>
+          {" · "}
+          <Link href="/admin/takedowns" className="text-primary underline underline-offset-2">
+            Takedown requests{openTakedowns > 0 ? ` (${openTakedowns} open)` : ""}
           </Link>
         </p>
       </div>

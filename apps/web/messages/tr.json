@@ -429,5 +429,129 @@
       "body": "Ekibe ulaşmanın en hızlı yolu.",
       "note": "Yönlendirmeli bir iletişim formu sonraki bir sürümde gelecek."
     }
+  },
+  "legal": {
+    "updated": "Son güncelleme: 1 Ekim 2026",
+    "terms": {
+      "eyebrow": "Hukuki",
+      "title": "Kullanım",
+      "accent": "Şartları",
+      "lead": "Mediaory'yi kullanma kuralları, sade bir dille. Lütfen \"Kaynaklar ve içerik\" bölümünü okuyun: neyi gösterdiğimizi, neyi göstermediğimizi ve yayıncıların bize nasıl ulaşabileceğini anlatır.",
+      "sections": [
+        {
+          "title": "Hizmet hakkında",
+          "body": [
+            "Mediaory bir medya ve web izleme hizmetidir. Herkese açık kaynakları dizinler; seçtiğiniz anahtar kelimelerin geçtiği içerikleri aramanıza, takip etmenize ve raporlamanıza olanak tanır."
+          ]
+        },
+        {
+          "title": "Hesabınız",
+          "body": [
+            "Doğru bilgi verin, giriş bilgilerinizi güvende tutun ve hesabınıza izinsiz erişildiğinden şüphelenirseniz bize bildirin. Hesabınızdaki işlemlerden ve organizasyonunuza davet ettiğiniz kişilerden siz sorumlusunuz."
+          ]
+        },
+        {
+          "title": "Kaynaklar ve içerik",
+          "body": [
+            "Mediaory, herkese açık kaynaklar için bir arama ve dizinleme hizmetidir. Her sonuç için bir başlık, kısa bir özet ve orijinal sayfaya bir bağlantı gösteririz. Haberleri yeniden yayımlamayız; metnin tamamını okumak için yayıncının kendi sitesine gidersiniz.",
+            "Bağlantı verdiğimiz içeriklerin tüm hakları yayıncılarına ve yazarlarına aittir. Özetler, raporlar ve dışa aktarımlar kuruluşunuzun kendi izleme ve raporlama ihtiyacı içindir; bunun ötesindeki kullanım yayıncının şartlarına ve yürürlükteki mevzuata tabidir.",
+            "Üçüncü taraf içerikler olduğu gibi sunulur. Doğruluğundan, eksiksizliğinden, güncelliğinden veya telif durumundan sorumlu değiliz; içerik kaynağında her an değişebilir veya kaldırılabilir. Duygu etiketleri, özetler ve diğer yapay zekâ destekli analizler otomatiktir ve hatalı olabilir; güvenmeden önce orijinal kaynağı kontrol edin.",
+            "Yayıncılar, kaldırma talebi formunu kullanarak sitelerinin dizinlenmesini istedikleri an durdurmamızı isteyebilir. Bu taleplere gecikmeden işlem yaparız."
+          ]
+        },
+        {
+          "title": "Kabul edilebilir kullanım",
+          "body": [
+            "Mediaory'yi hukuka aykırı amaçlarla, kimseyi rahatsız etmek için veya hizmeti aksatmak için kullanmayın. Yazılı olarak anlaşmadıkça hizmeti ya da verilerini kazımayın, yeniden satmayın veya dağıtmayın. Hız sınırlarına ve planınızın limitlerine uyun."
+          ]
+        },
+        {
+          "title": "Planlar ve ücretler",
+          "body": [
+            "Ücretli bir plan sunulduğunda fiyat, faturalama dönemi ve fatura bilgileri satın almadan önce gösterilir. Faturalar, organizasyonunuzun fatura profiline girdiğiniz şirket bilgilerine düzenlenir."
+          ]
+        },
+        {
+          "title": "Erişilebilirlik ve değişiklikler",
+          "body": [
+            "Mediaory'yi erişilebilir tutmak için çalışırız ancak kesintisiz hizmet taahhüt etmeyiz. Özellikleri değiştirebilir veya kaldırabiliriz; sizi önemli ölçüde etkileyen değişiklikler için makul bir süre önceden haber veririz."
+          ]
+        },
+        {
+          "title": "Sorumluluk",
+          "body": [
+            "Mevzuatın izin verdiği ölçüde Mediaory; dolaylı veya sonuçsal zararlardan ya da izleme sonuçlarına dayanarak aldığınız kararlardan sorumlu değildir. Bu şartlardaki hiçbir hüküm, kanunen sınırlandırılamayacak sorumluluğu sınırlamaz."
+          ]
+        },
+        {
+          "title": "İletişim",
+          "body": [
+            "Bu şartlarla ilgili sorularınız için iletişim sayfasını kullanın. Yayıncılar için: kaldırma talebi formu."
+          ]
+        }
+      ]
+    },
+    "bot": {
+      "eyebrow": "Yayıncılar için",
+      "title": "Tanışın:",
+      "accent": "Mediaory-Bot",
+      "lead": "Mediaory-Bot, işletmelere yönelik bir medya izleme hizmeti olan Mediaory'nin tarayıcısıdır. Bu sayfa ne yaptığını ve onu durdurmak için nasıl başvuracağınızı anlatır.",
+      "sections": [
+        {
+          "title": "Kendini nasıl tanıtır",
+          "body": [
+            "Her istek şu User-Agent ile gelir: Mediaory-Bot/1.0 (+https://mediaory.io/bot). Tarayıcıyı bir web tarayıcısı gibi göstermeyiz. İsteklerimiz bulut altyapısından gelir ve sabit bir IP adresi kullanmaz; bu yüzden bizi tanımanın güvenilir yolu User-Agent'tır."
+          ]
+        },
+        {
+          "title": "Neleri okur",
+          "body": [
+            "Herkese açık RSS/Atom beslemelerini ve site haritalarını, ayrıca yalnızca robots.txt dosyanız izin veriyorsa herkese açık sayfaları. Hiçbir zaman oturum açmaz, ücretli duvarı aşmaz, özel alanları okumaz."
+          ]
+        },
+        {
+          "title": "Neyi saklar",
+          "body": [
+            "Başlık, bağlantı, yayın zamanı ve en fazla 200 karakterlik bir özet. Haberin tam metnini veya görsellerini saklamayız. Müşteriye gösterilen her sonuç, sizin orijinal sayfanıza bağlantı verir."
+          ]
+        },
+        {
+          "title": "Ne sıklıkla",
+          "body": [
+            "Her RSS beslemesi en fazla 10 dakikada bir, site haritaları ve sayfalar en fazla 30 dakikada bir okunur."
+          ]
+        },
+        {
+          "title": "Dışarıda kalmak",
+          "body": [
+            "Şunlardan biri yeterlidir:",
+            "1) Aşağıdaki bağlantıdaki formla kaldırma talebi gönderin — alan adınızı engeller, taramayı durdurur ve isterseniz sakladıklarımızı sileriz.",
+            "2) robots.txt dosyanıza tarayıcımızı adıyla anan bir kural ekleyin: User-agent: Mediaory-Bot / Disallow: /. Beslemeler için Mediaory-Bot'u adıyla anan kurallara, sayfalar ve site haritaları için ise geçerli tüm kurallara uyarız.",
+            "Talepleri iki iş günü içinde yanıtlamayı hedefleriz."
+          ]
+        }
+      ],
+      "cta": "Kaldırma talebi gönder"
+    },
+    "takedown": {
+      "eyebrow": "Yayıncılar için",
+      "title": "Kaldırma",
+      "accent": "talebi",
+      "lead": "Dizinlediğimiz bir sitenin yayıncısıysanız ve taramayı durdurmamızı istiyorsanız burada bildirin. Alan adını engeller, taramayı durdurur ve talep ederseniz sakladıklarımızı sileriz.",
+      "name": "Adınız",
+      "email": "E-posta adresiniz",
+      "publisher": "Yayıncı veya site adı",
+      "targets": "Site veya sayfa adresleri",
+      "targetsHint": "Örneğin: example.com veya bir sayfanın tam adresi.",
+      "message": "Bilmemizi istediğiniz başka bir şey (isteğe bağlı)",
+      "authority": "Yukarıda adı geçen yayıncı adına bu talebi yapmaya yetkiliyim.",
+      "submit": "Talebi gönder",
+      "sending": "Gönderiliyor…",
+      "doneTitle": "Talebiniz alındı",
+      "doneBody": "Teşekkürler. Talebi inceleyip e-postayla yanıtlayacağız, genellikle iki iş günü içinde.",
+      "error": "Talebiniz gönderilemedi. Formu kontrol edip tekrar deneyin."
+    },
+    "footerTerms": "Kullanım Şartları",
+    "footerBot": "Yayıncılar için"
   }
 }

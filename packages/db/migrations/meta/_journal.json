@@ -225,6 +225,13 @@
       "when": 1790816942396,
       "tag": "0031_concerned_scalphunter",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1790837158229,
+      "tag": "0032_compliance_blocklist_takedowns",
+      "breakpoints": true
     }
   ]
 }

@@ -22,6 +22,7 @@ async function post(path: string, body: unknown) {
   });
   const data = (await response.json().catch(() => ({}))) as {
     error?: string;
+    code?: string;
     itemCount?: number;
     ok?: boolean;
     sampleTitles?: string[];
@@ -92,10 +93,17 @@ export function AddSourceForm() {
   });
   const [busy, setBusy] = useState<"test" | "add" | null>(null);
   const [message, setMessage] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
+  // Shown only after the server says this is a licensed news agency.
+  const [needsLicense, setNeedsLicense] = useState(false);
+  const [licenseConfirmed, setLicenseConfirmed] = useState(false);
 
   function update<K extends keyof NewSource>(key: K, value: NewSource[K]) {
     setForm((current) => ({ ...current, [key]: value }));
     setMessage(null);
+    if (key === "url") {
+      setNeedsLicense(false);
+      setLicenseConfirmed(false);
+    }
   }
 
   async function test() {
@@ -126,8 +134,9 @@ export function AddSourceForm() {
     setBusy("add");
     setMessage(null);
     try {
-      const { ok, data } = await post("/api/admin/sources", form);
+      const { ok, data } = await post("/api/admin/sources", { ...form, licenseConfirmed });
       if (!ok) {
+        if (data.code === "license_required") setNeedsLicense(true);
         setMessage({ tone: "error", text: data.error ?? "Could not add." });
         return;
       }
@@ -214,6 +223,17 @@ export function AddSourceForm() {
           {busy === "add" ? "Adding…" : "Test & add"}
         </Button>
       </div>
+      {needsLicense ? (
+        <label className="flex items-start gap-2 text-sm text-foreground sm:col-span-2">
+          <input
+            type="checkbox"
+            className="mt-1"
+            checked={licenseConfirmed}
+            onChange={(e) => setLicenseConfirmed(e.target.checked)}
+          />
+          Mediaory holds a written licence from this news agency that allows this use.
+        </label>
+      ) : null}
       {message ? (
         <p
           role={message.tone === "error" ? "alert" : "status"}

@@ -11,3 +11,4 @@ export * from "./retention";
 export * from "./billing";
 export * from "./social";
 export * from "./visuals";
+export * from "./compliance";

@@ -10,6 +10,7 @@ export * from "./repositories/audit-log";
 export * from "./repositories/auth";
 export * from "./repositories/registration";
 export * from "./repositories/sources";
+export * from "./repositories/compliance";
 export * from "./repositories/articles";
 export * from "./repositories/analytics";
 export * from "./repositories/alerts";

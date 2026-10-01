@@ -5,6 +5,7 @@ const checkRateLimit = vi.fn();
 const testSourceUrl = vi.fn();
 const createSource = vi.fn();
 const setSourceCrawlEnabled = vi.fn();
+const checkSourcePolicy = vi.fn();
 
 vi.mock("@/lib/admin", () => ({ requireSuperAdmin: (...a: unknown[]) => requireSuperAdmin(...a) }));
 vi.mock("@/lib/rate-limit", () => ({ checkRateLimit: (...a: unknown[]) => checkRateLimit(...a) }));
@@ -12,6 +13,7 @@ vi.mock("@/lib/source-test", () => ({ testSourceUrl: (...a: unknown[]) => testSo
 vi.mock("@cim/db", () => ({
   db: {},
   createSource: (...a: unknown[]) => createSource(...a),
+  checkSourcePolicy: (...a: unknown[]) => checkSourcePolicy(...a),
   setSourceCrawlEnabled: (...a: unknown[]) => setSourceCrawlEnabled(...a),
 }));
 
@@ -33,6 +35,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   requireSuperAdmin.mockResolvedValue({ id: "admin-1", email: "a@b.c" });
   checkRateLimit.mockResolvedValue({ allowed: true, remaining: 5 });
+  checkSourcePolicy.mockResolvedValue(null);
 });
 
 describe("admin source API", () => {
@@ -85,6 +88,29 @@ describe("admin source API", () => {
     const stored = createSource.mock.calls[0]![1] as Record<string, unknown>;
     expect(stored).not.toHaveProperty("canStoreFullText");
     expect(stored).not.toHaveProperty("apiKey");
+  });
+
+  it("never fetches a blocked publisher or an unlicensed agency", async () => {
+    checkSourcePolicy.mockResolvedValueOnce("blocked");
+    const blocked = await sources.POST(json(valid));
+    expect(blocked.status).toBe(409);
+    expect(await blocked.json()).toMatchObject({ code: "blocked" });
+
+    checkSourcePolicy.mockResolvedValueOnce("license_required");
+    const agency = await sources.POST(json({ ...valid, url: "https://www.aa.com.tr/rss.xml" }));
+    expect(agency.status).toBe(422);
+    expect(await agency.json()).toMatchObject({ code: "license_required" });
+
+    expect(testSourceUrl).not.toHaveBeenCalled();
+    expect(createSource).not.toHaveBeenCalled();
+  });
+
+  it("passes the admin's licence confirmation through to the policy check", async () => {
+    testSourceUrl.mockResolvedValue({ ok: true, itemCount: 1, sampleTitles: [] });
+    createSource.mockResolvedValue({ ok: true, id: uuid });
+    await sources.POST(json({ ...valid, licenseConfirmed: true }));
+    expect(checkSourcePolicy.mock.calls[0]![2]).toBe(true);
+    expect(createSource.mock.calls[0]![1]).toMatchObject({ licenseConfirmed: true });
   });
 
   it("is rate limited", async () => {

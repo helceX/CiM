@@ -53,6 +53,8 @@ export type AdminSourceRow = {
   type: string;
   connector: string;
   url: string | null;
+  country: string | null;
+  language: string | null;
   status: string;
   lastCheckedAt: Date | null;
 };
@@ -67,6 +69,8 @@ export async function listSourcesForAdmin(db: Db): Promise<AdminSourceRow[]> {
       type: sources.type,
       connector: sources.connector,
       url: sources.url,
+      country: sources.country,
+      language: sources.language,
       status: sources.status,
       lastCheckedAt: sources.lastCheckedAt,
     })

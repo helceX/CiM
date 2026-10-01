@@ -5,6 +5,7 @@ const checkRateLimit = vi.fn();
 const testSourceUrl = vi.fn();
 const createSource = vi.fn();
 const setSourceCrawlEnabled = vi.fn();
+const bulkSetSourcesCrawlEnabled = vi.fn();
 const checkSourcePolicy = vi.fn();
 
 vi.mock("@/lib/admin", () => ({ requireSuperAdmin: (...a: unknown[]) => requireSuperAdmin(...a) }));
@@ -15,11 +16,13 @@ vi.mock("@cim/db", () => ({
   createSource: (...a: unknown[]) => createSource(...a),
   checkSourcePolicy: (...a: unknown[]) => checkSourcePolicy(...a),
   setSourceCrawlEnabled: (...a: unknown[]) => setSourceCrawlEnabled(...a),
+  bulkSetSourcesCrawlEnabled: (...a: unknown[]) => bulkSetSourcesCrawlEnabled(...a),
 }));
 
 const sources = await import("./route");
 const test = await import("./test/route");
 const crawl = await import("./[id]/crawl/route");
+const bulk = await import("./bulk/route");
 
 const json = (body: unknown) =>
   new Request("http://localhost/x", {
@@ -127,5 +130,47 @@ describe("admin source API", () => {
     expect(setSourceCrawlEnabled.mock.calls[0]).toEqual([{}, uuid, false]);
     setSourceCrawlEnabled.mockResolvedValueOnce(false);
     expect((await crawl.POST(json({ enabled: true }), params(uuid))).status).toBe(404);
+  });
+});
+
+describe("bulk pause / resume API", () => {
+  beforeEach(() => bulkSetSourcesCrawlEnabled.mockResolvedValue({ changed: 7, skippedBlocked: 0 }));
+
+  it("answers 404 to non-admins and changes nothing", async () => {
+    requireSuperAdmin.mockRejectedValue(new Error("NOT_SUPER_ADMIN"));
+    expect((await bulk.POST(json({ enabled: false }))).status).toBe(404);
+    expect(bulkSetSourcesCrawlEnabled).not.toHaveBeenCalled();
+  });
+
+  it("pauses everything when no region or kind is given", async () => {
+    const response = await bulk.POST(json({ enabled: false }));
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ ok: true, changed: 7 });
+    expect(bulkSetSourcesCrawlEnabled).toHaveBeenCalledWith({}, { countries: undefined, types: undefined }, false);
+  });
+
+  it("turns a continent into its country codes and kinds into source types", async () => {
+    await bulk.POST(json({ enabled: false, region: "eu", kinds: ["forums"] }));
+    const [, filter] = bulkSetSourcesCrawlEnabled.mock.calls[0]!;
+    expect(filter.countries).toContain("DE");
+    expect(filter.countries).toContain("TR");
+    expect(filter.countries).not.toContain("US");
+    expect(filter.types).toEqual(["forum", "comments"]);
+  });
+
+  it("scopes to one country, and to an explicit selection when ids are sent", async () => {
+    await bulk.POST(json({ enabled: true, region: "tr" }));
+    expect(bulkSetSourcesCrawlEnabled.mock.calls[0]![1].countries).toEqual(["TR"]);
+    await bulk.POST(json({ enabled: false, ids: [uuid] }));
+    expect(bulkSetSourcesCrawlEnabled.mock.calls[1]![1]).toEqual({ ids: [uuid] });
+  });
+
+  it("rejects bad input and is rate limited", async () => {
+    expect((await bulk.POST(json({ enabled: "yes" }))).status).toBe(400);
+    expect((await bulk.POST(json({ enabled: false, region: "../etc" }))).status).toBe(400);
+    expect((await bulk.POST(json({ enabled: false, kinds: ["nope"] }))).status).toBe(400);
+    expect((await bulk.POST(json({ enabled: false, ids: ["not-a-uuid"] }))).status).toBe(400);
+    checkRateLimit.mockResolvedValue({ allowed: false, remaining: 0 });
+    expect((await bulk.POST(json({ enabled: false }))).status).toBe(429);
   });
 });

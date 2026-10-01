@@ -1,17 +1,9 @@
 import Link from "next/link";
-import { Badge } from "@cim/ui";
 import { CATALOG_GROUPS, TURKEY_SOURCE_CATALOG } from "@cim/core";
 import { db, listSourcesForAdmin } from "@cim/db";
 import { requireSuperAdmin } from "@/lib/admin";
-import { AddSourceForm, CatalogBrowser, CrawlToggle } from "./source-controls";
-
-const STATUS_TONE: Record<string, "success" | "warning" | "danger" | "neutral"> = {
-  healthy: "success",
-  delayed: "warning",
-  error: "danger",
-  blocked: "danger",
-  unavailable: "neutral",
-};
+import { AddSourceForm, CatalogBrowser } from "./source-controls";
+import { SourceExplorer } from "./source-explorer";
 
 const GROUP_LABEL: Record<string, string> = {
   general: "General news",
@@ -54,6 +46,24 @@ export default async function AdminSourcesPage() {
         </p>
       </div>
 
+      <section aria-labelledby="current-heading">
+        <h2 id="current-heading" className="text-sm font-semibold text-foreground">
+          Current sources ({sources.length})
+        </h2>
+        <div className="mt-3">
+          <SourceExplorer
+            sources={sources.map((source) => ({
+              id: source.id,
+              name: source.name,
+              domain: source.domain,
+              type: source.type,
+              connector: source.connector,
+              country: source.country,
+              status: source.status,
+            }))}
+          />
+        </div>
+      </section>
       <section aria-labelledby="catalog-heading">
         <h2 id="catalog-heading" className="text-sm font-semibold text-foreground">
           Türkiye catalog
@@ -91,60 +101,6 @@ export default async function AdminSourcesPage() {
         </div>
       </section>
 
-      <section aria-labelledby="current-heading">
-        <h2 id="current-heading" className="text-sm font-semibold text-foreground">
-          Current sources ({sources.length})
-        </h2>
-        <div className="mt-3 overflow-x-auto rounded-lg border border-border">
-          <table className="w-full text-sm">
-            <thead className="border-b border-border bg-surface-muted text-left text-xs text-muted-foreground">
-              <tr>
-                <th className="px-4 py-2 font-medium">Name</th>
-                <th className="px-4 py-2 font-medium">Type</th>
-                <th className="px-4 py-2 font-medium">Connector</th>
-                <th className="px-4 py-2 font-medium">Status</th>
-                <th className="px-4 py-2 font-medium">
-                  <span className="sr-only">Actions</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {sources.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="px-4 py-6 text-center text-muted-foreground">
-                    No sources yet.
-                  </td>
-                </tr>
-              ) : (
-                sources.map((source) => (
-                  <tr key={source.id} className="border-b border-border last:border-0">
-                    <td className="px-4 py-2">
-                      <div className="font-medium text-foreground">{source.name}</div>
-                      <div className="text-xs text-muted-foreground">{source.domain}</div>
-                    </td>
-                    <td className="px-4 py-2 text-muted-foreground">{source.type}</td>
-                    <td className="px-4 py-2 text-muted-foreground">{source.connector}</td>
-                    <td className="px-4 py-2">
-                      <Badge tone={STATUS_TONE[source.status] ?? "neutral"}>
-                        {source.status === "unavailable" ? "paused / unavailable" : source.status}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-2 text-right">
-                      {source.connector === "rss" || source.connector === "sitemap" ? (
-                        <CrawlToggle
-                          id={source.id}
-                          name={source.name}
-                          paused={source.status === "unavailable"}
-                        />
-                      ) : null}
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </section>
     </div>
   );
 }

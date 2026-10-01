@@ -406,7 +406,7 @@ export function AddSocialFeedForm() {
         <Input id="social-value" value={value} onChange={(e) => setValue(e.target.value)} placeholder={kind.placeholder} required />
       </div>
       <div className="flex flex-col gap-1">
-        <Label htmlFor="social-country">Country</Label>
+        <Label htmlFor="social-country">Audience region</Label>
         <select id="social-country" className={select} value={country} onChange={(e) => setCountry(e.target.value)}>
           <option value="ZZ">Global (no country)</option>
           {COUNTRIES.map((entry) => (
@@ -417,7 +417,7 @@ export function AddSocialFeedForm() {
         </select>
       </div>
       <div className="flex flex-col gap-1">
-        <Label htmlFor="social-language">Language</Label>
+        <Label htmlFor="social-language">Feed language</Label>
         <select id="social-language" className={select} value={language} onChange={(e) => setLanguage(e.target.value)}>
           <option value="other">Mixed / other</option>
           <option value="tr">Turkish</option>
@@ -431,7 +431,7 @@ export function AddSocialFeedForm() {
       </div>
       <div className="flex items-end">
         <Button type="submit" disabled={busy}>
-          {busy ? "Testing…" : "Test & add"}
+          {busy ? "Testing…" : "Follow feed"}
         </Button>
       </div>
       {message ? (

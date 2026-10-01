@@ -4,7 +4,7 @@ import { QUEUE_NAMES, type SendEmailJobData } from "@cim/core";
 import { db, enqueueEmail } from "@cim/db";
 import { getRedis } from "./redis";
 
-export type EmailKind = "verify_email" | "password_reset" | "invitation";
+export type EmailKind = "verify_email" | "password_reset" | "invitation" | "admin_test";
 
 let sendEmailQueue: Queue<SendEmailJobData> | undefined;
 

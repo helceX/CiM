@@ -95,8 +95,19 @@ export async function enqueueEmail(
   return email;
 }
 
-export async function markEmailSent(db: Db, emailId: string) {
-  await db.update(emailOutbox).set({ sentAt: new Date() }).where(eq(emailOutbox.id, emailId));
+export async function markEmailSent(db: Db, emailId: string, deliveredVia: string) {
+  await db
+    .update(emailOutbox)
+    .set({ sentAt: new Date(), deliveredVia, lastError: null })
+    .where(eq(emailOutbox.id, emailId));
+}
+
+/** Keeps the latest delivery failure visible in /admin (the job itself is retried by the queue). */
+export async function recordEmailError(db: Db, emailId: string, message: string) {
+  await db
+    .update(emailOutbox)
+    .set({ lastError: message.slice(0, 500) })
+    .where(eq(emailOutbox.id, emailId));
 }
 
 export async function getEmailById(db: Db, emailId: string) {

@@ -28,7 +28,7 @@ demo data behind it). The site copy now says so ("coming soon").
 A fresh production database has no real sources until some are registered: **/admin/sources** has a
 Türkiye catalog (~430 feeds: a hand-checked list plus the community list at github.com/bakinazik/rss, regenerated with `pnpm exec tsx scripts/import-rss-catalog.ts <README>`; searchable, filterable by category, bulk "Test & add all shown"; each feed is fetch-tested when added, since feed URLs change) and a
 custom RSS/sitemap form. Nothing is stored unless the feed was actually readable.
-See also `CONTENT_POLICY.md` (licensing, takedown, snippet limits). Polling is polite: RSS every 10 min, API 15 min, sitemap/web 30 min (never the 30 s scheduler tick).
+See also `CONTENT_POLICY.md` (licensing, takedown, snippet limits). Polling is polite: every real source (RSS, API, sitemap, web) every 2 hours (never the 30 s scheduler tick).
 
 ## 3. "The whole internet" — why it is not how anyone does it
 No media-monitoring product crawls the entire web itself. Practical ways to get broad coverage:

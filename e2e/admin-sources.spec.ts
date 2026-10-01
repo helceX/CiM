@@ -32,6 +32,7 @@ test("a platform admin sees the Türkiye catalog and gets a clear error for an u
   expect(violations).toEqual([]);
 
   // A private address is refused by the SSRF guard, and nothing is stored.
+  await page.getByText(/^Add an RSS feed to World/).click();
   await page.getByLabel("Name").fill("Internal");
   await page.getByLabel("Feed or sitemap address").fill("https://10.0.0.1/rss.xml");
   await page.getByRole("button", { name: "Test", exact: true }).click();
@@ -60,6 +61,12 @@ test("a platform admin browses sources by region and kind and pauses a slice", a
   await page.getByRole("button", { name: /^Germany 1$/ }).click();
   await expect(page.getByText(`${tag}-de-blog`, { exact: true })).toBeVisible();
   await expect(page.getByText(`${tag}-tr-news`, { exact: true })).toHaveCount(0);
+
+  // The add-feed form follows the selected region: only Germany is offered under "Germany".
+  await page.getByText(/^Add an RSS feed to Germany/).click();
+  await expect(page.getByLabel("Country")).toHaveValue("DE");
+  await expect(page.getByLabel("Country").locator("option")).toHaveCount(1);
+  await page.getByText(/^Add an RSS feed to Germany/).click(); // collapse again
 
   // Pause only what's shown (the one German blog).
   page.once("dialog", (dialog) => dialog.accept());

@@ -42,8 +42,8 @@ describe("processCrawlSchedulerJob — crawl interval", () => {
     listActiveSources.mockResolvedValueOnce([
       { id: "never-checked", connector: "rss", lastCheckedAt: null },
       { id: "fresh-rss", connector: "rss", lastCheckedAt: minutesAgo(2) },
-      { id: "stale-rss", connector: "rss", lastCheckedAt: minutesAgo(11) },
-      { id: "fresh-sitemap", connector: "sitemap", lastCheckedAt: minutesAgo(20) },
+      { id: "stale-rss", connector: "rss", lastCheckedAt: minutesAgo(121) },
+      { id: "fresh-sitemap", connector: "sitemap", lastCheckedAt: minutesAgo(90) },
       { id: "mock", connector: "mock", lastCheckedAt: new Date(Date.now() - 31_000) },
     ]);
     const add = vi.fn().mockResolvedValue(undefined);

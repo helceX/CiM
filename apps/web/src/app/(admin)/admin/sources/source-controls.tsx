@@ -81,15 +81,19 @@ export function CatalogAddButton({ entry }: { entry: CatalogSource }) {
   );
 }
 
-export function AddSourceForm() {
+export function AddSourceForm({ countryCodes, defaultCountry = "TR" }: { countryCodes?: string[]; defaultCountry?: string } = {}) {
   const router = useRouter();
+  const countryChoices = countryCodes ? COUNTRIES.filter((country) => countryCodes.includes(country.code)) : COUNTRIES;
+  const initialCountry = countryChoices.some((country) => country.code === defaultCountry)
+    ? defaultCountry
+    : (countryChoices[0]?.code ?? defaultCountry);
   const [form, setForm] = useState<NewSource>({
     name: "",
     url: "",
     connector: "rss",
     type: "news",
     language: "tr",
-    country: "TR",
+    country: initialCountry,
   });
   const [busy, setBusy] = useState<"test" | "add" | null>(null);
   const [message, setMessage] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
@@ -214,7 +218,7 @@ export function AddSourceForm() {
           value={form.country}
           onChange={(e) => update("country", e.target.value)}
         >
-          {COUNTRIES.map((country) => (
+          {countryChoices.map((country) => (
             <option key={country.code} value={country.code}>
               {country.name}
             </option>

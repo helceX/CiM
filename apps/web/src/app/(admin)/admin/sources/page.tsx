@@ -2,7 +2,7 @@ import Link from "next/link";
 import { CATALOG_GROUPS, TURKEY_SOURCE_CATALOG } from "@cim/core";
 import { db, listSourcesForAdmin } from "@cim/db";
 import { requireSuperAdmin } from "@/lib/admin";
-import { AddSourceForm, CatalogBrowser } from "./source-controls";
+import { CatalogBrowser } from "./source-controls";
 import { SourceExplorer } from "./source-explorer";
 
 const GROUP_LABEL: Record<string, string> = {
@@ -89,15 +89,6 @@ export default async function AdminSourcesPage() {
             addedUrls={[...addedUrls]}
             groupLabels={Object.fromEntries(CATALOG_GROUPS.map((g) => [g, GROUP_LABEL[g] ?? g]))}
           />
-        </div>
-      </section>
-
-      <section aria-labelledby="custom-heading">
-        <h2 id="custom-heading" className="text-sm font-semibold text-foreground">
-          Add a source
-        </h2>
-        <div className="mt-3">
-          <AddSourceForm />
         </div>
       </section>
 

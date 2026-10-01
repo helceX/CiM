@@ -5,7 +5,7 @@ import { db, listActiveSources } from "@cim/db";
 /**
  * Fans out one `crawl_source` job per active Source that is DUE (see
  * crawl-interval.ts — the tick is every 30 s, a real site is fetched every
- * 10-30 minutes at most). A deterministic jobId per source+tick means a
+ * two hours at most). A deterministic jobId per source+tick means a
  * scheduler tick that fires while the previous one's jobs are still
  * queued/active doesn't pile up duplicate work for the same source (BullMQ
  * dedupes by jobId).

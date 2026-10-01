@@ -57,6 +57,7 @@ test("a publisher's takedown request reaches the admin, who can block the domain
 
   // A blocked publisher cannot be added again — and is never contacted.
   await page.goto("/admin/sources");
+  await page.getByText(/^Add an RSS feed to World/).click();
   await page.getByLabel("Name").fill("Pub");
   await page.getByLabel("Feed or sitemap address").fill(`https://www.${domain}/rss.xml`);
   await page.getByRole("button", { name: "Test & add", exact: true }).click();

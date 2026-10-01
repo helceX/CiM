@@ -45,7 +45,10 @@ export async function POST(request: Request) {
     );
   }
 
-  const test = await testSourceUrl(parsed.data.url, parsed.data.connector);
+  const test = await testSourceUrl(parsed.data.url, parsed.data.connector, {
+    apiKey: parsed.data.apiKey,
+    apiKeyHeaderName: parsed.data.apiKeyHeaderName,
+  });
   if (!test.ok) {
     return NextResponse.json({ error: test.message }, { status: 422 });
   }

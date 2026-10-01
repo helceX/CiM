@@ -40,5 +40,6 @@ export function normalizeToArticleInput(source: Source, raw: RawFetchResult) {
     language: raw.language ?? null,
     publishedAt: raw.publishedAt,
     authorName: raw.authorName ?? null,
+    print: raw.print ?? null,
   };
 }

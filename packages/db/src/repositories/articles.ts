@@ -1,5 +1,5 @@
 import { eq, or, sql } from "drizzle-orm";
-import { turkishFold } from "@cim/core";
+import { turkishFold, type ArticlePrint } from "@cim/core";
 import type { Db } from "../client";
 import { articles, sources } from "../schema/content";
 
@@ -37,6 +37,8 @@ export async function insertArticle(
     // pipeline when the raw fetch result carried a social author;
     // absent/null for every non-social article.
     authorProfileId?: string | null;
+    // Printed-edition reference (edition date, page, viewer link) — null/absent for digital stories.
+    print?: ArticlePrint | null;
   },
 ) {
   // docs/architecture/ADR-002-SEARCH.md MVP tier — folded here (JS, not a

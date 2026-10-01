@@ -2,7 +2,7 @@ import { z } from "zod";
 
 /** Source types an operator may create by hand — the connectors that really exist. */
 export const ADMIN_SOURCE_TYPES = ["news", "newspaper", "magazine", "press", "blog", "website", "forum", "comments"] as const;
-export const ADMIN_SOURCE_CONNECTORS = ["rss", "sitemap"] as const;
+export const ADMIN_SOURCE_CONNECTORS = ["rss", "sitemap", "api"] as const;
 
 const httpsUrl = z
   .url()
@@ -21,12 +21,25 @@ export const createSourceSchema = z.object({
   language: z.enum(["tr", "en", "de", "fr", "es", "ar", "ru", "other"]).default("tr"),
   country: z.string().trim().length(2).toUpperCase().default("TR"),
   licenseConfirmed: z.boolean().default(false),
+  // Only for connector "api" (a JSON clipping/data provider): the key sent on every request.
+  apiKey: z.string().trim().min(8).max(500).optional(),
+  apiKeyHeaderName: z
+    .string()
+    .trim()
+    .regex(/^[A-Za-z0-9-]{1,60}$/, "Header names use letters, digits and dashes")
+    .optional(),
 });
 export type CreateSourceInput = z.infer<typeof createSourceSchema>;
 
 export const testSourceSchema = z.object({
   url: httpsUrl,
   connector: z.enum(ADMIN_SOURCE_CONNECTORS).default("rss"),
+  apiKey: z.string().trim().min(8).max(500).optional(),
+  apiKeyHeaderName: z
+    .string()
+    .trim()
+    .regex(/^[A-Za-z0-9-]{1,60}$/)
+    .optional(),
 });
 export type TestSourceInput = z.infer<typeof testSourceSchema>;
 

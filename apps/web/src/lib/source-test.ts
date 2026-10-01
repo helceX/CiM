@@ -1,5 +1,5 @@
 import "server-only";
-import { parseFeed, parseSitemap, safeFetch, SsrfBlockedError } from "@cim/ingestion";
+import { parseFeed, parseSitemap, safeFetch, SsrfBlockedError, testApiEndpoint } from "@cim/ingestion";
 
 export type SourceTestResult =
   | { ok: true; itemCount: number; sampleTitles: string[] }
@@ -13,8 +13,13 @@ export type SourceTestResult =
  */
 export async function testSourceUrl(
   url: string,
-  connector: "rss" | "sitemap",
+  connector: "rss" | "sitemap" | "api",
+  auth: { apiKey?: string; apiKeyHeaderName?: string } = {},
 ): Promise<SourceTestResult> {
+  if (connector === "api") {
+    const result = await testApiEndpoint(url, auth);
+    return result.ok ? { ok: true, itemCount: result.itemCount, sampleTitles: result.sampleTitles } : result;
+  }
   try {
     const { status, body } = await safeFetch(url, { timeoutMs: 8000 });
     if (status >= 400) return { ok: false, message: `The server answered HTTP ${status}.` };

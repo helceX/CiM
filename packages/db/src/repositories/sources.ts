@@ -35,12 +35,15 @@ export async function markSourceChecked(
 export type NewSourceInput = {
   name: string;
   url: string;
-  connector: "rss" | "sitemap";
+  connector: "rss" | "sitemap" | "api";
   type: string;
   language: string;
   country: string;
   /** The admin states Mediaory holds a written licence from this agency. */
   licenseConfirmed?: boolean;
+  /** Only for connector "api": the provider's key and the header it goes in (never returned by any read). */
+  apiKey?: string;
+  apiKeyHeaderName?: string;
 };
 
 export type SourcePolicyFailure = "invalid_url" | "blocked" | "license_required";
@@ -93,6 +96,8 @@ export async function createSource(
         domain: host,
         url: input.url,
         connector: input.connector,
+        apiKey: input.connector === "api" ? (input.apiKey ?? null) : null,
+        apiKeyHeaderName: input.connector === "api" ? (input.apiKeyHeaderName ?? null) : null,
         type: input.type,
         language: input.language,
         country: input.country,

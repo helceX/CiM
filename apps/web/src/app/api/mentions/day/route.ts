@@ -38,6 +38,7 @@ export async function GET(request: Request) {
       sentiment: mention.sentiment,
       priority: mention.priority,
       assigneeName,
+      print: article.print ?? null,
     })),
   });
 }

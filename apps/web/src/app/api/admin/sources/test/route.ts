@@ -32,6 +32,9 @@ export async function POST(request: Request) {
       message: "News agency content needs a written licence — it is not fetched without one.",
     });
   }
-  const result = await testSourceUrl(parsed.data.url, parsed.data.connector);
+  const result = await testSourceUrl(parsed.data.url, parsed.data.connector, {
+    apiKey: parsed.data.apiKey,
+    apiKeyHeaderName: parsed.data.apiKeyHeaderName,
+  });
   return NextResponse.json(result);
 }

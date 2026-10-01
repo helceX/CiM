@@ -1,4 +1,5 @@
 import type { Source } from "@cim/db/schema";
+import { parseArticlePrint } from "@cim/core";
 import type { RawFetchResult, SourceConnector, SourceHealth } from "./connector";
 import { safeFetch, SsrfBlockedError } from "./safe-fetch";
 
@@ -21,7 +22,15 @@ import { safeFetch, SsrfBlockedError } from "./safe-fetch";
  *       "publishedAt": "ISO 8601 string or null",
  *       "content": "string — body text",
  *       "author": "string or null",
- *       "language": "string or null"
+ *       "language": "string or null",
+ *       "print": {            // optional — only for stories from a PRINTED edition
+ *         "publication": "string — newspaper/magazine name, required if print is given",
+ *         "editionDate": "YYYY-MM-DD or null",
+ *         "page": "integer or null",
+ *         "section": "string or null",
+ *         "pageUrl": "https URL where the page can be viewed, or null",
+ *         "pageImageUrl": "https URL of a page/clipping preview image, or null"
+ *       }
  *     }
  *   ]
  * }
@@ -35,6 +44,7 @@ type ApiItem = {
   content?: string;
   author?: string | null;
   language?: string | null;
+  print?: unknown;
 };
 
 type ApiResponseBody = { items?: ApiItem[] };
@@ -84,6 +94,7 @@ export class APIConnector implements SourceConnector {
         language: item.language ?? source.language,
         publishedAt: item.publishedAt ? new Date(item.publishedAt) : null,
         authorName: item.author ?? null,
+        print: parseArticlePrint(item.print),
       }));
   }
 
@@ -113,5 +124,43 @@ export class APIConnector implements SourceConnector {
         message: error instanceof Error ? error.message : String(error),
       };
     }
+  }
+}
+
+export type ApiEndpointTest =
+  | { ok: true; itemCount: number; printCount: number; sampleTitles: string[] }
+  | { ok: false; message: string };
+
+/**
+ * Fetches a candidate JSON endpoint exactly as the crawler would (same SSRF
+ * guard, same auth header convention) and reports what it found — used by the
+ * admin screen before a clipping/API provider is saved.
+ */
+export async function testApiEndpoint(
+  url: string,
+  auth: { apiKey?: string | null; apiKeyHeaderName?: string | null } = {},
+): Promise<ApiEndpointTest> {
+  try {
+    const headers = authHeaders({ apiKey: auth.apiKey ?? null, apiKeyHeaderName: auth.apiKeyHeaderName ?? null } as Source);
+    const { status, body } = await safeFetch(url, { headers, timeoutMs: 8000 });
+    if (status === 401 || status === 403) return { ok: false, message: `The endpoint answered HTTP ${status} — check the key.` };
+    if (status >= 400) return { ok: false, message: `The endpoint answered HTTP ${status}.` };
+    let items: ApiItem[];
+    try {
+      items = parseItems(body);
+    } catch {
+      return { ok: false, message: "The endpoint did not return JSON." };
+    }
+    const usable = items.filter((item) => Boolean(item.url));
+    if (usable.length === 0) return { ok: false, message: 'The response has no items with a "url".' };
+    return {
+      ok: true,
+      itemCount: usable.length,
+      printCount: usable.filter((item) => parseArticlePrint(item.print)).length,
+      sampleTitles: usable.slice(0, 3).map((item) => item.title ?? item.url!),
+    };
+  } catch (error) {
+    if (error instanceof SsrfBlockedError) return { ok: false, message: "That address is not allowed." };
+    return { ok: false, message: error instanceof Error ? `Could not read it: ${error.message}` : "Could not read it." };
   }
 }

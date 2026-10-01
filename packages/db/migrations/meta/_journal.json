@@ -246,6 +246,13 @@
       "when": 1790879866578,
       "tag": "0034_queries_cover_print_types",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1790880524845,
+      "tag": "0035_articles_print",
+      "breakpoints": true
     }
   ]
 }

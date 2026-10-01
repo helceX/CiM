@@ -57,4 +57,17 @@ describe("visual CSV export", () => {
     expect((await GET(request, params(uuid))).status).toBe(422);
     expect(runVisual).not.toHaveBeenCalled();
   });
+
+  it("returns a real XLSX workbook for ?format=xlsx", async () => {
+    getSavedVisual.mockResolvedValue({ id: uuid, name: "Board volume", spec });
+    runVisual.mockResolvedValue({ rows: [{ label: "=1+1", value: 2 }], truncated: false });
+    const res = await GET(new Request("http://localhost/api/visuals/x/export?format=xlsx"), params(uuid));
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toContain("spreadsheetml.sheet");
+    expect(res.headers.get("content-disposition")).toBe('attachment; filename="board-volume.xlsx"');
+
+    // A real workbook is a zip container; its contents are covered in packages/reports (renderVisualXlsx).
+    const bytes = Buffer.from(await res.arrayBuffer());
+    expect(bytes.subarray(0, 2).toString("ascii")).toBe("PK");
+  });
 });

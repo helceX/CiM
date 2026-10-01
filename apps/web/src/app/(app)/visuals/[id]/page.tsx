@@ -55,6 +55,13 @@ export default async function VisualPage({ params }: { params: Promise<{ id: str
               </a>
             </Button>
           ) : null}
+          {parsed.success ? (
+            <Button asChild variant="secondary" size="sm">
+              <a href={`/api/visuals/${visual.id}/export?format=xlsx`} download>
+                Export XLSX
+              </a>
+            </Button>
+          ) : null}
           {canWrite ? (
             <>
               <Button asChild variant="secondary" size="sm">

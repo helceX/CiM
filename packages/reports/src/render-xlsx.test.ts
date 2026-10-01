@@ -1,6 +1,6 @@
 import ExcelJS from "exceljs";
 import { describe, expect, it } from "vitest";
-import { renderReportXlsx } from "./render-xlsx";
+import { renderReportXlsx, renderVisualXlsx } from "./render-xlsx";
 import { fakeReportData } from "./test-fixtures";
 
 async function loadWorkbook(buffer: Buffer): Promise<ExcelJS.Workbook> {
@@ -262,5 +262,31 @@ describe("renderReportXlsx — visual sections", () => {
     );
     const sheet = workbook.worksheets.find((s) => s.name.startsWith("Visual"))!;
     expect(String(sheet.getRow(1).getCell(1).value)).toContain("Not available");
+  });
+});
+
+describe("renderVisualXlsx", () => {
+  it("writes one sheet with a header and formula-neutral labels; an undefined share is empty", async () => {
+    const workbook = await loadWorkbook(
+      await renderVisualXlsx({
+        id: "x",
+        name: "Board volume",
+        measure: "negative_share",
+        dimension: "source",
+        periodDays: 30,
+        rows: [
+          { label: "=1+1", value: 40 },
+          { label: "Wire", value: null },
+        ],
+      }),
+    );
+    expect(workbook.worksheets).toHaveLength(1);
+    const sheet = workbook.worksheets[0]!;
+    expect(sheet.name).toBe("Visual - Board volume");
+    expect(sheet.getRow(1).getCell(1).value).toBe("Source");
+    expect(sheet.getRow(1).getCell(2).value).toBe("Negative share (%)");
+    expect(sheet.getRow(2).getCell(1).value).toBe("'=1+1");
+    expect(sheet.getRow(2).getCell(2).value).toBe(40);
+    expect(sheet.getRow(3).getCell(2).value).toBeNull();
   });
 });

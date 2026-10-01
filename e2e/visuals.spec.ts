@@ -115,3 +115,28 @@ test("a saved visual can be added to a custom report", async ({ page }) => {
   await page.getByRole("button", { name: "Generate report" }).click();
   expect((await created).status()).toBe(200);
 });
+
+test("a visual can be limited to a monitoring query and exported as XLSX", async ({ page }) => {
+  const account = await registerAndOnboard(page);
+  await page.goto("/visuals/new");
+  await expect(page.getByText("Computing…")).toBeHidden({ timeout: 10_000 });
+  await page.getByLabel("Name").fill("Only my query");
+  await page.getByRole("group", { name: "Monitoring queries" }).getByLabel(account.keyword).check();
+  await expect(page.getByText("Computing…")).toBeHidden({ timeout: 10_000 });
+  await page.getByRole("button", { name: "Save visual" }).click();
+  await expect(page).toHaveURL(/\/visuals\/[0-9a-f-]{36}$/);
+
+  // The filter survives a save: the edit screen shows it still ticked.
+  await page.getByRole("link", { name: "Edit" }).click();
+  await expect(page.getByRole("group", { name: "Monitoring queries" }).getByLabel(account.keyword)).toBeChecked();
+  await page.goBack();
+
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByRole("link", { name: "Export XLSX" }).click(),
+  ]);
+  expect(download.suggestedFilename()).toBe("only-my-query.xlsx");
+  const fs = await import("node:fs/promises");
+  const bytes = await fs.readFile((await download.path())!);
+  expect(bytes.subarray(0, 2).toString("ascii")).toBe("PK");
+});

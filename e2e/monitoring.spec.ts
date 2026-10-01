@@ -61,7 +61,7 @@ test("create a monitoring query, preview real matches, save it, and see it produ
   // query is deterministic instead of timing-dependent.
   await simulateCrawl("Daily Tech Wire");
 
-  await page.goto("/mentions");
+  await page.goto("/mentions?view=list");
   await page.getByLabel("Search").fill("Daily Tech Wire");
   await page.getByLabel("Search").press("Enter");
   await expect(page.getByRole("cell", { name: /Daily Tech Wire/ }).first()).toBeVisible({ timeout: 5000 });
@@ -72,6 +72,8 @@ test("create a monitoring query, preview real matches, save it, and see it produ
   await page.getByRole("link", { name: /View mentions/ }).first().click();
   await expect(page).toHaveURL(/\/mentions\?query=/);
   await expect(page.getByText("Showing only mentions from monitoring")).toBeVisible();
+  // Days are collapsed buttons; opening one shows its stories with the keyword that matched.
+  await page.locator("main button[aria-expanded]").first().click();
   await expect(
     page.getByRole("list", { name: "Matched keywords" }).first().getByText("Daily Tech Wire"),
   ).toBeVisible();

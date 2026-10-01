@@ -38,14 +38,39 @@ test.describe("mentions", () => {
   test.use({ storageState: storageStatePath });
 
   test("an empty filter combination shows the empty state, not a broken table", async ({ page }) => {
-    await page.goto("/mentions");
+    await page.goto("/mentions?view=list");
     await expect(page.getByText("No mentions match your filters.")).toBeVisible();
+  });
+
+  test("mentions are grouped by day: collapsed buttons that open into badge-marked clusters", async ({ page }) => {
+    await simulateCrawl("Daily Tech Wire");
+    await page.goto("/mentions");
+
+    const dayButton = page.locator("main button[aria-expanded]").first();
+    await expect(dayButton).toBeVisible({ timeout: 10_000 });
+    await expect(dayButton).toHaveAttribute("aria-expanded", "false");
+    await expect(page.getByText("Digital news")).toHaveCount(0); // nothing is loaded until a day is opened
+
+    await dayButton.click();
+    await expect(dayButton).toHaveAttribute("aria-expanded", "true");
+    // The cluster for news & press, and each story marked with what kind of place it came from.
+    await expect(page.getByText("News & press", { exact: true }).first()).toBeVisible();
+    await expect(page.getByText("Digital news", { exact: true }).first()).toBeVisible();
+    await expect(page.getByRole("link", { name: /Open story/ }).first()).toHaveAttribute("target", "_blank");
+
+    // A story opens in the same detail drawer, and the flat list is one click away.
+    await page.getByRole("button", { name: /open details/ }).first().click();
+    await expect(page.getByRole("dialog")).toBeVisible();
+    await page.keyboard.press("Escape");
+    await page.getByRole("link", { name: "All, newest first" }).click();
+    await expect(page).toHaveURL(/view=list/);
+    await expect(page.getByRole("row", { name: /Daily Tech Wire/ }).first()).toBeVisible();
   });
 
   test("filter mentions, open the detail drawer, and submit relevant feedback", async ({ page }) => {
     await simulateCrawl("Daily Tech Wire");
 
-    await page.goto("/mentions");
+    await page.goto("/mentions?view=list");
     await page.getByLabel("Search").fill("Daily Tech Wire");
     await page.getByLabel("Search").press("Enter");
 
@@ -75,7 +100,7 @@ test.describe("mentions", () => {
    * reason documented at the top of this file.
    */
   test("adds and removes a tag from a mention", async ({ page }) => {
-    await page.goto("/mentions");
+    await page.goto("/mentions?view=list");
     await page.getByLabel("Search").fill("Daily Tech Wire");
     await page.getByLabel("Search").press("Enter");
 
@@ -110,7 +135,7 @@ test.describe("mentions", () => {
    * the top of this file.
    */
   test("adds and deletes a comment on a mention", async ({ page }) => {
-    await page.goto("/mentions");
+    await page.goto("/mentions?view=list");
     await page.getByLabel("Search").fill("Daily Tech Wire");
     await page.getByLabel("Search").press("Enter");
 
@@ -177,7 +202,7 @@ test.describe("mentions", () => {
     await expect(inviteePage).toHaveURL(/\/dashboard/, { timeout: 5000 });
     await inviteeContext.close();
 
-    await page.goto("/mentions");
+    await page.goto("/mentions?view=list");
     await page.getByLabel("Search").fill("Daily Tech Wire");
     await page.getByLabel("Search").press("Enter");
     const row = page.getByRole("row", { name: /Daily Tech Wire/ }).first();
@@ -208,7 +233,7 @@ test.describe("mentions", () => {
     await page.getByRole("button", { name: "Revoke access" }).click();
     await revokeResponse;
 
-    await page.goto("/mentions");
+    await page.goto("/mentions?view=list");
     await page.getByLabel("Search").fill("Daily Tech Wire");
     await page.getByLabel("Search").press("Enter");
     const revisitedRow = page.getByRole("row", { name: /Daily Tech Wire/ }).first();

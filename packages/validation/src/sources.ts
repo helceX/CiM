@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 /** Source types an operator may create by hand — the connectors that really exist. */
-export const ADMIN_SOURCE_TYPES = ["news", "press", "blog", "website", "forum"] as const;
+export const ADMIN_SOURCE_TYPES = ["news", "newspaper", "magazine", "press", "blog", "website", "forum", "comments"] as const;
 export const ADMIN_SOURCE_CONNECTORS = ["rss", "sitemap"] as const;
 
 const httpsUrl = z

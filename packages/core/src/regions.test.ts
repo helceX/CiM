@@ -8,7 +8,7 @@ import {
   countryName,
   continentsOfCountry,
 } from "./regions";
-import { SOURCE_KINDS, sourceKindOfType } from "./source-categories";
+import { SOURCE_KINDS, sourceKindOfType, sourceTypeBadge } from "./source-categories";
 
 describe("regions", () => {
   it("has unique ISO codes and every continent is populated", () => {
@@ -49,6 +49,10 @@ describe("source kinds", () => {
     const all = SOURCE_KINDS.flatMap((kind) => kind.types);
     expect(new Set(all).size).toBe(all.length);
     expect(sourceKindOfType("press")).toBe("news");
+    // Digital news, agencies, newspapers and magazines share one cluster, each with its own badge.
+    expect(["news", "press", "newspaper", "magazine"].map(sourceKindOfType)).toEqual(["news", "news", "news", "news"]);
+    expect(["news", "newspaper", "magazine", "press"].map(sourceTypeBadge)).toEqual(["Digital news", "Newspaper", "Magazine", "News agency"]);
+    expect(sourceTypeBadge("unheard-of")).toBe("Other");
     expect(sourceKindOfType("forum")).toBe("forums");
     expect(sourceKindOfType("something-new")).toBe("feeds");
   });

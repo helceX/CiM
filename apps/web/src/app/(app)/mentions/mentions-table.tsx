@@ -7,6 +7,7 @@ import { Inbox } from "lucide-react";
 import type { MentionsPage, Tag } from "@cim/db";
 import { FilterBar } from "@/components/filter-bar";
 import { MentionDetailDrawer, type AssignableMember } from "./mention-detail-drawer";
+import { buildMentionSelects } from "./mention-filter-config";
 
 const SENTIMENT_TONE = {
   positive: "success",
@@ -103,64 +104,7 @@ export function MentionsTable({
       <FilterBar
         extraKeys={["query"]}
         searchPlaceholder="Search mentions…"
-        selects={[
-          {
-            key: "sentiment",
-            label: "Sentiment",
-            options: [
-              { value: "positive", label: "Positive" },
-              { value: "neutral", label: "Neutral" },
-              { value: "negative", label: "Negative" },
-              { value: "unclassified", label: "Unclassified" },
-            ],
-          },
-          {
-            key: "priority",
-            label: "Priority",
-            options: [
-              { value: "low", label: "Low" },
-              { value: "normal", label: "Normal" },
-              { value: "high", label: "High" },
-              { value: "critical", label: "Critical" },
-            ],
-          },
-          {
-            key: "since",
-            label: "Date",
-            options: [
-              { value: "1", label: "Today" },
-              { value: "7", label: "Last 7 days" },
-              { value: "30", label: "Last 30 days" },
-              { value: "90", label: "Last 90 days" },
-            ],
-          },
-          {
-            key: "assigned",
-            label: "Assignment",
-            options: [
-              { value: "me", label: "Assigned to me" },
-              { value: "unassigned", label: "Unassigned" },
-            ],
-          },
-          ...(tags.length > 0
-            ? [
-                {
-                  key: "tag",
-                  label: "Tag",
-                  options: tags.map((tag) => ({ value: tag.id, label: tag.name })),
-                },
-              ]
-            : []),
-          ...(brandGroups.length > 0
-            ? [
-                {
-                  key: "group",
-                  label: "Group",
-                  options: brandGroups.map((group) => ({ value: group.id, label: group.name })),
-                },
-              ]
-            : []),
-        ]}
+        selects={buildMentionSelects(tags, brandGroups)}
       />
 
       {result.items.length === 0 ? (

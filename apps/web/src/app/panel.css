@@ -172,7 +172,8 @@ body:has(.mp[data-mp-theme="light"]) {
 }
 
 /* Links and primary-coloured text need a lighter violet on the ink canvas. */
-.mp .text-primary { color: var(--mp-link); }
+.mp .text-primary,
+body:has(.mp) .text-primary { color: var(--mp-link); }
 
 /* Primary fills become the signal gradient. */
 .mp .bg-primary {

@@ -33,7 +33,7 @@ test("create a brand group, assign a query, compare and filter", async ({ page }
   ).violations;
   expect(dashboardViolations).toEqual([]);
 
-  await page.goto("/mentions");
+  await page.goto("/mentions?view=list");
   await expect(page.getByLabel("Group")).toBeVisible();
 
   // Settings with a populated group list + assignment table stays accessible.

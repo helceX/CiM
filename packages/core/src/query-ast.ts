@@ -1,4 +1,4 @@
-import { turkishFold } from "./turkish";
+import { keywordMatches, prepareText } from "./keyword-match";
 
 /**
  * docs/architecture/SEARCH.md — one canonical AST shared by the Simple
@@ -129,15 +129,15 @@ function tokenize(input: string): string[] {
  * two never diverge in what counts as a match.
  */
 export function matchesText(ast: QueryAst, text: string): boolean {
-  const folded = turkishFold(text);
+  const texts = prepareText(text);
 
   const includeCandidates = [...ast.include, ...ast.exactPhrases];
   const hasInclude =
     includeCandidates.length === 0 ||
-    includeCandidates.some((term) => folded.includes(turkishFold(term)));
+    includeCandidates.some((term) => keywordMatches(term, texts));
   if (!hasInclude) return false;
 
-  const hasExcluded = ast.exclude.some((term) => folded.includes(turkishFold(term)));
+  const hasExcluded = ast.exclude.some((term) => keywordMatches(term, texts));
   return !hasExcluded;
 }
 
@@ -150,10 +150,8 @@ export function matchesText(ast: QueryAst, text: string): boolean {
  * — never a fabricated confidence number.
  */
 export function computeMatchPriority(ast: QueryAst, text: string): "high" | "normal" {
-  const folded = turkishFold(text);
-  const hasExactPhraseMatch = ast.exactPhrases.some((phrase) =>
-    folded.includes(turkishFold(phrase)),
-  );
+  const texts = prepareText(text);
+  const hasExactPhraseMatch = ast.exactPhrases.some((phrase) => keywordMatches(phrase, texts));
   return hasExactPhraseMatch ? "high" : "normal";
 }
 
@@ -166,12 +164,12 @@ export function computeMatchPriority(ast: QueryAst, text: string): "high" | "nor
  * vacuously-true case matchesText itself falls back to).
  */
 export function findMatchedTerm(ast: QueryAst, text: string): string | null {
-  const folded = turkishFold(text);
+  const texts = prepareText(text);
   for (const phrase of ast.exactPhrases) {
-    if (folded.includes(turkishFold(phrase))) return phrase;
+    if (keywordMatches(phrase, texts)) return phrase;
   }
   for (const term of ast.include) {
-    if (folded.includes(turkishFold(term))) return term;
+    if (keywordMatches(term, texts)) return term;
   }
   return null;
 }
@@ -229,7 +227,9 @@ export function queryQualityWarning(ast: QueryAst): string | null {
   if (totalTerms === 1 && ast.exactPhrases.length === 0) {
     const term = ast.include[0] ?? "";
     if (term.length > 0 && term.length <= 6 && !term.includes(" ")) {
-      return `"${term}" is a short, common-looking term and may return unrelated results. Consider an exact phrase or adding context terms.`;
+      // Whole-word matching already stops "THY" matching inside "ARTHYMIA"; what is
+      // left is a short word that is simply common in its own right.
+      return `"${term}" is short and may still match unrelated stories as a whole word. Consider a longer name or an exact phrase.`;
     }
   }
   return null;

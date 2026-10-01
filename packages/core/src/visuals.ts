@@ -121,3 +121,38 @@ export function renderVisualCsv(
   }
   return lines.join("\r\n") + "\r\n";
 }
+
+export type VisualHighlights = {
+  /** Sum of the buckets — only for additive measures. */
+  total: number | null;
+  /** The biggest bucket (ties: the earliest). */
+  peak: { label: string; value: number } | null;
+  /** Mean per bucket that has a value — time series only. */
+  average: number | null;
+  /** The last bucket's value — time series only. */
+  latest: number | null;
+};
+
+/**
+ * The few numbers worth reading before the chart: the total, the peak, the
+ * typical bucket, the latest one. "Unique sources" and shares are not
+ * additive, so they get no total; a null bucket (undefined share) is
+ * skipped, never counted as 0.
+ */
+export function summarizeVisualRows(
+  rows: VisualRow[],
+  spec: { measure: VisualMeasure; dimension: VisualDimension },
+): VisualHighlights {
+  const filled = rows.filter((row): row is { label: string; value: number } => row.value !== null);
+  const additive = spec.measure === "mentions" || spec.measure === "high_priority";
+  let peak: VisualHighlights["peak"] = null;
+  for (const row of filled) if (!peak || row.value > peak.value) peak = { label: row.label, value: row.value };
+  const time = isTimeDimension(spec.dimension);
+  const sum = filled.reduce((acc, row) => acc + row.value, 0);
+  return {
+    total: additive && filled.length > 0 ? sum : null,
+    peak,
+    average: time && filled.length > 0 ? Math.round((sum / filled.length) * 10) / 10 : null,
+    latest: time ? (rows.at(-1)?.value ?? null) : null,
+  };
+}

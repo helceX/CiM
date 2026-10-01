@@ -1,4 +1,4 @@
-@layer components {
+/* Intentionally unlayered: these overrides must outrank Tailwind's utilities layer. */
 /*
  * The signed-in panel wears the same skin as the marketing site: an "ink"
  * canvas lit by a violet → magenta → coral signal gradient, glass cards,
@@ -343,5 +343,4 @@ body:has(.mp[data-mp-theme="light"]) {
 
 @media (prefers-reduced-motion: reduce) {
   .mp *, .mp *::before, .mp *::after { transition: none !important; animation: none !important; }
-}
 }

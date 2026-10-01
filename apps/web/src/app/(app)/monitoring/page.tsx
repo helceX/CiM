@@ -1,8 +1,21 @@
 import Link from "next/link";
 import { Badge, Button, EmptyState } from "@cim/ui";
 import { Radar } from "lucide-react";
+import { parseKeywordSpec } from "@cim/core";
 import { countMentionsByQuery, db, listMonitoringQueries } from "@cim/db";
 import { requireOrgContext } from "@/lib/tenant";
+
+/** Small suffix on a chip when the keyword has a stricter-than-default rule. */
+function KeywordRule({ term }: { term: string }) {
+  const spec = parseKeywordSpec(term);
+  if (spec.caseSensitive) {
+    return <span className="ml-1 text-[11px] text-muted-foreground" title="Matched as the whole word with exactly these capitals">· exact caps</span>;
+  }
+  if (spec.prefix) {
+    return <span className="ml-1 text-[11px] text-muted-foreground" title="Matches words that start with this">· word start</span>;
+  }
+  return null;
+}
 
 export default async function MonitoringListPage() {
   const context = await requireOrgContext();
@@ -72,6 +85,9 @@ export default async function MonitoringListPage() {
                         >
                           {kind === "exclude" ? <span className="sr-only">Excluded: </span> : null}
                           {term}
+                          {kind === "include" && !term.startsWith('"') ? (
+                            <KeywordRule term={term} />
+                          ) : null}
                         </li>
                       ))}
                       {keywords.length > 12 ? (

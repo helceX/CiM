@@ -109,6 +109,11 @@ export default async function AdminOverviewPage() {
           Operational aggregates across every organization — not a way to browse tenant
           content.
         </p>
+        <p className="mt-2 text-sm">
+          <Link href="/admin/email" className="text-primary underline underline-offset-2">
+            Email delivery &amp; unverified accounts
+          </Link>
+        </p>
       </div>
 
       <section>

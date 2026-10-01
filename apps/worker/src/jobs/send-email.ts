@@ -1,7 +1,7 @@
 import type { Job } from "bullmq";
 import { getEnv } from "@cim/config";
 import { deliverEmailViaProvider, type SendEmailJobData } from "@cim/core";
-import { db, getEmailById, markEmailSent } from "@cim/db";
+import { db, getEmailById, markEmailSent, recordEmailError } from "@cim/db";
 
 /**
  * docs/architecture/INGESTION.md job system — status/attempts/error are
@@ -16,10 +16,17 @@ export async function processSendEmailJob(job: Job<SendEmailJobData>): Promise<v
   }
   if (email.sentAt) return; // already delivered (safe to re-run)
 
-  await deliverEmailViaProvider(getEnv(), {
-    toEmail: email.toEmail,
-    subject: email.subject,
-    bodyText: email.bodyText,
-  });
-  await markEmailSent(db, email.id);
+  const env = getEnv();
+  try {
+    await deliverEmailViaProvider(env, {
+      toEmail: email.toEmail,
+      subject: email.subject,
+      bodyText: email.bodyText,
+    });
+  } catch (error) {
+    // Surface the failure in /admin, then let the queue retry as before.
+    await recordEmailError(db, email.id, error instanceof Error ? error.message : String(error));
+    throw error;
+  }
+  await markEmailSent(db, email.id, env.EMAIL_PROVIDER);
 }

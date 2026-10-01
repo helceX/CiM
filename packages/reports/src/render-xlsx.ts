@@ -288,3 +288,12 @@ export async function renderReportXlsx(data: ReportData): Promise<Buffer> {
   const buffer = await workbook.xlsx.writeBuffer();
   return Buffer.from(buffer);
 }
+
+
+/** A workbook with a single sheet for one saved visual (the "Export XLSX" on a visual's page). */
+export async function renderVisualXlsx(visual: ReportVisual): Promise<Buffer> {
+  const workbook = new ExcelJS.Workbook();
+  workbook.created = new Date();
+  addVisualSheet(workbook, visual);
+  return Buffer.from(await workbook.xlsx.writeBuffer());
+}

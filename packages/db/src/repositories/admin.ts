@@ -1,6 +1,8 @@
-import { desc, sql } from "drizzle-orm";
+import { and, desc, isNull, sql } from "drizzle-orm";
 import type { Db } from "../client";
+import { emailOutbox } from "../schema/auth";
 import { sources } from "../schema/content";
+import { users } from "../schema/users";
 
 /**
  * docs/architecture/SECURITY.md (brief §86) — Platform Super Admin reads.
@@ -106,4 +108,61 @@ export async function checkDatabaseHealth(db: Db): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+
+export type AdminUnverifiedUser = { id: string; email: string; name: string; createdAt: Date };
+
+/** Accounts that registered but never confirmed their email (newest first). */
+export async function listUnverifiedUsersForAdmin(db: Db, limit = 50): Promise<AdminUnverifiedUser[]> {
+  const rows = await db
+    .select({
+      id: users.id,
+      email: users.email,
+      firstName: users.firstName,
+      lastName: users.lastName,
+      createdAt: users.createdAt,
+    })
+    .from(users)
+    .where(and(isNull(users.emailVerifiedAt), isNull(users.deletedAt)))
+    .orderBy(desc(users.createdAt))
+    .limit(limit);
+  return rows.map((row) => ({
+    id: row.id,
+    email: row.email,
+    name: `${row.firstName} ${row.lastName}`.trim(),
+    createdAt: row.createdAt,
+  }));
+}
+
+export type AdminEmailRow = {
+  id: string;
+  toEmail: string;
+  subject: string;
+  kind: string;
+  createdAt: Date;
+  sentAt: Date | null;
+  deliveredVia: string | null;
+  lastError: string | null;
+};
+
+/**
+ * Recent outgoing emails for delivery diagnostics. The body is deliberately
+ * NOT selected: it contains verification / reset links that are credentials.
+ */
+export async function listRecentEmailsForAdmin(db: Db, limit = 20): Promise<AdminEmailRow[]> {
+  return db
+    .select({
+      id: emailOutbox.id,
+      toEmail: emailOutbox.toEmail,
+      subject: emailOutbox.subject,
+      kind: emailOutbox.kind,
+      createdAt: emailOutbox.createdAt,
+      sentAt: emailOutbox.sentAt,
+      deliveredVia: emailOutbox.deliveredVia,
+      lastError: emailOutbox.lastError,
+    })
+    .from(emailOutbox)
+    .orderBy(desc(emailOutbox.createdAt))
+    .limit(limit);
 }

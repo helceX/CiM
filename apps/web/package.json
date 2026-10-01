@@ -14,6 +14,7 @@
     "@cim/config": "workspace:*",
     "@cim/core": "workspace:*",
     "@cim/db": "workspace:*",
+    "@cim/ingestion": "workspace:*",
     "@cim/reports": "workspace:*",
     "@cim/ui": "workspace:*",
     "@cim/validation": "workspace:*",

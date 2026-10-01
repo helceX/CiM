@@ -59,6 +59,9 @@ importers:
       '@cim/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@cim/ingestion':
+        specifier: workspace:*
+        version: link:../../packages/ingestion
       '@cim/reports':
         specifier: workspace:*
         version: link:../../packages/reports

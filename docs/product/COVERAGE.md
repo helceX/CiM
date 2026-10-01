@@ -25,7 +25,9 @@ Mediaory reads the **sources registered in the `sources` table**. Each source ha
 So today Mediaory is a **monitor over a list of sources**, not a crawler of the whole web, and
 social / video / podcast / TV / radio are **not live** (the Social dashboard exists but has only
 demo data behind it). The site copy now says so ("coming soon").
-A fresh production database has no real sources until some are registered (Admin → Sources).
+A fresh production database has no real sources until some are registered: **/admin/sources** has a
+Türkiye catalog (18 well-known outlets; each is fetch-tested when added, since feed URLs change) and a
+custom RSS/sitemap form. Nothing is stored unless the feed was actually readable.
 
 ## 3. "The whole internet" — why it is not how anyone does it
 No media-monitoring product crawls the entire web itself. Practical ways to get broad coverage:
@@ -81,8 +83,8 @@ Two honest paths:
   We would not record broadcasts ourselves.
 
 ## 7. Suggested order
-1. Ship the **source catalog** (Turkish news/business/trade RSS + sitemaps) and a way for admins to
-   register sources → real coverage for the core promise.
+1. ~~Ship the **source catalog** and a way for admins to register sources~~ — **done** (/admin/sources).
+   Next: grow the catalog (regional press, trade, business) and add sitemap coverage.
 2. Add **one news-search provider** for long-tail keyword coverage (evaluate GDELT first — free).
 3. **YouTube** (official API) and **podcasts** (RSS + transcription).
 4. **Connected social pages** (Facebook / Instagram / LinkedIn) + X + Reddit via official APIs.

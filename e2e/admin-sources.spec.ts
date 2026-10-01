@@ -88,3 +88,21 @@ test("a platform admin browses sources by region and kind and pauses a slice", a
   ).violations;
   expect(violations).toEqual([]);
 });
+
+test("a platform admin can add a print-clipping provider (JSON API) with a key", async ({ page }) => {
+  const admin = await registerAndOnboard(page);
+  makePlatformAdmin(admin.email);
+  await page.goto("/admin/sources");
+  await page.getByText(/^Add an RSS feed to World/).click();
+
+  await page.getByLabel("Kind", { exact: true }).selectOption("api");
+  await expect(page.getByLabel("Provider endpoint (JSON)")).toBeVisible();
+  await page.getByLabel("Source type").selectOption("newspaper");
+  await page.getByLabel("API key (optional)").fill("provider-secret-key");
+  await page.getByLabel("Name").fill("Clipping provider");
+  // A private address is refused by the same SSRF guard, and the key is never echoed back.
+  await page.getByLabel("Provider endpoint (JSON)").fill("https://10.0.0.1/clippings.json");
+  await page.getByRole("button", { name: "Test", exact: true }).click();
+  await expect(page.getByRole("alert").filter({ hasText: "not allowed" })).toBeVisible();
+  await expect(page.getByText("provider-secret-key")).toHaveCount(0);
+});

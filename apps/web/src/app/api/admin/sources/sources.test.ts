@@ -87,10 +87,27 @@ describe("admin source API", () => {
   it("ignores policy fields a client tries to send", async () => {
     testSourceUrl.mockResolvedValue({ ok: true, itemCount: 1, sampleTitles: [] });
     createSource.mockResolvedValue({ ok: true, id: uuid });
-    await sources.POST(json({ ...valid, canStoreFullText: true, apiKey: "secret" }));
+    await sources.POST(json({ ...valid, canStoreFullText: true, apiKey: "secret-long-key" }));
     const stored = createSource.mock.calls[0]![1] as Record<string, unknown>;
     expect(stored).not.toHaveProperty("canStoreFullText");
-    expect(stored).not.toHaveProperty("apiKey");
+    expect(stored).not.toHaveProperty("apiKey"); // a feed never keeps a key
+  });
+
+  it("keeps an API provider's key and header, tests it with them, and never echoes the key", async () => {
+    testSourceUrl.mockResolvedValue({ ok: true, itemCount: 4, sampleTitles: [] });
+    createSource.mockResolvedValue({ ok: true, id: uuid });
+    const response = await sources.POST(
+      json({ ...valid, connector: "api", type: "newspaper", apiKey: "provider-key-123", apiKeyHeaderName: "X-Api-Key" }),
+    );
+    expect(response.status).toBe(201);
+    expect(JSON.stringify(await response.json())).not.toContain("provider-key-123");
+    expect(testSourceUrl).toHaveBeenCalledWith(valid.url, "api", { apiKey: "provider-key-123", apiKeyHeaderName: "X-Api-Key" });
+    expect(createSource.mock.calls[0]![1]).toMatchObject({
+      connector: "api",
+      type: "newspaper",
+      apiKey: "provider-key-123",
+      apiKeyHeaderName: "X-Api-Key",
+    });
   });
 
   it("never fetches a blocked publisher or an unlicensed agency", async () => {

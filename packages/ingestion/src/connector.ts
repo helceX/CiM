@@ -1,4 +1,5 @@
 import type { Source } from "@cim/db/schema";
+import type { ArticlePrint } from "@cim/core";
 
 /**
  * docs/architecture/INGESTION.md — every connector (Mock, RSS, Sitemap,
@@ -17,6 +18,8 @@ export type RawFetchResult = {
   language?: string | null;
   publishedAt: Date | null;
   authorName?: string | null;
+  /** Set when the story ran in a printed edition (clipping providers only). */
+  print?: ArticlePrint | null;
   // docs/architecture/ADR-006-SOCIAL-LISTENING.md — set only by social
   // connectors (Mock today; X/Instagram/etc. are future phases). When
   // socialAuthorExternalId is present, the pipeline resolves/creates a

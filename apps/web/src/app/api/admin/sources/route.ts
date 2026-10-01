@@ -45,12 +45,17 @@ export async function POST(request: Request) {
     );
   }
 
-  const test = await testSourceUrl(parsed.data.url, parsed.data.connector);
+  const test = await testSourceUrl(parsed.data.url, parsed.data.connector, {
+    apiKey: parsed.data.apiKey,
+    apiKeyHeaderName: parsed.data.apiKeyHeaderName,
+  });
   if (!test.ok) {
     return NextResponse.json({ error: test.message }, { status: 422 });
   }
 
-  const result = await createSource(db, parsed.data);
+  // A key only means something to an API provider; for feeds and sitemaps it is dropped, never stored.
+  const { apiKey: _apiKey, apiKeyHeaderName: _header, ...withoutKey } = parsed.data;
+  const result = await createSource(db, parsed.data.connector === "api" ? parsed.data : withoutKey);
   if (!result.ok) {
     const failures = {
       duplicate: { status: 409, error: "This address is already a source." },

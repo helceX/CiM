@@ -390,7 +390,7 @@ export function SourceExplorer({ sources }: { sources: ExplorerSource[] }) {
                         <Badge tone={STATUS_TONE[source.status] ?? "neutral"}>
                           {isPaused(source) ? "paused" : source.status}
                         </Badge>
-                        {source.connector === "rss" || source.connector === "sitemap" ? (
+                        {source.connector === "rss" || source.connector === "sitemap" || source.connector === "api" ? (
                           <CrawlToggle id={source.id} name={source.name} paused={isPaused(source)} />
                         ) : null}
                       </div>

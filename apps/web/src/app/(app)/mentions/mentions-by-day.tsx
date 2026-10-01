@@ -4,11 +4,12 @@ import { useRef, useState } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { Badge, Button } from "@cim/ui";
 import { ChevronRight, ExternalLink } from "lucide-react";
-import { SOURCE_KINDS, countryName, sourceKindOfType, sourceTypeBadge } from "@cim/core";
+import { SOURCE_KINDS, countryName, sourceKindOfType, sourceTypeBadge, type ArticlePrint } from "@cim/core";
 import type { MentionDaySummary, Tag } from "@cim/db";
 import { FilterBar } from "@/components/filter-bar";
 import { MentionDetailDrawer, type AssignableMember } from "./mention-detail-drawer";
 import { buildMentionSelects } from "./mention-filter-config";
+import { PrintLine } from "./print-clipping";
 
 type DayItem = {
   id: string;
@@ -22,6 +23,7 @@ type DayItem = {
   sentiment: string | null;
   priority: string;
   assigneeName: string | null;
+  print: ArticlePrint | null;
 };
 type DayState = { status: "loading" } | { status: "error" } | { status: "ready"; items: DayItem[]; truncated: boolean };
 
@@ -106,6 +108,24 @@ function DayBody({ state, onOpen }: { state: DayState | undefined; onOpen: (id: 
                       {new Date(item.publishedAt).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Istanbul" })}
                     </time>
                   </p>
+                  {item.print ? (
+                    <p className="mt-1">
+                      <PrintLine print={item.print} />
+                      {item.print.pageUrl ? (
+                        <>
+                          {" "}
+                          <a
+                            href={item.print.pageUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-primary underline underline-offset-2"
+                          >
+                            View page<span className="sr-only"> of {item.print.publication} (new tab)</span>
+                          </a>
+                        </>
+                      ) : null}
+                    </p>
+                  ) : null}
                   {item.matchedTerms.length > 0 ? (
                     <ul className="mt-1.5 flex flex-wrap gap-1" aria-label="Matched keywords">
                       {item.matchedTerms.slice(0, 4).map((term) => (

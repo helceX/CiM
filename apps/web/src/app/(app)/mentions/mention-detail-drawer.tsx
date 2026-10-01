@@ -14,6 +14,7 @@ import {
   Textarea,
 } from "@cim/ui";
 import type { MentionDetail, Tag } from "@cim/db";
+import { PrintClipping } from "./print-clipping";
 
 const SENTIMENT_TONE = {
   positive: "success",
@@ -337,6 +338,8 @@ export function MentionDetailDrawer({
                 View original
               </a>
             </section>
+
+            {detail.article.print ? <PrintClipping print={detail.article.print} /> : null}
 
             {detail.socialAuthor ? (
               <section className="flex flex-col gap-1">

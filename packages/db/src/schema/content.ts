@@ -4,6 +4,7 @@ import {
   customType,
   index,
   integer,
+  jsonb,
   numeric,
   pgTable,
   primaryKey,
@@ -16,6 +17,7 @@ import { organizations, projects } from "./organizations";
 import { monitoringQueries } from "./monitoring";
 import { users } from "./users";
 import { socialProfiles } from "./social";
+import type { ArticlePrint } from "@cim/core";
 
 /**
  * docs/architecture/ADR-002-SEARCH.md / SEARCH.md — no built-in drizzle-orm
@@ -95,6 +97,10 @@ export const articles = pgTable(
       onDelete: "set null",
     }),
     storyClusterId: uuid("story_cluster_id"),
+    // Set only for stories that ran in a PRINTED edition (newspaper/magazine
+    // clippings from a provider): edition date, page and where the page can
+    // be viewed. References only — see @cim/core print-media.ts.
+    print: jsonb("print").$type<ArticlePrint>(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     // docs/architecture/ADR-002-SEARCH.md MVP tier — title + storedExcerpt,
     // Turkish-folded then tokenized with the 'simple' (no-stemming)

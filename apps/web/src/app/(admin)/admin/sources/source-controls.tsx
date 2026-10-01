@@ -8,7 +8,9 @@ import { COUNTRIES, type CatalogSource } from "@cim/core";
 type NewSource = {
   name: string;
   url: string;
-  connector: "rss" | "sitemap";
+  connector: "rss" | "sitemap" | "api";
+  apiKey: string;
+  apiKeyHeaderName: string;
   type: string;
   language: string;
   country: string;
@@ -91,6 +93,8 @@ export function AddSourceForm({ countryCodes, defaultCountry = "TR" }: { country
     name: "",
     url: "",
     connector: "rss",
+    apiKey: "",
+    apiKeyHeaderName: "Authorization",
     type: "news",
     language: "tr",
     country: initialCountry,
@@ -117,6 +121,7 @@ export function AddSourceForm({ countryCodes, defaultCountry = "TR" }: { country
       const { ok, data } = await post("/api/admin/sources/test", {
         url: form.url,
         connector: form.connector,
+        ...(form.connector === "api" && form.apiKey ? { apiKey: form.apiKey, apiKeyHeaderName: form.apiKeyHeaderName } : {}),
       });
       if (!ok) {
         setMessage({ tone: "error", text: data.error ?? "Could not test." });
@@ -138,7 +143,12 @@ export function AddSourceForm({ countryCodes, defaultCountry = "TR" }: { country
     setBusy("add");
     setMessage(null);
     try {
-      const { ok, data } = await post("/api/admin/sources", { ...form, licenseConfirmed });
+      const { apiKey, apiKeyHeaderName, ...rest } = form;
+      const { ok, data } = await post("/api/admin/sources", {
+        ...rest,
+        ...(form.connector === "api" && apiKey ? { apiKey, apiKeyHeaderName } : {}),
+        licenseConfirmed,
+      });
       if (!ok) {
         if (data.code === "license_required") setNeedsLicense(true);
         setMessage({ tone: "error", text: data.error ?? "Could not add." });
@@ -170,7 +180,7 @@ export function AddSourceForm({ countryCodes, defaultCountry = "TR" }: { country
         />
       </div>
       <div className="flex flex-col gap-1">
-        <Label htmlFor="source-url">Feed or sitemap address</Label>
+        <Label htmlFor="source-url">{form.connector === "api" ? "Provider endpoint (JSON)" : "Feed or sitemap address"}</Label>
         <Input
           id="source-url"
           type="url"
@@ -190,8 +200,33 @@ export function AddSourceForm({ countryCodes, defaultCountry = "TR" }: { country
         >
           <option value="rss">RSS / Atom feed</option>
           <option value="sitemap">Sitemap</option>
+          <option value="api">Clipping / data provider (JSON API)</option>
         </select>
       </div>
+      {form.connector === "api" ? (
+        <>
+          <div className="flex flex-col gap-1">
+            <Label htmlFor="source-api-key">API key (optional)</Label>
+            <Input
+              id="source-api-key"
+              type="password"
+              autoComplete="off"
+              value={form.apiKey}
+              onChange={(e) => update("apiKey", e.target.value)}
+              placeholder="Never shown again after saving"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label htmlFor="source-api-header">Header the key is sent in</Label>
+            <Input
+              id="source-api-header"
+              value={form.apiKeyHeaderName}
+              onChange={(e) => update("apiKeyHeaderName", e.target.value)}
+              placeholder="Authorization (Bearer) or X-Api-Key"
+            />
+          </div>
+        </>
+      ) : null}
       <div className="flex flex-col gap-1">
         <Label htmlFor="source-type">Source type</Label>
         <select

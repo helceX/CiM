@@ -16,6 +16,12 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
 
   return (
     <div lang="en" className="flex min-h-screen">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50 focus:rounded-md focus:bg-primary focus:px-3 focus:py-2 focus:text-sm focus:text-primary-foreground"
+      >
+        Skip to content
+      </a>
       <AppSidebar />
       <div className="flex min-w-0 flex-1 flex-col">
         <AppTopbar
@@ -23,7 +29,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
           userLabel={`${user.firstName} ${user.lastName}`}
           initialUnreadCount={unreadCount}
         />
-        <main className="flex-1 px-4 py-6 md:px-6 md:py-8">{children}</main>
+        <main id="main-content" tabIndex={-1} className="flex-1 px-4 py-6 outline-none md:px-6 md:py-8">{children}</main>
       </div>
     </div>
   );

@@ -172,9 +172,21 @@ test.describe("a11y + keyboard operability: overlays and nav", () => {
 
     const row = page.getByRole("row", { name: /Daily Tech Wire/ }).first();
     await expect(row).toBeVisible({ timeout: 5000 });
-    await row.focus();
+    // The headline is a real button inside the row, so Tab reaches it.
+    const opener = row.getByRole("button", { name: /Daily Tech Wire/ });
+    await opener.focus();
+    await expect(opener).toBeFocused();
     await page.keyboard.press("Enter");
     await expect(page.getByRole("dialog")).toBeVisible();
+  });
+
+  test("a skip link jumps past the navigation to the main content", async ({ page }) => {
+    await page.goto("/dashboard");
+    await page.keyboard.press("Tab");
+    const skip = page.getByRole("link", { name: "Skip to content" });
+    await expect(skip).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(page.locator("#main-content")).toBeFocused();
   });
 
   test("the primary nav is fully reachable by Tab and Enter activates a link", async ({

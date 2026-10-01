@@ -1,6 +1,7 @@
 import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import type { Db } from "../client";
 import { monitoringQueries, type QueryAst } from "../schema/monitoring";
+import { mentions } from "../schema/content";
 import { organizations } from "../schema/organizations";
 import type { OrganizationId } from "./tenant-scope";
 
@@ -20,6 +21,27 @@ export async function listMonitoringQueries(
       ),
     )
     .orderBy(desc(monitoringQueries.createdAt));
+}
+
+/**
+ * How much each query has produced, for the Monitoring list: all-time and
+ * last-7-days counts (archived mentions excluded, same as the Mentions
+ * inbox). Keyed by query id; a query with no mentions is simply absent.
+ */
+export async function countMentionsByQuery(
+  db: Db,
+  organizationId: OrganizationId,
+): Promise<Map<string, { total: number; last7Days: number }>> {
+  const rows = await db
+    .select({
+      queryId: mentions.queryId,
+      total: sql<number>`count(*)::int`,
+      last7Days: sql<number>`count(*) filter (where ${mentions.createdAt} >= now() - interval '7 days')::int`,
+    })
+    .from(mentions)
+    .where(and(eq(mentions.organizationId, organizationId), sql`${mentions.status} != 'archived'`))
+    .groupBy(mentions.queryId);
+  return new Map(rows.map((row) => [row.queryId, { total: row.total, last7Days: row.last7Days }]));
 }
 
 export async function createMonitoringQuery(

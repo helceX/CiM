@@ -133,6 +133,10 @@ export type MentionFilters = {
   tagId?: string;
   // Mentions of any query currently in this brand group.
   brandGroupId?: string;
+  // Mentions produced by one monitoring query ("View mentions" on the
+  // Monitoring list). Org scope still comes from organizationId, so a
+  // foreign query id simply matches nothing.
+  queryId?: string;
 };
 
 export type MentionsPage = {
@@ -191,6 +195,7 @@ function mentionFiltersToWhere(
     filters.tagId
       ? sql`exists (select 1 from mention_tags mt where mt.mention_id = ${mentions.id} and mt.tag_id = ${filters.tagId})`
       : undefined,
+    filters.queryId ? eq(mentions.queryId, filters.queryId) : undefined,
     filters.brandGroupId
       ? sql`${mentions.queryId} in (select mq.id from monitoring_queries mq where mq.brand_group_id = ${filters.brandGroupId} and mq.organization_id = ${organizationId})`
       : undefined,

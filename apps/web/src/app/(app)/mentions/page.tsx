@@ -1,5 +1,6 @@
 import {
   db,
+  getMonitoringQuery,
   listBrandGroups,
   listMembersForOrganization,
   listMentionsFiltered,
@@ -43,6 +44,9 @@ export default async function MentionsPage({
     tagId: param(resolvedParams, "tag") || undefined,
     // A malformed id in the URL is ignored rather than reaching Postgres,
     // where a non-uuid string would fail the whole page.
+    queryId: UUID_PATTERN.test(param(resolvedParams, "query") ?? "")
+      ? param(resolvedParams, "query")
+      : undefined,
     brandGroupId: UUID_PATTERN.test(param(resolvedParams, "group") ?? "")
       ? param(resolvedParams, "group")
       : undefined,
@@ -57,6 +61,9 @@ export default async function MentionsPage({
     listTagsForOrganization(db, context.organizationId),
     listBrandGroups(db, context.organizationId),
   ]);
+  const queryName = filters.queryId
+    ? ((await getMonitoringQuery(db, context.organizationId, filters.queryId))?.name ?? null)
+    : null;
   const assignableMembers = members.filter((m) => m.status === "active");
 
   return (
@@ -74,6 +81,7 @@ export default async function MentionsPage({
         tags={tags}
         brandGroups={brandGroups.map((group) => ({ id: group.id, name: group.name }))}
         currentUserId={context.userId}
+        queryName={queryName}
       />
     </div>
   );

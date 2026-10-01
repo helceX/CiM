@@ -3,7 +3,7 @@ import { db } from "../client";
 import { articles, mentions, sources } from "../schema/content";
 import { organizations, workspaces } from "../schema/index";
 import { createProject } from "./projects";
-import { createMonitoringQuery, getMonitoringQuery } from "./monitoring-queries";
+import { countMentionsByQuery, createMonitoringQuery, getMonitoringQuery } from "./monitoring-queries";
 import { listMentionsFiltered } from "./mentions";
 import {
   createBrandGroup,
@@ -216,6 +216,17 @@ describe("brand groups (integration)", () => {
     expect(filtered.totalCount).toBe(3);
     const crossTenant = await listMentionsFiltered(db, a.organizationId, { brandGroupId: own.group.id }, { page: 1, pageSize: 50 });
     expect(crossTenant.totalCount).toBe(0);
+
+    // One query's own mentions ("View mentions" on the Monitoring list), and
+    // the per-query counts that list shows.
+    const oneQuery = await listMentionsFiltered(db, c.organizationId, { queryId: usQ1.id }, { page: 1, pageSize: 50 });
+    expect(oneQuery.totalCount).toBe(2);
+    const foreignQuery = await listMentionsFiltered(db, a.organizationId, { queryId: usQ1.id }, { page: 1, pageSize: 50 });
+    expect(foreignQuery.totalCount).toBe(0);
+    const counts = await countMentionsByQuery(db, c.organizationId);
+    expect(counts.get(usQ1.id)).toEqual({ total: 2, last7Days: 2 });
+    expect(counts.get(themQ.id)).toEqual({ total: 1, last7Days: 1 });
+    expect((await countMentionsByQuery(db, a.organizationId)).get(usQ1.id)).toBeUndefined();
   });
 
   it("reports share of voice as null when the compared groups had no mentions", async () => {

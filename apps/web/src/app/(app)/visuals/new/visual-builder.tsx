@@ -31,6 +31,8 @@ const CHART_LABELS: Record<VisualChartType, string> = {
 
 type Preview = { rows: VisualRow[]; truncated: boolean };
 
+export type FilterOption = { id: string; name: string };
+
 export type VisualBuilderInitial = {
   id: string;
   name: string;
@@ -38,16 +40,28 @@ export type VisualBuilderInitial = {
   dimension: VisualDimension;
   periodDays: number;
   sentiments: Sentiment[];
+  brandGroupIds: string[];
+  queryIds: string[];
   chartType: VisualChartType;
 };
 
-export function VisualBuilder({ initial }: { initial?: VisualBuilderInitial }) {
+export function VisualBuilder({
+  initial,
+  brandGroups = [],
+  queries = [],
+}: {
+  initial?: VisualBuilderInitial;
+  brandGroups?: FilterOption[];
+  queries?: FilterOption[];
+}) {
   const router = useRouter();
   const [name, setName] = useState(initial?.name ?? "");
   const [measure, setMeasure] = useState<VisualMeasure>(initial?.measure ?? "mentions");
   const [dimension, setDimension] = useState<VisualDimension>(initial?.dimension ?? "day");
   const [periodDays, setPeriodDays] = useState<number>(initial?.periodDays ?? 30);
   const [sentiments, setSentiments] = useState<Sentiment[]>(initial?.sentiments ?? []);
+  const [brandGroupIds, setBrandGroupIds] = useState<string[]>(initial?.brandGroupIds ?? []);
+  const [queryIds, setQueryIds] = useState<string[]>(initial?.queryIds ?? []);
   const [chartType, setChartType] = useState<VisualChartType>(initial?.chartType ?? "line");
   const [preview, setPreview] = useState<Preview | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -61,9 +75,13 @@ export function VisualBuilder({ initial }: { initial?: VisualBuilderInitial }) {
       dimension,
       periodDays,
       chartType,
-      filters: sentiments.length > 0 ? { sentiments } : {},
+      filters: {
+        ...(sentiments.length > 0 ? { sentiments } : {}),
+        ...(brandGroupIds.length > 0 ? { brandGroupIds } : {}),
+        ...(queryIds.length > 0 ? { queryIds } : {}),
+      },
     }),
-    [measure, dimension, periodDays, chartType, sentiments],
+    [measure, dimension, periodDays, chartType, sentiments, brandGroupIds, queryIds],
   );
 
   const suggestions = suggestChartTypes({ measure, dimension }, preview?.rows.length ?? 0);
@@ -104,6 +122,9 @@ export function VisualBuilder({ initial }: { initial?: VisualBuilderInitial }) {
       clearTimeout(timer);
     };
   }, [spec]);
+
+  const toggleIn = (setter: (fn: (current: string[]) => string[]) => void, id: string) =>
+    setter((current) => (current.includes(id) ? current.filter((v) => v !== id) : [...current, id]));
 
   function toggleSentiment(value: Sentiment) {
     setSentiments((current) => (current.includes(value) ? current.filter((v) => v !== value) : [...current, value]));
@@ -181,6 +202,38 @@ export function VisualBuilder({ initial }: { initial?: VisualBuilderInitial }) {
           </div>
           <p className="text-xs text-muted-foreground">Leave all unchecked to include every mention.</p>
         </fieldset>
+        {brandGroups.length > 0 ? (
+          <fieldset className="flex flex-col gap-2">
+            <legend className="text-sm font-medium text-foreground">Only these brand groups</legend>
+            <div className="flex flex-col gap-1.5">
+              {brandGroups.map((group) => (
+                <label key={group.id} className="flex items-center gap-2 text-sm text-foreground">
+                  <Checkbox
+                    checked={brandGroupIds.includes(group.id)}
+                    onCheckedChange={() => toggleIn(setBrandGroupIds, group.id)}
+                  />
+                  {group.name}
+                </label>
+              ))}
+            </div>
+          </fieldset>
+        ) : null}
+        {queries.length > 0 ? (
+          <fieldset className="flex flex-col gap-2">
+            <legend className="text-sm font-medium text-foreground">Only these monitoring queries</legend>
+            <div className="flex max-h-40 flex-col gap-1.5 overflow-y-auto" role="group" aria-label="Monitoring queries">
+              {queries.map((query) => (
+                <label key={query.id} className="flex items-center gap-2 text-sm text-foreground">
+                  <Checkbox
+                    checked={queryIds.includes(query.id)}
+                    onCheckedChange={() => toggleIn(setQueryIds, query.id)}
+                  />
+                  {query.name}
+                </label>
+              ))}
+            </div>
+          </fieldset>
+        ) : null}
         <Field id="visual-chart-type" label="Show as">
           <Select value={chartType} onChange={(e) => setChartType(e.target.value as VisualChartType)}>
             {suggestions.map((t) => (

@@ -43,7 +43,7 @@ assign query → filter mentions → comparison renders.
 
 ## 2. Chart & table builder
 
-> **Status: slices 1–4 shipped** (engine; API + builder + /visuals; edit, pin to Dashboard (max 4), CSV export; add visuals to a custom report — PDF and XLSX, `visual:<id>` sections, up to 4). Slice 1 detail: `saved_visuals` table, the closed-vocabulary spec (`visualSpecSchema`: measures `mentions | unique_sources | high_priority | negative_share`; dimensions `day | week | source | source_type | sentiment | brand_group | query`), the tenant-scoped query compiler + `runVisual` (5 s statement timeout, 1000-row cap, zero-filled time series) and repository CRUD. **Next:** XLSX export of a single visual, brand-group/query filters in the builder. Not yet: `topic` dimension, `breakdown`, `stacked_bar` data shape.
+> **Status: slices 1–5 shipped (v1 complete)** (engine; API + builder + /visuals; edit, pin to Dashboard (max 4), CSV export; add visuals to a custom report — PDF and XLSX, `visual:<id>` sections, up to 4; XLSX export of a single visual; brand-group and monitoring-query filters in the builder). Slice 1 detail: `saved_visuals` table, the closed-vocabulary spec (`visualSpecSchema`: measures `mentions | unique_sources | high_priority | negative_share`; dimensions `day | week | source | source_type | sentiment | brand_group | query`), the tenant-scoped query compiler + `runVisual` (5 s statement timeout, 1000-row cap, zero-filled time series) and repository CRUD. **Not in v1:** `topic` dimension, `breakdown`, `stacked_bar` data shape.
 
 **Problem.** Fixed dashboards and templates cannot answer every question; users
 want to build their own visuals from monitoring data and place them in

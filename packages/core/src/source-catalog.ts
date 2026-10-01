@@ -1,3 +1,6 @@
+import { hostOfUrl, isLicenseRequiredHost } from "./restricted-publishers";
+import { GENERATED_CATALOG } from "./source-catalog.generated";
+
 /**
  * Candidate public RSS feeds of Turkish (and a few English-language Turkey)
  * outlets an operator can add as crawl sources from /admin.
@@ -21,10 +24,25 @@ export type CatalogSource = {
   type: "news" | "press" | "blog" | "website";
   language: "tr" | "en";
   country: "TR";
-  group: "general" | "economy" | "technology" | "english";
+  group: CatalogGroup;
 };
 
-export const TURKEY_SOURCE_CATALOG: readonly CatalogSource[] = [
+export const CATALOG_GROUPS = [
+  "general",
+  "economy",
+  "business",
+  "technology",
+  "science",
+  "sports",
+  "culture",
+  "entertainment",
+  "lifestyle",
+  "defense",
+  "english",
+] as const;
+export type CatalogGroup = (typeof CATALOG_GROUPS)[number];
+
+const CURATED_CATALOG: readonly CatalogSource[] = [
   { key: "hurriyet", name: "Hürriyet", url: "https://www.hurriyet.com.tr/rss/anasayfa", type: "news", language: "tr", country: "TR", group: "general" },
   { key: "sabah", name: "Sabah", url: "https://www.sabah.com.tr/rss/anasayfa.xml", type: "news", language: "tr", country: "TR", group: "general" },
   { key: "cumhuriyet", name: "Cumhuriyet", url: "https://www.cumhuriyet.com.tr/rss/son_dakika.xml", type: "news", language: "tr", country: "TR", group: "general" },
@@ -44,6 +62,38 @@ export const TURKEY_SOURCE_CATALOG: readonly CatalogSource[] = [
   { key: "daily-sabah", name: "Daily Sabah", url: "https://www.dailysabah.com/rssFeed/turkey", type: "news", language: "en", country: "TR", group: "english" },
   { key: "hurriyet-daily-news", name: "Hürriyet Daily News", url: "https://www.hurriyetdailynews.com/rss", type: "news", language: "en", country: "TR", group: "english" },
 ];
+
+/** Same feed written two ways ("…/feed" vs "…/feed/", with or without "www.") counts once. */
+export function feedIdentity(url: string): string {
+  try {
+    const u = new URL(url);
+    const path = u.pathname.replace(/\/+$/, "") || "/";
+    return `${hostOfUrl(url)}${path}${u.search}`.toLowerCase();
+  } catch {
+    return url.toLowerCase();
+  }
+}
+
+/**
+ * The hand-checked list first (it wins on a duplicate), then the community list
+ * in source-catalog.generated.ts. Anything on a licence-required agency's domain
+ * is dropped here, so no catalog entry can ever point at one.
+ */
+export const TURKEY_SOURCE_CATALOG: readonly CatalogSource[] = (() => {
+  const seenFeeds = new Set<string>();
+  const seenKeys = new Set<string>();
+  const merged: CatalogSource[] = [];
+  for (const entry of [...CURATED_CATALOG, ...GENERATED_CATALOG]) {
+    const host = hostOfUrl(entry.url);
+    if (!host || isLicenseRequiredHost(host)) continue;
+    const identity = feedIdentity(entry.url);
+    if (seenFeeds.has(identity) || seenKeys.has(entry.key)) continue;
+    seenFeeds.add(identity);
+    seenKeys.add(entry.key);
+    merged.push(entry);
+  }
+  return merged;
+})();
 
 export function findCatalogSource(key: string): CatalogSource | undefined {
   return TURKEY_SOURCE_CATALOG.find((entry) => entry.key === key);

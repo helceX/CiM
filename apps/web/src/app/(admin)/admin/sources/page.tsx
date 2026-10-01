@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { Badge } from "@cim/ui";
-import { TURKEY_SOURCE_CATALOG } from "@cim/core";
+import { CATALOG_GROUPS, TURKEY_SOURCE_CATALOG } from "@cim/core";
 import { db, listSourcesForAdmin } from "@cim/db";
 import { requireSuperAdmin } from "@/lib/admin";
-import { AddSourceForm, CatalogAddButton, CrawlToggle } from "./source-controls";
+import { AddSourceForm, CatalogBrowser, CrawlToggle } from "./source-controls";
 
 const STATUS_TONE: Record<string, "success" | "warning" | "danger" | "neutral"> = {
   healthy: "success",
@@ -15,8 +15,15 @@ const STATUS_TONE: Record<string, "success" | "warning" | "danger" | "neutral"> 
 
 const GROUP_LABEL: Record<string, string> = {
   general: "General news",
-  economy: "Economy",
+  economy: "Economy & finance",
+  business: "Business",
   technology: "Technology",
+  science: "Science",
+  sports: "Sports",
+  culture: "Culture & arts",
+  entertainment: "Entertainment",
+  lifestyle: "Lifestyle",
+  defense: "Defense & industry",
   english: "English-language",
 };
 
@@ -30,7 +37,6 @@ export default async function AdminSourcesPage() {
   await requireSuperAdmin();
   const sources = await listSourcesForAdmin(db);
   const addedUrls = new Set(sources.map((s) => s.url).filter((u): u is string => Boolean(u)));
-  const groups = Object.keys(GROUP_LABEL);
 
   return (
     <div className="flex flex-col gap-8">
@@ -53,36 +59,26 @@ export default async function AdminSourcesPage() {
           Türkiye catalog
         </h2>
         <p className="mt-1 text-xs text-muted-foreground">
-          Well-known outlets with a public feed. Feed addresses change, so each one is tested
-          when you add it — if a feed fails, use the custom form below with the publisher&apos;s
-          current address.
+          {TURKEY_SOURCE_CATALOG.length} public feeds of Turkish outlets (curated list plus the community list
+          at github.com/bakinazik/rss; news agencies that license their content are left out). Feed addresses
+          change, so each one is fetch-tested when you add it — if a feed fails, use the custom form below with the
+          publisher&apos;s current address. These are candidates, not permissions: check a publisher&apos;s terms
+          of use before adding it.
         </p>
-        <div className="mt-3 flex flex-col gap-4">
-          {groups.map((group) => (
-            <div key={group}>
-              <h3 className="text-xs font-medium text-muted-foreground">{GROUP_LABEL[group]}</h3>
-              <ul className="mt-2 grid gap-2 sm:grid-cols-2">
-                {TURKEY_SOURCE_CATALOG.filter((entry) => entry.group === group).map((entry) => (
-                  <li
-                    key={entry.key}
-                    className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2"
-                  >
-                    <div className="min-w-0">
-                      <div className="truncate text-sm font-medium text-foreground">
-                        {entry.name}
-                      </div>
-                      <div className="truncate text-xs text-muted-foreground">{entry.url}</div>
-                    </div>
-                    {addedUrls.has(entry.url) ? (
-                      <Badge tone="success">Added</Badge>
-                    ) : (
-                      <CatalogAddButton entry={entry} />
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
+        <div className="mt-3">
+          <CatalogBrowser
+            entries={TURKEY_SOURCE_CATALOG.map((entry) => ({
+              key: entry.key,
+              name: entry.name,
+              url: entry.url,
+              group: entry.group,
+              type: entry.type,
+              language: entry.language,
+              country: entry.country,
+            }))}
+            addedUrls={[...addedUrls]}
+            groupLabels={Object.fromEntries(CATALOG_GROUPS.map((g) => [g, GROUP_LABEL[g] ?? g]))}
+          />
         </div>
       </section>
 

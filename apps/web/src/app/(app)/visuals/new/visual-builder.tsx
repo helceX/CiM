@@ -218,6 +218,8 @@ export function VisualBuilder({
     setPeriodDays(preset.periodDays);
     setChartType(preset.chartType);
     setSentiments(preset.sentiments ?? []);
+    // The old preview's row count would veto the preset's chart form (e.g. a pie) before the new data arrives.
+    setPreview(null);
   }
 
   async function handleSave() {

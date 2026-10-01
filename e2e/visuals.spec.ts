@@ -123,6 +123,7 @@ test("a visual can be limited to a monitoring query and exported as XLSX", async
   await page.goto("/visuals/new");
   await expect(page.getByText("Computing…")).toBeHidden({ timeout: 10_000 });
   await page.getByLabel("Name").fill("Only my query");
+  await page.getByText("Narrow it down").click();
   await page.getByRole("group", { name: "Monitoring queries" }).getByLabel(account.keyword).check();
   await expect(page.getByText("Computing…")).toBeHidden({ timeout: 10_000 });
   await page.getByRole("button", { name: "Save visual" }).click();

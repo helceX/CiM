@@ -5,6 +5,7 @@ export * from "./query-ast";
 export * from "./turkish";
 export * from "./email-provider";
 export * from "./jobs";
+export * from "./crawl-interval";
 export * from "./error-reporting";
 export * from "./source-categories";
 export * from "./connector-capabilities";

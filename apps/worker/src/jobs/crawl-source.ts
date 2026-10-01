@@ -36,7 +36,16 @@ export async function processCrawlSourceJob(
     return;
   }
 
-  const result = await ingestSource(db, source, connector);
+  let result;
+  try {
+    result = await ingestSource(db, source, connector);
+  } catch (error) {
+    // Record the attempt so the failure counts as a check: without this
+    // lastCheckedAt stays old and the source would be re-fetched on every
+    // scheduler tick instead of waiting out its crawl interval.
+    await markSourceChecked(db, source.id, "error");
+    throw error;
+  }
   await markSourceChecked(db, source.id, "healthy");
   console.log(
     `[worker] crawled source "${source.name}": ${result.itemsFetched} item(s), ` +

@@ -115,8 +115,11 @@ export default async function DashboardPage() {
           { label: "High priority", value: String(summary.highPriority) },
           {
             label: "Sentiment mix",
-            value: `${summary.positive}/${summary.neutral}/${summary.negative}`,
-            hint: "positive / neutral / negative",
+            value:
+              summary.totalMentions > 0
+                ? `${Math.round((summary.positive / summary.totalMentions) * 100)}% positive`
+                : "—",
+            hint: `${summary.neutral} neutral · ${summary.negative} negative`,
           },
         ]}
       />
@@ -176,7 +179,12 @@ export default async function DashboardPage() {
       <PinnedVisualsSection organizationId={context.organizationId} />
 
       <section>
-        <h2 className="text-sm font-semibold text-foreground">Top stories</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-foreground">Top stories</h2>
+          <Link href="/mentions" className="text-xs text-primary underline underline-offset-2">
+            View all mentions
+          </Link>
+        </div>
         <div className="mt-3 overflow-hidden rounded-lg border border-border">
           {recentMentions.length === 0 ? (
             <EmptyState
@@ -190,7 +198,12 @@ export default async function DashboardPage() {
                 <li key={mention.id} className="flex flex-col gap-1 px-4 py-3">
                   <div className="flex items-center justify-between gap-3">
                     <p className="text-sm font-medium text-foreground">
-                      {article.title}
+                      <Link
+                        href={`/mentions?open=${mention.id}`}
+                        className="hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                      >
+                        {article.title}
+                      </Link>
                     </p>
                     <div className="flex shrink-0 items-center gap-2">
                       {mention.sentiment ? (

@@ -54,7 +54,7 @@ test("create a monitoring query, preview real matches, save it, and see it produ
 
   await page.getByRole("button", { name: "Save monitoring" }).click();
   await expect(page).toHaveURL(/\/monitoring$/, { timeout: 5000 });
-  await expect(page.getByRole("cell", { name: "Daily Tech Wire watch" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Daily Tech Wire watch" })).toBeVisible();
 
   // Force one real ingestion pass now, rather than waiting on the live
   // worker's own 30s crawl tick, so a fresh mention for this brand-new
@@ -65,4 +65,16 @@ test("create a monitoring query, preview real matches, save it, and see it produ
   await page.getByLabel("Search").fill("Daily Tech Wire");
   await page.getByLabel("Search").press("Enter");
   await expect(page.getByRole("cell", { name: /Daily Tech Wire/ }).first()).toBeVisible({ timeout: 5000 });
+
+  // The Monitoring list links straight to that query's own mentions, and
+  // the Mentions table says which keyword matched.
+  await page.goto("/monitoring");
+  await page.getByRole("link", { name: /View mentions/ }).first().click();
+  await expect(page).toHaveURL(/\/mentions\?query=/);
+  await expect(page.getByText("Showing only mentions from monitoring")).toBeVisible();
+  await expect(
+    page.getByRole("list", { name: "Matched keywords" }).first().getByText("Daily Tech Wire"),
+  ).toBeVisible();
+  await page.getByRole("button", { name: /Show all monitoring/ }).click();
+  await expect(page.getByText("Showing only mentions from monitoring")).toHaveCount(0);
 });

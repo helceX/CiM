@@ -35,6 +35,16 @@ describe("admin source management (integration)", () => {
     expect(row?.connector).toBe("rss");
   });
 
+  it("stores a global social feed (country ZZ) without a country", async () => {
+    const result = await createSource(db, { ...input, url: `https://www.reddit-${unique}.example/r/x/.rss`, type: "social", country: "ZZ" });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    created.push(result.id);
+    const [row] = await db.select().from(sources).where(eq(sources.id, result.id));
+    expect(row?.country).toBeNull();
+    expect(row?.type).toBe("social");
+  });
+
   it("refuses a second source with the same feed URL", async () => {
     const result = await createSource(db, input);
     expect(result).toEqual({ ok: false, reason: "duplicate" });

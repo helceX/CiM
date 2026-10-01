@@ -100,7 +100,7 @@ export async function createSource(
         apiKeyHeaderName: input.connector === "api" ? (input.apiKeyHeaderName ?? null) : null,
         type: input.type,
         language: input.language,
-        country: input.country,
+        country: input.country === "ZZ" ? null : input.country,
         status: "healthy",
         canStoreFullText: false,
         canDisplayFullText: false,

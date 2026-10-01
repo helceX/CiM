@@ -5,6 +5,7 @@ import { Wordmark } from "@cim/ui";
 export async function MarketingFooter() {
   const t = await getTranslations("footer");
   const nav = await getTranslations("nav");
+  const legal = await getTranslations("legal");
   const columns = [
     {
       title: t("product"),
@@ -20,6 +21,8 @@ export async function MarketingFooter() {
         { href: "/security", label: nav("security") },
         { href: "/resources", label: nav("resources") },
         { href: "/contact", label: t("contact") },
+        { href: "/terms", label: legal("footerTerms") },
+        { href: "/bot", label: legal("footerBot") },
       ],
     },
     {

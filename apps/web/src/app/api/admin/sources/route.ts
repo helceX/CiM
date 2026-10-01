@@ -1,9 +1,15 @@
 import { NextResponse } from "next/server";
 import { createSourceSchema } from "@cim/validation";
-import { createSource, db } from "@cim/db";
+import { checkSourcePolicy, createSource, db } from "@cim/db";
 import { testSourceUrl } from "@/lib/source-test";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { authorizeAdmin } from "../auth";
+
+const POLICY_MESSAGES = {
+  blocked: "This publisher asked not to be crawled and is blocked.",
+  license_required:
+    "This is a news agency that licenses its content commercially. Add it only if Mediaory holds a written licence from them.",
+} as const;
 
 /**
  * Adds a crawl source. The feed is fetched and parsed first and nothing is
@@ -30,6 +36,15 @@ export async function POST(request: Request) {
     );
   }
 
+  // Never contact a publisher we must not crawl (blocked, or an unlicensed agency).
+  const policyFailure = await checkSourcePolicy(db, parsed.data.url, parsed.data.licenseConfirmed);
+  if (policyFailure && policyFailure !== "invalid_url") {
+    return NextResponse.json(
+      { error: POLICY_MESSAGES[policyFailure], code: policyFailure },
+      { status: policyFailure === "blocked" ? 409 : 422 },
+    );
+  }
+
   const test = await testSourceUrl(parsed.data.url, parsed.data.connector);
   if (!test.ok) {
     return NextResponse.json({ error: test.message }, { status: 422 });
@@ -37,10 +52,14 @@ export async function POST(request: Request) {
 
   const result = await createSource(db, parsed.data);
   if (!result.ok) {
-    return NextResponse.json(
-      { error: result.reason === "duplicate" ? "This address is already a source." : "Invalid address." },
-      { status: result.reason === "duplicate" ? 409 : 400 },
-    );
+    const failures = {
+      duplicate: { status: 409, error: "This address is already a source." },
+      invalid_url: { status: 400, error: "Invalid address." },
+      blocked: { status: 409, error: POLICY_MESSAGES.blocked },
+      license_required: { status: 422, error: POLICY_MESSAGES.license_required },
+    } as const;
+    const failure = failures[result.reason];
+    return NextResponse.json({ error: failure.error, code: result.reason }, { status: failure.status });
   }
   return NextResponse.json({ ok: true, id: result.id, itemCount: test.itemCount }, { status: 201 });
 }

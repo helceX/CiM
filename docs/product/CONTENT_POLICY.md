@@ -1,0 +1,26 @@
+# Content & publisher policy (how Mediaory treats other people's content)
+
+Status: implemented. **Not legal advice** — the public texts (`/terms`, `/bot`, `/takedown`) and this policy
+must be reviewed by a lawyer experienced in media monitoring / data processing before launch.
+Note: "fair use" is a US doctrine; Turkish law works with FSEK's own exceptions (alıntı, etc.), so don't rely on
+that phrase in contracts or marketing.
+
+## Rules the product enforces
+| Rule | Where |
+|---|---|
+| Only public RSS feeds / sitemaps; pages only if `robots.txt` allows | `packages/ingestion` (RSS, Sitemap, Web connectors) |
+| Never full text: title + link + time + excerpt ≤ 200 chars at a sentence/word boundary | `normalize.ts` `makeSnippet` |
+| Every result links back to the publisher's page | mention drawer, reports |
+| Polite polling: RSS 10 min, API 15, sitemap/web 30 | `packages/core/src/crawl-interval.ts` |
+| Honest identity: `Mediaory-Bot/1.0 (+https://mediaory.io/bot)`; page explains it | `safe-fetch.ts`, `/bot` |
+| News agencies (AA, DHA, İHA, Reuters, AP, AFP, Bloomberg) refused unless the admin confirms a written licence | `restricted-publishers.ts`, `/admin/sources` |
+| A `robots.txt` rule that names `Mediaory-Bot` stops feed fetching too | `robots.ts` `isExplicitlyBlockedByRobots` |
+| Public takedown form → admins e-mailed → `/admin/takedowns` | `/takedown`, `api/takedown` |
+| Block a publisher: pauses its sources, can't be re-added/resumed, optional purge of stored articles (cascades to mentions) | `blockDomain` |
+| Terms of Service with the "indexing engine / rights belong to publishers / no responsibility for accuracy" language | `/terms` |
+
+## Still on the owner
+- Lawyer review of Terms, a **Privacy / KVKK aydınlatma** text (not written yet — news content contains personal data), and this policy.
+- Written licences before adding any agency; check each publisher's terms of use before adding it (catalog URLs are candidates, not permissions).
+- Decide the takedown response promise (the pages say "we aim to answer within two business days").
+- Fill `terms_url` per source if you want to track each publisher's terms in the DB.

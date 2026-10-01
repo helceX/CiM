@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isAllowedByRobotsTxt, isPathAllowedByRobots } from "./robots";
+import { isAllowedByRobotsTxt, isDisallowedForBotByName, isPathAllowedByRobots } from "./robots";
 
 describe("isPathAllowedByRobots", () => {
   it("allows everything when robots.txt has no applicable group", () => {
@@ -45,5 +45,25 @@ describe("isAllowedByRobotsTxt", () => {
     // confirms that failure is absorbed as "allowed" rather than
     // propagating and taking down the caller.
     await expect(isAllowedByRobotsTxt("http://127.0.0.1:1/x")).resolves.toBe(true);
+  });
+});
+
+describe("isDisallowedForBotByName (feeds)", () => {
+  const UA = "Mediaory-Bot";
+  it("ignores generic * rules — feeds are published to be fetched", () => {
+    expect(isDisallowedForBotByName("User-agent: *\nDisallow: /", UA, "/rss.xml")).toBe(false);
+  });
+  it("honours a group that names Mediaory-Bot", () => {
+    const robots = "User-agent: *\nAllow: /\n\nUser-agent: Mediaory-Bot\nDisallow: /";
+    expect(isDisallowedForBotByName(robots, UA, "/rss.xml")).toBe(true);
+  });
+  it("honours a path-specific rule and allows other paths", () => {
+    const robots = "User-agent: mediaory-bot\nDisallow: /feeds/";
+    expect(isDisallowedForBotByName(robots, UA, "/feeds/all.xml")).toBe(true);
+    expect(isDisallowedForBotByName(robots, UA, "/other.xml")).toBe(false);
+  });
+  it("is false when no group names us or the file is empty", () => {
+    expect(isDisallowedForBotByName("", UA, "/x")).toBe(false);
+    expect(isDisallowedForBotByName("User-agent: Googlebot\nDisallow: /", UA, "/x")).toBe(false);
   });
 });

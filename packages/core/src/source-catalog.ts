@@ -7,6 +7,9 @@
  * fetches the feed and counts its items before it saves anything, and a feed
  * that does not parse is never stored. Only titles/excerpts are used — the
  * source policy for catalog sources is "no full-text storage".
+ *
+ * News agencies sold by subscription (AA, DHA, İHA, Reuters, AP, AFP) are
+ * deliberately NOT listed: see restricted-publishers.ts.
  */
 export type CatalogSource = {
   /** Stable key, used by the admin UI to pick an entry. */
@@ -29,7 +32,6 @@ export const TURKEY_SOURCE_CATALOG: readonly CatalogSource[] = [
   { key: "haberturk", name: "Habertürk", url: "https://www.haberturk.com/rss", type: "news", language: "tr", country: "TR", group: "general" },
   { key: "ntv", name: "NTV", url: "https://www.ntv.com.tr/son-dakika.rss", type: "news", language: "tr", country: "TR", group: "general" },
   { key: "trthaber", name: "TRT Haber", url: "https://www.trthaber.com/sondakika.rss", type: "news", language: "tr", country: "TR", group: "general" },
-  { key: "aa", name: "Anadolu Ajansı", url: "https://www.aa.com.tr/tr/rss/default?cat=guncel", type: "press", language: "tr", country: "TR", group: "general" },
   { key: "t24", name: "T24", url: "https://t24.com.tr/rss", type: "news", language: "tr", country: "TR", group: "general" },
   { key: "bianet", name: "bianet", url: "https://bianet.org/rss/bianet", type: "news", language: "tr", country: "TR", group: "general" },
   { key: "medyascope", name: "Medyascope", url: "https://medyascope.tv/feed/", type: "news", language: "tr", country: "TR", group: "general" },

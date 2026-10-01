@@ -166,7 +166,7 @@ export async function safeFetch(
         method: options.method ?? "GET",
         body: options.body,
         redirect: "manual",
-        headers: { "user-agent": "Mediaory-Bot/1.0 (+monitoring)", ...options.headers },
+        headers: { "user-agent": "Mediaory-Bot/1.0 (+https://mediaory.io/bot)", ...options.headers },
         dispatcher: agent,
         signal: AbortSignal.timeout(timeoutMs),
       });

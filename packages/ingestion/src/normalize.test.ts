@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Source } from "@cim/db/schema";
-import { computeContentHash, normalizeToArticleInput } from "./normalize";
+import { SNIPPET_MAX_CHARS, computeContentHash, makeSnippet, normalizeToArticleInput } from "./normalize";
 import type { RawFetchResult } from "./connector";
 
 function fakeSource(overrides: Partial<Source> = {}): Source {
@@ -65,5 +65,30 @@ describe("normalizeToArticleInput", () => {
       raw,
     );
     expect(article.storedExcerpt).toBeNull();
+  });
+});
+
+describe("makeSnippet", () => {
+  it("keeps short text as is (whitespace collapsed)", () => {
+    expect(makeSnippet("  Short   lead.\n")).toBe("Short lead.");
+  });
+
+  it("never exceeds the cap and ends at a sentence when one fits", () => {
+    const text = `${"Birinci cümle burada biter. ".repeat(10)}${"x".repeat(400)}`;
+    const snippet = makeSnippet(text);
+    expect(snippet.length).toBeLessThanOrEqual(SNIPPET_MAX_CHARS);
+    expect(snippet.endsWith(".")).toBe(true);
+  });
+
+  it("cuts at a word boundary with an ellipsis otherwise", () => {
+    const text = "kelime ".repeat(100);
+    const snippet = makeSnippet(text);
+    expect(snippet.length).toBeLessThanOrEqual(SNIPPET_MAX_CHARS + 1);
+    expect(snippet.endsWith("…")).toBe(true);
+    expect(snippet).not.toMatch(/\skelim…$/);
+  });
+
+  it("handles one long unbroken string", () => {
+    expect(makeSnippet("a".repeat(500)).length).toBeLessThanOrEqual(SNIPPET_MAX_CHARS + 1);
   });
 });

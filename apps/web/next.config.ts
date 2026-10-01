@@ -6,7 +6,14 @@ const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
-  transpilePackages: ["@cim/ui", "@cim/core", "@cim/db", "@cim/config", "@cim/validation"],
+  transpilePackages: [
+    "@cim/ui",
+    "@cim/core",
+    "@cim/db",
+    "@cim/config",
+    "@cim/validation",
+    "@cim/ingestion",
+  ],
   // Docker/standalone deploys (apps/web/Dockerfile) need only the traced
   // files under .next/standalone, not the full pnpm workspace — and in a
   // monorepo the tracing root defaults to this package directory, which

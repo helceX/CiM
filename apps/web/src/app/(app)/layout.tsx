@@ -5,6 +5,7 @@ import { getOrgContext } from "@/lib/tenant";
 import { getCurrentUser } from "@/lib/session";
 import { AppSidebar } from "@/components/app-sidebar";
 import { AppTopbar } from "@/components/app-topbar";
+import "../panel.css";
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const [context, user] = await Promise.all([getOrgContext(), getCurrentUser()]);
@@ -15,7 +16,14 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   const unreadCount = await countUnreadNotifications(db, context.organizationId, context.userId);
 
   return (
-    <div lang="en" className="flex min-h-screen">
+    <div lang="en" className="mp flex min-h-screen" data-mp-theme="dark" suppressHydrationWarning>
+      {/* Apply a remembered light theme before first paint so it never flashes dark. */}
+      <script
+        dangerouslySetInnerHTML={{
+          __html:
+            "try{var t=localStorage.getItem('mediaory-panel-theme');if(t==='light'){document.querySelector('.mp').setAttribute('data-mp-theme','light')}}catch(e){}",
+        }}
+      />
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50 focus:rounded-md focus:bg-primary focus:px-3 focus:py-2 focus:text-sm focus:text-primary-foreground"

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import {
   db,
   getBillingProfile,
@@ -11,8 +12,6 @@ import {
   listBrandGroups,
   listMonitoringQueries,
   listProjects,
-  listCustomRolesForOrganization,
-  listMembersForOrganization,
 } from "@cim/db";
 import { requireOrgContext } from "@/lib/tenant";
 import {
@@ -20,8 +19,6 @@ import {
   DeleteAccountDialog,
   DeleteOrganizationDialog,
 } from "./danger-zone";
-import { CustomRolesSection } from "./custom-roles-section";
-import { MembersSection } from "./members-section";
 import { RetentionSection } from "./retention-section";
 import { WebhookSection } from "./webhook-section";
 import { ApiKeysSection } from "./api-keys-section";
@@ -29,11 +26,24 @@ import { UsageSection } from "./usage-section";
 import { BrandGroupsSection } from "./brand-groups-section";
 import { BillingProfileSection } from "./billing-profile-section";
 
-export default async function SettingsPage() {
+const TABS = [
+  { key: "general", label: "General" },
+  { key: "billing", label: "Plan & billing" },
+  { key: "developers", label: "Developers" },
+  { key: "privacy", label: "Privacy" },
+] as const;
+type TabKey = (typeof TABS)[number]["key"];
+
+export default async function SettingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const context = await requireOrgContext();
+  const rawTab = (await searchParams).tab;
+  const requested = Array.isArray(rawTab) ? rawTab[0] : rawTab;
+  const tab: TabKey = TABS.some((t) => t.key === requested) ? (requested as TabKey) : "general";
   const [
-    members,
-    customRoles,
     retentionPolicy,
     webhookUrl,
     apiKeys,
@@ -46,8 +56,6 @@ export default async function SettingsPage() {
     credits,
     billingProfile,
   ] = await Promise.all([
-    listMembersForOrganization(db, context.organizationId),
-    listCustomRolesForOrganization(db, context.organizationId),
     getRetentionPolicy(db, context.organizationId),
     getOrganizationWebhookUrl(db, context.organizationId),
     listApiKeys(db, context.organizationId),
@@ -63,34 +71,45 @@ export default async function SettingsPage() {
       ? getBillingProfile(db, context.organizationId)
       : Promise.resolve(undefined),
   ]);
-  const canManageMembers = context.permissions.includes("org:manage_members");
   const canManageSettings = context.permissions.includes("org:manage_settings");
   const canManageApiKeys = context.permissions.includes("api_keys:manage");
   const canManageBilling = context.permissions.includes("org:manage_billing");
   const canManageBrandGroups = context.permissions.includes("monitoring:write");
 
   return (
-    <div className="flex max-w-2xl flex-col gap-8">
+    <div className="flex max-w-3xl flex-col gap-6">
       <div>
-        <h1 className="text-lg font-semibold text-foreground">Settings</h1>
-        <p className="text-sm text-muted-foreground">
-          Organization profile and members.
+        <h1>Settings</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {context.organizationName} — organization, plan, developer tools and privacy. Members and
+          roles live under{" "}
+          <Link href="/team" className="text-primary underline underline-offset-2">
+            Team
+          </Link>
+          .
         </p>
       </div>
 
+      <nav aria-label="Settings sections" className="flex flex-wrap gap-2">
+        {TABS.map((item) => (
+          <Link
+            key={item.key}
+            href={item.key === "general" ? "/settings" : `/settings?tab=${item.key}`}
+            aria-current={tab === item.key ? "page" : undefined}
+            className="mp-tab"
+          >
+            {item.label}
+          </Link>
+        ))}
+      </nav>
+
+      <div className="flex flex-col gap-8">
+      {tab === "general" ? (
+        <>
       <section>
         <h2 className="text-sm font-semibold text-foreground">Organization</h2>
         <p className="mt-2 text-sm text-foreground">{context.organizationName}</p>
       </section>
-
-      <MembersSection
-        members={members}
-        customRoles={customRoles}
-        canManageMembers={canManageMembers}
-        currentUserId={context.userId}
-      />
-
-      {canManageMembers ? <CustomRolesSection customRoles={customRoles} /> : null}
 
       <BrandGroupsSection
         groups={brandGroups.map((group) => ({
@@ -124,6 +143,11 @@ export default async function SettingsPage() {
         canManageSettings={canManageSettings}
       />
 
+        </>
+      ) : null}
+
+      {tab === "billing" ? (
+        <>
       <UsageSection
         plan={subscription.plan}
         usage={usage}
@@ -151,6 +175,11 @@ export default async function SettingsPage() {
         />
       ) : null}
 
+        </>
+      ) : null}
+
+      {tab === "developers" ? (
+        <>
       <ApiKeysSection
         // Only ever sent to the browser when the viewer can manage keys —
         // a "use client" component's props all reach the RSC payload
@@ -170,6 +199,11 @@ export default async function SettingsPage() {
         canManageApiKeys={canManageApiKeys}
       />
 
+        </>
+      ) : null}
+
+      {tab === "privacy" ? (
+        <>
       <section>
         <h2 className="text-sm font-semibold text-foreground">Your data</h2>
         <p className="mt-2 text-sm text-muted-foreground">
@@ -207,6 +241,9 @@ export default async function SettingsPage() {
           ) : null}
         </div>
       </section>
+        </>
+      ) : null}
+      </div>
     </div>
   );
 }

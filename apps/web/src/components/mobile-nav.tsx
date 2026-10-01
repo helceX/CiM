@@ -35,13 +35,13 @@ export function MobileNav() {
                 onClick={() => setOpen(false)}
                 aria-current={isActive ? "page" : undefined}
                 className={cn(
-                  "flex items-center gap-2.5 rounded px-2.5 py-3 text-sm transition-colors",
-                  isActive
-                    ? "bg-secondary text-foreground"
-                    : "text-muted-foreground hover:bg-surface-muted hover:text-foreground",
+                  "mp-nav-item flex items-center gap-3 px-2 py-2 text-sm font-medium",
+                  isActive ? "text-foreground" : "text-muted-foreground hover:text-foreground",
                 )}
               >
-                <Icon className="size-4" aria-hidden="true" />
+                <span className="mp-nav-icon">
+                  <Icon className="size-4" aria-hidden="true" />
+                </span>
                 {item.label}
               </Link>
             );

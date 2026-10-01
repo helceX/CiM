@@ -9,6 +9,7 @@ import {
   Radar,
   Settings,
   Share2,
+  Users,
 } from "lucide-react";
 
 /**
@@ -26,5 +27,6 @@ export const NAV_ITEMS: { href: string; label: string; icon: LucideIcon }[] = [
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/visuals", label: "Visuals", icon: ChartColumn },
   { href: "/reports", label: "Reports", icon: FileText },
+  { href: "/team", label: "Team", icon: Users },
   { href: "/settings", label: "Settings", icon: Settings },
 ];

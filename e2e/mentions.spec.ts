@@ -159,7 +159,7 @@ test.describe("mentions", () => {
     const unique = `${Date.now()}-${Math.floor(Math.random() * 100000)}`;
     const inviteeEmail = `e2e-assignee-${unique}@example.com`;
 
-    await page.goto("/settings");
+    await page.goto("/team");
     await page.getByRole("button", { name: "Invite member" }).click();
     await page.getByLabel("Email", { exact: true }).fill(inviteeEmail);
     await page.getByLabel("Role").selectOption({ label: "Analyst" });
@@ -196,7 +196,7 @@ test.describe("mentions", () => {
     await page.keyboard.press("Escape");
     await expect(page.getByRole("dialog")).not.toBeVisible();
 
-    await page.goto("/settings");
+    await page.goto("/team");
     await expect(page.getByText(inviteeEmail)).toBeVisible();
     await page.getByRole("button", { name: "Revoke" }).click();
     const revokeResponse = page.waitForResponse(

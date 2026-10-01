@@ -21,7 +21,7 @@ export async function POST(request: Request) {
   if (auth.response) return auth.response;
 
   const limit = await checkRateLimit(`admin-source-create:${auth.user.id}`, {
-    limit: 60,
+    limit: 800,
     windowSeconds: 60 * 10,
   });
   if (!limit.allowed) {

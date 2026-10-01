@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Input, Label } from "@cim/ui";
 import type { CatalogSource } from "@cim/core";
@@ -271,5 +271,202 @@ export function CrawlToggle({ id, name, paused }: { id: string; name: string; pa
     >
       {paused ? "Resume" : "Pause"}
     </Button>
+  );
+}
+
+export type CatalogEntry = { key: string; name: string; url: string; group: string; type: string; language: string; country: string };
+
+type BulkOutcome = { added: number; skipped: number; failed: { name: string; error: string }[] };
+
+/**
+ * The Türkiye feed catalog: search, filter by category, add one feed, or add
+ * everything currently shown. Each add is fetch-tested server-side first, so a
+ * dead feed is reported and never stored; bulk adds run three at a time.
+ */
+export function CatalogBrowser({
+  entries,
+  addedUrls,
+  groupLabels,
+}: {
+  entries: CatalogEntry[];
+  addedUrls: string[];
+  groupLabels: Record<string, string>;
+}) {
+  const router = useRouter();
+  const added = new Set(addedUrls);
+  const [query, setQuery] = useState("");
+  const [group, setGroup] = useState("all");
+  const [running, setRunning] = useState(false);
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
+  const [outcome, setOutcome] = useState<BulkOutcome | null>(null);
+  const [cancelRequested, setCancelRequested] = useState(false);
+  const cancelRef = useRef(false);
+  const [limit, setLimit] = useState(60);
+
+  const needle = query.trim().toLocaleLowerCase("tr");
+  const shown = entries.filter(
+    (entry) =>
+      (group === "all" || entry.group === group) &&
+      (!needle || entry.name.toLocaleLowerCase("tr").includes(needle) || entry.url.toLowerCase().includes(needle)),
+  );
+  const pending = shown.filter((entry) => !added.has(entry.url));
+  const counts = new Map<string, number>();
+  for (const entry of entries) counts.set(entry.group, (counts.get(entry.group) ?? 0) + 1);
+
+  async function addAll() {
+    if (
+      !window.confirm(
+        `Test and add ${pending.length} feeds? Each one is fetched first; feeds that can't be read are skipped. ` +
+          "Check the publishers' terms of use before adding mainstream newspapers.",
+      )
+    ) {
+      return;
+    }
+    setRunning(true);
+    cancelRef.current = false;
+    setCancelRequested(false);
+    setOutcome(null);
+    const result: BulkOutcome = { added: 0, skipped: 0, failed: [] };
+    const queue = [...pending];
+    let done = 0;
+    setProgress({ done: 0, total: queue.length });
+
+    async function worker() {
+      while (queue.length > 0 && !cancelRef.current) {
+        const entry = queue.shift()!;
+        try {
+          const { ok, data } = await post("/api/admin/sources", {
+            name: entry.name,
+            url: entry.url,
+            connector: "rss",
+            type: entry.type,
+            language: entry.language,
+            country: entry.country,
+          });
+          if (ok) result.added += 1;
+          else if (data.code === "duplicate") result.skipped += 1;
+          else result.failed.push({ name: entry.name, error: data.error ?? "Could not add." });
+        } catch {
+          result.failed.push({ name: entry.name, error: "Network error." });
+        }
+        done += 1;
+        setProgress({ done, total: result.added + result.skipped + result.failed.length + queue.length });
+      }
+    }
+    await Promise.all([worker(), worker(), worker()]);
+    setOutcome(result);
+    setProgress(null);
+    setRunning(false);
+    router.refresh();
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="flex flex-col gap-1">
+          <Label htmlFor="catalog-search">Search</Label>
+          <Input
+            id="catalog-search"
+            value={query}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setLimit(60);
+            }}
+            placeholder="Outlet or address"
+          />
+        </div>
+        <div className="flex flex-col gap-1">
+          <Label htmlFor="catalog-group">Category</Label>
+          <select
+            id="catalog-group"
+            className="h-9 rounded-md border border-border bg-background px-2 text-sm text-foreground"
+            value={group}
+            onChange={(e) => {
+              setGroup(e.target.value);
+              setLimit(60);
+            }}
+          >
+            <option value="all">All ({entries.length})</option>
+            {Object.entries(groupLabels)
+              .filter(([key]) => counts.has(key))
+              .map(([key, label]) => (
+                <option key={key} value={key}>
+                  {label} ({counts.get(key)})
+                </option>
+              ))}
+          </select>
+        </div>
+        <Button type="button" variant="secondary" onClick={addAll} disabled={running || pending.length === 0}>
+          {running ? "Adding…" : `Test & add all shown (${pending.length})`}
+        </Button>
+        {running ? (
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => {
+              cancelRef.current = true;
+              setCancelRequested(true);
+            }}
+            disabled={cancelRequested}
+          >
+            {cancelRequested ? "Stopping…" : "Stop"}
+          </Button>
+        ) : null}
+      </div>
+
+      {progress ? (
+        <p role="status" className="text-sm text-muted-foreground">
+          Testing feeds… {progress.done} of {progress.total}
+        </p>
+      ) : null}
+      {outcome ? (
+        <div role="status" className="rounded-lg border border-border p-3 text-sm">
+          <p className="text-foreground">
+            Added {outcome.added}, already present {outcome.skipped}, could not add {outcome.failed.length}.
+          </p>
+          {outcome.failed.length > 0 ? (
+            <details className="mt-2">
+              <summary className="cursor-pointer text-muted-foreground">Show feeds that failed</summary>
+              <ul className="mt-2 max-h-64 overflow-auto text-xs text-muted-foreground">
+                {outcome.failed.map((item) => (
+                  <li key={item.name + item.error}>
+                    {item.name}: {item.error}
+                  </li>
+                ))}
+              </ul>
+            </details>
+          ) : null}
+        </div>
+      ) : null}
+
+      <p className="text-xs text-muted-foreground">
+        {shown.length} feeds match · {shown.length - pending.length} already added
+      </p>
+      <ul className="grid gap-2 sm:grid-cols-2">
+        {shown.slice(0, limit).map((entry) => (
+          <li
+            key={entry.key}
+            className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2"
+          >
+            <div className="min-w-0">
+              <div className="truncate text-sm font-medium text-foreground">{entry.name}</div>
+              <div className="truncate text-xs text-muted-foreground">{entry.url}</div>
+            </div>
+            {added.has(entry.url) ? (
+              <span className="shrink-0 text-xs font-medium text-success">Added</span>
+            ) : (
+              <CatalogAddButton
+                entry={{ ...entry, type: entry.type as "news", language: entry.language as "tr", country: "TR", group: entry.group as "general" }}
+              />
+            )}
+          </li>
+        ))}
+      </ul>
+      {shown.length > limit ? (
+        <Button type="button" variant="ghost" onClick={() => setLimit((n) => n + 60)}>
+          Show more ({shown.length - limit} left)
+        </Button>
+      ) : null}
+    </div>
   );
 }

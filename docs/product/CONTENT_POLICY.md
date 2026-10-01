@@ -24,3 +24,9 @@ that phrase in contracts or marketing.
 - Written licences before adding any agency; check each publisher's terms of use before adding it (catalog URLs are candidates, not permissions).
 - Decide the takedown response promise (the pages say "we aim to answer within two business days").
 - Fill `terms_url` per source if you want to track each publisher's terms in the DB.
+
+## The community RSS list (bakinazik/rss)
+- ~430 Turkish feeds are bundled as catalog candidates (`packages/core/src/source-catalog.generated.ts`). Only outlet name, feed URL and category were copied — never the list's text.
+- That repository has **no licence file**. Feed URLs are facts about other people's public sites, but a curated list can carry compilation rights, so: credit it (done in the generated file and the admin page), and consider opening an issue asking the author to add a licence or permission.
+- A listed feed is **not a permission** to use it commercially. AA and other licence-required agencies are filtered out automatically; for every other publisher the terms-of-use check is still yours (see "Still on the owner").
+- Several feeds share one host (e.g. 29 Sözcü, 20 Euronews category feeds): each is polled on its own 10-minute schedule, so a host with N feeds receives ~N×2 requests per 10 minutes. If a publisher objects, block the domain (`/admin/takedowns`).

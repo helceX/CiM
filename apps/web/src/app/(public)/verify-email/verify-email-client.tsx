@@ -7,7 +7,7 @@ import { ResendVerificationForm } from "./resend-form";
 
 type Status = "verifying" | "success" | "error" | "no-token";
 
-export function VerifyEmailClient() {
+export function VerifyEmailClient({ turnstileSiteKey = null }: { turnstileSiteKey?: string | null }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
@@ -65,7 +65,7 @@ export function VerifyEmailClient() {
           Open the verification link from your email to activate your account. Didn&apos;t get it? We
           can send a new one.
         </p>
-        <ResendVerificationForm />
+        <ResendVerificationForm turnstileSiteKey={turnstileSiteKey} />
       </div>
     );
   }
@@ -73,7 +73,7 @@ export function VerifyEmailClient() {
   return (
     <div className="flex flex-col gap-4">
       <p className="text-sm text-danger">This link is invalid or has expired. Request a new one below.</p>
-      <ResendVerificationForm />
+      <ResendVerificationForm turnstileSiteKey={turnstileSiteKey} />
     </div>
   );
 }

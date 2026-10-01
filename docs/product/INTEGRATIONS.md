@@ -85,11 +85,18 @@ müşterilere satılabilir bir public API **yok** — bilinçli, sonraki sürüm
 
 ### 3.5 Bot koruması — Cloudflare Turnstile (sıra 1)
 - https://developers.cloudflare.com/turnstile/ · Panel: https://dash.cloudflare.com/ (Turnstile)
-- Ücretsiz. Site anahtarı + gizli anahtar alınır; kayıt/şifre sıfırlama formlarına eklenir (ben kodlarım).
-  Değişkenler: `TURNSTILE_SITE_KEY` (web), `TURNSTILE_SECRET_KEY` (web).
+- Ücretsiz. Site anahtarı + gizli anahtar alınır. **Kod hazır:** kayıt, şifre sıfırlama ve doğrulama
+  e-postasını yeniden gönderme formları anahtarlar girilince otomatik captcha ister; **iki anahtar da
+  girilmezse tamamen kapalıdır** (hiçbir şey değişmez). Cloudflare erişilemezse güvenli tarafta kalıp
+  isteği reddeder.
+  Değişkenler (yalnız **web** servisi): `TURNSTILE_SITE_KEY` (herkese açık), `TURNSTILE_SECRET_KEY` (gizli — sohbete yazmayın).
 
 ### 3.6 Hata ve uptime izleme (sıra 1)
-- Sentry (hata): https://sentry.io — proje aç, `SENTRY_DSN` ver (ben bağlarım). Ücretsiz katman var.
+- Sentry (hata): https://sentry.io — proje aç, **DSN**'i Railway'e `SENTRY_DSN` olarak gir (web **ve** worker).
+  **Kod hazır, DSN girilmezse hiçbir şey göndermez.** Tam Sentry SDK'sı yerine hafif, bağımlılıksız bir
+  raporlayıcı kullanır: yalnız hata adı, temizlenmiş mesaj/stack, rota ve kuyruk adı gider — istek gövdesi,
+  başlık, çerez, sorgu dizesi, e-posta adresleri ve token'lar gitmez. Dakikada en fazla 30 olay.
+  GlitchTip gibi Sentry uyumlu sunucularla da çalışır.
 - Uptime: https://uptimerobot.com veya https://betterstack.com — `https://mediaory.io/login` adresini 1-5 dk'da bir kontrol etsin.
 
 ### 3.7 Veri toplama API'leri (sıra 3–5) — detay: `COVERAGE.md`
@@ -127,8 +134,8 @@ müşterilere satılabilir bir public API **yok** — bilinçli, sonraki sürüm
 | `DATABASE_URL`, `REDIS_URL`, `SESSION_SECRET`, `APP_URL` | ✓ | ✓ | Zaten var |
 | `EMAIL_PROVIDER`, `EMAIL_API_KEY`, `EMAIL_FROM` | ✓ | ✓ | **Eksik — acil** |
 | `AI_PROVIDER`, `AI_API_KEY`, `AI_SYNTHESIS_MODEL`, `AI_CHEAP_MODEL` | ✓ | ✓ | **Eksik** |
-| `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY` | ✓ | | Eklenecek |
-| `SENTRY_DSN` | ✓ | ✓ | Eklenecek |
+| `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY` | ✓ | | Kod hazır — anahtar girilince açılır |
+| `SENTRY_DSN` | ✓ | ✓ | Kod hazır — DSN girilince açılır |
 | `YOUTUBE_API_KEY`, haber/transkript anahtarları | | ✓ | Veri çekmeyi worker yapar |
 | iyzico / e-fatura anahtarları | ✓ | ✓ | Sonra |
 

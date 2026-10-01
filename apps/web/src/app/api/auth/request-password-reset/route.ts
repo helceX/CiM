@@ -5,6 +5,7 @@ import { db, findUserByEmail, createPasswordResetToken } from "@cim/db";
 import { getEnv } from "@cim/config";
 import { checkRateLimit, clientIpFrom } from "@/lib/rate-limit";
 import { sendEmail, passwordResetEmailBody } from "@/lib/email";
+import { rejectIfNotHuman } from "@/lib/turnstile";
 
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
 
@@ -16,6 +17,8 @@ export async function POST(request: Request) {
   }
 
   const json = await request.json().catch(() => null);
+  const notHuman = await rejectIfNotHuman(json, ip);
+  if (notHuman) return notHuman;
   const parsed = requestPasswordResetSchema.safeParse(json);
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid input" }, { status: 400 });

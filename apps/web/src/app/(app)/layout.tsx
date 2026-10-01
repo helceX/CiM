@@ -16,7 +16,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   const unreadCount = await countUnreadNotifications(db, context.organizationId, context.userId);
 
   return (
-    <div lang="en" className="mp flex min-h-screen" data-mp-theme="dark">
+    <div lang="en" className="mp flex min-h-screen" data-mp-theme="dark" suppressHydrationWarning>
       {/* Apply a remembered light theme before first paint so it never flashes dark. */}
       <script
         dangerouslySetInnerHTML={{

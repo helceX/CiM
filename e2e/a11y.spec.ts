@@ -198,7 +198,7 @@ test.describe("a11y + keyboard operability: overlays and nav", () => {
   }) => {
     await page.goto("/dashboard");
 
-    const monitoringLink = page.getByRole("link", { name: "Monitoring" });
+    const monitoringLink = page.getByRole("link", { name: "Monitoring", exact: true });
     await monitoringLink.focus();
     await expect(monitoringLink).toBeFocused();
     await page.keyboard.press("Enter");

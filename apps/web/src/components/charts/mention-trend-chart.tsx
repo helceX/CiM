@@ -1,56 +1,57 @@
 "use client";
 
-import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { useId } from "react";
+import { Area, AreaChart, CartesianGrid, ReferenceDot, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { MentionVolumePoint } from "@cim/db";
+import { axisTick, ChartTip, GradientDefs, gridStroke, tooltipWrapper } from "./chart-kit";
+
+const day = (value: string) => new Date(value).toLocaleDateString(undefined, { month: "short", day: "numeric" });
 
 /**
- * Single series (magnitude over time) — one hue, no legend needed (the
- * chart title names the series). docs/architecture/DATA_MODEL.md's
- * zero-filled series means the line has no misleading gaps.
+ * Single series (magnitude over time) — one signal gradient, no legend (the
+ * heading names the series). The zero-filled series has no gaps; the peak day
+ * is marked so the eye lands on it.
  */
 export function MentionTrendChart({ data }: { data: MentionVolumePoint[] }) {
+  const id = useId().replace(/:/g, "");
+  const peak = data.reduce<MentionVolumePoint | null>((best, point) => (!best || point.count > best.count ? point : best), null);
+
   return (
-    <ResponsiveContainer width="100%" height={200}>
-      <AreaChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-        <defs>
-          <linearGradient id="mentionTrendFill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="var(--color-primary)" stopOpacity={0.25} />
-            <stop offset="100%" stopColor="var(--color-primary)" stopOpacity={0} />
-          </linearGradient>
-        </defs>
-        <CartesianGrid vertical={false} stroke="var(--color-border)" />
-        <XAxis
-          dataKey="date"
-          tickFormatter={(value: string) => new Date(value).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
-          tick={{ fontSize: 11, fill: "var(--color-muted-foreground)" }}
-          axisLine={{ stroke: "var(--color-border)" }}
-          tickLine={false}
-          minTickGap={24}
-        />
-        <YAxis
-          allowDecimals={false}
-          tick={{ fontSize: 11, fill: "var(--color-muted-foreground)" }}
-          axisLine={false}
-          tickLine={false}
-          width={28}
-        />
+    <ResponsiveContainer width="100%" height={220}>
+      <AreaChart data={data} margin={{ top: 16, right: 12, left: 0, bottom: 0 }}>
+        <GradientDefs id={id} />
+        <CartesianGrid vertical={false} stroke={gridStroke} strokeDasharray="3 5" />
+        <XAxis dataKey="date" tickFormatter={day} tick={axisTick} axisLine={false} tickLine={false} minTickGap={28} />
+        <YAxis allowDecimals={false} tick={axisTick} axisLine={false} tickLine={false} width={28} />
         <Tooltip
-          formatter={(value) => [value, "Mentions"]}
-          labelFormatter={(value) => new Date(String(value)).toLocaleDateString()}
-          contentStyle={{
-            background: "var(--color-surface)",
-            border: "1px solid var(--color-border-strong)",
-            borderRadius: 6,
-            fontSize: 12,
-          }}
+          wrapperStyle={tooltipWrapper}
+          cursor={{ stroke: "var(--color-border-strong)", strokeDasharray: "4 4" }}
+          content={({ active, payload, label }) =>
+            active && payload?.length ? (
+              <ChartTip title={day(String(label))} rows={[{ color: "#ff4fa3", label: "Mentions", value: String(payload[0]?.value ?? 0) }]} />
+            ) : null
+          }
         />
         <Area
           type="monotone"
           dataKey="count"
-          stroke="var(--color-primary)"
-          strokeWidth={2}
-          fill="url(#mentionTrendFill)"
+          stroke={`url(#${id}-stroke)`}
+          strokeWidth={3}
+          fill={`url(#${id}-fill)`}
+          activeDot={{ r: 5, stroke: "var(--color-surface)", strokeWidth: 2, fill: "#ff4fa3" }}
+          style={{ filter: `drop-shadow(0 4px 10px rgb(255 79 163 / 0.35))` }}
         />
+        {peak && peak.count > 0 ? (
+          <ReferenceDot
+            x={peak.date}
+            y={peak.count}
+            r={5}
+            fill="#ffc857"
+            stroke="var(--color-surface)"
+            strokeWidth={2}
+            label={{ value: `Peak ${peak.count}`, position: "top", fill: "var(--color-foreground)", fontSize: 11, fontWeight: 700 }}
+          />
+        ) : null}
       </AreaChart>
     </ResponsiveContainer>
   );

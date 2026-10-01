@@ -12,11 +12,13 @@ test("build a visual with a live preview, save it, see it as chart and table, de
 
   // Live preview renders without saving; switching to a category dimension offers a pie.
   await expect(page.getByText("Computing…")).toBeHidden({ timeout: 10_000 });
-  await page.getByLabel("Group by").selectOption("sentiment");
-  await expect(page.getByLabel("Show as").locator("option", { hasText: "Pie" })).toHaveCount(1);
+  const groupBy = page.getByRole("radiogroup", { name: "Group by" });
+  const showAs = page.getByRole("radiogroup", { name: "Show as" });
+  await groupBy.getByText("Sentiment", { exact: true }).click();
+  await expect(showAs.getByText("Pie", { exact: true })).toBeVisible();
   // A brand-new organization has no mentions yet; a day series is zero-filled, so it always has rows.
-  await page.getByLabel("Group by").selectOption("day");
-  await page.getByLabel("Show as").selectOption("bar");
+  await groupBy.getByText("Day", { exact: true }).click();
+  await showAs.getByText("Bar", { exact: true }).click();
   await page.getByRole("button", { name: "View as table" }).click();
   await expect(page.getByRole("table")).toBeVisible();
 
@@ -85,7 +87,7 @@ test("pin a visual to the Dashboard, export it as CSV, edit it, unpin it", async
   await page.getByRole("link", { name: "Edit" }).click();
   await expect(page.getByLabel("Name")).toHaveValue("Daily volume");
   await page.getByLabel("Name").fill("Volume by source");
-  await page.getByLabel("Group by").selectOption("source");
+  await page.getByRole("radiogroup", { name: "Group by" }).getByText("Source", { exact: true }).click();
   await page.getByRole("button", { name: "Save changes" }).click();
   await expect(page.getByRole("heading", { name: "Volume by source" })).toBeVisible({ timeout: 15_000 });
 
@@ -139,4 +141,14 @@ test("a visual can be limited to a monitoring query and exported as XLSX", async
   const fs = await import("node:fs/promises");
   const bytes = await fs.readFile((await download.path())!);
   expect(bytes.subarray(0, 2).toString("ascii")).toBe("PK");
+});
+
+test("a preset question fills in the builder", async ({ page }) => {
+  await registerAndOnboard(page);
+  await page.goto("/visuals/new");
+  await expect(page.getByText("Computing…")).toBeHidden({ timeout: 10_000 });
+  await page.getByRole("button", { name: /Tone of voice/ }).click();
+  await expect(page.getByRole("radio", { name: "Sentiment", exact: true })).toBeChecked();
+  await expect(page.getByRole("radio", { name: "Pie" })).toBeChecked();
+  await expect(page.getByLabel("Name")).toHaveValue("Tone of voice");
 });

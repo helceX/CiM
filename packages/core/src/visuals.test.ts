@@ -83,3 +83,39 @@ describe("renderVisualCsv", () => {
     expect(csv).toContain('"He said ""hi""",3');
   });
 });
+
+import { summarizeVisualRows } from "./visuals";
+
+describe("summarizeVisualRows", () => {
+  it("totals additive measures and finds the peak, average and latest of a time series", () => {
+    const rows = [
+      { label: "2026-01-01", value: 2 },
+      { label: "2026-01-02", value: 8 },
+      { label: "2026-01-03", value: 5 },
+    ];
+    expect(summarizeVisualRows(rows, { measure: "mentions", dimension: "day" })).toEqual({
+      total: 15,
+      peak: { label: "2026-01-02", value: 8 },
+      average: 5,
+      latest: 5,
+    });
+  });
+
+  it("does not total non-additive measures or count an undefined share as zero", () => {
+    const rows = [
+      { label: "a", value: 40 },
+      { label: "b", value: null },
+      { label: "c", value: 10 },
+    ];
+    const result = summarizeVisualRows(rows, { measure: "negative_share", dimension: "source" });
+    expect(result.total).toBeNull();
+    expect(result.peak).toEqual({ label: "a", value: 40 });
+    expect(result.average).toBeNull(); // not a time series
+    expect(summarizeVisualRows([], { measure: "mentions", dimension: "day" })).toEqual({
+      total: null,
+      peak: null,
+      average: null,
+      latest: null,
+    });
+  });
+});

@@ -5,7 +5,7 @@ import { registerAndOnboard } from "./helpers";
 /** Credit metering v1 is measure-only: Settings shows what is tracked and says nothing is charged. */
 test("settings shows tracked keywords and the measure-only credit note", async ({ page }) => {
   await registerAndOnboard(page);
-  await page.goto("/settings");
+  await page.goto("/settings?tab=billing");
 
   await expect(page.getByRole("heading", { name: "Credits" })).toBeVisible();
   // Onboarding created one query with one include term.

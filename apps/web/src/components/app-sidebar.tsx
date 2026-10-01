@@ -8,13 +8,13 @@ import { cn, Wordmark } from "@cim/ui";
 export function AppSidebar() {
   const pathname = usePathname();
   return (
-    <aside className="hidden w-56 shrink-0 border-r border-border md:flex md:flex-col">
+    <aside className="mp-sidebar sticky top-0 hidden h-screen w-60 shrink-0 md:flex md:flex-col">
       <div className="flex h-16 items-center px-5">
-        <Link href="/dashboard" aria-label="Mediaory dashboard" className="text-sm text-foreground">
-          <Wordmark />
+        <Link href="/dashboard" aria-label="Mediaory dashboard" className="text-base text-foreground">
+          <Wordmark className="font-extrabold tracking-tight" />
         </Link>
       </div>
-      <nav className="flex flex-1 flex-col gap-0.5 px-3" aria-label="Primary">
+      <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 pb-4" aria-label="Primary">
         {NAV_ITEMS.map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
           const Icon = item.icon;
@@ -24,13 +24,13 @@ export function AppSidebar() {
               href={item.href}
               aria-current={isActive ? "page" : undefined}
               className={cn(
-                "flex items-center gap-2.5 rounded px-2.5 py-2 text-sm transition-colors",
-                isActive
-                  ? "bg-secondary text-foreground"
-                  : "text-muted-foreground hover:bg-surface-muted hover:text-foreground",
+                "mp-nav-item flex items-center gap-3 px-2 py-1.5 text-sm font-medium",
+                isActive ? "text-foreground" : "text-muted-foreground hover:text-foreground",
               )}
             >
-              <Icon className="size-4" aria-hidden="true" />
+              <span className="mp-nav-icon">
+                <Icon className="size-4" aria-hidden="true" />
+              </span>
               {item.label}
             </Link>
           );

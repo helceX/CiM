@@ -18,7 +18,7 @@ test("invite a member, they accept, owner changes role and revokes access", asyn
   const unique = `${Date.now()}-${Math.floor(Math.random() * 100000)}`;
   const inviteeEmail = `e2e-invitee-${unique}@example.com`;
 
-  await page.goto("/settings");
+  await page.goto("/team");
   await page.getByRole("button", { name: "Invite member" }).click();
   await page.getByLabel("Email", { exact: true }).fill(inviteeEmail);
   await page.getByLabel("Role").selectOption({ label: "Analyst" });
@@ -88,7 +88,7 @@ test("a custom role grants exactly its own permissions, nothing more", async ({
 }) => {
   await registerAndOnboard(page, { keyword: "Custom Roles E2E Co" });
 
-  await page.goto("/settings");
+  await page.goto("/team");
   await page.getByRole("button", { name: "New role" }).click();
   const roleDialog = page.getByRole("dialog");
   await roleDialog.getByLabel("Name").fill("Report Viewer");
@@ -122,7 +122,7 @@ test("a custom role grants exactly its own permissions, nothing more", async ({
   await inviteePage.goto("/reports");
   await expect(inviteePage).toHaveURL(/\/reports/);
 
-  await inviteePage.goto("/settings");
+  await inviteePage.goto("/team");
   await expect(inviteePage.getByRole("button", { name: "Invite member" })).toHaveCount(0);
   await expect(inviteePage.getByRole("button", { name: "New role" })).toHaveCount(0);
 

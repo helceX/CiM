@@ -13,6 +13,7 @@ import {
   listRecentMentions,
 } from "@cim/db";
 import { requireOrgContext } from "@/lib/tenant";
+import { getCurrentUser } from "@/lib/session";
 import { KpiRow } from "@/components/kpi-row";
 import { MentionTrendChart } from "@/components/charts/mention-trend-chart";
 import { AiAssistantPanel } from "./ai-assistant-panel";
@@ -46,7 +47,10 @@ const PRIORITY_TONE = {
 
 export default async function DashboardPage() {
   const context = await requireOrgContext();
-  const projects = await listProjects(db, context.organizationId);
+  const [projects, user] = await Promise.all([
+    listProjects(db, context.organizationId),
+    getCurrentUser(),
+  ]);
 
   if (projects.length === 0) {
     return (
@@ -100,13 +104,28 @@ export default async function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-8">
-      <div>
-        <h1 className="text-lg font-semibold text-foreground">Dashboard</h1>
-        <p className="text-sm text-muted-foreground">
-          Last 7 days across {projects.length} project{projects.length === 1 ? "" : "s"}
-          .
-        </p>
-      </div>
+      <header className="mp-hero p-6 md:p-8">
+        <div className="relative flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+              {context.organizationName} · last 7 days · {projects.length} project
+              {projects.length === 1 ? "" : "s"}
+            </p>
+            <h1 className="mt-2">
+              {user ? `Hello, ${user.firstName}.` : "Dashboard"}{" "}
+              <span className="mp-gradient-text">Here&apos;s what changed.</span>
+            </h1>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button asChild size="sm">
+              <Link href="/monitoring/new">New monitoring</Link>
+            </Button>
+            <Button asChild size="sm" variant="secondary">
+              <Link href="/mentions">Open mentions</Link>
+            </Button>
+          </div>
+        </div>
+      </header>
 
       <KpiRow
         items={[

@@ -66,7 +66,11 @@ const AUTHENTICATED_PATHS = [
   "/analytics",
   "/visuals",
   "/visuals/new",
+  "/team",
   "/settings",
+  "/settings?tab=billing",
+  "/settings?tab=developers",
+  "/settings?tab=privacy",
 ];
 
 test.describe("a11y: authenticated app pages", () => {

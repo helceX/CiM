@@ -4,7 +4,7 @@ import { registerAndOnboard } from "./helpers";
 
 test("an owner saves invoice details; a mistyped tax number is rejected; values persist", async ({ page }) => {
   await registerAndOnboard(page);
-  await page.goto("/settings");
+  await page.goto("/settings?tab=billing");
   await expect(page.getByRole("heading", { name: "Invoice details" })).toBeVisible();
 
   await page.getByLabel("Company name (as registered)").fill("Acme Medya A.Ş.");

@@ -15,9 +15,19 @@ type NotificationItem = {
   id: string;
   title: string;
   body: string;
+  /** https:// address of the post, or an in-app path. */
+  linkUrl: string | null;
   readAt: string | null;
   createdAt: string;
 };
+
+/** Only an https address or an in-app path is ever linked — anything else is shown as plain text. */
+function safeLink(value: string | null): { url: string; external: boolean } | null {
+  if (!value) return null;
+  if (value.startsWith("https://")) return { url: value, external: true };
+  if (value.startsWith("/") && !value.startsWith("//")) return { url: value, external: false };
+  return null;
+}
 
 export function NotificationBell({
   initialUnreadCount,
@@ -169,24 +179,47 @@ export function NotificationBell({
               You&apos;re all caught up.
             </p>
           ) : (
-            items.map((item) => (
-              <DropdownMenuItem
-                key={item.id}
-                onSelect={(event) => {
-                  event.preventDefault();
-                  if (!item.readAt) void markRead(item.id);
-                }}
-                className="flex-col items-start gap-0.5 whitespace-normal"
-              >
-                <div className="flex w-full items-center justify-between gap-2">
-                  <span className="text-sm font-medium text-foreground">
-                    {item.title}
-                  </span>
-                  {!item.readAt ? <Badge tone="info">New</Badge> : null}
-                </div>
-                <span className="text-xs text-muted-foreground">{item.body}</span>
-              </DropdownMenuItem>
-            ))
+            items.map((item) => {
+              const href = safeLink(item.linkUrl);
+              const content = (
+                <>
+                  <div className="flex w-full items-center justify-between gap-2">
+                    <span className="text-sm font-medium text-foreground">{item.title}</span>
+                    {!item.readAt ? <Badge tone="info">New</Badge> : null}
+                  </div>
+                  <span className="text-xs text-muted-foreground">{item.body}</span>
+                  {href ? (
+                    <span className="text-xs text-primary underline underline-offset-2">
+                      {href.external ? "Open the post ↗" : "Open"}
+                    </span>
+                  ) : null}
+                </>
+              );
+              return href ? (
+                <DropdownMenuItem key={item.id} asChild className="flex-col items-start gap-0.5 whitespace-normal">
+                  <a
+                    href={href.url}
+                    {...(href.external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+                    onClick={() => {
+                      if (!item.readAt) void markRead(item.id);
+                    }}
+                  >
+                    {content}
+                  </a>
+                </DropdownMenuItem>
+              ) : (
+                <DropdownMenuItem
+                  key={item.id}
+                  onSelect={(event) => {
+                    event.preventDefault();
+                    if (!item.readAt) void markRead(item.id);
+                  }}
+                  className="flex-col items-start gap-0.5 whitespace-normal"
+                >
+                  {content}
+                </DropdownMenuItem>
+              );
+            })
           )}
         </div>
       </DropdownMenuContent>

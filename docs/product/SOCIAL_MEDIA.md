@@ -44,9 +44,53 @@ bridge. If you choose to run one, add its routes under *Your own RSSHub / bridge
 the platform terms are then yours to honour. Never paste a key or cookie into a
 chat, an issue or an email — set it as a variable in the bridge's own hosting.
 
-## 3. Connected accounts (planned in the next change)
+## 3. Connected accounts (built: YouTube, X; more as approvals land)
 
-Customers connect their *own* account by OAuth, and Mediaory reads only what that
-account is allowed to see — comments on their videos, mentions and tags of their
-handle — and sends a notification that links straight to the post. See the
-platform table in that change's documentation for the developer apps needed.
+Customers link **their own** account under **Settings → Connected accounts**
+(owner/admin). Mediaory then reads — through the platform's official API, with
+the customer's own OAuth grant, read-only scopes — what that account may see, and
+tells them with a notification that **opens the post itself**. Everything collected
+also lists under **Social → Mentions & tags** (`/social/mentions`).
+
+| Platform | What is read | Poll | Cost / limit |
+|---|---|---|---|
+| YouTube | New comments on the connected channel's videos | every 15 min | 1 quota unit per poll; 10,000 units/day per Google project |
+| X | Posts that mention the connected account | every 30 min | Pay-per-use: ~US$0.005 per post read, billed to *your* X developer account |
+| Instagram, Facebook, LinkedIn, TikTok | — (listed as "coming next") | — | Each needs an app review / programme approval first |
+
+Honest limits: no network offers a public "everyone who mentioned a keyword" search
+for free (X's is paid, Instagram's hashtag search is capped at 30 hashtags/week,
+LinkedIn and TikTok have none for companies). Connected accounts therefore cover
+*your own* mentions, tags and comments; brand-wide keyword monitoring comes from
+the public feeds (route 1), your own bridge (route 2), or — later — a licensed
+data provider through the existing "Clipping / data provider (JSON API)" source.
+
+### What the operator sets up (Railway → web **and** worker → Variables)
+
+Never paste a key into chat, an issue or an e-mail — only into Railway Variables.
+
+| Variable | Where it comes from |
+|---|---|
+| `YOUTUBE_CLIENT_ID`, `YOUTUBE_CLIENT_SECRET` | Google Cloud Console → new project → enable **YouTube Data API v3** → OAuth consent screen (scope `youtube.readonly`; "Testing" works for up to 100 named users, publishing needs Google's verification) → Credentials → OAuth client ID, type *Web application*. Authorized redirect URI: `https://mediaory.io/api/social/callback/youtube` |
+| `X_CLIENT_ID`, `X_CLIENT_SECRET` | developer.x.com → project + app → *User authentication settings*: OAuth 2.0, type *Web App*, callback `https://mediaory.io/api/social/callback/x`, scopes `tweet.read users.read offline.access`. Add credit to the developer account (pay-per-use) |
+| `SOCIAL_TOKEN_ENCRYPTION_KEY` (optional) | Any long random string. Tokens are stored AES-256-GCM-encrypted. If unset, the key is derived from `SESSION_SECRET` (then rotating `SESSION_SECRET` means customers reconnect). |
+| `SOCIAL_MOCK_PROVIDER=1` | Development and tests only — enables the built-in demo network. Ignored in production. |
+
+`APP_URL` must be the public address (`https://mediaory.io`) because the redirect
+URI is built from it. A platform whose variables are not set simply does not show a
+Connect button.
+
+### How it is built
+
+- `social_connections` (per organization; sealed access/refresh tokens, status,
+  cursor) and `social_connection_events` (a short excerpt + link; unique per post).
+- OAuth: `GET /api/social/connect/<platform>` → platform consent (PKCE + random
+  `state`, kept in a signed, HttpOnly, 10-minute cookie) → `GET /api/social/callback/<platform>`
+  verifies state, person and organization, exchanges the code, seals the tokens.
+- Worker job `sync_social_connections` (every 5 min; each platform has its own
+  minimum interval): refreshes expiring tokens, fetches only what is new, stores
+  events, notifies the person who connected the account (up to 8 individual
+  notifications per poll, the rest as one summary). A grant the platform rejects
+  marks the connection *Needs attention* and sends a "Reconnect" notification.
+- First connection looks back 3 days at most, so it does not flood.
+- Disconnecting deletes the tokens and every event collected from that account.

@@ -5,6 +5,7 @@ import { db, schema } from "@cim/db";
 import { ingestSource, MockNewsConnector, type IngestSourceResult } from "@cim/ingestion";
 import { evaluateNewMentionAlerts } from "../apps/worker/src/alerts/evaluate";
 import { processGenerateReportJob } from "../apps/worker/src/jobs/generate-report";
+import { processSyncSocialConnectionsJob } from "../apps/worker/src/jobs/sync-social-connections";
 
 /**
  * Several worker stages (ingestion crawl ticks, report rendering) run on
@@ -46,4 +47,9 @@ export async function simulateCrawl(sourceName: string): Promise<IngestSourceRes
 export async function simulateReportGeneration(reportRunId: string): Promise<void> {
   const fakeJob = { data: { reportRunId } } as Job<GenerateReportJobData>;
   await processGenerateReportJob(fakeJob);
+}
+
+/** One poll of every connected social account, exactly like the worker's sync_social_connections job. */
+export async function simulateSocialSync(): Promise<void> {
+  await processSyncSocialConnectionsJob({ env: { ...process.env, SOCIAL_MOCK_PROVIDER: "1" } });
 }

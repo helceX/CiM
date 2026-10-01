@@ -17,6 +17,7 @@ export async function createNotificationForOrgMembers(
     title: string;
     body: string;
     relatedAlertEventId?: string;
+    linkUrl?: string;
   },
 ) {
   const members = await db
@@ -40,6 +41,7 @@ export async function createNotificationForOrgMembers(
         title: input.title,
         body: input.body,
         relatedAlertEventId: input.relatedAlertEventId,
+        linkUrl: input.linkUrl,
       })),
     )
     .returning();
@@ -50,11 +52,11 @@ export async function createNotificationForUser(
   db: Db,
   organizationId: OrganizationId,
   userId: string,
-  input: { kind: "alert" | "system" | "report"; title: string; body: string },
+  input: { kind: "alert" | "system" | "report"; title: string; body: string; linkUrl?: string },
 ) {
   const [row] = await db
     .insert(notifications)
-    .values({ organizationId, userId, kind: input.kind, title: input.title, body: input.body })
+    .values({ organizationId, userId, kind: input.kind, title: input.title, body: input.body, linkUrl: input.linkUrl })
     .returning();
   return row;
 }

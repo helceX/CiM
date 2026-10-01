@@ -253,6 +253,13 @@
       "when": 1790880524845,
       "tag": "0035_articles_print",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1790881431357,
+      "tag": "0036_social_connections",
+      "breakpoints": true
     }
   ]
 }

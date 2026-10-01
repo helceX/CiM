@@ -18,7 +18,7 @@ export const createSourceSchema = z.object({
   url: httpsUrl,
   connector: z.enum(ADMIN_SOURCE_CONNECTORS).default("rss"),
   type: z.enum(ADMIN_SOURCE_TYPES).default("news"),
-  language: z.enum(["tr", "en"]).default("tr"),
+  language: z.enum(["tr", "en", "de", "fr", "es", "ar", "ru", "other"]).default("tr"),
   country: z.string().trim().length(2).toUpperCase().default("TR"),
   licenseConfirmed: z.boolean().default(false),
 });

@@ -43,3 +43,20 @@ export function makePlatformAdmin(email: string): void {
 export function isEmailVerified(email: string): boolean {
   return sql(`select email_verified_at is not null from users where email = '${email}';`) === "t";
 }
+
+/** Test-only: three crawlable sources (TR news, TR forum, DE blog) sharing a name prefix. */
+export function seedSources(tag: string): void {
+  const row = (key: string, country: string, type: string) =>
+    `('${tag}-${key}', '${tag}-${key}.example', 'https://${tag}-${key}.example/feed', '${country}', 'tr', '${type}', 'rss', 'healthy')`;
+  sql(
+    `insert into sources (name, domain, url, country, language, type, connector, status) values ${[
+      row("tr-news", "TR", "news"),
+      row("tr-forum", "TR", "forum"),
+      row("de-blog", "DE", "blog"),
+    ].join(", ")};`,
+  );
+}
+
+export function sourceStatus(name: string): string {
+  return sql(`select status from sources where name = '${name}';`);
+}

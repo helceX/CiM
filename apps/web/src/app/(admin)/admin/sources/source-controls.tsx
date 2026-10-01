@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Input, Label } from "@cim/ui";
-import type { CatalogSource } from "@cim/core";
+import { COUNTRIES, type CatalogSource } from "@cim/core";
 
 type NewSource = {
   name: string;
@@ -201,6 +201,22 @@ export function AddSourceForm() {
           <option value="blog">Blog</option>
           <option value="website">Website</option>
           <option value="forum">Forum</option>
+          <option value="comments">Comments</option>
+        </select>
+      </div>
+      <div className="flex flex-col gap-1">
+        <Label htmlFor="source-country">Country</Label>
+        <select
+          id="source-country"
+          className={select}
+          value={form.country}
+          onChange={(e) => update("country", e.target.value)}
+        >
+          {COUNTRIES.map((country) => (
+            <option key={country.code} value={country.code}>
+              {country.name}
+            </option>
+          ))}
         </select>
       </div>
       <div className="flex flex-col gap-1">
@@ -213,6 +229,12 @@ export function AddSourceForm() {
         >
           <option value="tr">Turkish</option>
           <option value="en">English</option>
+          <option value="de">German</option>
+          <option value="fr">French</option>
+          <option value="es">Spanish</option>
+          <option value="ar">Arabic</option>
+          <option value="ru">Russian</option>
+          <option value="other">Other</option>
         </select>
       </div>
       <div className="flex items-end gap-2">

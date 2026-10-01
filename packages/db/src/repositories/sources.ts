@@ -1,8 +1,8 @@
-import { eq, ne, sql } from "drizzle-orm";
-import { hostOfUrl, isLicenseRequiredHost } from "@cim/core";
+import { and, eq, inArray, ne, notInArray, sql } from "drizzle-orm";
+import { hostMatchesDomain, hostOfUrl, isLicenseRequiredHost } from "@cim/core";
 import type { Db } from "../client";
 import { sources } from "../schema/content";
-import { isHostBlocked } from "./compliance";
+import { isHostBlocked, listBlockedDomains } from "./compliance";
 
 /** Sources are global/reference data (ADR-001) — no tenant scoping here. */
 
@@ -131,4 +131,58 @@ export async function setSourceCrawlEnabled(
     .where(eq(sources.id, sourceId))
     .returning({ id: sources.id });
   return rows.length > 0;
+}
+
+export type SourceBulkFilter = {
+  /** ISO country codes; omitted = every country (the "World" scope). */
+  countries?: string[];
+  /** `Source.type` values; omitted = every type. */
+  types?: string[];
+  /** Only these sources (the admin's explicit selection); omitted = by filter. */
+  ids?: string[];
+};
+
+/** Fake/test connectors are not real crawl targets and are never touched in bulk. */
+const NON_CRAWL_CONNECTORS = ["mock", "mock-social"];
+
+/**
+ * Pauses or resumes many sources at once — the "stop everything" switch and
+ * its scoped versions (one country, one continent, only forums …). Like the
+ * single toggle it never deletes anything, and resuming skips every source on
+ * a blocked publisher's domain. Returns how many sources actually changed.
+ */
+export async function bulkSetSourcesCrawlEnabled(
+  db: Db,
+  filter: SourceBulkFilter,
+  enabled: boolean,
+): Promise<{ changed: number; skippedBlocked: number }> {
+  const scope = and(
+    notInArray(sources.connector, NON_CRAWL_CONNECTORS),
+    filter.countries ? inArray(sources.country, filter.countries) : undefined,
+    filter.types ? inArray(sources.type, filter.types) : undefined,
+    filter.ids ? inArray(sources.id, filter.ids) : undefined,
+    // Only rows that would actually change state.
+    enabled ? eq(sources.status, "unavailable") : ne(sources.status, "unavailable"),
+  );
+
+  let blockedIds: string[] = [];
+  if (enabled) {
+    const blocked = await listBlockedDomains(db);
+    if (blocked.length > 0) {
+      const candidates = await db
+        .select({ id: sources.id, domain: sources.domain })
+        .from(sources)
+        .where(scope);
+      blockedIds = candidates
+        .filter((row) => blocked.some((entry) => hostMatchesDomain(row.domain, entry.domain)))
+        .map((row) => row.id);
+    }
+  }
+
+  const rows = await db
+    .update(sources)
+    .set({ status: enabled ? "delayed" : "unavailable", updatedAt: new Date() })
+    .where(and(scope, blockedIds.length > 0 ? notInArray(sources.id, blockedIds) : undefined))
+    .returning({ id: sources.id });
+  return { changed: rows.length, skippedBlocked: blockedIds.length };
 }

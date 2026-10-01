@@ -112,6 +112,7 @@ export default async function DashboardPage() {
               {projects.length === 1 ? "" : "s"}
             </p>
             <h1 className="mt-2">
+              <span className="sr-only">Dashboard — </span>
               {user ? `Hello, ${user.firstName}.` : "Dashboard"}{" "}
               <span className="mp-gradient-text">Here&apos;s what changed.</span>
             </h1>

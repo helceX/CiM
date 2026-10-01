@@ -60,3 +60,16 @@ export function seedSources(tag: string): void {
 export function sourceStatus(name: string): string {
   return sql(`select status from sources where name = '${name}';`);
 }
+
+/** Test-only: mark the stories matching a title fragment as printed-edition clippings. */
+export function markArticlesAsPrint(titleFragment: string): void {
+  const print = JSON.stringify({
+    publication: "Test Gazetesi",
+    editionDate: "2026-10-01",
+    page: 12,
+    section: "Ekonomi",
+    pageUrl: "https://epaper.example/test-gazetesi/2026-10-01/12",
+    pageImageUrl: null,
+  }).replace(/'/g, "''");
+  sql(`update articles set print = '${print}'::jsonb where title ilike '%${titleFragment.replace(/'/g, "''")}%';`);
+}

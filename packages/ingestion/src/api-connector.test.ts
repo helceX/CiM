@@ -13,7 +13,7 @@ vi.mock("./safe-fetch", async (importOriginal) => {
   };
 });
 
-const { APIConnector } = await import("./api-connector");
+const { APIConnector, testApiEndpoint } = await import("./api-connector");
 
 function fakeSource(overrides: Partial<Source> = {}): Source {
   return {
@@ -192,5 +192,56 @@ describe("APIConnector", () => {
     safeFetchMock.mockResolvedValueOnce(fetchResult({ status: 200, body: API_BODY }));
     const health = await new APIConnector().healthCheck(fakeSource());
     expect(health.status).toBe("healthy");
+  });
+});
+
+describe("print clippings in the API contract", () => {
+  const PRINT_BODY = JSON.stringify({
+    items: [
+      {
+        id: "clip-1",
+        title: "Printed story",
+        url: "https://provider.invalid/clip/1",
+        publishedAt: "2026-10-01T04:00:00Z",
+        print: {
+          publication: "Cumhuriyet",
+          editionDate: "2026-10-01",
+          page: 12,
+          pageUrl: "https://provider.invalid/epaper/cumhuriyet/2026-10-01/12",
+          pageImageUrl: "javascript:alert(1)",
+        },
+      },
+      { id: "digital-1", title: "Digital story", url: "https://provider.invalid/clip/2" },
+    ],
+  });
+
+  it("carries a validated print reference and drops unsafe parts of it", async () => {
+    safeFetchMock.mockResolvedValueOnce(fetchResult({ body: PRINT_BODY }));
+    const [printed, digital] = await new APIConnector().fetch(fakeSource({ type: "newspaper" }));
+    expect(printed?.print).toEqual({
+      publication: "Cumhuriyet",
+      editionDate: "2026-10-01",
+      page: 12,
+      section: null,
+      pageUrl: "https://provider.invalid/epaper/cumhuriyet/2026-10-01/12",
+      pageImageUrl: null, // javascript: is refused
+    });
+    expect(digital?.print).toBeNull();
+  });
+
+  it("tests a candidate endpoint, sending the key in the configured header and counting print items", async () => {
+    safeFetchMock.mockResolvedValueOnce(fetchResult({ body: PRINT_BODY }));
+    const result = await testApiEndpoint("https://provider.invalid/api", { apiKey: "secret-key-123", apiKeyHeaderName: "X-Api-Key" });
+    expect(result).toEqual({ ok: true, itemCount: 2, printCount: 1, sampleTitles: ["Printed story", "Digital story"] });
+    expect(safeFetchMock).toHaveBeenLastCalledWith("https://provider.invalid/api", expect.objectContaining({ headers: { "X-Api-Key": "secret-key-123" } }));
+  });
+
+  it("explains a wrong key, a non-JSON answer and an empty response", async () => {
+    safeFetchMock.mockResolvedValueOnce(fetchResult({ status: 401 }));
+    expect(await testApiEndpoint("https://provider.invalid/api")).toMatchObject({ ok: false, message: expect.stringContaining("check the key") });
+    safeFetchMock.mockResolvedValueOnce(fetchResult({ body: "<html>" }));
+    expect(await testApiEndpoint("https://provider.invalid/api")).toMatchObject({ ok: false, message: "The endpoint did not return JSON." });
+    safeFetchMock.mockResolvedValueOnce(fetchResult({ body: JSON.stringify({ items: [] }) }));
+    expect(await testApiEndpoint("https://provider.invalid/api")).toMatchObject({ ok: false });
   });
 });

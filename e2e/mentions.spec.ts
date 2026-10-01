@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { test, expect } from "@playwright/test";
 import { registerAndOnboard } from "./helpers";
-import { latestEmailLinkFor } from "./db";
+import { latestEmailLinkFor, markArticlesAsPrint } from "./db";
 import { simulateCrawl } from "./simulate";
 
 /**
@@ -65,6 +65,23 @@ test.describe("mentions", () => {
     await page.getByRole("link", { name: "All, newest first" }).click();
     await expect(page).toHaveURL(/view=list/);
     await expect(page.getByRole("row", { name: /Daily Tech Wire/ }).first()).toBeVisible();
+  });
+
+  test("a printed-edition story shows its page reference, a link, and the print section in the drawer", async ({ page }) => {
+    await simulateCrawl("Daily Tech Wire");
+    markArticlesAsPrint("Daily Tech Wire");
+    await page.goto("/mentions");
+    await page.locator("main button[aria-expanded]").first().click();
+
+    await expect(page.getByText("Test Gazetesi · Oct 1, 2026 · p. 12").first()).toBeVisible();
+    const viewPage = page.getByRole("link", { name: /View page of Test Gazetesi/ }).first();
+    await expect(viewPage).toHaveAttribute("href", "https://epaper.example/test-gazetesi/2026-10-01/12");
+    await expect(viewPage).toHaveAttribute("target", "_blank");
+
+    await page.getByRole("button", { name: /open details/ }).first().click();
+    const drawer = page.getByRole("dialog");
+    await expect(drawer.getByRole("region", { name: "Print edition" })).toBeVisible();
+    await expect(drawer.getByText("Test Gazetesi · Oct 1, 2026 · p. 12")).toBeVisible();
   });
 
   test("filter mentions, open the detail drawer, and submit relevant feedback", async ({ page }) => {

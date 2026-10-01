@@ -30,3 +30,16 @@ export function latestEmailLinkFor(
   }
   return match[0];
 }
+
+function sql(statement: string): string {
+  return execFileSync("psql", [DATABASE_URL, "-t", "-A", "-c", statement], { encoding: "utf-8" }).trim();
+}
+
+/** Test-only: grant the platform-admin flag the way the owner does it by hand in production. */
+export function makePlatformAdmin(email: string): void {
+  sql(`update users set is_platform_super_admin = true where email = '${email}';`);
+}
+
+export function isEmailVerified(email: string): boolean {
+  return sql(`select email_verified_at is not null from users where email = '${email}';`) === "t";
+}

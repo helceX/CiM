@@ -91,6 +91,11 @@ export const emailOutbox = pgTable(
     bodyText: text("body_text").notNull(),
     kind: text("kind").notNull(), // verify_email | password_reset | daily_digest | ...
     sentAt: timestamp("sent_at", { withTimezone: true }),
+    // Which provider actually handled the send ("resend", "console", …) — so
+    // /admin can tell a delivered email from one that was only written to a log.
+    deliveredVia: text("delivered_via"),
+    // Last delivery failure (truncated), cleared on success.
+    lastError: text("last_error"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [index("email_outbox_to_email_idx").on(table.toEmail)],

@@ -1,14 +1,17 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { db } from "../client";
-import { organizations, sources, workspaces } from "../schema/index";
+import { organizations, sources, users, workspaces } from "../schema/index";
 import { createProject } from "./projects";
 import {
   checkDatabaseHealth,
   getPlatformTotals,
   listOrganizationsForAdmin,
+  listRecentEmailsForAdmin,
   listSourcesForAdmin,
+  listUnverifiedUsersForAdmin,
 } from "./admin";
+import { enqueueEmail, markEmailSent, recordEmailError } from "./auth";
 import { asOrganizationId } from "./tenant-scope";
 
 /**
@@ -104,5 +107,49 @@ describe("admin repository (integration)", () => {
 
   it("reports the database reachable", async () => {
     expect(await checkDatabaseHealth(db)).toBe(true);
+  });
+
+  it("lists only live, unverified accounts as waiting for verification", async () => {
+    const stamp = Date.now();
+    const make = (label: string, extra: Partial<typeof users.$inferInsert>) =>
+      db
+        .insert(users)
+        .values({ email: `adm-${label}-${stamp}@example.com`, passwordHash: "x", firstName: label, lastName: "T", ...extra })
+        .returning();
+    const [pending] = await make("pending", {});
+    const [verified] = await make("verified", { emailVerifiedAt: new Date() });
+    const [deleted] = await make("deleted", { deletedAt: new Date() });
+    try {
+      const emails = (await listUnverifiedUsersForAdmin(db, 500)).map((u) => u.email);
+      expect(emails).toContain(pending!.email);
+      expect(emails).not.toContain(verified!.email);
+      expect(emails).not.toContain(deleted!.email);
+    } finally {
+      for (const u of [pending, verified, deleted]) await db.delete(users).where(eq(users.id, u!.id));
+    }
+  });
+
+  it("shows how recent emails were delivered or why they failed, and never exposes the body", async () => {
+    const sent = await enqueueEmail(db, { toEmail: "adm-sent@example.com", subject: "s", bodyText: "https://secret.example/verify?token=abc", kind: "admin_test" });
+    const failing = await enqueueEmail(db, { toEmail: "adm-fail@example.com", subject: "f", bodyText: "x", kind: "admin_test" });
+    await markEmailSent(db, sent.id, "console");
+    await recordEmailError(db, failing.id, "Resend API request failed (403): domain not verified");
+
+    const rows = await listRecentEmailsForAdmin(db, 50);
+    const sentRow = rows.find((r) => r.id === sent.id)!;
+    const failRow = rows.find((r) => r.id === failing.id)!;
+    expect(sentRow).toMatchObject({ deliveredVia: "console", lastError: null });
+    expect(sentRow.sentAt).not.toBeNull();
+    expect(failRow.sentAt).toBeNull();
+    expect(failRow.lastError).toContain("domain not verified");
+    expect(JSON.stringify(rows)).not.toContain("token=abc");
+    expect(Object.keys(sentRow)).not.toContain("bodyText");
+
+    // A later successful send clears the stored error.
+    await markEmailSent(db, failing.id, "resend");
+    expect((await listRecentEmailsForAdmin(db, 50)).find((r) => r.id === failing.id)).toMatchObject({
+      deliveredVia: "resend",
+      lastError: null,
+    });
   });
 });

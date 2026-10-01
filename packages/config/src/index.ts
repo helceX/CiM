@@ -36,6 +36,9 @@ const envSchema = z.object({
   AI_CHEAP_MODEL: z.string().default("claude-haiku-4-5"),
   AI_SYNTHESIS_MODEL: z.string().default("claude-sonnet-5"),
 
+  // Error reporting (Sentry-compatible). Unset = nothing is ever sent.
+  SENTRY_DSN: z.string().optional(),
+
   DEFAULT_TIMEZONE: z.string().default("Europe/Istanbul"),
   DEFAULT_LOCALE: z.enum(["tr", "en"]).default("tr"),
 

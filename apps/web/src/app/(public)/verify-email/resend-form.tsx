@@ -2,8 +2,17 @@
 
 import { useState, type FormEvent } from "react";
 import { Button, Field, Input } from "@cim/ui";
+import { TurnstileWidget } from "@/components/turnstile-widget";
 
-export function ResendVerificationForm({ defaultEmail = "" }: { defaultEmail?: string }) {
+export function ResendVerificationForm({
+  defaultEmail = "",
+  turnstileSiteKey = null,
+}: {
+  defaultEmail?: string;
+  turnstileSiteKey?: string | null;
+}) {
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [captchaReset, setCaptchaReset] = useState(0);
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [message, setMessage] = useState<string | null>(null);
 
@@ -16,7 +25,7 @@ export function ResendVerificationForm({ defaultEmail = "" }: { defaultEmail?: s
       const response = await fetch("/api/auth/resend-verification", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, turnstileToken: captchaToken ?? undefined }),
       });
       if (response.ok) {
         setStatus("sent");
@@ -25,6 +34,7 @@ export function ResendVerificationForm({ defaultEmail = "" }: { defaultEmail?: s
       const data = await response.json().catch(() => ({}));
       setMessage(data.error ?? "Something went wrong. Please try again.");
       setStatus("error");
+      setCaptchaReset((n) => n + 1);
     } catch {
       setMessage("Something went wrong. Please try again.");
       setStatus("error");
@@ -50,7 +60,12 @@ export function ResendVerificationForm({ defaultEmail = "" }: { defaultEmail?: s
           {message}
         </p>
       ) : null}
-      <Button type="submit" variant="secondary" disabled={status === "sending"}>
+      <TurnstileWidget siteKey={turnstileSiteKey} onToken={setCaptchaToken} resetKey={captchaReset} />
+      <Button
+        type="submit"
+        variant="secondary"
+        disabled={status === "sending" || (turnstileSiteKey !== null && !captchaToken)}
+      >
         {status === "sending" ? "Sending…" : "Resend verification email"}
       </Button>
     </form>

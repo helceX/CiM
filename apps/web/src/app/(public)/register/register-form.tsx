@@ -3,8 +3,11 @@
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { Button, Field, Input } from "@cim/ui";
+import { TurnstileWidget } from "@/components/turnstile-widget";
 
-export function RegisterForm() {
+export function RegisterForm({ turnstileSiteKey = null }: { turnstileSiteKey?: string | null }) {
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [captchaReset, setCaptchaReset] = useState(0);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -24,6 +27,7 @@ export function RegisterForm() {
       companyName: String(formData.get("companyName") ?? ""),
       jobTitle: String(formData.get("jobTitle") ?? ""),
       password: String(formData.get("password") ?? ""),
+      turnstileToken: captchaToken ?? undefined,
     };
 
     try {
@@ -50,6 +54,7 @@ export function RegisterForm() {
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {
+      setCaptchaReset((n) => n + 1);
       setIsSubmitting(false);
     }
   }
@@ -106,7 +111,13 @@ export function RegisterForm() {
         </p>
       ) : null}
 
-      <Button type="submit" disabled={isSubmitting} className="mt-2">
+      <TurnstileWidget siteKey={turnstileSiteKey} onToken={setCaptchaToken} resetKey={captchaReset} />
+
+      <Button
+        type="submit"
+        disabled={isSubmitting || (turnstileSiteKey !== null && !captchaToken)}
+        className="mt-2"
+      >
         {isSubmitting ? "Creating account…" : "Create account"}
       </Button>
 

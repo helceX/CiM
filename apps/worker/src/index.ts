@@ -17,6 +17,8 @@ import {
   type InsightGenerateJobData,
   type SendEmailJobData,
   type SendExecutiveBriefJobData,
+  captureException,
+  configureErrorReporting,
 } from "@cim/core";
 import { getRedisConnection } from "./redis";
 import { processSendEmailJob } from "./jobs/send-email";
@@ -266,9 +268,22 @@ const allWorkers = [
   captureFeatureUsageWorker,
   sendExecutiveBriefWorker,
 ];
+// Off unless SENTRY_DSN is set. Tags carry only the queue and job id — never job data.
+configureErrorReporting({
+  dsn: process.env.SENTRY_DSN,
+  service: "worker",
+  environment: process.env.NODE_ENV,
+  release: process.env.RAILWAY_GIT_COMMIT_SHA,
+});
+// Fires for every uncaught exception / unhandled rejection WITHOUT changing
+// Node's behaviour (the process still crashes and Railway restarts it).
+process.on("uncaughtExceptionMonitor", (error) => {
+  void captureException(error, { where: "uncaughtException" });
+});
 for (const worker of allWorkers) {
   worker.on("failed", (job, error) => {
     console.error(`[worker] job ${job?.id} (${worker.name}) failed:`, error);
+    void captureException(error, { queue: worker.name, jobId: job?.id, attempt: job?.attemptsMade });
   });
   worker.on("completed", (job) => {
     console.log(`[worker] job ${job.id} (${worker.name}) completed`);

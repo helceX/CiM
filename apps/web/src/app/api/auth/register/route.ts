@@ -12,6 +12,7 @@ import {
 import { getEnv } from "@cim/config";
 import { checkRateLimit, clientIpFrom } from "@/lib/rate-limit";
 import { sendEmail, verificationEmailBody } from "@/lib/email";
+import { rejectIfNotHuman } from "@/lib/turnstile";
 
 const VERIFICATION_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
 
@@ -23,6 +24,8 @@ export async function POST(request: Request) {
   }
 
   const json = await request.json().catch(() => null);
+  const notHuman = await rejectIfNotHuman(json, ip);
+  if (notHuman) return notHuman;
   const parsed = registerSchema.safeParse(json);
   if (!parsed.success) {
     return NextResponse.json(

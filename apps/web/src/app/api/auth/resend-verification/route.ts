@@ -5,6 +5,7 @@ import { db, findUserByEmail, createEmailVerificationToken } from "@cim/db";
 import { getEnv } from "@cim/config";
 import { checkRateLimit, clientIpFrom } from "@/lib/rate-limit";
 import { sendEmail, verificationEmailBody } from "@/lib/email";
+import { rejectIfNotHuman } from "@/lib/turnstile";
 
 const VERIFICATION_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
 
@@ -15,7 +16,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Too many attempts. Try again later." }, { status: 429 });
   }
 
-  const parsed = resendVerificationSchema.safeParse(await request.json().catch(() => null));
+  const json = await request.json().catch(() => null);
+  const notHuman = await rejectIfNotHuman(json, ip);
+  if (notHuman) return notHuman;
+  const parsed = resendVerificationSchema.safeParse(json);
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid input" }, { status: 400 });
   }

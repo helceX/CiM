@@ -6,6 +6,7 @@ import { Badge, Button, Input, Label } from "@cim/ui";
 import {
   CONTINENTS,
   continentName,
+  countryCodesInScope,
   countryInScope,
   countryName,
   isContinentCode,
@@ -13,7 +14,7 @@ import {
   sourceKindOfType,
   type SourceKindKey,
 } from "@cim/core";
-import { CrawlToggle } from "./source-controls";
+import { AddSourceForm, CrawlToggle } from "./source-controls";
 
 export type ExplorerSource = {
   id: string;
@@ -269,6 +270,26 @@ export function SourceExplorer({ sources }: { sources: ExplorerSource[] }) {
           </div>
         ) : null}
       </div>
+
+      {/* Add a feed to exactly the region being browsed */}
+      {region !== "unknown" ? (
+        <details className="rounded-xl border border-border">
+          <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-foreground">
+            Add an RSS feed to {regionLabel}
+            <span className="ml-2 font-normal text-muted-foreground">
+              {country ? "" : region === "world" ? "· pick any country" : "· pick a country in this continent"}
+            </span>
+          </summary>
+          <div className="border-t border-border p-4">
+            {/* Re-keyed per region so the country list and defaults follow the selection. */}
+            <AddSourceForm
+              key={region}
+              countryCodes={countryCodesInScope(region) ?? undefined}
+              defaultCountry={country ?? undefined}
+            />
+          </div>
+        </details>
+      ) : null}
 
       {/* Kind + status + search */}
       <div className="flex flex-col gap-3">

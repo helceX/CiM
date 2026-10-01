@@ -212,7 +212,8 @@ export function VisualBuilder({
   }
 
   function applyPreset(preset: (typeof PRESETS)[number]) {
-    setName((current) => current || preset.name);
+    // Keep a name the user typed; swap one that a previous preset filled in.
+    setName((current) => (!current || PRESETS.some((p) => p.name === current) ? preset.name : current));
     setMeasure(preset.measure);
     setDimension(preset.dimension);
     setPeriodDays(preset.periodDays);

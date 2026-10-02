@@ -26,7 +26,7 @@ So today Mediaory is a **monitor over a list of sources**, not a crawler of the 
 social / video / podcast / TV / radio are **not live** (the Social dashboard exists but has only
 demo data behind it). The site copy now says so ("coming soon").
 A fresh production database has no real sources until some are registered: **/admin/sources** has a
-Türkiye catalog (~430 feeds: a hand-checked list plus the community list at github.com/bakinazik/rss, regenerated with `pnpm exec tsx scripts/import-rss-catalog.ts <README>`; searchable, filterable by category, bulk "Test & add all shown"; each feed is fetch-tested when added, since feed URLs change) and a
+Türkiye catalog (~2,250 feeds: ~430 below plus ~1,800 from the verified list in scripts/data/ — regenerated with `pnpm exec tsx scripts/import-rss-list.ts <list>`, which skips any feed already listed; columnist feeds and forum feeds sit in their own groups so a bulk add can leave them out. The earlier ~430: a hand-checked list plus the community list at github.com/bakinazik/rss, regenerated with `pnpm exec tsx scripts/import-rss-catalog.ts <README>`; searchable, filterable by category, bulk "Test & add all shown"; each feed is fetch-tested when added, since feed URLs change) and a
 custom RSS/sitemap form. Nothing is stored unless the feed was actually readable.
 See also `CONTENT_POLICY.md` (licensing, takedown, snippet limits). Polling is polite: every real source (RSS, API, sitemap, web) every 2 hours (never the 30 s scheduler tick).
 

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { CATALOG_GROUPS, TURKEY_SOURCE_CATALOG, feedIdentity, findCatalogSource } from "./source-catalog";
 import { GENERATED_CATALOG } from "./source-catalog.generated";
+import { LIST_CATALOG } from "./source-catalog.list.generated";
 import { hostOfUrl } from "./restricted-publishers";
 
 describe("TURKEY_SOURCE_CATALOG", () => {
@@ -42,5 +43,23 @@ describe("TURKEY_SOURCE_CATALOG", () => {
     expect(generatedHosts).toContain("aa.com.tr"); // present in the source list…
     const merged = TURKEY_SOURCE_CATALOG.map((e) => hostOfUrl(e.url));
     expect(merged).not.toContain("aa.com.tr"); // …but never offered
+  });
+
+  it("adds the verified feed list without repeating any feed already in the community list", () => {
+    expect(LIST_CATALOG.length).toBeGreaterThan(1500);
+    const earlier = new Set([...GENERATED_CATALOG].map((e) => feedIdentity(e.url)));
+    for (const entry of LIST_CATALOG) expect(earlier.has(feedIdentity(entry.url))).toBe(false);
+    // Every one of them survives the merge (the merge only drops repeats and licence-required hosts).
+    const merged = new Set(TURKEY_SOURCE_CATALOG.map((e) => e.key));
+    for (const entry of LIST_CATALOG) expect(merged.has(entry.key)).toBe(true);
+  });
+
+  it("keeps columnist and forum feeds in their own groups so a bulk add can leave them out", () => {
+    const columns = TURKEY_SOURCE_CATALOG.filter((e) => e.group === "columns");
+    expect(columns.length).toBeGreaterThan(100);
+    expect(columns.every((e) => /\/(yazar|yazarlar|author)\//.test(e.url) || /yazi/.test(e.url) || e.url.endsWith("/rssmakale"))).toBe(true);
+    const forums = TURKEY_SOURCE_CATALOG.filter((e) => e.group === "forums");
+    expect(forums.length).toBeGreaterThan(5);
+    expect(forums.every((e) => e.type === "forum")).toBe(true);
   });
 });

@@ -304,6 +304,13 @@ for (const worker of allWorkers) {
 }
 
 async function scheduleRepeatingJobs() {
+  // Clear crawl jobs that were queued before a worker (re)start. The scheduler
+  // re-queues anything that is genuinely due within one tick, so nothing is lost;
+  // what this prevents is an old backlog (an earlier build queued a source again
+  // on every tick) fetching every publisher over and over. Running jobs are untouched.
+  const clearedCrawlJobs = await crawlSourceQueue.getWaitingCount();
+  await crawlSourceQueue.drain(true);
+  if (clearedCrawlJobs > 0) console.log(`[worker] cleared ${clearedCrawlJobs} queued crawl job(s) at start`);
   // Every-30-seconds cadence is a dev-friendly default, not a fixed
   // architectural choice — per-source polling intervals (brief §35) are
   // Phase 3+ scope once source volume justifies differentiated cadence.

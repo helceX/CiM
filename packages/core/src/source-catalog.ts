@@ -1,5 +1,6 @@
 import { hostOfUrl, isLicenseRequiredHost } from "./restricted-publishers";
 import { GENERATED_CATALOG } from "./source-catalog.generated";
+import { LIST_CATALOG } from "./source-catalog.list.generated";
 
 /**
  * Candidate public RSS feeds of Turkish (and a few English-language Turkey)
@@ -21,9 +22,10 @@ export type CatalogSource = {
   /** Feed URL (always https). */
   url: string;
   /** `Source.type` — see source-categories.ts. */
-  type: "news" | "press" | "blog" | "website";
+  type: "news" | "press" | "blog" | "website" | "forum";
   language: "tr" | "en";
-  country: "TR";
+  /** ISO country of the outlet (TR for almost all; a few Cyprus / foreign-based Turkish-language feeds). */
+  country: string;
   group: CatalogGroup;
 };
 
@@ -39,6 +41,9 @@ export const CATALOG_GROUPS = [
   "lifestyle",
   "defense",
   "english",
+  // Opinion-column feeds (one per writer) and forums are listed apart so a bulk add can leave them out.
+  "columns",
+  "forums",
 ] as const;
 export type CatalogGroup = (typeof CATALOG_GROUPS)[number];
 
@@ -83,7 +88,7 @@ export const TURKEY_SOURCE_CATALOG: readonly CatalogSource[] = (() => {
   const seenFeeds = new Set<string>();
   const seenKeys = new Set<string>();
   const merged: CatalogSource[] = [];
-  for (const entry of [...CURATED_CATALOG, ...GENERATED_CATALOG]) {
+  for (const entry of [...CURATED_CATALOG, ...GENERATED_CATALOG, ...LIST_CATALOG]) {
     const host = hostOfUrl(entry.url);
     if (!host || isLicenseRequiredHost(host)) continue;
     const identity = feedIdentity(entry.url);

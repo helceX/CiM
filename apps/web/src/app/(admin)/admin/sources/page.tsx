@@ -17,6 +17,8 @@ const GROUP_LABEL: Record<string, string> = {
   lifestyle: "Lifestyle",
   defense: "Defense & industry",
   english: "English-language",
+  columns: "Columnists (one feed per writer)",
+  forums: "Forums",
 };
 
 /**

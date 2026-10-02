@@ -1,7 +1,7 @@
 import type { Job, Queue } from "bullmq";
 import { eq } from "drizzle-orm";
 import { ingestSource } from "@cim/ingestion";
-import type { CrawlSourceJobData, SendEmailJobData } from "@cim/core";
+import { isSourceDue, type CrawlSourceJobData, type SendEmailJobData } from "@cim/core";
 import { db, markSourceChecked, schema } from "@cim/db";
 import { getConnectorFor } from "../connector-registry";
 import { evaluateNewMentionAlerts } from "../alerts/evaluate";
@@ -22,6 +22,12 @@ export async function processCrawlSourceJob(
   if (!source) {
     throw new Error(`Source not found: ${job.data.sourceId}`);
   }
+
+  // A job that waited in the queue while the source was crawled by another one
+  // (or an older backlog) must not fetch the publisher again. Only a first attempt
+  // is skipped: a retry runs because the previous attempt failed and recorded its
+  // check, so it is "not due" by design.
+  if (job.attemptsMade === 0 && !isSourceDue(source)) return;
 
   const connector = getConnectorFor(source.connector);
   if (!connector) {

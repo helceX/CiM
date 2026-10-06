@@ -6,7 +6,7 @@ import { organizations, workspaces } from "../schema/organizations";
 import { createProject } from "./projects";
 import { createMonitoringQuery } from "./monitoring-queries";
 import { createMentionIfNotExists } from "./mentions";
-import { getDatabaseSizeBytes, listLargestTables, pruneOrphanArticles } from "./storage";
+import { getDatabaseSizeBytes, listLargestTables, pruneArticles, pruneOrphanArticles, previewPrune } from "./storage";
 import { asOrganizationId } from "./tenant-scope";
 
 describe("storage (integration)", () => {
@@ -60,6 +60,22 @@ describe("storage (integration)", () => {
     expect(left.map((r) => r.title).sort()).toEqual(["new orphan", "old matched"]);
     const kept = await db.select().from(mentions).where(eq(mentions.organizationId, organizationId));
     expect(kept).toHaveLength(1);
+  });
+
+  it("previews, then deletes on request: unmatched only, or matched ones (and their mentions) too", async () => {
+    const before = await previewPrune(db, 0);
+    expect(before.unmatchedStories).toBeGreaterThanOrEqual(1); // the new orphan
+    expect(before.matchedStories).toBeGreaterThanOrEqual(1);
+    expect(before.mentions).toBeGreaterThanOrEqual(1);
+
+    await pruneArticles(db, { olderThanDays: 0, includeMatched: false });
+    let left = await db.select({ title: articles.title }).from(articles).where(eq(articles.sourceId, sourceId));
+    expect(left.map((r) => r.title)).toEqual(["old matched"]); // matched stories survive the safe form
+
+    await pruneArticles(db, { olderThanDays: 0, includeMatched: true });
+    left = await db.select({ title: articles.title }).from(articles).where(eq(articles.sourceId, sourceId));
+    expect(left).toEqual([]);
+    expect(await db.select().from(mentions).where(eq(mentions.organizationId, organizationId))).toHaveLength(0);
   });
 
   it("reports the database size and the biggest tables", async () => {

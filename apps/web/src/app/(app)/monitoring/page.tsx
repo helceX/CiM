@@ -2,7 +2,8 @@ import Link from "next/link";
 import { Badge, Button, EmptyState } from "@cim/ui";
 import { Radar } from "lucide-react";
 import { parseKeywordSpec } from "@cim/core";
-import { countMentionsByQuery, db, listMonitoringQueries } from "@cim/db";
+import { countMentionsByQuery, db, getCrawlCoverage, listMonitoringQueries } from "@cim/db";
+import type { CrawlCoverage } from "@cim/db";
 import { requireOrgContext } from "@/lib/tenant";
 
 /** Small suffix on a chip when the keyword has a stricter-than-default rule. */
@@ -17,11 +18,55 @@ function KeywordRule({ term }: { term: string }) {
   return null;
 }
 
+/** "14 minutes ago" — coarse on purpose; the exact time is in the tooltip. */
+function ago(date: Date): string {
+  const minutes = Math.max(0, Math.round((Date.now() - date.getTime()) / 60_000));
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes} min ago`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 48) return `${hours} h ago`;
+  return `${Math.round(hours / 24)} days ago`;
+}
+
+/**
+ * Answers "is it even running?" on the page where people wait for results. The
+ * crawler runs on our servers around the clock — it does not depend on anyone
+ * having the app open — so this shows what it has actually done, not a promise.
+ */
+function CoverageStrip({ coverage }: { coverage: CrawlCoverage }) {
+  const stale = coverage.lastScanAt !== null && Date.now() - coverage.lastScanAt.getTime() > 6 * 3_600_000;
+  return (
+    <p
+      className={`rounded-lg border px-3 py-2 text-xs ${stale ? "border-warning/50 text-warning" : "border-border text-muted-foreground"}`}
+      role="status"
+    >
+      {coverage.activeSources === 0 ? (
+        "No sources are being scanned yet."
+      ) : (
+        <>
+          Scanning <strong className="text-foreground">{coverage.activeSources.toLocaleString()}</strong> sources every 2 hours on our
+          servers (your computer does not need to be on).{" "}
+          {coverage.lastScanAt ? (
+            <>
+              Last scan <time dateTime={coverage.lastScanAt.toISOString()} title={coverage.lastScanAt.toISOString()}>{ago(coverage.lastScanAt)}</time>
+              {stale ? " — longer than expected." : ""}
+            </>
+          ) : (
+            "First scan has not finished yet."
+          )}{" "}
+          {coverage.storiesLast24h.toLocaleString()} new stories in the last 24 hours.
+        </>
+      )}
+    </p>
+  );
+}
+
 export default async function MonitoringListPage() {
   const context = await requireOrgContext();
-  const [queries, counts] = await Promise.all([
+  const [queries, counts, coverage] = await Promise.all([
     listMonitoringQueries(db, context.organizationId),
     countMentionsByQuery(db, context.organizationId),
+    getCrawlCoverage(db),
   ]);
 
   return (
@@ -38,6 +83,8 @@ export default async function MonitoringListPage() {
           <Link href="/monitoring/new">New monitoring</Link>
         </Button>
       </div>
+
+      <CoverageStrip coverage={coverage} />
 
       {queries.length === 0 ? (
         <EmptyState

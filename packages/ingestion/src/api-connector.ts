@@ -1,4 +1,5 @@
 import type { Source } from "@cim/db/schema";
+import { cleanInlineText } from "./html-text";
 import { parseArticlePrint } from "@cim/core";
 import type { RawFetchResult, SourceConnector, SourceHealth } from "./connector";
 import { safeFetch, SsrfBlockedError } from "./safe-fetch";
@@ -89,7 +90,7 @@ export class APIConnector implements SourceConnector {
       .map((item) => ({
         externalId: item.id || item.url,
         canonicalUrl: item.url,
-        title: item.title || "(untitled)",
+        title: cleanInlineText(item.title ?? "") || "(untitled)",
         bodyText: item.content ?? "",
         language: item.language ?? source.language,
         publishedAt: item.publishedAt ? new Date(item.publishedAt) : null,

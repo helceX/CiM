@@ -2,12 +2,14 @@ import { NextResponse } from "next/server";
 import { createMonitoringQuerySchema } from "@cim/validation";
 import { astToBooleanQuery, expandSourceCategoriesToTypes } from "@cim/core";
 import {
+  backfillMentionsForQuery,
   createMonitoringQueryWithPlanLimit,
   getProject,
   recordAuditLog,
   db,
 } from "@cim/db";
 import { requirePermission } from "@/lib/tenant";
+import { getCurrentUser } from "@/lib/session";
 
 export async function POST(request: Request) {
   let context;
@@ -49,23 +51,44 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Add at least one include, exclude, or exact-phrase term" }, { status: 400 });
   }
 
-  const result = await createMonitoringQueryWithPlanLimit(db, context.organizationId, {
-    projectId: project.id,
-    name: input.name,
-    queryAst: ast,
-    booleanQuery: astToBooleanQuery(ast),
-    sourceTypes: expandSourceCategoriesToTypes(input.sourceTypes),
-    trackingTarget: input.trackingTarget,
-  });
+  const user = await getCurrentUser();
+  const result = await createMonitoringQueryWithPlanLimit(
+    db,
+    context.organizationId,
+    {
+      projectId: project.id,
+      name: input.name,
+      queryAst: ast,
+      booleanQuery: astToBooleanQuery(ast),
+      sourceTypes: expandSourceCategoriesToTypes(input.sourceTypes),
+      trackingTarget: input.trackingTarget,
+    },
+    { unlimited: user?.isPlatformSuperAdmin === true },
+  );
   if (!result.ok) {
     return NextResponse.json(
       {
         error: `Your plan allows up to ${result.limit} monitoring quer${result.limit === 1 ? "y" : "ies"}. Upgrade to add more.`,
+        code: "plan_limit",
+        upgradeUrl: "/settings?tab=billing",
       },
       { status: 409 },
     );
   }
   const query = result.query;
+
+  // Pick up the stories already stored (same 30-day window the preview showed)
+  // so the new monitoring is not empty until the next crawl. Best effort: a
+  // failure here must not undo a saved monitoring.
+  const backfill = await backfillMentionsForQuery(db, context.organizationId, {
+    id: query.id,
+    projectId: project.id,
+    queryAst: ast,
+    sourceTypes: query.sourceTypes,
+  }).catch((error) => {
+    console.error("[monitoring] backfill failed:", error);
+    return { scanned: 0, created: 0 };
+  });
 
   await recordAuditLog(db, context.organizationId, {
     actorUserId: context.userId,
@@ -74,5 +97,5 @@ export async function POST(request: Request) {
     targetId: query.id,
   });
 
-  return NextResponse.json({ ok: true, queryId: query.id });
+  return NextResponse.json({ ok: true, queryId: query.id, backfilled: backfill.created });
 }

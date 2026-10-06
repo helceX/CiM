@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { Badge, Button, Input, Label } from "@cim/ui";
 import {
@@ -15,6 +16,45 @@ import {
   type SourceKindKey,
 } from "@cim/core";
 import { AddSourceForm, CrawlToggle } from "./source-controls";
+
+// The outlines are ~125 KB of path data — only this admin screen needs them, and only on the client.
+const WorldMap = dynamic(() => import("@/components/world-map").then((m) => m.WorldMap), {
+  ssr: false,
+  loading: () => <div className="h-64 animate-pulse rounded-xl border border-border bg-surface-muted/40" aria-hidden="true" />,
+});
+
+function RegionRow({
+  label,
+  count,
+  depth,
+  active,
+  onClick,
+}: {
+  label: string;
+  count: number;
+  depth: 0 | 1 | 2;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <tr className={active ? "bg-primary/10" : undefined}>
+      <th scope="row" className="p-0 text-left font-normal">
+        <button
+          type="button"
+          aria-pressed={active}
+          onClick={onClick}
+          style={{ paddingLeft: `${0.75 + depth * 1}rem` }}
+          className={`w-full py-2 pr-3 text-left transition-colors hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary ${
+            depth === 0 ? "font-semibold" : depth === 1 ? "font-medium" : "text-muted-foreground"
+          } ${active ? "text-foreground" : ""}`}
+        >
+          {label}
+        </button>
+      </th>
+      <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">{count}</td>
+    </tr>
+  );
+}
 
 export type ExplorerSource = {
   id: string;
@@ -102,6 +142,12 @@ export function SourceExplorer({ sources }: { sources: ExplorerSource[] }) {
     }
     return [...counts.entries()].sort((a, b) => b[1] - a[1]);
   }, [activeContinent, sources, kinds, status, search]);
+
+  const countryCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const s of base) if (s.country) counts[s.country] = (counts[s.country] ?? 0) + 1;
+    return counts;
+  }, [sources, kinds, status, search]);
 
   const unknownCount = base.filter((s) => !s.country).length;
   const inRegion = base.filter((s) =>
@@ -219,56 +265,59 @@ export function SourceExplorer({ sources }: { sources: ExplorerSource[] }) {
         </div>
       </div>
 
-      {/* Region tree */}
-      <div className="flex flex-col gap-2" role="group" aria-label="Region">
-        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          Region · {regionLabel}
-        </p>
-        <div className="flex flex-wrap gap-2">
-          <button type="button" className={chip(region === "world")} aria-pressed={region === "world"} onClick={() => {
-            setContinent(null);
-            setCountry(null);
-          }}>
-            World <span className="opacity-70">{base.length}</span>
-          </button>
-          {continentCounts.map((c) => (
-            <button
-              key={c.code}
-              type="button"
-              className={chip(continent === c.code)}
-              aria-pressed={continent === c.code}
-              onClick={() => {
-                setContinent(c.code);
-                setCountry(null);
-              }}
-            >
-              {c.name} <span className="opacity-70">{c.count}</span>
-            </button>
-          ))}
-          {unknownCount > 0 ? (
-            <button type="button" className={chip(continent === "unknown")} aria-pressed={continent === "unknown"} onClick={() => {
-                setContinent("unknown");
-                setCountry(null);
-              }}>
-              Unknown <span className="opacity-70">{unknownCount}</span>
-            </button>
-          ) : null}
+      {/* Region: world map (visual) + table (the base view; keyboard- and screen-reader-friendly) */}
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]" role="group" aria-label="Region">
+        <WorldMap
+          counts={countryCounts}
+          continent={activeContinent}
+          selected={country}
+          labelFor={countryName}
+          onSelect={(code) => {
+            const owner = CONTINENTS.find((c) => countryInScope(code, c.code));
+            setContinent(owner?.code ?? null);
+            setCountry(country === code ? null : code);
+          }}
+        />
+        <div className="max-h-[26rem] overflow-auto rounded-xl border border-border">
+          <table className="w-full text-sm">
+            <caption className="sr-only">Sources by region. Select a row to browse and manage that region.</caption>
+            <thead className="sticky top-0 border-b border-border bg-surface-muted text-left text-xs text-muted-foreground">
+              <tr>
+                <th scope="col" className="px-3 py-2 font-medium">Region · {regionLabel}</th>
+                <th scope="col" className="px-3 py-2 text-right font-medium">Sources</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              <RegionRow label="World" count={base.length} depth={0} active={region === "world"} onClick={() => { setContinent(null); setCountry(null); }} />
+              {continentCounts.map((c) => (
+                <Fragment key={c.code}>
+                  <RegionRow
+                    label={c.name}
+                    count={c.count}
+                    depth={1}
+                    active={region === c.code}
+                    onClick={() => { setContinent(c.code); setCountry(null); }}
+                  />
+                  {activeContinent === c.code
+                    ? countryChips.map(([code, count]) => (
+                        <RegionRow
+                          key={code}
+                          label={countryName(code)}
+                          count={count}
+                          depth={2}
+                          active={country === code}
+                          onClick={() => setCountry(country === code ? null : code)}
+                        />
+                      ))
+                    : null}
+                </Fragment>
+              ))}
+              {unknownCount > 0 ? (
+                <RegionRow label="Unknown" count={unknownCount} depth={1} active={continent === "unknown"} onClick={() => { setContinent("unknown"); setCountry(null); }} />
+              ) : null}
+            </tbody>
+          </table>
         </div>
-        {countryChips.length > 0 ? (
-          <div className="flex flex-wrap gap-2 border-l-2 border-border pl-3" role="group" aria-label="Countries">
-            {countryChips.map(([code, count]) => (
-              <button
-                key={code}
-                type="button"
-                className={chip(country === code)}
-                aria-pressed={country === code}
-                onClick={() => setCountry(country === code ? null : code)}
-              >
-                {countryName(code)} <span className="opacity-70">{count}</span>
-              </button>
-            ))}
-          </div>
-        ) : null}
       </div>
 
       {/* Add a feed to exactly the region being browsed */}

@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { notFound, redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/session";
+import { AdminNav } from "./admin-nav";
 
 /**
  * docs/ux/SCREEN_INVENTORY.md §19 — "explicitly separated from tenant app
@@ -28,6 +29,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
         </div>
         <span className="text-sm text-muted-foreground">{user.email}</span>
       </header>
+      <AdminNav />
       <main className="flex-1 px-6 py-8">{children}</main>
     </div>
   );

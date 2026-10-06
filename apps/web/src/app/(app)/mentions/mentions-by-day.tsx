@@ -13,6 +13,7 @@ import { PrintLine } from "./print-clipping";
 
 type DayItem = {
   id: string;
+  queryId: string;
   title: string;
   url: string;
   sourceName: string;
@@ -25,7 +26,11 @@ type DayItem = {
   assigneeName: string | null;
   print: ArticlePrint | null;
 };
-type DayState = { status: "loading" } | { status: "error" } | { status: "ready"; items: DayItem[]; truncated: boolean };
+type DayQuery = { id: string; name: string };
+type DayState =
+  | { status: "loading" }
+  | { status: "error" }
+  | { status: "ready"; items: DayItem[]; queries: DayQuery[]; truncated: boolean };
 
 const SENTIMENT_TONE = { positive: "success", neutral: "neutral", negative: "danger" } as const;
 const TYPE_TONE: Record<string, string> = {
@@ -64,6 +69,79 @@ function TypeBadge({ type }: { type: string }) {
   );
 }
 
+function ItemList({ items, onOpen }: { items: DayItem[]; onOpen: (id: string) => void }) {
+  return (
+      <ul className="divide-y divide-border border-t border-border">
+        {items.map((item) => (
+          <li key={item.id} className="flex flex-col gap-1.5 px-3 py-2.5 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <TypeBadge type={item.sourceType} />
+                <button
+                  type="button"
+                  onClick={() => onOpen(item.id)}
+                  className="rounded-sm text-left text-sm font-medium text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                >
+                  {item.title}
+                  <span className="sr-only"> — open details</span>
+                </button>
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {item.sourceName}
+                {item.sourceCountry ? ` · ${countryName(item.sourceCountry)}` : ""} ·{" "}
+                <time dateTime={item.publishedAt}>
+                  {new Date(item.publishedAt).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Istanbul" })}
+                </time>
+              </p>
+              {item.print ? (
+                <p className="mt-1">
+                  <PrintLine print={item.print} />
+                  {item.print.pageUrl ? (
+                    <>
+                      {" "}
+                      <a
+                        href={item.print.pageUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-primary underline underline-offset-2"
+                      >
+                        View page<span className="sr-only"> of {item.print.publication} (new tab)</span>
+                      </a>
+                    </>
+                  ) : null}
+                </p>
+              ) : null}
+              {item.matchedTerms.length > 0 ? (
+                <ul className="mt-1.5 flex flex-wrap gap-1" aria-label="Matched keywords">
+                  {item.matchedTerms.slice(0, 4).map((term) => (
+                    <li key={term} className="rounded-sm bg-secondary px-1.5 py-0.5 text-[11px] text-secondary-foreground">
+                      {term}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              {item.sentiment ? (
+                <Badge tone={SENTIMENT_TONE[item.sentiment as keyof typeof SENTIMENT_TONE] ?? "neutral"}>{item.sentiment}</Badge>
+              ) : null}
+              {item.priority !== "normal" ? <Badge tone={item.priority === "low" ? "neutral" : "warning"}>{item.priority}</Badge> : null}
+              <a
+                href={item.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-xs text-primary underline underline-offset-2"
+              >
+                Open story<span className="sr-only"> “{item.title}” on {item.sourceName} (new tab)</span>
+                <ExternalLink className="size-3" aria-hidden="true" />
+              </a>
+            </div>
+          </li>
+        ))}
+      </ul>
+  );
+}
+
 function DayBody({ state, onOpen }: { state: DayState | undefined; onOpen: (id: string) => void }) {
   if (!state || state.status === "loading") return <p className="px-4 py-6 text-sm text-muted-foreground">Loading…</p>;
   if (state.status === "error") {
@@ -73,87 +151,39 @@ function DayBody({ state, onOpen }: { state: DayState | undefined; onOpen: (id: 
       </p>
     );
   }
-  const clusters = SOURCE_KINDS.map((kind) => ({
-    kind,
-    items: state.items.filter((item) => sourceKindOfType(item.sourceType) === kind.key),
-  })).filter((cluster) => cluster.items.length > 0);
+  // One block per monitoring (the one filtered on first, then in Monitoring-page
+  // order), each with its own stories; inside a block the stories keep the
+  // kind-of-place clusters (news & press, blogs, forums, social, broadcast).
+  const groups = state.queries
+    .map((query) => ({ query, items: state.items.filter((item) => item.queryId === query.id) }))
+    .filter((group) => group.items.length > 0);
 
   return (
     <div className="flex flex-col gap-3 px-3 pb-3">
-      {clusters.map(({ kind, items }) => (
-        <details key={kind.key} open className="rounded-xl border border-border bg-background/30">
-          <summary className="flex cursor-pointer items-center justify-between gap-2 px-3 py-2 text-sm font-semibold text-foreground">
-            <span>{kind.label}</span>
-            <span className="text-xs font-normal text-muted-foreground">{items.length}</span>
+      {groups.map(({ query, items }) => (
+        <details key={query.id} open className="rounded-xl border border-border bg-background/30">
+          <summary className="flex cursor-pointer items-center justify-between gap-2 px-3 py-2.5 text-sm font-bold text-foreground">
+            <span className="min-w-0 truncate">{query.name}</span>
+            <span className="shrink-0 text-xs font-normal text-muted-foreground">
+              {items.length} {items.length === 1 ? "story" : "stories"}
+            </span>
           </summary>
-          <ul className="divide-y divide-border border-t border-border">
-            {items.map((item) => (
-              <li key={item.id} className="flex flex-col gap-1.5 px-3 py-2.5 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <TypeBadge type={item.sourceType} />
-                    <button
-                      type="button"
-                      onClick={() => onOpen(item.id)}
-                      className="rounded-sm text-left text-sm font-medium text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                    >
-                      {item.title}
-                      <span className="sr-only"> — open details</span>
-                    </button>
-                  </div>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {item.sourceName}
-                    {item.sourceCountry ? ` · ${countryName(item.sourceCountry)}` : ""} ·{" "}
-                    <time dateTime={item.publishedAt}>
-                      {new Date(item.publishedAt).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Istanbul" })}
-                    </time>
-                  </p>
-                  {item.print ? (
-                    <p className="mt-1">
-                      <PrintLine print={item.print} />
-                      {item.print.pageUrl ? (
-                        <>
-                          {" "}
-                          <a
-                            href={item.print.pageUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-xs text-primary underline underline-offset-2"
-                          >
-                            View page<span className="sr-only"> of {item.print.publication} (new tab)</span>
-                          </a>
-                        </>
-                      ) : null}
-                    </p>
-                  ) : null}
-                  {item.matchedTerms.length > 0 ? (
-                    <ul className="mt-1.5 flex flex-wrap gap-1" aria-label="Matched keywords">
-                      {item.matchedTerms.slice(0, 4).map((term) => (
-                        <li key={term} className="rounded-sm bg-secondary px-1.5 py-0.5 text-[11px] text-secondary-foreground">
-                          {term}
-                        </li>
-                      ))}
-                    </ul>
-                  ) : null}
-                </div>
-                <div className="flex shrink-0 items-center gap-2">
-                  {item.sentiment ? (
-                    <Badge tone={SENTIMENT_TONE[item.sentiment as keyof typeof SENTIMENT_TONE] ?? "neutral"}>{item.sentiment}</Badge>
-                  ) : null}
-                  {item.priority !== "normal" ? <Badge tone={item.priority === "low" ? "neutral" : "warning"}>{item.priority}</Badge> : null}
-                  <a
-                    href={item.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-xs text-primary underline underline-offset-2"
-                  >
-                    Open story<span className="sr-only"> “{item.title}” on {item.sourceName} (new tab)</span>
-                    <ExternalLink className="size-3" aria-hidden="true" />
-                  </a>
-                </div>
-              </li>
-            ))}
-          </ul>
+          <div className="flex flex-col gap-2 border-t border-border p-2">
+            {SOURCE_KINDS.map((kind) => ({
+              kind,
+              kindItems: items.filter((item) => sourceKindOfType(item.sourceType) === kind.key),
+            }))
+              .filter((cluster) => cluster.kindItems.length > 0)
+              .map(({ kind, kindItems }) => (
+                <details key={kind.key} open className="rounded-lg border border-border/70">
+                  <summary className="flex cursor-pointer items-center justify-between gap-2 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    <span>{kind.label}</span>
+                    <span className="font-normal normal-case">{kindItems.length}</span>
+                  </summary>
+                  <ItemList items={kindItems} onOpen={onOpen} />
+                </details>
+              ))}
+          </div>
         </details>
       ))}
       {state.truncated ? <p className="px-1 text-xs text-muted-foreground">Showing the 300 most recent stories of this day — narrow the filters to see the rest.</p> : null}
@@ -209,8 +239,11 @@ export function MentionsByDay({
       params.set("day", day);
       const response = await fetch(`/api/mentions/day?${params.toString()}`);
       if (!response.ok) throw new Error("failed");
-      const data = (await response.json()) as { items: DayItem[]; truncated: boolean };
-      setLoaded((current) => ({ ...current, [day]: { status: "ready", items: data.items, truncated: data.truncated } }));
+      const data = (await response.json()) as { items: DayItem[]; queries: DayQuery[]; truncated: boolean };
+      setLoaded((current) => ({
+        ...current,
+        [day]: { status: "ready", items: data.items, queries: data.queries, truncated: data.truncated },
+      }));
     } catch {
       setLoaded((current) => ({ ...current, [day]: { status: "error" } }));
     } finally {

@@ -15,7 +15,9 @@ import {
   listSocialConnections,
 } from "@cim/db";
 import { PLANNED_SOCIAL_PLATFORMS, SOCIAL_PROVIDERS, configuredSocialProviders } from "@cim/ingestion";
+import { getMonitoringQueryLimit } from "@cim/core";
 import { requireOrgContext } from "@/lib/tenant";
+import { getCurrentUser } from "@/lib/session";
 import {
   DataExportButton,
   DeleteAccountDialog,
@@ -79,6 +81,7 @@ export default async function SettingsPage({
   const rawSocial = (await searchParams).social;
   const socialNotice = Array.isArray(rawSocial) ? (rawSocial[0] ?? null) : (rawSocial ?? null);
   const configuredPlatforms = configuredSocialProviders(process.env);
+  const isOperator = (await getCurrentUser())?.isPlatformSuperAdmin === true;
   const canManageSettings = context.permissions.includes("org:manage_settings");
   const canManageApiKeys = context.permissions.includes("api_keys:manage");
   const canManageBilling = context.permissions.includes("org:manage_billing");
@@ -183,6 +186,8 @@ export default async function SettingsPage({
         usage={usage}
         trackedKeywords={trackedKeywords}
         credits={credits}
+        organizationName={context.organizationName}
+        monitoringLimit={isOperator ? null : getMonitoringQueryLimit(subscription.plan)}
       />
 
       {canManageBilling ? (

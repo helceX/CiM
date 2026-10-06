@@ -173,6 +173,7 @@ export async function listRecentArticlesForPreview(db: Db, days = 30, limit = 50
     .select({
       id: articles.id,
       title: articles.title,
+      storedExcerpt: articles.storedExcerpt,
       publishedAt: articles.publishedAt,
       sourceName: sources.name,
       sourceType: sources.type,

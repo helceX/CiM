@@ -234,3 +234,15 @@ export function queryQualityWarning(ast: QueryAst): string | null {
   }
   return null;
 }
+
+/**
+ * What a monitoring is matched against: the headline plus the lead the feed
+ * gave us (its summary / the stored snippet). Matching the headline alone
+ * misses every story that names the brand only in its first lines, which is
+ * most of them. The same text is used at ingest, when a monitoring is saved
+ * (backfill) and in the preview, so the three always agree.
+ */
+export function matchableText(article: { title: string; lead?: string | null }): string {
+  const lead = article.lead?.trim();
+  return lead ? `${article.title}\n${lead}` : article.title;
+}

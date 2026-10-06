@@ -260,6 +260,13 @@
       "when": 1790881431357,
       "tag": "0036_social_connections",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1790967831357,
+      "tag": "0037_decode_article_entities",
+      "breakpoints": true
     }
   ]
 }

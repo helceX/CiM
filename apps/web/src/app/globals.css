@@ -49,3 +49,16 @@
 html {
   font-family: var(--font-sans);
 }
+
+/* Admin sources world map (components/world-map.tsx) */
+.wm-sphere { fill: color-mix(in oklab, var(--color-primary) 4%, var(--color-background)); stroke: none; }
+.wm-country {
+  fill: color-mix(in oklab, var(--color-primary) var(--wm-strength, 0%), color-mix(in oklab, var(--color-foreground) 12%, var(--color-background)));
+  stroke: var(--color-background);
+  stroke-width: 0.6;
+  cursor: pointer;
+  transition: fill 120ms;
+}
+.wm-country:hover { fill: var(--color-primary); }
+.wm-scope { stroke: var(--color-primary); stroke-width: 1; }
+.wm-selected { fill: var(--color-primary); stroke: var(--color-foreground); stroke-width: 1.4; }

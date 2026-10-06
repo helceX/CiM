@@ -4,6 +4,7 @@ import {
   classifyMatchType,
   computeMatchPriority,
   findMatchedTerm,
+  matchableText,
   matchesText,
 } from "@cim/core";
 import {
@@ -78,11 +79,15 @@ export async function ingestSource(
       await maybeAssignStoryCluster(db, article);
     }
 
+    // Headline plus the feed's own summary (see matchableText): a story that
+    // names the brand in its first lines is a mention even when the headline
+    // does not. The priority signal stays headline-only.
+    const text = matchableText({ title: article.title, lead: raw.bodyText });
     for (const query of activeQueries) {
-      if (!matchesText(query.queryAst, article.title)) continue;
+      if (!matchesText(query.queryAst, text)) continue;
       const priority = computeMatchPriority(query.queryAst, article.title);
       const organizationId = asOrganizationId(query.organizationId);
-      const matchedTerm = findMatchedTerm(query.queryAst, article.title);
+      const matchedTerm = findMatchedTerm(query.queryAst, text);
       const { matchType, matchedRule } = matchedTerm
         ? classifyMatchType(query.queryAst, matchedTerm, source.type)
         : { matchType: null, matchedRule: null };

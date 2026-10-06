@@ -38,7 +38,9 @@ test.describe("mentions", () => {
   test.use({ storageState: storageStatePath });
 
   test("an empty filter combination shows the empty state, not a broken table", async ({ page }) => {
-    await page.goto("/mentions?view=list");
+    // A fresh monitoring now picks up the stories already stored (backfill), so
+    // "empty" has to come from the filters, not from a brand-new account.
+    await page.goto("/mentions?view=list&q=zzqx-no-such-story");
     await expect(page.getByText("No mentions match your filters.")).toBeVisible();
   });
 

@@ -87,6 +87,11 @@ export default async function ArchivePage() {
                       <Badge tone={STATUS_TONE[run.status] ?? "neutral"} className="capitalize">
                         {run.status}
                       </Badge>
+                      {run.status === "failed" ? (
+                        <span className="mt-1 block max-w-xs text-xs text-muted-foreground">
+                          {user?.isPlatformSuperAdmin && run.error ? run.error.slice(0, 200) : "We’ll try again automatically."}
+                        </span>
+                      ) : null}
                     </td>
                     <td className="px-4 py-3">
                       {run.status === "ready" && canOpen && configured ? (

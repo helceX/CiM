@@ -1,7 +1,7 @@
 import { and, count, desc, eq, gte, inArray, isNull, sql } from "drizzle-orm";
 import type { Db } from "../client";
 import { articles, mentions, sources, type Tag } from "../schema/content";
-import { monitoringQueries } from "../schema/monitoring";
+import { monitoringQueries, type QueryAst } from "../schema/monitoring";
 import { organizationMemberships } from "../schema/organizations";
 import { socialProfiles } from "../schema/social";
 import { users } from "../schema/users";
@@ -350,6 +350,8 @@ export type MentionDayItem = MentionListItem & {
   /** The monitoring the story matched — a story matched by two monitorings appears under both. */
   queryName: string;
   queryCreatedAt: Date;
+  /** The monitoring's keyword structure, for grouping a day's stories by concept. */
+  queryAst: QueryAst;
 };
 
 /** Every mention of one day (capped), newest first — loaded when the day is opened. */
@@ -372,6 +374,7 @@ export async function listMentionsForDay(
       assigneeName: assigneeNameColumn,
       queryName: monitoringQueries.name,
       queryCreatedAt: monitoringQueries.createdAt,
+      queryAst: monitoringQueries.queryAst,
     })
     .from(mentions)
     .innerJoin(articles, eq(articles.id, mentions.articleId))

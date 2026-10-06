@@ -118,3 +118,26 @@ describe("POST /api/monitoring — plan limit", () => {
     expect(backfillMentionsForQuery).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("POST /api/monitoring — scope and concepts", () => {
+  it("stores the region scope and the alias groups, adding names that were not keywords yet", async () => {
+    requirePermission.mockResolvedValueOnce({ organizationId: "org-1", userId: "user-1" });
+    getProject.mockResolvedValueOnce({ id: basePayload.projectId });
+    createMonitoringQueryWithPlanLimit.mockResolvedValueOnce({ ok: true, query: { id: "query-1", sourceTypes: ["news"], regionScopes: ["TR"] } });
+
+    const response = await POST(
+      makeRequest({
+        ...basePayload,
+        include: ["BTM"],
+        aliasGroups: [["BTM", "Bilgiyi Ticarileştirme Merkezi"], ["solo"]],
+        regionScopes: ["tr", "nowhere"],
+      }),
+    );
+    expect(response.status).toBe(200);
+    const created = createMonitoringQueryWithPlanLimit.mock.calls[0]?.[2];
+    expect(created.regionScopes).toEqual(["TR"]);
+    expect(created.queryAst.aliasGroups).toEqual([["BTM", "Bilgiyi Ticarileştirme Merkezi"]]);
+    expect(created.queryAst.include).toEqual(["BTM", "Bilgiyi Ticarileştirme Merkezi"]);
+    expect(backfillMentionsForQuery.mock.calls[0]?.[2]).toMatchObject({ regionScopes: ["TR"] });
+  });
+});

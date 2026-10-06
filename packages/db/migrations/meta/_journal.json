@@ -290,6 +290,13 @@
       "breakpoints": true
     },
     {
+      "idx": 41,
+      "version": "7",
+      "when": 1791240000000,
+      "tag": "0041_articles_fetched_at_idx",
+      "breakpoints": true
+    },
+    {
       "idx": 42,
       "version": "7",
       "when": 1791250000000,

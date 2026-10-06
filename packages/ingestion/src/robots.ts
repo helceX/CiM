@@ -84,10 +84,35 @@ export function isDisallowedForBotByName(robotsTxt: string, userAgent: string, p
   return !isPathAllowedByRobots(robotsTxt, userAgent, path);
 }
 
+const ROBOTS_CACHE_MS = 60 * 60_000;
+const ROBOTS_CACHE_MAX = 5_000;
+const robotsCache = new Map<string, { at: number; body: Promise<string | null> }>();
+
+/** Forget remembered robots.txt files (tests). */
+export function clearRobotsCache(): void {
+  robotsCache.clear();
+}
+
+/**
+ * robots.txt for a host, remembered for an hour. A publisher with dozens of feeds (and every crawl of
+ * each one, twice) used to download the same file again and again; the answer — including "none" —
+ * is shared, and simultaneous callers wait for one request.
+ */
+function fetchRobotsTxtCached(protocol: string, host: string): Promise<string | null> {
+  const key = `${protocol}//${host}`;
+  const now = Date.now();
+  const hit = robotsCache.get(key);
+  if (hit && now - hit.at < ROBOTS_CACHE_MS) return hit.body;
+  if (robotsCache.size >= ROBOTS_CACHE_MAX) robotsCache.clear();
+  const body = fetchRobotsTxt(protocol, host);
+  robotsCache.set(key, { at: now, body });
+  return body;
+}
+
 /** True only when robots.txt explicitly tells Mediaory-Bot (by name) to stay away from this URL. */
 export async function isExplicitlyBlockedByRobots(targetUrl: string): Promise<boolean> {
   const parsed = new URL(targetUrl);
-  const body = await fetchRobotsTxt(parsed.protocol, parsed.host);
+  const body = await fetchRobotsTxtCached(parsed.protocol, parsed.host);
   if (body === null) return false;
   return isDisallowedForBotByName(body, USER_AGENT, parsed.pathname || "/");
 }

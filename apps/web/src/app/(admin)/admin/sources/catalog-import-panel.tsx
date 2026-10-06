@@ -57,8 +57,8 @@ export function CatalogImportPanel({
             Automatic catalog import: {enabled ? "on" : "paused"}
           </p>
           <p className="text-xs text-muted-foreground">
-            The worker adds the Türkiye and world catalog feeds by itself — 25 every 5 minutes, each fetch-tested first —
-            and stands down while the crawl queue is backed up or the database is filling its volume.
+            The worker adds the Türkiye and world catalog feeds by itself — 50 every 5 minutes, each fetch-tested first —
+            and stands down while the crawler is not keeping up or the database is filling its volume.
           </p>
         </div>
         <Button type="button" variant="secondary" onClick={toggle} disabled={busy}>

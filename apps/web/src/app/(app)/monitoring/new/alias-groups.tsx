@@ -46,7 +46,7 @@ export function AliasGroups({
       <div className="flex gap-2">
         <Input
           value={draft}
-          aria-label="Names of the same thing, separated by ="
+          aria-label="Alternative spellings of one thing, separated by ="
           placeholder="İTO = İstanbul Ticaret Odası"
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => {

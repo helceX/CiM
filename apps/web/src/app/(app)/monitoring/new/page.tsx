@@ -23,17 +23,15 @@ export default async function NewMonitoringPage() {
           Track a brand, competitor, campaign, or topic across your selected sources.
         </p>
       </div>
-      {limitCheck.ok ? (
-        <QueryBuilderForm projects={projects.map((p) => ({ id: p.id, name: p.name }))} />
-      ) : (
+      {!limitCheck.ok ? (
         <div role="status" className="flex flex-col gap-3 rounded-lg border border-border p-5">
           <p className="text-sm font-medium text-foreground">
-            Your plan allows {limitCheck.limit} monitoring{" "}
-            {limitCheck.limit === 1 ? "query" : "queries"} and you are using
-            {limitCheck.limit === 1 ? " it" : " all of them"}.
+            Your plan allows {limitCheck.limit} monitoring {limitCheck.limit === 1 ? "query" : "queries"} and you are
+            using {limitCheck.limit === 1 ? "it" : "all of them"}, so a new one can&apos;t be saved yet.
           </p>
           <p className="text-sm text-muted-foreground">
-            Upgrade to add more, or pause or delete an existing monitoring to free a slot.
+            Upgrade to add more, or pause or delete an existing monitoring to free a slot. You can still try keywords
+            and preview matches below.
           </p>
           <div className="flex flex-wrap gap-2">
             <Link
@@ -50,7 +48,11 @@ export default async function NewMonitoringPage() {
             </Link>
           </div>
         </div>
-      )}
+      ) : null}
+      <QueryBuilderForm
+        projects={projects.map((p) => ({ id: p.id, name: p.name }))}
+        saveBlocked={!limitCheck.ok}
+      />
     </div>
   );
 }

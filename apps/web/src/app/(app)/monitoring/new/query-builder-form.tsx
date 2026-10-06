@@ -127,7 +127,14 @@ function ChipInput({
   );
 }
 
-export function QueryBuilderForm({ projects }: { projects: Project[] }) {
+export function QueryBuilderForm({
+  projects,
+  saveBlocked = false,
+}: {
+  projects: Project[];
+  /** The plan's monitoring cap is reached: keywords and preview still work, saving does not. */
+  saveBlocked?: boolean;
+}) {
   const router = useRouter();
   const [mode, setMode] = useState<"simple" | "advanced">("simple");
   const [name, setName] = useState("");
@@ -411,7 +418,7 @@ export function QueryBuilderForm({ projects }: { projects: Project[] }) {
       ) : null}
 
       <div className="flex justify-end">
-        <Button type="button" onClick={handleSave} disabled={isSubmitting}>
+        <Button type="button" onClick={handleSave} disabled={isSubmitting || saveBlocked}>
           {isSubmitting ? "Saving…" : "Save monitoring"}
         </Button>
       </div>

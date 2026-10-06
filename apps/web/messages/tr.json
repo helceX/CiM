@@ -552,6 +552,77 @@
       "error": "Talebiniz gönderilemedi. Formu kontrol edip tekrar deneyin."
     },
     "footerTerms": "Kullanım Şartları",
-    "footerBot": "Yayıncılar için"
+    "footerBot": "Yayıncılar için",
+    "privacy": {
+      "eyebrow": "Hukuki",
+      "title": "Gizlilik ve KVKK",
+      "accent": "Aydınlatma Metni",
+      "lead": "Mediaory'nin hangi kişisel verileri neden, ne kadar süreyle işlediği ve KVKK kapsamındaki haklarınız. Sade bir dille yazılmıştır.",
+      "sections": [
+        {
+          "title": "Biz kimiz",
+          "body": [
+            "Mediaory bir medya ve web izleme hizmetidir. Aşağıda anlatılan hesap, fatura iletişimi ve kullanım verileri bakımından Mediaory veri sorumlusudur. İletişim: hello@mediaory.io.",
+            "Müşterilerimiz adına herkese açık kaynaklardan dizinlediğimiz başlık, kısa özet ve kamuya açık yazar adları bakımından arama ve dizinleme hizmeti sunarız; bkz. 4. bölüm."
+          ]
+        },
+        {
+          "title": "Müşterilerle ilgili işlediğimiz veriler",
+          "body": [
+            "Hesap verileri: ad, e-posta adresi, hashlenmiş parola, bağlı olduğunuz organizasyon, rolünüz ve gönderdiğiniz veya aldığınız davetler.",
+            "Sizin oluşturduğunuz çalışma alanı verileri: izleme anahtar kelimeleri ve sorguları, uyarı kuralları, raporlar ve dışa aktarımlar, etiketler, yorumlar, atamalar ve organizasyonunuzun ayarları.",
+            "Hizmet verileri: oturumlar, güvenlik ve denetim kayıtları, kullanım sayaçları (ör. kaç anahtar kelime veya rapor kullandığınız) ve hizmeti kötüye kullanıma karşı korumak için kullanılan IP adresi, tarayıcı türü gibi teknik veriler.",
+            "Bir sosyal medya hesabı bağlarsanız, o hesabın herkese açık verilerini okumak için gereken bağlantı bilgisini tutarız; hesaptan başka bir şey tutmayız."
+          ]
+        },
+        {
+          "title": "Neden ve hangi hukuki sebeple işliyoruz",
+          "body": [
+            "İstediğiniz hizmeti sunmak ve güvenliğini sağlamak için (sözleşmenin ifası; güvenlik ve kötüye kullanımı önleme konusundaki meşru menfaatimiz). Doğrulama, uyarı, özet ve haftalık arşiv bağlantısı gibi hizmet e-postalarını göndermek için. Hukuki yükümlülüklerimizi yerine getirmek için. Kişisel verileri satmayız ve çalışma alanı verilerinizi yapay zekâ modellerini eğitmek için kullanmayız."
+          ]
+        },
+        {
+          "title": "Herkese açık kaynaklardaki içerik",
+          "body": [
+            "Herkese açık kaynakları dizinleriz. Her haber için başlığı, bağlantıyı, yayın zamanını, kaynak veriyorsa kamuya açık yazar adını ve en çok 200 karakterlik bir özeti saklarız. Eşleştirme için ayrıca bir kelime parmak izi saklarız: başlık ve özetteki kelimelerin özet değerleri; bunlar metne geri dönüştürülemez.",
+            "Hiçbir müşterinin izlemesiyle eşleşmeyen haberler 14 gün sonra silinir. Eşleşenler müşterinin çalışma alanında mention olarak, müşterinin kendi saklama ayarı onları silene kadar durur ve müşterinin haftalık arşivinde yer alır.",
+            "Kamuya açık haberlerde adı geçen kişiler müşterimiz değildir. Hakkınızdaki bir içeriğin kaldırılmasını isterseniz veya bir sorunuz varsa bize ulaşın (bkz. 9. bölüm); yayıncılar içerik kaldırma formunu kullanabilir."
+          ]
+        },
+        {
+          "title": "Verilerin aktarıldığı taraflar",
+          "body": [
+            "Mediaory'yi çalıştırmak için hizmet sağlayıcılar kullanırız: bulut barındırma ve veritabanı, haftalık arşivler için nesne depolama, e-posta gönderim hizmeti ve yapay zekâ özellikleri açıksa özet üretmek için başlık ve kısa özetleri alan bir yapay zekâ sağlayıcısı. Bunlar verileri bizim talimatımızla işler. Bazıları Türkiye dışındadır; bu nedenle veriler yurt dışına aktarılabilir. Gerektiğinde kanunun izin verdiği güvencelere dayanırız.",
+            "Verileri yalnızca kanunen gerektiğinde yetkili makamlara açıklarız."
+          ]
+        },
+        {
+          "title": "Ne kadar saklıyoruz",
+          "body": [
+            "Hesap ve çalışma alanı verileri: hesap var olduğu sürece ve siz sildikten sonra silme tamamlanana kadar. Organizasyonu veya hesabınızı silmek, ona bağlı verileri kaldırır. Haftalık arşivler, organizasyon silene veya kapanana kadar erişilebilir kalır. Güvenlik ve denetim kayıtları, koruma ve hukuki amaçlar için gereken sınırlı süre saklanır."
+          ]
+        },
+        {
+          "title": "Güvenlik",
+          "body": [
+            "Parolalar hashlenerek saklanır, oturumlar korunur, erişim rollerle sınırlandırılır ve her istek ait olduğu organizasyona göre denetlenir. Hiçbir sistem tamamen güvenli değildir; bir ihlal sizi etkilerse kanunun gerektirdiği şekilde size ve yetkili makamlara bildiririz."
+          ]
+        },
+        {
+          "title": "Haklarınız (KVKK madde 11)",
+          "body": [
+            "6698 sayılı Kişisel Verilerin Korunması Kanunu (KVKK) uyarınca; verilerinizin işlenip işlenmediğini öğrenme, işlenmişse bilgi talep etme, işlenme amacını ve amacına uygun kullanılıp kullanılmadığını öğrenme, aktarıldığı kişileri bilme, düzeltilmesini, silinmesini veya yok edilmesini isteme, bu işlemlerin aktarıldığı kişilere bildirilmesini isteme, yalnızca otomatik analiz sonucu aleyhinize bir sonuca itiraz etme ve kanuna aykırı işlemeden doğan zararın giderilmesini talep etme haklarına sahipsiniz.",
+            "Müşteriyseniz verilerinizi Ayarlar'dan dışa aktarabilir ve silebilirsiniz. Her talep için bize yazın; 30 gün içinde yanıtlarız. Kişisel Verileri Koruma Kurumu'na (KVKK) şikâyette de bulunabilirsiniz."
+          ]
+        },
+        {
+          "title": "İletişim",
+          "body": [
+            "Gizlilik soruları ve talepleri: hello@mediaory.io. Yayıncılar: içerik kaldırma talep formunu kullanın."
+          ]
+        }
+      ]
+    },
+    "footerPrivacy": "Gizlilik / KVKK"
   }
 }

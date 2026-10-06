@@ -552,6 +552,77 @@
       "error": "We could not send your request. Please check the form and try again."
     },
     "footerTerms": "Terms of Service",
-    "footerBot": "For publishers"
+    "footerBot": "For publishers",
+    "privacy": {
+      "eyebrow": "Legal",
+      "title": "Privacy",
+      "accent": "Notice",
+      "lead": "What personal data Mediaory processes, why, for how long, and the rights you have under Turkey's data protection law (KVKK). Written in plain language.",
+      "sections": [
+        {
+          "title": "Who we are",
+          "body": [
+            "Mediaory is a media and web monitoring service. For the account, billing-contact and usage data described below, Mediaory is the data controller. Contact: hello@mediaory.io.",
+            "For the headlines, short excerpts and public author names we index from public sources on behalf of our customers, we act as a search and indexing service; see section 4."
+          ]
+        },
+        {
+          "title": "Data we process about customers",
+          "body": [
+            "Account data: name, email address, a hashed password, the organization you belong to, your role and the invitations you send or receive.",
+            "Workspace data you create: monitoring keywords and queries, alert rules, reports and exports, tags, comments, assignments and the settings of your organization.",
+            "Service data: sign-in sessions, security and audit events, usage counters (for example how many keywords or reports you use) and technical data such as IP address and browser type used to protect the service from abuse.",
+            "If you connect a social account, we keep the connection details needed to read that account's public data and nothing else from the account."
+          ]
+        },
+        {
+          "title": "Why we process it, and on what basis",
+          "body": [
+            "To provide the service you asked for and to keep it secure (performance of a contract; our legitimate interest in security and abuse prevention). To send service emails such as verification, alerts, digests and weekly archive links. To meet legal obligations. We do not sell personal data and we do not use your workspace data to train AI models."
+          ]
+        },
+        {
+          "title": "Content from public sources",
+          "body": [
+            "We index publicly available sources. For each story we keep the headline, the link, the publication time, a public author name where the source gives one, and an excerpt of at most 200 characters. For matching we also keep a word fingerprint: hashes of the words of the headline and summary, which cannot be turned back into text.",
+            "Stories that no customer's monitoring matched are deleted after 14 days. Stories that were matched stay as mentions in the customer's workspace until the customer's own retention setting removes them, and are listed in the customer's weekly archive.",
+            "People named in public news are not our customers. If you want content about you removed or have a question about it, contact us (see section 9) — publishers can use the takedown form."
+          ]
+        },
+        {
+          "title": "Who receives data",
+          "body": [
+            "We use service providers to run Mediaory: cloud hosting and databases, object storage for weekly archives, an email delivery service and, where AI features are enabled, an AI provider that receives headlines and short excerpts to produce summaries. They process data on our instructions. Some of them are located outside Türkiye, so data may be transferred abroad; where required we rely on the safeguards the law allows.",
+            "We disclose data to authorities only when the law requires it."
+          ]
+        },
+        {
+          "title": "How long we keep it",
+          "body": [
+            "Account and workspace data: while the account exists, and until deletion is complete after you delete it. Deleting the organization or your account removes the data linked to it. Weekly archives stay available to the organization until it deletes them or closes. Security and audit logs are kept for a limited period needed for protection and legal purposes."
+          ]
+        },
+        {
+          "title": "Security",
+          "body": [
+            "Passwords are stored hashed, sessions are protected, access is limited by roles and every request is checked against the organization it belongs to. No system is perfectly secure; if a breach affects you we will notify you and the authorities as the law requires."
+          ]
+        },
+        {
+          "title": "Your rights (KVKK Article 11)",
+          "body": [
+            "Under Turkey's Personal Data Protection Law (KVKK) you can ask whether your data is processed, request information about it, learn the purpose and whether it is used accordingly, know who it is transferred to, ask for correction, deletion or destruction, ask that these actions be notified to recipients, object to a result that arises solely from automated analysis, and claim compensation for unlawful processing.",
+            "If you are a customer, you can export and delete your data from Settings. For any request, write to us; we reply within 30 days. You can also complain to the Personal Data Protection Authority (KVKK)."
+          ]
+        },
+        {
+          "title": "Contact",
+          "body": [
+            "Privacy questions and requests: hello@mediaory.io. Publishers: use the takedown request form."
+          ]
+        }
+      ]
+    },
+    "footerPrivacy": "Privacy"
   }
 }

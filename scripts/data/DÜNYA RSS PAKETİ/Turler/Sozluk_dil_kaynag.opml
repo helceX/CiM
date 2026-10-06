@@ -1,0 +1,49 @@
+<?xml version='1.0' encoding='utf-8'?>
+<opml version="2.0">
+  <head>
+    <title>Sözlük / dil kaynağı — adaylar dahil</title>
+  </head>
+  <body>
+    <outline text="Avrupa">
+      <outline text="Birleşik Krallık">
+        <outline text="Sözlük / dil kaynağı">
+          <outline type="rss" text="Cambridge Dictionary Blog" title="Cambridge Dictionary Blog" xmlUrl="https://dictionaryblog.cambridge.org/feed/" htmlUrl="https://dictionaryblog.cambridge.org/" />
+        </outline>
+      </outline>
+    </outline>
+    <outline text="Kuzey Amerika">
+      <outline text="ABD">
+        <outline text="Sözlük / dil kaynağı">
+          <outline type="rss" text="Merriam-Webster" title="Merriam-Webster" xmlUrl="https://www.merriam-webster.com/wotd/feed/rss2" htmlUrl="https://www.merriam-webster.com/word-of-the-day" />
+        </outline>
+      </outline>
+    </outline>
+    <outline text="Küresel / çok ülkeli">
+      <outline text="Küresel / çok ülkeli">
+        <outline text="Sözlük / dil kaynağı">
+          <outline type="rss" text="A.Word.A.Day" title="A.Word.A.Day" xmlUrl="https://wordsmith.org/awad/rss1.xml" htmlUrl="https://wordsmith.org/awad/" />
+          <outline type="rss" text="Wiktionary (ar)" title="Wiktionary (ar)" xmlUrl="https://ar.wiktionary.org/w/api.php?action=feedrecentchanges&amp;feedformat=atom&amp;hidebots=1" htmlUrl="https://ar.wiktionary.org" />
+          <outline type="rss" text="Wiktionary (de)" title="Wiktionary (de)" xmlUrl="https://de.wiktionary.org/w/api.php?action=feedrecentchanges&amp;feedformat=atom&amp;hidebots=1" htmlUrl="https://de.wiktionary.org" />
+          <outline type="rss" text="Wiktionary (en)" title="Wiktionary (en)" xmlUrl="https://en.wiktionary.org/w/api.php?action=feedrecentchanges&amp;feedformat=atom&amp;hidebots=1" htmlUrl="https://en.wiktionary.org" />
+          <outline type="rss" text="Wiktionary (es)" title="Wiktionary (es)" xmlUrl="https://es.wiktionary.org/w/api.php?action=feedrecentchanges&amp;feedformat=atom&amp;hidebots=1" htmlUrl="https://es.wiktionary.org" />
+          <outline type="rss" text="Wiktionary (fa)" title="Wiktionary (fa)" xmlUrl="https://fa.wiktionary.org/w/api.php?action=feedrecentchanges&amp;feedformat=atom&amp;hidebots=1" htmlUrl="https://fa.wiktionary.org" />
+          <outline type="rss" text="Wiktionary (fr)" title="Wiktionary (fr)" xmlUrl="https://fr.wiktionary.org/w/api.php?action=feedrecentchanges&amp;feedformat=atom&amp;hidebots=1" htmlUrl="https://fr.wiktionary.org" />
+          <outline type="rss" text="Wiktionary (hi)" title="Wiktionary (hi)" xmlUrl="https://hi.wiktionary.org/w/api.php?action=feedrecentchanges&amp;feedformat=atom&amp;hidebots=1" htmlUrl="https://hi.wiktionary.org" />
+          <outline type="rss" text="Wiktionary (id)" title="Wiktionary (id)" xmlUrl="https://id.wiktionary.org/w/api.php?action=feedrecentchanges&amp;feedformat=atom&amp;hidebots=1" htmlUrl="https://id.wiktionary.org" />
+          <outline type="rss" text="Wiktionary (it)" title="Wiktionary (it)" xmlUrl="https://it.wiktionary.org/w/api.php?action=feedrecentchanges&amp;feedformat=atom&amp;hidebots=1" htmlUrl="https://it.wiktionary.org" />
+          <outline type="rss" text="Wiktionary (ja)" title="Wiktionary (ja)" xmlUrl="https://ja.wiktionary.org/w/api.php?action=feedrecentchanges&amp;feedformat=atom&amp;hidebots=1" htmlUrl="https://ja.wiktionary.org" />
+          <outline type="rss" text="Wiktionary (ko)" title="Wiktionary (ko)" xmlUrl="https://ko.wiktionary.org/w/api.php?action=feedrecentchanges&amp;feedformat=atom&amp;hidebots=1" htmlUrl="https://ko.wiktionary.org" />
+          <outline type="rss" text="Wiktionary (nl)" title="Wiktionary (nl)" xmlUrl="https://nl.wiktionary.org/w/api.php?action=feedrecentchanges&amp;feedformat=atom&amp;hidebots=1" htmlUrl="https://nl.wiktionary.org" />
+          <outline type="rss" text="Wiktionary (pl)" title="Wiktionary (pl)" xmlUrl="https://pl.wiktionary.org/w/api.php?action=feedrecentchanges&amp;feedformat=atom&amp;hidebots=1" htmlUrl="https://pl.wiktionary.org" />
+          <outline type="rss" text="Wiktionary (pt)" title="Wiktionary (pt)" xmlUrl="https://pt.wiktionary.org/w/api.php?action=feedrecentchanges&amp;feedformat=atom&amp;hidebots=1" htmlUrl="https://pt.wiktionary.org" />
+          <outline type="rss" text="Wiktionary (ru)" title="Wiktionary (ru)" xmlUrl="https://ru.wiktionary.org/w/api.php?action=feedrecentchanges&amp;feedformat=atom&amp;hidebots=1" htmlUrl="https://ru.wiktionary.org" />
+          <outline type="rss" text="Wiktionary (sv)" title="Wiktionary (sv)" xmlUrl="https://sv.wiktionary.org/w/api.php?action=feedrecentchanges&amp;feedformat=atom&amp;hidebots=1" htmlUrl="https://sv.wiktionary.org" />
+          <outline type="rss" text="Wiktionary (tr)" title="Wiktionary (tr)" xmlUrl="https://tr.wiktionary.org/w/api.php?action=feedrecentchanges&amp;feedformat=atom&amp;hidebots=1" htmlUrl="https://tr.wiktionary.org" />
+          <outline type="rss" text="Wiktionary (uk)" title="Wiktionary (uk)" xmlUrl="https://uk.wiktionary.org/w/api.php?action=feedrecentchanges&amp;feedformat=atom&amp;hidebots=1" htmlUrl="https://uk.wiktionary.org" />
+          <outline type="rss" text="Wiktionary (vi)" title="Wiktionary (vi)" xmlUrl="https://vi.wiktionary.org/w/api.php?action=feedrecentchanges&amp;feedformat=atom&amp;hidebots=1" htmlUrl="https://vi.wiktionary.org" />
+          <outline type="rss" text="Wiktionary (zh)" title="Wiktionary (zh)" xmlUrl="https://zh.wiktionary.org/w/api.php?action=feedrecentchanges&amp;feedformat=atom&amp;hidebots=1" htmlUrl="https://zh.wiktionary.org" />
+        </outline>
+      </outline>
+    </outline>
+  </body>
+</opml>

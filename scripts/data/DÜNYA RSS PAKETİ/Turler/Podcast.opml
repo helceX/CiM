@@ -1,0 +1,79 @@
+<?xml version='1.0' encoding='utf-8'?>
+<opml version="2.0">
+  <head>
+    <title>Podcast — adaylar dahil</title>
+  </head>
+  <body>
+    <outline text="Afrika">
+      <outline text="Etiyopya">
+        <outline text="Podcast">
+          <outline type="rss" text="VOA" title="VOA" xmlUrl="http://amharic.voanews.com/podcast/" htmlUrl="http://amharic.voanews.com/" />
+        </outline>
+      </outline>
+      <outline text="Çad">
+        <outline text="Podcast">
+          <outline type="rss" text="Le Visionnaire" title="Le Visionnaire" xmlUrl="https://rtvisionnaire.com/feed/podcast/" htmlUrl="https://rtvisionnaire.com" />
+        </outline>
+      </outline>
+    </outline>
+    <outline text="Asya">
+      <outline text="Japonya">
+        <outline text="Podcast">
+          <outline type="rss" text="NHK" title="NHK" xmlUrl="http://www.nhk.or.jp/rj/podcast/rss/english.xml" htmlUrl="http://nhk.or.jp/" />
+        </outline>
+      </outline>
+    </outline>
+    <outline text="Avrupa">
+      <outline text="Faroe Adaları">
+        <outline text="Podcast">
+          <outline type="rss" text="PLANET" title="PLANET" xmlUrl="http://www.npr.org/rss/podcast.php?id=510289" htmlUrl="http://planet.fo/" />
+        </outline>
+      </outline>
+    </outline>
+    <outline text="Kuzey Amerika">
+      <outline text="ABD">
+        <outline text="Podcast">
+          <outline type="rss" text="Vermont Public" title="Vermont Public" xmlUrl="https://www.vermontpublic.org/podcasts.rss" htmlUrl="https://www.vermontpublic.org" />
+          <outline type="rss" text="WOLA" title="WOLA" xmlUrl="https://wolapodcast.libsyn.com/rss" htmlUrl="https://wolapodcast.libsyn.com" />
+        </outline>
+      </outline>
+      <outline text="Küba">
+        <outline text="Podcast">
+          <outline type="rss" text="Marti" title="Marti" xmlUrl="http://www.martinoticias.com/podcast/video.aspx?count=20&amp;zoneId=128" htmlUrl="http://martinoticias.com/" />
+        </outline>
+      </outline>
+    </outline>
+    <outline text="Küresel / çok ülkeli">
+      <outline text="Küresel">
+        <outline text="Podcast">
+          <outline type="rss" text="60-Second Science" title="60-Second Science" xmlUrl="http://rss.sciam.com/sciam/60secsciencepodcast" htmlUrl="https://rss.sciam.com" />
+          <outline type="rss" text="Android Central Podcast" title="Android Central Podcast" xmlUrl="http://feeds.feedburner.com/AndroidCentralPodcast" htmlUrl="https://feeds.feedburner.com" />
+          <outline type="rss" text="CodeNewbie" title="CodeNewbie" xmlUrl="http://feeds.codenewbie.org/cnpodcast.xml" htmlUrl="https://feeds.codenewbie.org" />
+          <outline type="rss" text="Complete Developer Podcast" title="Complete Developer Podcast" xmlUrl="https://completedeveloperpodcast.com/feed/podcast/" htmlUrl="https://completedeveloperpodcast.com" />
+          <outline type="rss" text="Discovery" title="Discovery" xmlUrl="https://podcasts.files.bbci.co.uk/p002w557.rss" htmlUrl="https://podcasts.files.bbci.co.uk" />
+          <outline type="rss" text="Gastropod" title="Gastropod" xmlUrl="https://www.omnycontent.com/d/playlist/aaea4e69-af51-495e-afc9-a9760146922b/2a195077-f014-41d2-8313-ab190186b4c2/277bcd5c-0a05-4c14-8ba6-ab190186b4d5/podcast.rss" htmlUrl="https://www.omnycontent.com" />
+          <outline type="rss" text="Hidden Brain" title="Hidden Brain" xmlUrl="https://feeds.npr.org/510308/podcast.xml" htmlUrl="https://feeds.npr.org" />
+          <outline type="rss" text="How I Built This with Guy Raz" title="How I Built This with Guy Raz" xmlUrl="https://feeds.npr.org/510313/podcast.xml" htmlUrl="https://feeds.npr.org" />
+          <outline type="rss" text="Invisibilia" title="Invisibilia" xmlUrl="https://feeds.npr.org/510307/podcast.xml" htmlUrl="https://feeds.npr.org" />
+          <outline type="rss" text="Podcast – Software Engineering Daily" title="Podcast – Software Engineering Daily" xmlUrl="https://softwareengineeringdaily.com/category/podcast/feed" htmlUrl="https://softwareengineeringdaily.com" />
+          <outline type="rss" text="Startup Stories - Mixergy" title="Startup Stories - Mixergy" xmlUrl="https://feeds.feedburner.com/Mixergy-main-podcast" htmlUrl="https://feeds.feedburner.com" />
+          <outline type="rss" text="Stumped" title="Stumped" xmlUrl="https://podcasts.files.bbci.co.uk/p02gsrmh.rss" htmlUrl="https://podcasts.files.bbci.co.uk" />
+          <outline type="rss" text="Tailenders" title="Tailenders" xmlUrl="https://podcasts.files.bbci.co.uk/p02pcb4w.rss" htmlUrl="https://podcasts.files.bbci.co.uk" />
+          <outline type="rss" text="Test Match Special" title="Test Match Special" xmlUrl="https://podcasts.files.bbci.co.uk/p02nrsl2.rss" htmlUrl="https://podcasts.files.bbci.co.uk" />
+          <outline type="rss" text="The Cynical Developer" title="The Cynical Developer" xmlUrl="https://cynicaldeveloper.com/feed/podcast" htmlUrl="https://cynicaldeveloper.com" />
+          <outline type="rss" text="The Grade Cricketer" title="The Grade Cricketer" xmlUrl="https://rss.whooshkaa.com/rss/podcast/id/1308" htmlUrl="https://rss.whooshkaa.com" />
+          <outline type="rss" text="The Infinite Monkey Cage" title="The Infinite Monkey Cage" xmlUrl="https://podcasts.files.bbci.co.uk/b00snr0w.rss" htmlUrl="https://podcasts.files.bbci.co.uk" />
+          <outline type="rss" text="The PIT Show: Reflections and Interviews in the Tech World" title="The PIT Show: Reflections and Interviews in the Tech World" xmlUrl="https://feeds.transistor.fm/productivity-in-tech-podcast" htmlUrl="https://feeds.transistor.fm" />
+          <outline type="rss" text="The Women in Tech Show: A Technical Podcast" title="The Women in Tech Show: A Technical Podcast" xmlUrl="https://thewomenintechshow.com/category/podcast/feed/" htmlUrl="https://thewomenintechshow.com" />
+        </outline>
+      </outline>
+    </outline>
+    <outline text="Türkiye / Avrupa-Asya">
+      <outline text="Türkiye">
+        <outline text="Podcast">
+          <outline type="rss" text="MediaCat" title="MediaCat" xmlUrl="https://mediacat.com/feed/podcast/mediacat/" htmlUrl="https://mediacat.com/" />
+        </outline>
+      </outline>
+    </outline>
+  </body>
+</opml>

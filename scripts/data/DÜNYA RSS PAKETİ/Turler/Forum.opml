@@ -1,0 +1,112 @@
+<?xml version='1.0' encoding='utf-8'?>
+<opml version="2.0">
+  <head>
+    <title>Forum — adaylar dahil</title>
+  </head>
+  <body>
+    <outline text="Afrika">
+      <outline text="Nijerya">
+        <outline text="Forum">
+          <outline type="rss" text="Nigeria News Links | Today's Updates - Nigerian Bulletin" title="Nigeria News Links | Today's Updates - Nigerian Bulletin" xmlUrl="https://www.nigerianbulletin.com/forums/-/index.rss" htmlUrl="https://www.nigerianbulletin.com/" />
+        </outline>
+      </outline>
+    </outline>
+    <outline text="Avrupa">
+      <outline text="Kuzey Makedonya">
+        <outline text="Forum">
+          <outline type="rss" text="crnobelo.com" title="crnobelo.com" xmlUrl="http://forum.crnobelo.com/forums/%D0%A0%D0%B5%D0%BB%D0%B8%D0%B3%D0%B8%D1%98%D0%B0.68/index.rss" htmlUrl="http://crnobelo.com/" />
+        </outline>
+      </outline>
+    </outline>
+    <outline text="Kuzey Amerika">
+      <outline text="ABD">
+        <outline text="Forum">
+          <outline type="rss" text="InForum" title="InForum" xmlUrl="https://www.inforum.com/index.rss" htmlUrl="https://www.inforum.com" />
+        </outline>
+      </outline>
+    </outline>
+    <outline text="Küresel / çok ülkeli">
+      <outline text="Küresel">
+        <outline text="Forum">
+          <outline type="rss" text="Ars Technica Forum" title="Ars Technica Forum" xmlUrl="https://arstechnica.com/civis/forums/-/index.rss" htmlUrl="https://arstechnica.com/" />
+          <outline type="rss" text="Blender Artists" title="Blender Artists" xmlUrl="https://blenderartists.org/latest.rss" htmlUrl="https://blenderartists.org/" />
+          <outline type="rss" text="Discourse Meta" title="Discourse Meta" xmlUrl="https://meta.discourse.org/latest.rss" htmlUrl="https://meta.discourse.org/" />
+          <outline type="rss" text="KDE Discuss" title="KDE Discuss" xmlUrl="https://discuss.kde.org/latest.rss" htmlUrl="https://discuss.kde.org/" />
+          <outline type="rss" text="LinuxQuestions" title="LinuxQuestions" xmlUrl="https://www.linuxquestions.org/questions/external.php?type=RSS2" htmlUrl="https://www.linuxquestions.org/" />
+          <outline type="rss" text="MacRumors Forums" title="MacRumors Forums" xmlUrl="https://forums.macrumors.com/forums/-/index.rss" htmlUrl="https://forums.macrumors.com/" />
+          <outline type="rss" text="OpenStreetMap Community" title="OpenStreetMap Community" xmlUrl="https://community.openstreetmap.org/latest.rss" htmlUrl="https://community.openstreetmap.org/" />
+          <outline type="rss" text="Phoronix Forum" title="Phoronix Forum" xmlUrl="https://www.phoronix.com/forums/external.php?type=RSS2" htmlUrl="https://www.phoronix.com/" />
+          <outline type="rss" text="TalkAndroid" title="TalkAndroid" xmlUrl="http://feeds.feedburner.com/AndroidNewsGoogleAndroidForums" htmlUrl="https://feeds.feedburner.com" />
+          <outline type="rss" text="TouchArcade - iPhone, iPad, Android Games Forum" title="TouchArcade - iPhone, iPad, Android Games Forum" xmlUrl="https://toucharcade.com/community/forums/-/index.rss" htmlUrl="https://toucharcade.com" />
+          <outline type="rss" text="Ubuntu Discourse" title="Ubuntu Discourse" xmlUrl="https://discourse.ubuntu.com/latest.rss" htmlUrl="https://discourse.ubuntu.com/" />
+        </outline>
+      </outline>
+      <outline text="Küresel / çok ülkeli">
+        <outline text="Forum">
+          <outline type="rss" text="Arduino Forum" title="Arduino Forum" xmlUrl="https://forum.arduino.cc/latest.rss" htmlUrl="https://forum.arduino.cc" />
+          <outline type="rss" text="Astropy Community" title="Astropy Community" xmlUrl="https://community.openastronomy.org/latest.rss" htmlUrl="https://community.openastronomy.org" />
+          <outline type="rss" text="Blender Developer Talk" title="Blender Developer Talk" xmlUrl="https://devtalk.blender.org/latest.rss" htmlUrl="https://devtalk.blender.org" />
+          <outline type="rss" text="ClojureVerse" title="ClojureVerse" xmlUrl="https://clojureverse.org/latest.rss" htmlUrl="https://clojureverse.org" />
+          <outline type="rss" text="Django Forum" title="Django Forum" xmlUrl="https://forum.djangoproject.com/latest.rss" htmlUrl="https://forum.djangoproject.com" />
+          <outline type="rss" text="Docker Community" title="Docker Community" xmlUrl="https://forums.docker.com/latest.rss" htmlUrl="https://forums.docker.com" />
+          <outline type="rss" text="Doom Emacs Discourse" title="Doom Emacs Discourse" xmlUrl="https://discourse.doomemacs.org/latest.rss" htmlUrl="https://discourse.doomemacs.org" />
+          <outline type="rss" text="Elastic Discuss" title="Elastic Discuss" xmlUrl="https://discuss.elastic.co/latest.rss" htmlUrl="https://discuss.elastic.co" />
+          <outline type="rss" text="Elixir Forum" title="Elixir Forum" xmlUrl="https://elixirforum.com/latest.rss" htmlUrl="https://elixirforum.com" />
+          <outline type="rss" text="Fast.ai Forums" title="Fast.ai Forums" xmlUrl="https://forums.fast.ai/latest.rss" htmlUrl="https://forums.fast.ai" />
+          <outline type="rss" text="Fedora Discussion" title="Fedora Discussion" xmlUrl="https://discussion.fedoraproject.org/latest.rss" htmlUrl="https://discussion.fedoraproject.org" />
+          <outline type="rss" text="Godot Forum" title="Godot Forum" xmlUrl="https://forum.godotengine.org/latest.rss" htmlUrl="https://forum.godotengine.org" />
+          <outline type="rss" text="Grafana Community" title="Grafana Community" xmlUrl="https://community.grafana.com/latest.rss" htmlUrl="https://community.grafana.com" />
+          <outline type="rss" text="Haskell Discourse" title="Haskell Discourse" xmlUrl="https://discourse.haskell.org/latest.rss" htmlUrl="https://discourse.haskell.org" />
+          <outline type="rss" text="Home Assistant Community" title="Home Assistant Community" xmlUrl="https://community.home-assistant.io/latest.rss" htmlUrl="https://community.home-assistant.io" />
+          <outline type="rss" text="Homebrew Discourse" title="Homebrew Discourse" xmlUrl="https://discourse.brew.sh/latest.rss" htmlUrl="https://discourse.brew.sh" />
+          <outline type="rss" text="Hugging Face Forums" title="Hugging Face Forums" xmlUrl="https://discuss.huggingface.co/latest.rss" htmlUrl="https://discuss.huggingface.co" />
+          <outline type="rss" text="Hugo Forum" title="Hugo Forum" xmlUrl="https://discourse.gohugo.io/latest.rss" htmlUrl="https://discourse.gohugo.io" />
+          <outline type="rss" text="iNaturalist Community" title="iNaturalist Community" xmlUrl="https://forum.inaturalist.org/latest.rss" htmlUrl="https://forum.inaturalist.org" />
+          <outline type="rss" text="Joplin Forum" title="Joplin Forum" xmlUrl="https://discourse.joplinapp.org/latest.rss" htmlUrl="https://discourse.joplinapp.org" />
+          <outline type="rss" text="Julia Discourse" title="Julia Discourse" xmlUrl="https://discourse.julialang.org/latest.rss" htmlUrl="https://discourse.julialang.org" />
+          <outline type="rss" text="Kotlin Discussions" title="Kotlin Discussions" xmlUrl="https://discuss.kotlinlang.org/latest.rss" htmlUrl="https://discuss.kotlinlang.org" />
+          <outline type="rss" text="Krita Artists" title="Krita Artists" xmlUrl="https://krita-artists.org/latest.rss" htmlUrl="https://krita-artists.org" />
+          <outline type="rss" text="Kubernetes Discuss" title="Kubernetes Discuss" xmlUrl="https://discuss.kubernetes.io/latest.rss" htmlUrl="https://discuss.kubernetes.io" />
+          <outline type="rss" text="MongoDB Community" title="MongoDB Community" xmlUrl="https://www.mongodb.com/community/forums/latest.rss" htmlUrl="https://www.mongodb.com/community/forums" />
+          <outline type="rss" text="MusicBrainz Community" title="MusicBrainz Community" xmlUrl="https://community.metabrainz.org/latest.rss" htmlUrl="https://community.metabrainz.org" />
+          <outline type="rss" text="Nextcloud Community" title="Nextcloud Community" xmlUrl="https://help.nextcloud.com/latest.rss" htmlUrl="https://help.nextcloud.com" />
+          <outline type="rss" text="NixOS Discourse" title="NixOS Discourse" xmlUrl="https://discourse.nixos.org/latest.rss" htmlUrl="https://discourse.nixos.org" />
+          <outline type="rss" text="Obsidian Forum" title="Obsidian Forum" xmlUrl="https://forum.obsidian.md/latest.rss" htmlUrl="https://forum.obsidian.md" />
+          <outline type="rss" text="OCaml Discuss" title="OCaml Discuss" xmlUrl="https://discuss.ocaml.org/latest.rss" htmlUrl="https://discuss.ocaml.org" />
+          <outline type="rss" text="Open Food Facts Forum" title="Open Food Facts Forum" xmlUrl="https://forum.openfoodfacts.org/latest.rss" htmlUrl="https://forum.openfoodfacts.org" />
+          <outline type="rss" text="OpenAI Developer Community" title="OpenAI Developer Community" xmlUrl="https://community.openai.com/latest.rss" htmlUrl="https://community.openai.com" />
+          <outline type="rss" text="OpenWrt Forum" title="OpenWrt Forum" xmlUrl="https://forum.openwrt.org/latest.rss" htmlUrl="https://forum.openwrt.org" />
+          <outline type="rss" text="Python Discuss" title="Python Discuss" xmlUrl="https://discuss.python.org/latest.rss" htmlUrl="https://discuss.python.org" />
+          <outline type="rss" text="PyTorch Forums" title="PyTorch Forums" xmlUrl="https://discuss.pytorch.org/latest.rss" htmlUrl="https://discuss.pytorch.org" />
+          <outline type="rss" text="R / Posit Community" title="R / Posit Community" xmlUrl="https://forum.posit.co/latest.rss" htmlUrl="https://forum.posit.co" />
+          <outline type="rss" text="Ruby on Rails Discussions" title="Ruby on Rails Discussions" xmlUrl="https://discuss.rubyonrails.org/latest.rss" htmlUrl="https://discuss.rubyonrails.org" />
+          <outline type="rss" text="Rust Internals" title="Rust Internals" xmlUrl="https://internals.rust-lang.org/latest.rss" htmlUrl="https://internals.rust-lang.org" />
+          <outline type="rss" text="Rust Users" title="Rust Users" xmlUrl="https://users.rust-lang.org/latest.rss" htmlUrl="https://users.rust-lang.org" />
+          <outline type="rss" text="Scientific Python" title="Scientific Python" xmlUrl="https://discuss.scientific-python.org/latest.rss" htmlUrl="https://discuss.scientific-python.org" />
+          <outline type="rss" text="Signal Community" title="Signal Community" xmlUrl="https://community.signalusers.org/latest.rss" htmlUrl="https://community.signalusers.org" />
+          <outline type="rss" text="Swift Forums" title="Swift Forums" xmlUrl="https://forums.swift.org/latest.rss" htmlUrl="https://forums.swift.org" />
+          <outline type="rss" text="Syncthing Forum" title="Syncthing Forum" xmlUrl="https://forum.syncthing.net/latest.rss" htmlUrl="https://forum.syncthing.net" />
+          <outline type="rss" text="TensorFlow Forum" title="TensorFlow Forum" xmlUrl="https://discuss.ai.google.dev/latest.rss" htmlUrl="https://discuss.ai.google.dev" />
+        </outline>
+      </outline>
+    </outline>
+    <outline text="Türkiye / Avrupa-Asya">
+      <outline text="Türkiye">
+        <outline text="Forum">
+          <outline type="rss" text="Bisiklet Forum" title="Bisiklet Forum" xmlUrl="https://www.bisikletforum.com/forum/-/index.rss" htmlUrl="https://www.bisikletforum.com/" />
+          <outline type="rss" text="Forum Saati - Tüm Forumlar" title="Forum Saati - Tüm Forumlar" xmlUrl="https://forumsaati.net/syndication.php?limit=15" htmlUrl="https://forumsaati.net" />
+          <outline type="rss" text="GEZENBİLİR FORUM" title="GEZENBİLİR FORUM" xmlUrl="https://www.gezenbilir.com/forum/forum/-/index.rss" htmlUrl="https://www.gezenbilir.com/forum/" />
+          <outline type="rss" text="İyinet.com" title="İyinet.com" xmlUrl="https://iyinet.com/kategori/-/index.rss" htmlUrl="https://www.iyinet.com/" />
+          <outline type="rss" text="Kayıp Rıhtım Forum - En son konular" title="Kayıp Rıhtım Forum - En son konular" xmlUrl="https://forum.kayiprihtim.com/latest.rss" htmlUrl="https://forum.kayiprihtim.com" />
+          <outline type="rss" text="Linux Mint Türkiye" title="Linux Mint Türkiye" xmlUrl="https://forum.linux.net.tr/index.php?action=.xml;type=rss" htmlUrl="https://forum.linux.net.tr/" />
+          <outline type="rss" text="Pardus Forumları - TÜBİTAK BİLGEM - En son konular" title="Pardus Forumları - TÜBİTAK BİLGEM - En son konular" xmlUrl="https://forum.pardus.org.tr/latest.rss" htmlUrl="https://forum.pardus.org.tr" />
+          <outline type="rss" text="Technopat Sosyal" title="Technopat Sosyal" xmlUrl="https://www.technopat.net/sosyal/bolum/-/index.rss" htmlUrl="https://www.technopat.net/sosyal/" />
+          <outline type="rss" text="Ubuntu Türkiye" title="Ubuntu Türkiye" xmlUrl="https://forum.ubuntu-tr.net/index.php?action=.xml;type=rss2" htmlUrl="https://forum.ubuntu-tr.net/" />
+          <outline type="rss" text="Webmaster Forum | Türkiye'nin En iyi Webmaster Platformu" title="Webmaster Forum | Türkiye'nin En iyi Webmaster Platformu" xmlUrl="https://webmasterforum.com.tr/forum/-/index.rss" htmlUrl="https://www.webmasterforum.com.tr/" />
+          <outline type="rss" text="Webmaster Forum® - WFN" title="Webmaster Forum® - WFN" xmlUrl="https://webmasterforum.net/forum/-/index.rss" htmlUrl="https://www.webmasterforum.net/" />
+          <outline type="rss" text="XenGenTr - Türkiye'nin XenForo Türkçe destek topluluğu" title="XenGenTr - Türkiye'nin XenForo Türkçe destek topluluğu" xmlUrl="https://xenforo.gen.tr/forumlar/-/index.rss" htmlUrl="https://xenforo.gen.tr/" />
+        </outline>
+      </outline>
+    </outline>
+  </body>
+</opml>

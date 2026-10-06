@@ -1,0 +1,78 @@
+<?xml version='1.0' encoding='utf-8'?>
+<opml version="2.0">
+  <head>
+    <title>Video platformu — adaylar dahil</title>
+  </head>
+  <body>
+    <outline text="Avrupa">
+      <outline text="Birleşik Krallık">
+        <outline text="Video platformu">
+          <outline type="rss" text="Reuters" title="Reuters" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UChqUTb7kYRX8-EiaN3XFrSQ" htmlUrl="https://www.youtube.com" />
+          <outline type="rss" text="Royal Air Force" title="Royal Air Force" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCydzmgAnOoT5tjFwAy7b5dA" htmlUrl="https://www.youtube.com" />
+          <outline type="rss" text="Suchomimus" title="Suchomimus" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCXZs3e_VSlYgrUuTqm3GgVA" htmlUrl="https://www.youtube.com" />
+        </outline>
+      </outline>
+    </outline>
+    <outline text="Kuzey Amerika">
+      <outline text="ABD">
+        <outline text="Video platformu">
+          <outline type="rss" text="Associated Press" title="Associated Press" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UC52X5wxOL_s5yw0dQk7NtgA" htmlUrl="https://www.youtube.com" />
+          <outline type="rss" text="CIA" title="CIA" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UClFKF4TkuGWFkkeMYYQoOmg" htmlUrl="https://www.youtube.com" />
+          <outline type="rss" text="CSIS" title="CSIS" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCr5jq6MC_VCe1c5ciIZtk_w" htmlUrl="https://www.youtube.com" />
+          <outline type="rss" text="FBI" title="FBI" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCpE5S-iuV221aM4vxaHbU6w" htmlUrl="https://www.youtube.com" />
+          <outline type="rss" text="INTERNATIONAL SPY MUSEUM" title="INTERNATIONAL SPY MUSEUM" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCJ-UEBNs3VfYGuMMaXg1NFw" htmlUrl="https://www.youtube.com" />
+          <outline type="rss" text="JEDBURGH PODCAST" title="JEDBURGH PODCAST" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCmED_uWlwzZ9i_PUe-wvPpg" htmlUrl="https://www.youtube.com" />
+          <outline type="rss" text="JHU" title="JHU" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCL_uzkLMTCSpEZ54leYViYg" htmlUrl="https://www.youtube.com" />
+          <outline type="rss" text="MIT SECURITY STUDIES" title="MIT SECURITY STUDIES" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCG5ooD8Ydk4vd83Ac8VNEoQ" htmlUrl="https://www.youtube.com" />
+          <outline type="rss" text="Preston Stewart" title="Preston Stewart" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UC75suCpChvMVC_9ij7rUpxw" htmlUrl="https://www.youtube.com" />
+          <outline type="rss" text="SPYCRAFT 101" title="SPYCRAFT 101" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCPFKJ79K40D4Zp6EV6M14Xg" htmlUrl="https://www.youtube.com" />
+          <outline type="rss" text="THE CIPHER BRIEF" title="THE CIPHER BRIEF" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCEyPWPSLfrg1ue9Oq1wLr8w" htmlUrl="https://www.youtube.com" />
+          <outline type="rss" text="US ARMY SOCOM" title="US ARMY SOCOM" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UC4SUwgraCA1FY1wfV5HDubA" htmlUrl="https://www.youtube.com" />
+          <outline type="rss" text="US ARMY YouTube" title="US ARMY YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCs6bj7e__tT_m3s8xxhazhA" htmlUrl="https://www.youtube.com" />
+        </outline>
+      </outline>
+    </outline>
+    <outline text="Küresel / çok ülkeli">
+      <outline text="Küresel">
+        <outline text="Video platformu">
+          <outline type="rss" text="Android Authority" title="Android Authority" xmlUrl="https://www.youtube.com/feeds/videos.xml?user=AndroidAuthority" htmlUrl="https://www.youtube.com" />
+          <outline type="rss" text="Android Developers" title="Android Developers" xmlUrl="https://www.youtube.com/feeds/videos.xml?user=androiddevelopers" htmlUrl="https://www.youtube.com" />
+          <outline type="rss" text="Apple" title="Apple" xmlUrl="https://www.youtube.com/feeds/videos.xml?user=Apple" htmlUrl="https://www.youtube.com" />
+          <outline type="rss" text="Bloomberg Quicktake" title="Bloomberg Quicktake" xmlUrl="https://www.youtube.com/feeds/videos.xml?user=Bloomberg" htmlUrl="https://www.youtube.com" />
+          <outline type="rss" text="Business Insider" title="Business Insider" xmlUrl="https://www.youtube.com/feeds/videos.xml?user=businessinsider" htmlUrl="https://www.youtube.com" />
+          <outline type="rss" text="CNET" title="CNET" xmlUrl="https://www.youtube.com/feeds/videos.xml?user=CNETTV" htmlUrl="https://www.youtube.com" />
+          <outline type="rss" text="Cricbuzz" title="Cricbuzz" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCSRQXk5yErn4e14vN76upOw" htmlUrl="https://www.youtube.com" />
+          <outline type="rss" text="cricket.com.au" title="cricket.com.au" xmlUrl="https://www.youtube.com/feeds/videos.xml?user=cricketaustraliatv" htmlUrl="https://www.youtube.com" />
+          <outline type="rss" text="droidcon NYC" title="droidcon NYC" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCSLXy31j2Z0sdDeeAX5JpPw" htmlUrl="https://www.youtube.com" />
+          <outline type="rss" text="droidcon SF" title="droidcon SF" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCKubKoe1CBw_-n_GXetEQbg" htmlUrl="https://www.youtube.com" />
+          <outline type="rss" text="England &amp; Wales Cricket Board" title="England &amp; Wales Cricket Board" xmlUrl="https://www.youtube.com/feeds/videos.xml?user=ecbcricket" htmlUrl="https://www.youtube.com" />
+          <outline type="rss" text="GaryVee" title="GaryVee" xmlUrl="https://www.youtube.com/feeds/videos.xml?user=GaryVaynerchuk" htmlUrl="https://www.youtube.com" />
+          <outline type="rss" text="Google TechTalks" title="Google TechTalks" xmlUrl="https://www.youtube.com/feeds/videos.xml?user=GoogleTechTalks" htmlUrl="https://www.youtube.com" />
+          <outline type="rss" text="Kotlin" title="Kotlin" xmlUrl="https://www.youtube.com/feeds/videos.xml?playlist_id=PLQ176FUIyIUa6SChjajjVc-LMzxWiz6dy" htmlUrl="https://www.youtube.com" />
+          <outline type="rss" text="Linus Tech Tips" title="Linus Tech Tips" xmlUrl="https://www.youtube.com/feeds/videos.xml?user=LinusTechTips" htmlUrl="https://www.youtube.com" />
+          <outline type="rss" text="MacRumors" title="MacRumors" xmlUrl="https://www.youtube.com/feeds/videos.xml?user=macrumors" htmlUrl="https://www.youtube.com" />
+          <outline type="rss" text="Marie Forleo" title="Marie Forleo" xmlUrl="https://www.youtube.com/feeds/videos.xml?user=marieforleo" htmlUrl="https://www.youtube.com" />
+          <outline type="rss" text="Marques Brownlee" title="Marques Brownlee" xmlUrl="https://www.youtube.com/feeds/videos.xml?user=marquesbrownlee" htmlUrl="https://www.youtube.com" />
+          <outline type="rss" text="Pakistan Cricket" title="Pakistan Cricket" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCiWrjBhlICf_L_RK5y6Vrxw" htmlUrl="https://www.youtube.com" />
+          <outline type="rss" text="SpaceX" title="SpaceX" xmlUrl="https://www.youtube.com/feeds/videos.xml?user=spacexchannel" htmlUrl="https://www.youtube.com" />
+          <outline type="rss" text="Sri Lanka Cricket" title="Sri Lanka Cricket" xmlUrl="https://www.youtube.com/feeds/videos.xml?user=TheOfficialSLC" htmlUrl="https://www.youtube.com" />
+          <outline type="rss" text="The Verge" title="The Verge" xmlUrl="https://www.youtube.com/feeds/videos.xml?user=TheVerge" htmlUrl="https://www.youtube.com" />
+          <outline type="rss" text="Unbox Therapy" title="Unbox Therapy" xmlUrl="https://www.youtube.com/feeds/videos.xml?user=unboxtherapy" htmlUrl="https://www.youtube.com" />
+        </outline>
+      </outline>
+      <outline text="Küresel / ülke belirsiz">
+        <outline text="Video platformu">
+          <outline type="rss" text="CHRISTO FILES" title="CHRISTO FILES" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCU64gI8KGwpFyJLwNjfg_mw" htmlUrl="https://www.youtube.com" />
+          <outline type="rss" text="THE SPY COLLECTION" title="THE SPY COLLECTION" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCNJB0TZqLvHK25EEJ1AY59g" htmlUrl="https://www.youtube.com" />
+        </outline>
+      </outline>
+    </outline>
+    <outline text="Okyanusya">
+      <outline text="Avustralya">
+        <outline text="Video platformu">
+          <outline type="rss" text="PERUN" title="PERUN" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCC3ehuUksTyQ7bbjGntmx3Q" htmlUrl="https://www.youtube.com" />
+        </outline>
+      </outline>
+    </outline>
+  </body>
+</opml>

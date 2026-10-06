@@ -1,0 +1,58 @@
+RSS ve platform kataloğu
+
+{
+  "tarih": "2026-10-05",
+  "toplam_kayit": 7729,
+  "rss_adresi": 7655,
+  "platform_web_kaydi": 74,
+  "xml_icerik_dogrulanan": 2379,
+  "aktarilan_turkiye": 2180,
+  "yeni_arastirma_kaydi": 913,
+  "turler": {
+    "Haber / medya": 6678,
+    "Podcast": 27,
+    "Forum": 97,
+    "Blog platformu / topluluk": 15,
+    "Sosyal haber / topluluk": 19,
+    "Soru-cevap": 187,
+    "Sözlük / dil kaynağı": 29,
+    "Video platformu": 43,
+    "Ansiklopedi / bilgi kaynağı": 3,
+    "Blog": 575,
+    "Dergi / kültür": 7,
+    "Ansiklopedi / wiki": 21,
+    "Arşiv / kütüphane": 5,
+    "Bilim / akademik": 6,
+    "Eğitim / bilgi kaynağı": 4,
+    "Katılımcı sözlük": 5,
+    "Sosyal ağ / görsel": 1,
+    "Sosyal ağ / mikroblog": 3,
+    "Veri / araştırma": 2,
+    "Doğrulama / bilgi kaynağı": 2
+  },
+  "kitalar": {
+    "Afrika": 581,
+    "Antarktika / kutup araştırmaları": 5,
+    "Asya": 821,
+    "Avrupa": 1097,
+    "Güney Amerika": 258,
+    "Kuzey Amerika": 1430,
+    "Küresel / çok ülkeli": 1229,
+    "Okyanusya": 112,
+    "Türkiye / Avrupa-Asya": 2196
+  }
+}
+
+Bu katalog internetin tamamını kapsamaz. RSS adresi sayısı yayıncı sayısı değildir; aynı platformun farklı akışları ayrı kayıt olabilir. Aday adreslerin tümü canlı doğrulanmış değildir. Türkiye aktarımının kontrol tarihi 2 Ekim 2026, önceki dünya ve yeni örneklem kontrollerinin tarihi 5 Ekim 2026'dır. XML doğrulaması güncellik veya sürekli erişim garantisi değildir. Erişim engeli, ağ kısıtı veya zaman aşımı alanlar bozuk ilan edilmez.
+
+Ülke, önceki dizin etiketi veya açık topluluk odağıdır; şirket merkezi/sunucu konumu olarak kullanmayın. Küresel kayıtların bir kısmında ülke teyit edilmemiştir. Dil ülkeye çevrilmemiştir. Türler önceki dizin kategorileri, açık blog/forum URL işaretleri ve yeni kaynak sınıflarıyla düzenlenmiştir; tüm yayınların türü insan incelemesinden geçmiş değildir. Belirsiz konu ve diller boş bırakılmıştır.
+
+Sözlük, wiki ve ansiklopedi birbirinden ayrılır. Wikimedia RSS/Atom kayıtları son düzenlemeleri gösterir; günün kelimesi veya yeni makale listesi değildir. Blog platformlarında genel bir RSS yoksa web adresi verilir; profil/yayın RSS'si uydurulmaz. RSS belirlenmeyen platformlar OPML'e alınmaz. Katılımcı sözlüklerde genel RSS teyit edilmemiştir.
+
+Reddit'in resmî duyurusu RSS desteğinin 13 Kasım 2026'da sonlandırılacağını bildiriyor. Reddit platform kaydı olarak listelenir; uzun ömürlü RSS aboneliği olarak önerilmez. https://www.reddit.com/r/modnews/comments/1wubgvt/continuing_our_infrastructure_updates_whats/
+
+Kategorili_RSS_Katalogu.html: İnternetsiz arama/filtreleme. Filtrelenen adresleri TXT veya OPML dışa aktarabilirsiniz.
+RSS_Dogrulanan.opml: yalnızca XML ve içerik kontrolü yapılmış akışlar.
+RSS_Tum_Adaylar.opml: doğrulanmamış adaylar da dahil.
+Turler klasörü: platform türüne göre OPML.
+JSON: bütün konum, kaynak, sınıflandırma, durum ve kontrol alanları.

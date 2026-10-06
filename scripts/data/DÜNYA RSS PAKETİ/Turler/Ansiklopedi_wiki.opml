@@ -1,0 +1,41 @@
+<?xml version='1.0' encoding='utf-8'?>
+<opml version="2.0">
+  <head>
+    <title>Ansiklopedi / wiki — adaylar dahil</title>
+  </head>
+  <body>
+    <outline text="Küresel / çok ülkeli">
+      <outline text="Küresel / çok ülkeli">
+        <outline text="Ansiklopedi / wiki">
+          <outline type="rss" text="Wikipedia (ar)" title="Wikipedia (ar)" xmlUrl="https://ar.wikipedia.org/w/api.php?action=feedrecentchanges&amp;feedformat=atom&amp;hidebots=1" htmlUrl="https://ar.wikipedia.org" />
+          <outline type="rss" text="Wikipedia (de)" title="Wikipedia (de)" xmlUrl="https://de.wikipedia.org/w/api.php?action=feedrecentchanges&amp;feedformat=atom&amp;hidebots=1" htmlUrl="https://de.wikipedia.org" />
+          <outline type="rss" text="Wikipedia (en)" title="Wikipedia (en)" xmlUrl="https://en.wikipedia.org/w/api.php?action=feedrecentchanges&amp;feedformat=atom&amp;hidebots=1" htmlUrl="https://en.wikipedia.org" />
+          <outline type="rss" text="Wikipedia (es)" title="Wikipedia (es)" xmlUrl="https://es.wikipedia.org/w/api.php?action=feedrecentchanges&amp;feedformat=atom&amp;hidebots=1" htmlUrl="https://es.wikipedia.org" />
+          <outline type="rss" text="Wikipedia (fa)" title="Wikipedia (fa)" xmlUrl="https://fa.wikipedia.org/w/api.php?action=feedrecentchanges&amp;feedformat=atom&amp;hidebots=1" htmlUrl="https://fa.wikipedia.org" />
+          <outline type="rss" text="Wikipedia (fr)" title="Wikipedia (fr)" xmlUrl="https://fr.wikipedia.org/w/api.php?action=feedrecentchanges&amp;feedformat=atom&amp;hidebots=1" htmlUrl="https://fr.wikipedia.org" />
+          <outline type="rss" text="Wikipedia (hi)" title="Wikipedia (hi)" xmlUrl="https://hi.wikipedia.org/w/api.php?action=feedrecentchanges&amp;feedformat=atom&amp;hidebots=1" htmlUrl="https://hi.wikipedia.org" />
+          <outline type="rss" text="Wikipedia (id)" title="Wikipedia (id)" xmlUrl="https://id.wikipedia.org/w/api.php?action=feedrecentchanges&amp;feedformat=atom&amp;hidebots=1" htmlUrl="https://id.wikipedia.org" />
+          <outline type="rss" text="Wikipedia (it)" title="Wikipedia (it)" xmlUrl="https://it.wikipedia.org/w/api.php?action=feedrecentchanges&amp;feedformat=atom&amp;hidebots=1" htmlUrl="https://it.wikipedia.org" />
+          <outline type="rss" text="Wikipedia (ja)" title="Wikipedia (ja)" xmlUrl="https://ja.wikipedia.org/w/api.php?action=feedrecentchanges&amp;feedformat=atom&amp;hidebots=1" htmlUrl="https://ja.wikipedia.org" />
+          <outline type="rss" text="Wikipedia (ko)" title="Wikipedia (ko)" xmlUrl="https://ko.wikipedia.org/w/api.php?action=feedrecentchanges&amp;feedformat=atom&amp;hidebots=1" htmlUrl="https://ko.wikipedia.org" />
+          <outline type="rss" text="Wikipedia (nl)" title="Wikipedia (nl)" xmlUrl="https://nl.wikipedia.org/w/api.php?action=feedrecentchanges&amp;feedformat=atom&amp;hidebots=1" htmlUrl="https://nl.wikipedia.org" />
+          <outline type="rss" text="Wikipedia (pl)" title="Wikipedia (pl)" xmlUrl="https://pl.wikipedia.org/w/api.php?action=feedrecentchanges&amp;feedformat=atom&amp;hidebots=1" htmlUrl="https://pl.wikipedia.org" />
+          <outline type="rss" text="Wikipedia (pt)" title="Wikipedia (pt)" xmlUrl="https://pt.wikipedia.org/w/api.php?action=feedrecentchanges&amp;feedformat=atom&amp;hidebots=1" htmlUrl="https://pt.wikipedia.org" />
+          <outline type="rss" text="Wikipedia (ru)" title="Wikipedia (ru)" xmlUrl="https://ru.wikipedia.org/w/api.php?action=feedrecentchanges&amp;feedformat=atom&amp;hidebots=1" htmlUrl="https://ru.wikipedia.org" />
+          <outline type="rss" text="Wikipedia (sv)" title="Wikipedia (sv)" xmlUrl="https://sv.wikipedia.org/w/api.php?action=feedrecentchanges&amp;feedformat=atom&amp;hidebots=1" htmlUrl="https://sv.wikipedia.org" />
+          <outline type="rss" text="Wikipedia (tr)" title="Wikipedia (tr)" xmlUrl="https://tr.wikipedia.org/w/api.php?action=feedrecentchanges&amp;feedformat=atom&amp;hidebots=1" htmlUrl="https://tr.wikipedia.org" />
+          <outline type="rss" text="Wikipedia (uk)" title="Wikipedia (uk)" xmlUrl="https://uk.wikipedia.org/w/api.php?action=feedrecentchanges&amp;feedformat=atom&amp;hidebots=1" htmlUrl="https://uk.wikipedia.org" />
+          <outline type="rss" text="Wikipedia (vi)" title="Wikipedia (vi)" xmlUrl="https://vi.wikipedia.org/w/api.php?action=feedrecentchanges&amp;feedformat=atom&amp;hidebots=1" htmlUrl="https://vi.wikipedia.org" />
+          <outline type="rss" text="Wikipedia (zh)" title="Wikipedia (zh)" xmlUrl="https://zh.wikipedia.org/w/api.php?action=feedrecentchanges&amp;feedformat=atom&amp;hidebots=1" htmlUrl="https://zh.wikipedia.org" />
+        </outline>
+      </outline>
+    </outline>
+    <outline text="Okyanusya">
+      <outline text="Yeni Zelanda">
+        <outline text="Ansiklopedi / wiki">
+          <outline type="rss" text="RNZ" title="RNZ" xmlUrl="http://en.wikipedia.org/wiki/rss" htmlUrl="https://www.rnz.co.nz/rss" />
+        </outline>
+      </outline>
+    </outline>
+  </body>
+</opml>

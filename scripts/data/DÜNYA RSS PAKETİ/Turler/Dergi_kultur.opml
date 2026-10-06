@@ -1,0 +1,32 @@
+<?xml version='1.0' encoding='utf-8'?>
+<opml version="2.0">
+  <head>
+    <title>Dergi / kültür — adaylar dahil</title>
+  </head>
+  <body>
+    <outline text="Kuzey Amerika">
+      <outline text="ABD">
+        <outline text="Dergi / kültür">
+          <outline type="rss" text="Smithsonian Magazine" title="Smithsonian Magazine" xmlUrl="https://www.smithsonianmag.com/rss/latest_articles/" htmlUrl="https://www.smithsonianmag.com/" />
+        </outline>
+      </outline>
+    </outline>
+    <outline text="Küresel / çok ülkeli">
+      <outline text="Küresel / çok ülkeli">
+        <outline text="Dergi / kültür">
+          <outline type="rss" text="Aeon" title="Aeon" xmlUrl="https://aeon.co/feed.rss" htmlUrl="https://aeon.co/" />
+          <outline type="rss" text="JSTOR Daily" title="JSTOR Daily" xmlUrl="https://daily.jstor.org/feed/" htmlUrl="https://daily.jstor.org/" />
+          <outline type="rss" text="Psyche" title="Psyche" xmlUrl="https://psyche.co/feed" htmlUrl="https://psyche.co/" />
+          <outline type="rss" text="Public Domain Review" title="Public Domain Review" xmlUrl="https://publicdomainreview.org/rss.xml" htmlUrl="https://publicdomainreview.org/" />
+        </outline>
+      </outline>
+    </outline>
+    <outline text="Türkiye / Avrupa-Asya">
+      <outline text="Türkiye">
+        <outline text="Dergi / kültür">
+          <outline type="rss" text="Arkitera" title="Arkitera" xmlUrl="https://www.arkitera.com/feed/" htmlUrl="https://www.arkitera.com/" />
+        </outline>
+      </outline>
+    </outline>
+  </body>
+</opml>

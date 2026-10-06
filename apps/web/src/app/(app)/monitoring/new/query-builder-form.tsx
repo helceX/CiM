@@ -13,6 +13,7 @@ import {
 } from "@cim/core";
 import type { TrackingTarget } from "@cim/validation";
 import { TRACKING_TARGET_OPTIONS } from "@/lib/tracking-targets";
+import { RegionPicker } from "./region-picker";
 
 type Project = { id: string; name: string };
 
@@ -145,6 +146,7 @@ export function QueryBuilderForm({
   const [exactPhrases, setExactPhrases] = useState<string[]>([]);
   const [advancedText, setAdvancedText] = useState("");
   const [sourceCategories, setSourceCategories] = useState<string[]>(["news", "web"]);
+  const [regionScopes, setRegionScopes] = useState<string[]>([]);
   const [preview, setPreview] = useState<PreviewResult | null>(null);
   const [isPreviewing, setIsPreviewing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -186,7 +188,7 @@ export function QueryBuilderForm({
       const response = await fetch("/api/monitoring/preview", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(currentAst),
+        body: JSON.stringify({ ...currentAst, regionScopes }),
       });
       if (response.ok) {
         setPreview(await response.json());
@@ -223,6 +225,7 @@ export function QueryBuilderForm({
           exclude: currentAst.exclude,
           exactPhrases: currentAst.exactPhrases,
           sourceTypes: sourceCategories,
+          regionScopes,
           trackingTarget,
         }),
       });
@@ -354,6 +357,8 @@ export function QueryBuilderForm({
           ))}
         </div>
       </div>
+
+      <RegionPicker value={regionScopes} onChange={setRegionScopes} />
 
       <div className="flex flex-col gap-3 rounded-lg border border-dashed border-border p-4">
         <div className="flex items-center justify-between">

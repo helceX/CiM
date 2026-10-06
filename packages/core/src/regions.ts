@@ -287,3 +287,41 @@ export function countryCodesInScope(scope: RegionScope): string[] | null {
   if (isContinentCode(scope)) return countriesInContinent(scope).map((country) => country.code);
   return [scope.toUpperCase()];
 }
+
+
+/** The country the product treats as "local" for a Türkiye-based customer. */
+export const LOCAL_REGION = "TR";
+
+/**
+ * A monitoring's geography: continent codes and/or ISO country codes. Empty (or containing
+ * "world") means everywhere. Unknown values and duplicates are dropped; the result is sorted
+ * so the same choice always reads the same.
+ */
+export function normalizeRegionScopes(scopes: readonly string[] | null | undefined): string[] {
+  const out = new Set<string>();
+  for (const raw of scopes ?? []) {
+    const value = raw.trim();
+    if (!value) continue;
+    if (value.toLowerCase() === "world") return [];
+    const upper = value.toUpperCase();
+    if (isContinentCode(upper) || countryByCode(upper)) out.add(upper);
+  }
+  return [...out].sort();
+}
+
+/**
+ * May a story from a source in `countryCode` count for a monitoring with these scopes? A source with
+ * no known country (global feeds) only counts when the monitoring is worldwide.
+ */
+export function sourceInRegionScopes(countryCode: string | null | undefined, scopes: readonly string[] | null | undefined): boolean {
+  const list = normalizeRegionScopes(scopes);
+  if (list.length === 0) return true;
+  return list.some((scope) => countryInScope(countryCode, scope));
+}
+
+/** "Worldwide", "Türkiye", or "Europe, Türkiye, United States" for badges. */
+export function describeRegionScopes(scopes: readonly string[] | null | undefined): string {
+  const list = normalizeRegionScopes(scopes);
+  if (list.length === 0) return "Worldwide";
+  return list.map((scope) => (isContinentCode(scope) ? continentName(scope) : countryName(scope))).join(", ");
+}

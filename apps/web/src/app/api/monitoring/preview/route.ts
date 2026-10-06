@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { previewMonitoringQuerySchema } from "@cim/validation";
-import { astToBooleanQuery, matchesFingerprint, matchesText, queryQualityWarning } from "@cim/core";
+import { astToBooleanQuery, matchesFingerprint, matchesText, queryQualityWarning, sourceInRegionScopes } from "@cim/core";
 import { getAIProvider } from "@cim/ai";
 import { getEnv } from "@cim/config";
 import { db, listRecentArticlesForPreview } from "@cim/db";
@@ -31,8 +31,9 @@ export async function POST(request: Request) {
   // story's word fingerprint, so the preview count and the first result agree.
   const matches = recentArticles.filter(
     (article) =>
-      matchesText(ast, matchableText({ title: article.title, lead: article.storedExcerpt }), { language: article.language }) ||
-      matchesFingerprint(ast, article.wordFingerprint, { language: article.language }),
+      sourceInRegionScopes(article.sourceCountry, ast.regionScopes) &&
+      (matchesText(ast, matchableText({ title: article.title, lead: article.storedExcerpt }), { language: article.language }) ||
+        matchesFingerprint(ast, article.wordFingerprint, { language: article.language })),
   );
   const sample = matches.slice(0, SAMPLE_LIMIT).map((m) => ({
     title: m.title,

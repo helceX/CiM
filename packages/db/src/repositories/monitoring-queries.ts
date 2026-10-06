@@ -53,6 +53,7 @@ export async function createMonitoringQuery(
     queryAst: QueryAst;
     booleanQuery: string;
     sourceTypes: string[];
+    regionScopes?: string[];
     trackingTarget?: string;
   },
 ) {
@@ -65,6 +66,7 @@ export async function createMonitoringQuery(
       queryAst: input.queryAst,
       booleanQuery: input.booleanQuery,
       sourceTypes: input.sourceTypes,
+      regionScopes: input.regionScopes ?? [],
       trackingTarget: input.trackingTarget,
     })
     .returning();
@@ -108,6 +110,7 @@ export async function listActiveMonitoringQueriesForSourceType(db: Db, sourceTyp
       queryAst: monitoringQueries.queryAst,
       booleanQuery: monitoringQueries.booleanQuery,
       sourceTypes: monitoringQueries.sourceTypes,
+      regionScopes: monitoringQueries.regionScopes,
       status: monitoringQueries.status,
       createdAt: monitoringQueries.createdAt,
       updatedAt: monitoringQueries.updatedAt,

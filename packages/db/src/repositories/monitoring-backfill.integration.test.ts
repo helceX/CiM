@@ -20,6 +20,8 @@ describe("backfillMentionsForQuery (integration)", () => {
   let projectId: string;
   let newsSourceId: string;
   let blogSourceId: string;
+  let trSourceId: string;
+  let deSourceId: string;
 
   beforeAll(async () => {
     const [org] = await db
@@ -42,6 +44,20 @@ describe("backfillMentionsForQuery (integration)", () => {
     if (!news || !blog) throw new Error("sources");
     newsSourceId = news.id;
     blogSourceId = blog.id;
+    const [tr, de] = await db
+      .insert(sources)
+      .values([
+        { name: "BF TR", domain: `bf-tr-${stamp}.example`, type: "news", connector: "mock", country: "TR" },
+        { name: "BF DE", domain: `bf-de-${stamp}.example`, type: "news", connector: "mock", country: "DE" },
+      ])
+      .returning();
+    if (!tr || !de) throw new Error("region sources");
+    trSourceId = tr.id;
+    deSourceId = de.id;
+    await db.insert(articles).values([
+      { sourceId: trSourceId, canonicalUrl: `https://bf.example/${stamp}/tr`, contentHash: `bf-${stamp}-tr`, title: `Zyxwvut Corp Türkiye haberi ${stamp}`, publishedAt: new Date(Date.now() - 86_400_000) },
+      { sourceId: deSourceId, canonicalUrl: `https://bf.example/${stamp}/de`, contentHash: `bf-${stamp}-de`, title: `Zyxwvut Corp Deutschland ${stamp}`, publishedAt: new Date(Date.now() - 86_400_000) },
+    ]);
 
     const daysAgo = (d: number) => new Date(Date.now() - d * 86_400_000);
     await db.insert(articles).values([
@@ -66,6 +82,8 @@ describe("backfillMentionsForQuery (integration)", () => {
   afterAll(async () => {
     await db.delete(sources).where(eq(sources.id, newsSourceId));
     await db.delete(sources).where(eq(sources.id, blogSourceId));
+    await db.delete(sources).where(eq(sources.id, trSourceId));
+    await db.delete(sources).where(eq(sources.id, deSourceId));
     await db.delete(organizations).where(eq(organizations.id, organizationId));
   });
 
@@ -132,5 +150,24 @@ describe("backfillMentionsForQuery (integration)", () => {
       sourceTypes: ["news"],
     });
     expect(absent.created).toBe(0);
+  });
+
+  it("only looks at sources inside the monitoring's region scope", async () => {
+    const ast = { include: ["Zyxwvut Corp"], exclude: [], exactPhrases: [] };
+    const run = async (name: string, regionScopes: string[]) => {
+      const query = await createMonitoringQuery(db, organizationId, {
+        projectId,
+        name,
+        queryAst: ast,
+        booleanQuery: '"Zyxwvut Corp"',
+        sourceTypes: ["news"],
+        regionScopes,
+      });
+      return (await backfillMentionsForQuery(db, organizationId, { id: query.id, projectId, queryAst: ast, sourceTypes: ["news"], regionScopes })).created;
+    };
+    expect(await run("Worldwide", [])).toBe(2);
+    expect(await run("Local", ["TR"])).toBe(1);
+    expect(await run("Europe", ["EUR"])).toBe(2); // Türkiye and Germany are both in Europe
+    expect(await run("Japan", ["JP"])).toBe(0);
   });
 });

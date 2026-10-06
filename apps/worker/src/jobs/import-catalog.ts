@@ -17,8 +17,14 @@ import { testSourceUrl } from "@cim/ingestion";
 /** Small steady batches: the crawler's capacity and the disk are finite. */
 export const IMPORT_BATCH = 50;
 const CONCURRENCY = 6;
-/** Don't add feeds while the crawl queue is already this busy. */
-export const CRAWL_BACKLOG_LIMIT = 1000;
+/**
+ * Every source has one pending crawl job at the start of each 2-hour cycle, so a long queue alone says
+ * little. Feeds are held back only when the queue is huge, or when it is long AND its oldest job has
+ * waited most of a cycle (the crawler is not keeping up).
+ */
+export const CRAWL_BACKLOG_HARD_LIMIT = 4000;
+export const CRAWL_BACKLOG_LIMIT = 400;
+export const CRAWL_OLDEST_WAIT_LIMIT_MS = 90 * 60_000;
 /** Don't add feeds once the database is this full a share of the volume. */
 export const DB_VOLUME_SHARE = 0.6;
 export const MAX_SOURCES = 9000;
@@ -29,6 +35,8 @@ const CHUNK = 400;
 export type ImportDeps = {
   /** waiting + active crawl jobs */
   crawlBacklog: () => Promise<number>;
+  /** how long the oldest waiting crawl job has been waiting (ms); 0 when none */
+  crawlOldestWaitMs?: () => Promise<number>;
   env?: Record<string, string | undefined>;
   database?: Db;
   now?: () => Date;
@@ -67,7 +75,13 @@ export async function processImportCatalogJob(deps: ImportDeps): Promise<ImportR
     return stop(`The database uses ${Math.round(sizeMb)} MB of a ${volumeMb} MB volume (over ${Math.round(DB_VOLUME_SHARE * 100)}%) — paused until there is room.`);
   }
   const backlog = await deps.crawlBacklog();
-  if (backlog > CRAWL_BACKLOG_LIMIT) return stop(`The crawl queue has ${backlog} jobs waiting — waiting for it to drain.`);
+  if (backlog > CRAWL_BACKLOG_HARD_LIMIT) return stop(`The crawl queue has ${backlog} jobs waiting — waiting for it to drain.`);
+  if (backlog > CRAWL_BACKLOG_LIMIT && deps.crawlOldestWaitMs) {
+    const oldest = await deps.crawlOldestWaitMs();
+    if (oldest > CRAWL_OLDEST_WAIT_LIMIT_MS) {
+      return stop(`The crawl queue has ${backlog} jobs waiting and the oldest has waited ${Math.round(oldest / 60_000)} minutes — waiting for it to catch up.`);
+    }
+  }
   if ((await listActiveSources(database)).length >= MAX_SOURCES) return stop(`Reached the ${MAX_SOURCES} source limit.`);
 
   // Next feeds, in catalog order, that are not sources yet and not recently failed.

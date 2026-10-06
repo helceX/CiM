@@ -278,6 +278,15 @@ const importCatalogWorker = new Worker<ImportCatalogJobData>(
   async () => {
     await processImportCatalogJob({
       crawlBacklog: async () => (await crawlSourceQueue.getWaitingCount()) + (await crawlSourceQueue.getActiveCount()),
+      crawlOldestWaitMs: async () => {
+        // The ends of the waiting list: the oldest job is at one of them.
+        const ends = [
+          ...(await crawlSourceQueue.getJobs(["waiting"], 0, 4, true)),
+          ...(await crawlSourceQueue.getJobs(["waiting"], 0, 4, false)),
+        ];
+        const oldest = Math.min(...ends.map((job) => job.timestamp));
+        return Number.isFinite(oldest) ? Date.now() - oldest : 0;
+      },
     });
   },
   { connection, concurrency: 1 },

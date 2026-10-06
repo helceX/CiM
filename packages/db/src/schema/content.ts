@@ -140,6 +140,7 @@ export const articles = pgTable(
     uniqueIndex("articles_content_hash_uidx").on(table.contentHash),
     uniqueIndex("articles_canonical_url_uidx").on(table.canonicalUrl),
     index("articles_search_vector_idx").using("gin", table.searchVector),
+    index("articles_fetched_at_idx").on(table.fetchedAt),
     index("articles_title_trgm_idx").using("gin", sql`${table.title} gin_trgm_ops`),
     index("articles_author_profile_idx").on(table.authorProfileId),
   ],

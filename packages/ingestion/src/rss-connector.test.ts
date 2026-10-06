@@ -91,6 +91,21 @@ describe("RSSConnector", () => {
     expect(safeFetchMock).toHaveBeenCalledWith("https://cim-test.invalid/feed.xml");
   });
 
+  it("reuses the feed the health check just downloaded, once, instead of asking the publisher again", async () => {
+    safeFetchMock.mockReset();
+    const source = fakeSource({ url: "https://cim-test.invalid/reuse.xml" });
+    safeFetchMock.mockResolvedValueOnce(fetchResult({ body: FEED_XML }));
+    expect((await new RSSConnector().healthCheck(source)).status).toBe("healthy");
+    const first = await new RSSConnector().fetch(source);
+    expect(first).toHaveLength(1);
+    expect(safeFetchMock).toHaveBeenCalledTimes(1);
+
+    // the remembered copy is single-use: the next crawl downloads again
+    safeFetchMock.mockResolvedValueOnce(fetchResult({ body: FEED_XML }));
+    await new RSSConnector().fetch(source);
+    expect(safeFetchMock).toHaveBeenCalledTimes(2);
+  });
+
   it("throws fetching a source with no feed URL configured, without calling safeFetch", async () => {
     safeFetchMock.mockClear();
     await expect(new RSSConnector().fetch(fakeSource({ url: null }))).rejects.toThrow(

@@ -11,13 +11,36 @@ import { safeFetch, SsrfBlockedError } from "./safe-fetch";
  * names Mediaory-Bot (see isExplicitlyBlockedByRobots). `safeFetch` still
  * guards every request against SSRF regardless.
  */
+/**
+ * A crawl runs healthCheck and then fetch back to back; the health check already downloaded the
+ * feed, so its body is kept for a couple of minutes and fetch uses it once instead of asking the
+ * publisher a second time.
+ */
+const RECENT_BODY_MS = 2 * 60_000;
+const RECENT_BODY_MAX = 200;
+const recentBodies = new Map<string, { at: number; body: string }>();
+
+function rememberBody(url: string, body: string): void {
+  if (recentBodies.size >= RECENT_BODY_MAX) recentBodies.clear();
+  recentBodies.set(url, { at: Date.now(), body });
+}
+
+function takeRecentBody(url: string): string | null {
+  const hit = recentBodies.get(url);
+  recentBodies.delete(url);
+  return hit && Date.now() - hit.at < RECENT_BODY_MS ? hit.body : null;
+}
+
 export class RSSConnector implements SourceConnector {
   async fetch(source: Source): Promise<RawFetchResult[]> {
     if (!source.url) throw new Error(`Source "${source.name}" has no feed URL configured`);
-    if (await isExplicitlyBlockedByRobots(source.url)) {
-      throw new Error(`robots.txt asks Mediaory-Bot not to fetch ${source.url}`);
+    let body = takeRecentBody(source.url);
+    if (body === null) {
+      if (await isExplicitlyBlockedByRobots(source.url)) {
+        throw new Error(`robots.txt asks Mediaory-Bot not to fetch ${source.url}`);
+      }
+      body = (await safeFetch(source.url)).body;
     }
-    const { body } = await safeFetch(source.url);
     const items = parseFeed(body);
     return items
       .filter((item) => item.canonicalUrl)
@@ -41,6 +64,7 @@ export class RSSConnector implements SourceConnector {
       const { status, body } = await safeFetch(source.url, { timeoutMs: 8000 });
       if (status >= 400) return { status: "error", message: `Feed responded HTTP ${status}` };
       parseFeed(body);
+      rememberBody(source.url, body);
       return { status: "healthy" };
     } catch (error) {
       if (error instanceof SsrfBlockedError) return { status: "blocked", message: error.message };

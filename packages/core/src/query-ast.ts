@@ -1,4 +1,4 @@
-import { keywordMatches, prepareText } from "./keyword-match";
+import { keywordMatches, prepareText, type MatchOptions } from "./keyword-match";
 
 /**
  * docs/architecture/SEARCH.md — one canonical AST shared by the Simple
@@ -128,16 +128,16 @@ function tokenize(input: string): string[] {
  * (future) ingestion query-match stage and by "Preview results" so the
  * two never diverge in what counts as a match.
  */
-export function matchesText(ast: QueryAst, text: string): boolean {
+export function matchesText(ast: QueryAst, text: string, options: MatchOptions = {}): boolean {
   const texts = prepareText(text);
 
   const includeCandidates = [...ast.include, ...ast.exactPhrases];
   const hasInclude =
     includeCandidates.length === 0 ||
-    includeCandidates.some((term) => keywordMatches(term, texts));
+    includeCandidates.some((term) => keywordMatches(term, texts, options));
   if (!hasInclude) return false;
 
-  const hasExcluded = ast.exclude.some((term) => keywordMatches(term, texts));
+  const hasExcluded = ast.exclude.some((term) => keywordMatches(term, texts, options));
   return !hasExcluded;
 }
 
@@ -149,9 +149,9 @@ export function matchesText(ast: QueryAst, text: string): boolean {
  * priority. This is what the "high relevance" alert type checks against
  * — never a fabricated confidence number.
  */
-export function computeMatchPriority(ast: QueryAst, text: string): "high" | "normal" {
+export function computeMatchPriority(ast: QueryAst, text: string, options: MatchOptions = {}): "high" | "normal" {
   const texts = prepareText(text);
-  const hasExactPhraseMatch = ast.exactPhrases.some((phrase) => keywordMatches(phrase, texts));
+  const hasExactPhraseMatch = ast.exactPhrases.some((phrase) => keywordMatches(phrase, texts, options));
   return hasExactPhraseMatch ? "high" : "normal";
 }
 
@@ -163,13 +163,13 @@ export function computeMatchPriority(ast: QueryAst, text: string): "high" | "nor
  * when the query has no include/exactPhrase terms at all (the
  * vacuously-true case matchesText itself falls back to).
  */
-export function findMatchedTerm(ast: QueryAst, text: string): string | null {
+export function findMatchedTerm(ast: QueryAst, text: string, options: MatchOptions = {}): string | null {
   const texts = prepareText(text);
   for (const phrase of ast.exactPhrases) {
-    if (keywordMatches(phrase, texts)) return phrase;
+    if (keywordMatches(phrase, texts, options)) return phrase;
   }
   for (const term of ast.include) {
-    if (keywordMatches(term, texts)) return term;
+    if (keywordMatches(term, texts, options)) return term;
   }
   return null;
 }

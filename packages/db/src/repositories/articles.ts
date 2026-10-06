@@ -177,6 +177,7 @@ export async function listRecentArticlesForPreview(db: Db, days = 30, limit = 50
       title: articles.title,
       storedExcerpt: articles.storedExcerpt,
       wordFingerprint: articles.wordFingerprint,
+      language: articles.language,
       publishedAt: articles.publishedAt,
       sourceName: sources.name,
       sourceType: sources.type,

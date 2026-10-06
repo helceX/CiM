@@ -46,6 +46,7 @@ export async function backfillMentionsForQuery(
         title: articles.title,
         lead: articles.storedExcerpt,
         wordFingerprint: articles.wordFingerprint,
+        language: articles.language,
         publishedAt: articles.publishedAt,
         createdAt: articles.createdAt,
         sourceType: sources.type,
@@ -68,10 +69,11 @@ export async function backfillMentionsForQuery(
       // The stored headline + 200-character excerpt are matched exactly; beyond that the
       // story is only known by its word fingerprint (hashed words of the whole summary).
       const text = matchableText(row);
-      const exact = matchesText(query.queryAst, text);
-      const fingerprintTerm = exact ? null : findFingerprintMatch(query.queryAst, row.wordFingerprint);
+      const match = { language: row.language };
+      const exact = matchesText(query.queryAst, text, match);
+      const fingerprintTerm = exact ? null : findFingerprintMatch(query.queryAst, row.wordFingerprint, match);
       if (!exact && fingerprintTerm === null) continue;
-      const matchedTerm = exact ? findMatchedTerm(query.queryAst, text) : fingerprintTerm;
+      const matchedTerm = exact ? findMatchedTerm(query.queryAst, text, match) : fingerprintTerm;
       const { matchType, matchedRule } = matchedTerm
         ? classifyMatchType(query.queryAst, matchedTerm, row.sourceType)
         : { matchType: null, matchedRule: null };
@@ -80,7 +82,7 @@ export async function backfillMentionsForQuery(
         queryId: query.id,
         articleId: row.id,
         matchedTerms: matchedTerm ? [matchedTerm] : query.queryAst.include,
-        priority: computeMatchPriority(query.queryAst, row.title),
+        priority: computeMatchPriority(query.queryAst, row.title, match),
         matchType,
         matchedRule,
         createdAt: row.publishedAt ?? row.createdAt,

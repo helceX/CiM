@@ -102,7 +102,7 @@ function ChipInput({
                   ? "Short all-caps abbreviation: matched as the whole word, with exactly these capitals."
                   : spec.prefix
                     ? "Matches words that start with this (any ending)."
-                    : "Matches this whole word or phrase only."
+                    : "Matches this word or phrase and its forms: plural, possessive and case endings (girişimci → girişimcilerin, girişimciye; startup → startups)."
               }
               className="flex items-center gap-2 rounded-sm bg-secondary px-2.5 py-1 text-sm text-secondary-foreground"
             >
@@ -305,7 +305,7 @@ export function QueryBuilderForm({
               values={include}
               onChange={setInclude}
               placeholder="e.g. your brand, brand + product name"
-              hint="Matched as whole words: “THY” finds THY, THY'nin, THY ile — never the inside of a longer word. A short ALL-CAPS abbreviation also keeps its capitals (“AK” ≠ “ak”). Add * to match endings: banka* finds bankalar, bankası."
+              hint="Matched as whole words together with their endings: “girişimci” also finds girişimciler, girişimcinin, girişimciye; “startup” also finds startups and startup's. Apostrophes, hyphens and dots inside a keyword are tolerated (O'Reilly = O’Reilly). A short ALL-CAPS abbreviation keeps its capitals (“AK” ≠ “ak”) and takes only an apostrophe ending (THY'nin). Add * to open a word completely: banka* also finds bankacılık."
             />
             <ChipInput
               label="Exclude"
@@ -325,7 +325,7 @@ export function QueryBuilderForm({
           <Field
             id="advanced"
             label="Boolean query"
-            hint='Supports AND, OR, NOT, and "exact phrases". Words match whole words only; end a word with * to match endings (banka*).'
+            hint='Supports AND, OR, NOT, and "exact phrases". Words match whole words with their usual endings (plural, possessive, case); end a word with * to open it completely (banka*).'
           >
             <Textarea
               value={advancedText}

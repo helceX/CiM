@@ -76,7 +76,7 @@ export default async function MonitoringListPage() {
           <h1 className="text-lg font-semibold text-foreground">Monitoring</h1>
           <p className="text-sm text-muted-foreground">
             Queries tracking your brands, competitors, and topics. Keywords match whole words
-            only.
+            and their usual endings (girişimci → girişimcilerin).
           </p>
         </div>
         <Button asChild size="sm">

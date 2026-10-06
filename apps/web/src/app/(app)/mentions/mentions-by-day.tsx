@@ -293,7 +293,7 @@ export function MentionsByDay({
 
       {days.length === 0 ? (
         <p className="rounded-2xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
-          No mentions match your filters. Try widening the date range or clearing a filter. Keywords match whole words, so a short abbreviation will not match inside longer words.
+          No mentions match your filters. Try widening the date range or clearing a filter. Keywords match whole words and their usual endings, so a short abbreviation will not match inside longer words.
         </p>
       ) : (
         <ul className="flex flex-col gap-3">

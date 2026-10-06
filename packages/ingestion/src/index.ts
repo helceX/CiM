@@ -14,3 +14,4 @@ export * from "./feed-parse";
 export * from "./sitemap-parse";
 export * from "./robots";
 export * from "./social";
+export * from "./source-test";

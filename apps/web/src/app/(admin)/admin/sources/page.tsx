@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { CATALOG_GROUPS, TURKEY_SOURCE_CATALOG } from "@cim/core";
 import { WORLD_CATALOG_GROUP_LABELS, WORLD_SOURCE_CATALOG } from "@cim/core/world-catalog";
-import { db, listSourcesForAdmin } from "@cim/db";
+import { CATALOG_IMPORT_ORDER } from "@cim/core/catalog-import";
+import { countCatalogImportAttempts, db, getCatalogImportState, listSourcesForAdmin } from "@cim/db";
 import { requireSuperAdmin } from "@/lib/admin";
 import { AddSocialFeedForm, CatalogBrowser } from "./source-controls";
+import { CatalogImportPanel } from "./catalog-import-panel";
 import { SourceExplorer } from "./source-explorer";
 import { WorldCatalogBrowser } from "./world-catalog-browser";
 
@@ -31,7 +33,11 @@ const GROUP_LABEL: Record<string, string> = {
  */
 export default async function AdminSourcesPage() {
   await requireSuperAdmin();
-  const sources = await listSourcesForAdmin(db);
+  const [sources, importState, importCounts] = await Promise.all([
+    listSourcesForAdmin(db),
+    getCatalogImportState(db),
+    countCatalogImportAttempts(db),
+  ]);
   const worldCountryCounts: Record<string, number> = {};
   let worldGlobalCount = 0;
   for (const entry of WORLD_SOURCE_CATALOG) {
@@ -56,6 +62,21 @@ export default async function AdminSourcesPage() {
         </p>
       </div>
 
+      <section aria-labelledby="import-heading">
+        <h2 id="import-heading" className="sr-only">
+          Automatic catalog import
+        </h2>
+        <CatalogImportPanel
+          enabled={importState.enabled}
+          lastRunAt={importState.lastRunAt?.toISOString() ?? null}
+          lastNote={importState.lastNote}
+          added={importCounts.added}
+          failed={importCounts.failed}
+          skipped={importCounts.skipped}
+          catalogTotal={CATALOG_IMPORT_ORDER.length}
+          sourceCount={sources.length}
+        />
+      </section>
       <section aria-labelledby="current-heading">
         <h2 id="current-heading" className="text-sm font-semibold text-foreground">
           Current sources ({sources.length})

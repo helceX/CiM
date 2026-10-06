@@ -44,3 +44,18 @@ describe("world catalog", () => {
     expect(WORLD_SOURCE_CATALOG.some((e) => e.country === "US")).toBe(true);
   });
 });
+
+describe("catalog import order", () => {
+  it("lists every Türkiye and world feed once, home market and checked feeds first", async () => {
+    const { CATALOG_IMPORT_ORDER } = await import("./catalog-import");
+    expect(CATALOG_IMPORT_ORDER.length).toBe(TURKEY_SOURCE_CATALOG.length + WORLD_SOURCE_CATALOG.length);
+    expect(new Set(CATALOG_IMPORT_ORDER.map((e) => e.url)).size).toBe(CATALOG_IMPORT_ORDER.length);
+    const ranks = CATALOG_IMPORT_ORDER.map((e) => e.rank);
+    expect([...ranks].sort((a, b) => a - b)).toEqual(ranks);
+    expect(CATALOG_IMPORT_ORDER[0]!.country).toBe("TR");
+    for (const entry of CATALOG_IMPORT_ORDER) {
+      expect(entry.language).toMatch(/^([a-z]{2,3}|other)$/);
+      expect(entry.country).toMatch(/^[A-Z]{2}$/);
+    }
+  });
+});

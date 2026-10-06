@@ -18,6 +18,8 @@ import {
   type SendEmailJobData,
   type SendExecutiveBriefJobData,
   type SyncSocialConnectionsJobData,
+  type ImportCatalogJobData,
+  type PruneArticlesJobData,
   captureException,
   configureErrorReporting,
 } from "@cim/core";
@@ -32,6 +34,8 @@ import { processEnforceRetentionJob } from "./jobs/enforce-retention";
 import { processCaptureFeatureUsageJob } from "./jobs/capture-feature-usage";
 import { processSendExecutiveBriefJob } from "./jobs/send-executive-brief";
 import { processSyncSocialConnectionsJob } from "./jobs/sync-social-connections";
+import { processImportCatalogJob } from "./jobs/import-catalog";
+import { processPruneArticlesJob } from "./jobs/prune-articles";
 import { evaluateSpikeAlerts } from "./alerts/evaluate-spikes";
 import { evaluateSentimentShiftAlerts } from "./alerts/evaluate-sentiment-shift";
 import { evaluateEmergingTopicAlerts } from "./alerts/evaluate-emerging-topics";
@@ -262,6 +266,32 @@ const syncSocialConnectionsWorker = new Worker<SyncSocialConnectionsJobData>(
   { connection, concurrency: 1 },
 );
 
+const importCatalogQueue = new Queue<ImportCatalogJobData>(QUEUE_NAMES.importCatalog, {
+  connection,
+  defaultJobOptions: DEFAULT_JOB_OPTIONS,
+});
+const importCatalogWorker = new Worker<ImportCatalogJobData>(
+  QUEUE_NAMES.importCatalog,
+  async () => {
+    await processImportCatalogJob({
+      crawlBacklog: async () => (await crawlSourceQueue.getWaitingCount()) + (await crawlSourceQueue.getActiveCount()),
+    });
+  },
+  { connection, concurrency: 1 },
+);
+
+const pruneArticlesQueue = new Queue<PruneArticlesJobData>(QUEUE_NAMES.pruneArticles, {
+  connection,
+  defaultJobOptions: DEFAULT_JOB_OPTIONS,
+});
+const pruneArticlesWorker = new Worker<PruneArticlesJobData>(
+  QUEUE_NAMES.pruneArticles,
+  async () => {
+    await processPruneArticlesJob();
+  },
+  { connection, concurrency: 1 },
+);
+
 const allWorkers = [
   sendEmailWorker,
   crawlSourceWorker,
@@ -280,6 +310,8 @@ const allWorkers = [
   captureFeatureUsageWorker,
   sendExecutiveBriefWorker,
   syncSocialConnectionsWorker,
+  importCatalogWorker,
+  pruneArticlesWorker,
 ];
 // Off unless SENTRY_DSN is set. Tags carry only the queue and job id — never job data.
 configureErrorReporting({
@@ -416,12 +448,25 @@ async function scheduleRepeatingJobs() {
     { every: 5 * 60_000 },
     { name: QUEUE_NAMES.syncSocialConnections, data: {} },
   );
+  // Catalog feeds are added in small tested batches (it stands down when the crawl queue
+  // is backed up or the database is filling its volume — see jobs/import-catalog.ts).
+  await importCatalogQueue.upsertJobScheduler(
+    "import-catalog-repeat",
+    { every: 5 * 60_000 },
+    { name: QUEUE_NAMES.importCatalog, data: {} },
+  );
+  // Stories nobody's monitoring matched are only a 30-day cache; this keeps the disk from filling.
+  await pruneArticlesQueue.upsertJobScheduler(
+    "prune-articles-repeat",
+    { pattern: "30 3 * * *" },
+    { name: QUEUE_NAMES.pruneArticles, data: {} },
+  );
   console.log(
     "Schedulers registered: source crawl (30s), spike alert check (60s), " +
       "sentiment shift alert check (60s), emerging topic alert check (60s), " +
       "creator spike alert check (60s), " +
       "AI enrichment (20s), insight generation (2m), " +
-      "connected social accounts (5m), daily digest (08:00 UTC), scheduled reports (08:15 UTC), retention enforcement (08:30 UTC), " +
+      "catalog import (5m), article pruning (03:30 UTC), connected social accounts (5m), daily digest (08:00 UTC), scheduled reports (08:15 UTC), retention enforcement (08:30 UTC), " +
       "feature usage capture (08:45 UTC), executive brief delivery (09:00 UTC).",
   );
 }
@@ -455,6 +500,8 @@ async function shutdown() {
   await captureFeatureUsageQueue.close();
   await sendExecutiveBriefQueue.close();
   await syncSocialConnectionsQueue.close();
+  await importCatalogQueue.close();
+  await pruneArticlesQueue.close();
   process.exit(0);
 }
 

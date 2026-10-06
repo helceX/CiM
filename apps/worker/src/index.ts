@@ -448,6 +448,8 @@ async function scheduleRepeatingJobs() {
     { every: 5 * 60_000 },
     { name: QUEUE_NAMES.syncSocialConnections, data: {} },
   );
+  // Once at start-up too, so a restart after a full disk does not wait for 03:30.
+  await processPruneArticlesJob().catch((error) => console.error("[prune-articles] start-up run failed:", error));
   // Catalog feeds are added in small tested batches (it stands down when the crawl queue
   // is backed up or the database is filling its volume — see jobs/import-catalog.ts).
   await importCatalogQueue.upsertJobScheduler(

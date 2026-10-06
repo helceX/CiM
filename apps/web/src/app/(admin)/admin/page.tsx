@@ -14,6 +14,7 @@ import {
 import { requireSuperAdmin } from "@/lib/admin";
 import { getQueueHealth } from "@/lib/admin-queues";
 import { KpiRow } from "@/components/kpi-row";
+import { StoragePrune } from "./storage-prune";
 
 const SOURCE_STATUS_TONE: Record<string, "success" | "warning" | "danger" | "neutral"> =
   {
@@ -197,6 +198,9 @@ export default async function AdminOverviewPage() {
             ) : null}
           </div>
         )}
+        <div className="mt-4">
+          <StoragePrune />
+        </div>
       </section>
 
       <section>

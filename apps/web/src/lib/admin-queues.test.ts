@@ -3,7 +3,7 @@ import Redis from "ioredis";
 import { Queue, Worker } from "bullmq";
 import { getEnv } from "@cim/config";
 import { getRedis } from "./redis";
-import { getFailedJobsForQueue, isKnownQueueName } from "./admin-queues";
+import { getFailedJobsForQueue, getQueuedJobsForQueue, isKnownQueueName } from "./admin-queues";
 
 /**
  * docs/product/FEATURE_MATRIX.md P2 "Full observability views" — real
@@ -115,5 +115,26 @@ describe("isKnownQueueName", () => {
   it("accepts a real registered queue name and rejects an arbitrary string", () => {
     expect(isKnownQueueName("send_email")).toBe(true);
     expect(isKnownQueueName("not-a-real-queue")).toBe(false);
+  });
+});
+
+describe("getQueuedJobsForQueue (integration)", () => {
+  it("lists waiting jobs with their source id, oldest first, and honours the limit", async () => {
+    const queueName = `admin-queues-test-waiting-${crypto.randomUUID()}`;
+    const queue = new Queue(queueName, { connection: getRedis() });
+    try {
+      await queue.add("crawl_source", { sourceId: "source-1" });
+      await queue.add("crawl_source", { sourceId: "source-2" });
+      await queue.add("crawl_source", { sourceId: "source-3" });
+
+      const rows = await getQueuedJobsForQueue(queueName, "waiting", 2);
+      expect(rows.map((row) => row.sourceId)).toEqual(["source-1", "source-2"]);
+      expect(rows[0]?.data).toContain("source-1");
+      expect(await getQueuedJobsForQueue(queueName, "active", 10)).toEqual([]);
+      expect(await getQueuedJobsForQueue(queueName, "waiting", 0)).toEqual([]);
+    } finally {
+      await queue.obliterate({ force: true });
+      await queue.close();
+    }
   });
 });

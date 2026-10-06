@@ -105,3 +105,34 @@ export async function getFailedJobsForQueue(
     failedAt: job.finishedOn ?? job.timestamp,
   }));
 }
+
+export type QueuedJobRow = {
+  id: string;
+  name: string;
+  /** Job data as short JSON text (ids only — never anything customer-written). */
+  data: string;
+  /** Present on crawl jobs: the source the job will scan. */
+  sourceId: string | null;
+  createdAt: number;
+};
+
+/** The jobs waiting or running in a queue (oldest first), for the admin drill-down. Caller validates `queueName` with isKnownQueueName. */
+export async function getQueuedJobsForQueue(
+  queueName: string,
+  state: "waiting" | "active",
+  limit = 50,
+): Promise<QueuedJobRow[]> {
+  if (limit <= 0) return [];
+  const queue = getCachedQueue(queueName);
+  const jobs = await queue.getJobs([state], 0, limit - 1, true);
+  return jobs.map((job) => {
+    const data = job.data as { sourceId?: unknown } | null;
+    return {
+      id: job.id ?? "",
+      name: job.name,
+      data: JSON.stringify(job.data ?? {}).slice(0, 160),
+      sourceId: typeof data?.sourceId === "string" ? data.sourceId : null,
+      createdAt: job.timestamp,
+    };
+  });
+}

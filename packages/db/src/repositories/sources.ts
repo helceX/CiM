@@ -231,3 +231,10 @@ export async function findExistingSourceUrls(db: Db, urls: string[]): Promise<Se
   const rows = await db.select({ url: sources.url }).from(sources).where(inArray(sources.url, urls));
   return new Set(rows.map((row) => row.url).filter((url): url is string => Boolean(url)));
 }
+
+/** Names and addresses for a handful of source ids (admin drill-downs). */
+export async function getSourceLabels(db: Db, ids: string[]): Promise<Map<string, { name: string; url: string | null }>> {
+  if (ids.length === 0) return new Map();
+  const rows = await db.select({ id: sources.id, name: sources.name, url: sources.url }).from(sources).where(inArray(sources.id, ids));
+  return new Map(rows.map((row) => [row.id, { name: row.name, url: row.url }]));
+}

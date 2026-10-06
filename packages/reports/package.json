@@ -9,7 +9,8 @@
     ".": "./src/index.ts",
     "./templates": "./src/templates.ts",
     "./sections": "./src/sections.ts",
-    "./xlsx": "./src/render-xlsx.ts"
+    "./xlsx": "./src/render-xlsx.ts",
+    "./archive": "./src/archive/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
@@ -19,6 +20,7 @@
     "@cim/core": "workspace:*",
     "@cim/db": "workspace:*",
     "@cim/validation": "workspace:*",
+    "aws4fetch": "^1.0.20",
     "exceljs": "^4.4.0",
     "playwright": "1.63.0"
   },

@@ -20,6 +20,7 @@ import {
   type SyncSocialConnectionsJobData,
   type ImportCatalogJobData,
   type PruneArticlesJobData,
+  type WeeklyArchiveJobData,
   captureException,
   configureErrorReporting,
 } from "@cim/core";
@@ -36,6 +37,7 @@ import { processSendExecutiveBriefJob } from "./jobs/send-executive-brief";
 import { processSyncSocialConnectionsJob } from "./jobs/sync-social-connections";
 import { processImportCatalogJob } from "./jobs/import-catalog";
 import { processPruneArticlesJob } from "./jobs/prune-articles";
+import { processWeeklyArchiveJob } from "./jobs/weekly-archive";
 import { evaluateSpikeAlerts } from "./alerts/evaluate-spikes";
 import { evaluateSentimentShiftAlerts } from "./alerts/evaluate-sentiment-shift";
 import { evaluateEmergingTopicAlerts } from "./alerts/evaluate-emerging-topics";
@@ -292,6 +294,18 @@ const pruneArticlesWorker = new Worker<PruneArticlesJobData>(
   { connection, concurrency: 1 },
 );
 
+const weeklyArchiveQueue = new Queue<WeeklyArchiveJobData>(QUEUE_NAMES.weeklyArchive, {
+  connection,
+  defaultJobOptions: DEFAULT_JOB_OPTIONS,
+});
+const weeklyArchiveWorker = new Worker<WeeklyArchiveJobData>(
+  QUEUE_NAMES.weeklyArchive,
+  async () => {
+    await processWeeklyArchiveJob({ emailQueue: sendEmailQueue });
+  },
+  { connection, concurrency: 1 },
+);
+
 const allWorkers = [
   sendEmailWorker,
   crawlSourceWorker,
@@ -312,6 +326,7 @@ const allWorkers = [
   syncSocialConnectionsWorker,
   importCatalogWorker,
   pruneArticlesWorker,
+  weeklyArchiveWorker,
 ];
 // Off unless SENTRY_DSN is set. Tags carry only the queue and job id — never job data.
 configureErrorReporting({
@@ -463,12 +478,19 @@ async function scheduleRepeatingJobs() {
     { pattern: "30 3 * * *" },
     { name: QUEUE_NAMES.pruneArticles, data: {} },
   );
+  // 04:00 UTC every day (07:00 in Türkiye): archive the last fully ended week. Daily is safe —
+  // an organization already archived for that week is skipped, a failed one is retried.
+  await weeklyArchiveQueue.upsertJobScheduler(
+    "weekly-archive-repeat",
+    { pattern: "0 4 * * *" },
+    { name: QUEUE_NAMES.weeklyArchive, data: {} },
+  );
   console.log(
     "Schedulers registered: source crawl (30s), spike alert check (60s), " +
       "sentiment shift alert check (60s), emerging topic alert check (60s), " +
       "creator spike alert check (60s), " +
       "AI enrichment (20s), insight generation (2m), " +
-      "catalog import (5m), article pruning (03:30 UTC), connected social accounts (5m), daily digest (08:00 UTC), scheduled reports (08:15 UTC), retention enforcement (08:30 UTC), " +
+      "catalog import (5m), article pruning (03:30 UTC), weekly archive (04:00 UTC), connected social accounts (5m), daily digest (08:00 UTC), scheduled reports (08:15 UTC), retention enforcement (08:30 UTC), " +
       "feature usage capture (08:45 UTC), executive brief delivery (09:00 UTC).",
   );
 }
@@ -504,6 +526,7 @@ async function shutdown() {
   await syncSocialConnectionsQueue.close();
   await importCatalogQueue.close();
   await pruneArticlesQueue.close();
+  await weeklyArchiveQueue.close();
   process.exit(0);
 }
 

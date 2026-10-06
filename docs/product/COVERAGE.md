@@ -50,6 +50,14 @@ On 6 Oct 2026 the Postgres volume filled up ("No space left on device") and the 
 - **Storage panel:** Admin → Overview → Storage shows the database size and the biggest tables; set `DB_VOLUME_MB` (the Postgres volume size in MB) on the web and worker services to also see the share used.
 - **Automatic catalog import:** the worker adds the Türkiye and world catalog feeds (25 every 5 minutes, each fetch-tested; Türkiye news first, then XML-checked world feeds, then the rest). It stands down — and says why on Admin → Sources — when it is paused, when `DB_VOLUME_MB` is not set, when the database is over 60% of the volume, when more than 400 crawl jobs are waiting, or at 9,000 sources. Unreadable feeds are retried once, three days later.
 
+## 2e. The weekly archive
+
+Every Monday-to-Sunday week (Türkiye time) the worker builds, per organization, a self-contained HTML page (day → monitoring → kind, headlines, 200-character excerpts, links to the publishers; no scripts) and an XLSX, stores both in a **private Cloudflare R2 bucket** and emails owners/admins a link to `/archive`. Files open through a 5-minute signed redirect after an organization + `reports:read` check. The job runs daily at 04:00 UTC and is idempotent (one `archive_runs` row per org and week); admins can trigger it from `/archive` ("Build last week now").
+
+Variables (web **and** worker): `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`. Without them the job does nothing and the page says so.
+
+Optional, worker only: `ARCHIVE_DELETE_AFTER_DAYS` (28–3650). Once an archived week ended that many days ago, and its files are re-verified in R2, its mentions are deleted from Postgres. Unset = nothing is ever deleted because of the archive.
+
 ## 3. "The whole internet" — why it is not how anyone does it
 No media-monitoring product crawls the entire web itself. Practical ways to get broad coverage:
 

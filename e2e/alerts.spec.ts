@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { clearMentionsFor } from "./db";
 import { registerAndOnboard } from "./helpers";
 import { simulateCrawl } from "./simulate";
 
@@ -11,7 +12,10 @@ import { simulateCrawl } from "./simulate";
  * separately covered by apps/worker's own integration tests.
  */
 test("create a keyword alert rule, trigger it for real, and see the notification", async ({ page }) => {
-  await registerAndOnboard(page, { keyword: "Daily Tech Wire" });
+  const account = await registerAndOnboard(page, { keyword: "Daily Tech Wire" });
+  // A new monitoring matches stories already stored (earlier tests crawled the same source), and
+  // those are history, not alerts — start from "nothing found yet" so the crawl below finds new ones.
+  clearMentionsFor(account.email);
 
   await page.goto("/alerts/new");
   const ruleName = `Daily Tech Wire alert ${Date.now()}`;

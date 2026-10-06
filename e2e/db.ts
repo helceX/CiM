@@ -40,6 +40,17 @@ export function makePlatformAdmin(email: string): void {
   sql(`update users set is_platform_super_admin = true where email = '${email}';`);
 }
 
+/**
+ * Test-only: forget the stories a brand-new monitoring picked up from articles that earlier tests
+ * already stored (a new monitoring now matches the stored last 30 days). A test about what a crawl
+ * newly finds — an alert, say — needs those matches to be genuinely new.
+ */
+export function clearMentionsFor(email: string): void {
+  sql(
+    `delete from mentions where organization_id in (select organization_id from organization_memberships where user_id = (select id from users where email = '${email}'));`,
+  );
+}
+
 export function isEmailVerified(email: string): boolean {
   return sql(`select email_verified_at is not null from users where email = '${email}';`) === "t";
 }

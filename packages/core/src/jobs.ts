@@ -23,6 +23,8 @@ export const QUEUE_NAMES = {
   captureFeatureUsage: "capture_feature_usage",
   sendExecutiveBrief: "send_executive_brief",
   syncSocialConnections: "sync_social_connections",
+  importCatalog: "import_catalog",
+  pruneArticles: "prune_articles",
 } as const;
 
 export type SendEmailJobData = {
@@ -64,3 +66,7 @@ export type CaptureFeatureUsageJobData = Record<string, never>;
 export type SendExecutiveBriefJobData = Record<string, never>;
 
 export type SyncSocialConnectionsJobData = Record<string, never>;
+
+export type ImportCatalogJobData = Record<string, never>;
+
+export type PruneArticlesJobData = Record<string, never>;

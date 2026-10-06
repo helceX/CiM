@@ -5,7 +5,9 @@ import {
   checkDatabaseHealth,
   countOpenTakedownRequests,
   db,
+  getDatabaseSizeBytes,
   getPlatformTotals,
+  listLargestTables,
   listOrganizationsForAdmin,
   listSourcesForAdmin,
 } from "@cim/db";
@@ -103,6 +105,15 @@ export default async function AdminOverviewPage() {
   const organizations = organizationsResult.organizations;
   const sources = sourcesResult.sources;
 
+  // Disk: what fills the Postgres volume. Never fatal to the page.
+  const [dbSizeBytes, largestTables] = await Promise.all([
+    getDatabaseSizeBytes(db).catch(() => null),
+    listLargestTables(db, 6).catch(() => []),
+  ]);
+  const volumeMb = Number(process.env.DB_VOLUME_MB);
+  const dbMb = dbSizeBytes === null ? null : dbSizeBytes / 1_048_576;
+  const usedShare = dbMb !== null && volumeMb > 0 ? dbMb / volumeMb : null;
+
   return (
     <div className="flex flex-col gap-8">
       <div>
@@ -151,6 +162,41 @@ export default async function AdminOverviewPage() {
             ]}
           />
         </div>
+      </section>
+
+      <section>
+        <h2 className="text-sm font-semibold text-foreground">Storage</h2>
+        {dbMb === null ? (
+          <p className="mt-2 text-sm text-muted-foreground">Database size is not available.</p>
+        ) : (
+          <div className="mt-3 flex flex-col gap-3">
+            <p className="text-sm text-foreground">
+              Database: <strong className="tabular-nums">{Math.round(dbMb).toLocaleString()} MB</strong>
+              {usedShare !== null ? (
+                <>
+                  {" "}of a {volumeMb.toLocaleString()} MB volume ({Math.round(usedShare * 100)}%)
+                  {usedShare > 0.8 ? <Badge tone="danger">Almost full — enlarge the volume</Badge> : usedShare > 0.6 ? <Badge tone="warning">Over 60%</Badge> : null}
+                </>
+              ) : (
+                <span className="text-muted-foreground">
+                  {" "}— set DB_VOLUME_MB (the Postgres volume size in MB) on the web and worker services to see the share used.
+                </span>
+              )}
+            </p>
+            {largestTables.length > 0 ? (
+              <ul className="grid gap-1 text-xs text-muted-foreground sm:grid-cols-2">
+                {largestTables.map((table) => (
+                  <li key={table.name} className="flex justify-between gap-3 rounded border border-border px-3 py-1.5">
+                    <span className="truncate text-foreground">{table.name}</span>
+                    <span className="tabular-nums">
+                      {Math.round(table.bytes / 1_048_576).toLocaleString()} MB · ~{table.rows.toLocaleString()} rows
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
+        )}
       </section>
 
       <section>

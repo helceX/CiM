@@ -41,6 +41,14 @@ See also `CONTENT_POLICY.md` (licensing, takedown, snippet limits). Polling is p
 
 `scripts/data/DÜNYA RSS PAKETİ/` is the operator's research pack (7,729 records, 5 Oct 2026). `scripts/import-world-pack.ts` turns it into `packages/core/src/world-catalog.generated.ts`: 4,657 candidate feeds after leaving out plain-http feeds (811), Reddit (RSS ends 13 Nov 2026), licence-required agencies and everything the Türkiye catalog already has (2,169 repeats). Admin → Sources → World catalog browses it by place (map + World → continent → country table), topic, text and "XML-checked only"; the list is filtered on the server (`/api/admin/catalog`), never shipped whole. A country is the pack's directory label or community focus, not where a publisher is registered; 1,018 feeds have no confirmed country and sit under "Global". Every feed is still fetch-tested before it is stored. Continent codes are three letters (EUR, ASI, AFR, NAM, SAM, OCE) so they cannot be confused with ISO country codes (AF, NA, SA).
 
+## 2d. Disk, pruning and the automatic import
+
+On 6 Oct 2026 the Postgres volume filled up ("No space left on device") and the worker could not even run its start-up migration. Nothing deleted stored stories, and a few thousand sources each add dozens of stories per crawl. Since then:
+
+- **Pruning:** every day at 03:30 UTC `prune_articles` deletes stored stories that no customer's monitoring matched once they are older than 30 days (the history window a new monitoring is matched against). Stories with mentions stay until the customers' own retention removes the mentions.
+- **Storage panel:** Admin → Overview → Storage shows the database size and the biggest tables; set `DB_VOLUME_MB` (the Postgres volume size in MB) on the web and worker services to also see the share used.
+- **Automatic catalog import:** the worker adds the Türkiye and world catalog feeds (25 every 5 minutes, each fetch-tested; Türkiye news first, then XML-checked world feeds, then the rest). It stands down — and says why on Admin → Sources — when it is paused, when `DB_VOLUME_MB` is not set, when the database is over 60% of the volume, when more than 400 crawl jobs are waiting, or at 9,000 sources. Unreadable feeds are retried once, three days later.
+
 ## 3. "The whole internet" — why it is not how anyone does it
 No media-monitoring product crawls the entire web itself. Practical ways to get broad coverage:
 

@@ -1,11 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const safeFetch = vi.fn();
-vi.mock("server-only", () => ({}));
 // Everything real except the network: a private-IP URL goes through the real
 // SSRF guard (which rejects before any connection), other URLs are stubbed.
-vi.mock("@cim/ingestion", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@cim/ingestion")>();
+vi.mock("./safe-fetch", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./safe-fetch")>();
   return {
     ...actual,
     safeFetch: (url: string, ...rest: unknown[]) =>

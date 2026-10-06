@@ -14,3 +14,4 @@ export * from "./visuals";
 export * from "./compliance";
 export * from "./teams";
 export * from "./social-connections";
+export * from "./catalog-import";

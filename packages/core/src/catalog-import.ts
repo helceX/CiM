@@ -1,0 +1,54 @@
+import { TURKEY_SOURCE_CATALOG } from "./source-catalog";
+import { WORLD_SOURCE_CATALOG } from "./world-catalog";
+
+/**
+ * What the background catalog import adds, and in which order. Imported as
+ * `@cim/core/catalog-import` (it pulls in the world catalog's data, which the main
+ * entry deliberately does not).
+ *
+ * Order matters because the crawler's capacity is finite: the Türkiye news feeds
+ * first (the home market), then the world feeds the research pack's own XML check
+ * passed, then Türkiye's one-per-writer columns and forums, then the rest of the
+ * world — blogs, forums, podcasts and video last.
+ */
+export type ImportCandidate = {
+  key: string;
+  name: string;
+  url: string;
+  type: string;
+  /** ISO 639 code or "other" */
+  language: string;
+  /** ISO country, "ZZ" = none / global */
+  country: string;
+  verified: boolean;
+  rank: number;
+};
+
+const LATE_WORLD_GROUPS = new Set(["blogs", "forums", "podcasts", "video", "social", "reference"]);
+
+function rank(entry: ImportCandidate): number {
+  return entry.rank;
+}
+
+export const CATALOG_IMPORT_ORDER: readonly ImportCandidate[] = [
+  ...TURKEY_SOURCE_CATALOG.map<ImportCandidate>((e) => ({
+    key: e.key,
+    name: e.name,
+    url: e.url,
+    type: e.type,
+    language: e.language,
+    country: e.country,
+    verified: false,
+    rank: e.group === "columns" || e.group === "forums" ? 2 : 0,
+  })),
+  ...WORLD_SOURCE_CATALOG.map<ImportCandidate>((e) => ({
+    key: e.key,
+    name: e.name,
+    url: e.url,
+    type: e.type,
+    language: e.language || "other",
+    country: e.country || "ZZ",
+    verified: e.verified,
+    rank: e.verified ? 1 : LATE_WORLD_GROUPS.has(e.group) ? 4 : 3,
+  })),
+].sort((a, b) => rank(a) - rank(b));

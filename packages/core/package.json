@@ -7,7 +7,8 @@
   "types": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./world-catalog": "./src/world-catalog.ts"
+    "./world-catalog": "./src/world-catalog.ts",
+    "./catalog-import": "./src/catalog-import.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

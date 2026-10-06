@@ -1,3 +1,4 @@
+import { inflectedWordPattern, morphologyKey } from "./morphology";
 import { turkishFold } from "./turkish";
 
 /**
@@ -44,26 +45,61 @@ function escapeRegex(value: string): string {
 }
 
 const cache = new Map<string, { spec: KeywordMatchSpec; regex: RegExp | null }>();
-const CACHE_LIMIT = 2000;
+const CACHE_LIMIT = 4000;
+const NON_WORD = `[^${WORD}]`;
 
-function compile(term: string) {
-  let entry = cache.get(term);
+/** Everything about the text a keyword is matched in that can change what matches. */
+export type MatchOptions = {
+  /** Language of the text (ISO code); decides which word endings a keyword may take. */
+  language?: string | null;
+};
+
+/**
+ * The folded keyword as a pattern: its words joined by whatever the keyword used between them
+ * (a space → any whitespace; an apostrophe, hyphen, dot, comma… → any punctuation or nothing, so
+ * "O'Reilly", "O’Reilly" and "O Reilly" all agree), and the last word open to its inflections.
+ */
+function foldedPattern(core: string, prefix: boolean, language: string | null | undefined): string {
+  const leading = core.match(new RegExp(`^${NON_WORD}*`, "u"))?.[0] ?? "";
+  const trailing = core.slice(leading.length).match(new RegExp(`${NON_WORD}*$`, "u"))?.[0] ?? "";
+  const middle = core.slice(leading.length, core.length - trailing.length);
+  const parts = middle.split(new RegExp(`(${NON_WORD}+)`, "u"));
+  let pattern = "";
+  for (let i = 0; i < parts.length; i += 1) {
+    const part = parts[i] ?? "";
+    if (i % 2 === 1) {
+      pattern += /^\s+$/.test(part) ? "\\s+" : `${NON_WORD}{0,3}`;
+    } else if (i === parts.length - 1 && !prefix && trailing === "") {
+      pattern += inflectedWordPattern(part, language);
+    } else {
+      pattern += part;
+    }
+  }
+  return `${escapeRegex(leading)}${pattern}${escapeRegex(trailing)}`;
+}
+
+function compile(term: string, language: string | null | undefined) {
+  const key = `${morphologyKey(language)}\u0000${term}`;
+  let entry = cache.get(key);
   if (entry) return entry;
   const spec = parseKeywordSpec(term);
   let regex: RegExp | null = null;
   if (spec.core.length > 0) {
-    const body = escapeRegex(spec.caseSensitive ? spec.core : turkishFold(spec.core)).replace(/ /g, "\\s+");
     const first = spec.core[0] ?? "";
     const last = spec.core[spec.core.length - 1] ?? "";
     const startsWord = /[\p{L}\p{N}]/u.test(first);
     const endsWord = /[\p{L}\p{N}]/u.test(last);
     const before = startsWord ? `(?<![${WORD}])` : "";
     const after = spec.prefix ? `[${WORD}]*` : endsWord ? `(?![${WORD}])` : "";
+    // An abbreviation (THY) is exact; every other keyword may be inflected.
+    const body = spec.caseSensitive
+      ? escapeRegex(spec.core).replace(/ /g, "\\s+")
+      : foldedPattern(turkishFold(spec.core), spec.prefix, language);
     regex = new RegExp(`${before}${body}${after}`, "u");
   }
   entry = { spec, regex };
   if (cache.size >= CACHE_LIMIT) cache.clear();
-  cache.set(term, entry);
+  cache.set(key, entry);
   return entry;
 }
 
@@ -72,8 +108,8 @@ function compile(term: string) {
  * text as published (for case-sensitive abbreviations); `folded` is the same text
  * after turkishFold (everything else).
  */
-export function keywordMatches(term: string, texts: { original: string; folded: string }): boolean {
-  const { spec, regex } = compile(term);
+export function keywordMatches(term: string, texts: { original: string; folded: string }, options: MatchOptions = {}): boolean {
+  const { spec, regex } = compile(term, options.language);
   if (!regex) return false;
   return regex.test(spec.caseSensitive ? texts.original.normalize("NFC") : texts.folded);
 }
@@ -87,7 +123,13 @@ export function describeKeywordMatch(term: string): string | null {
   const { core, prefix, caseSensitive } = parseKeywordSpec(term);
   if (!core) return null;
   const parts: string[] = [];
-  parts.push(prefix ? `words that start with “${core}” (e.g. “${core}s”, “${core}'s” forms)` : `the whole word “${core}” only`);
+  parts.push(
+    prefix
+      ? `words that start with “${core}” (e.g. “${core}s”, “${core}'s” forms)`
+      : caseSensitive
+        ? `the whole word “${core}” only`
+        : `the whole word “${core}” and its forms (plural, possessive and case endings)`,
+  );
   if (caseSensitive) parts.push("exact capitals (abbreviation)");
   return parts.join(", ");
 }

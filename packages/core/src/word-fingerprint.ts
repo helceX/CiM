@@ -1,4 +1,5 @@
-import { parseKeywordSpec } from "./keyword-match";
+import { parseKeywordSpec, type MatchOptions } from "./keyword-match";
+import { inflectedForms, morphologyKey } from "./morphology";
 import type { QueryAst } from "./query-ast";
 import { turkishFold } from "./turkish";
 
@@ -95,6 +96,8 @@ type Reader = {
   hasWord(hash: number): boolean;
   hasPair(hash: number): boolean;
   hasCap(hash: number): boolean;
+  /** calls back with every stored word hash */
+  forEachWord(callback: (hash: number) => void): void;
 };
 
 function binarySearch(count: number, at: (index: number) => number, target: number): boolean {
@@ -124,42 +127,101 @@ function readerFor(fingerprint: Uint8Array): Reader | null {
     hasWord: (hash) => binarySearch(words, (i) => view.getUint32(6 + i * 4, true), hash),
     hasPair: (hash) => binarySearch(pairs, (i) => view.getUint16(pairsAt + i * 2, true), hash),
     hasCap: (hash) => binarySearch(caps, (i) => view.getUint32(capsAt + i * 4, true), hash),
+    forEachWord: (callback) => {
+      for (let i = 0; i < words; i += 1) callback(view.getUint32(6 + i * 4, true));
+    },
   };
 }
 
-function termInFingerprint(term: string, reader: Reader): boolean | null {
+/** One keyword prepared for fingerprints: what its words hash to, and every form its last word can take. */
+type TermMatcher = (reader: Reader) => boolean;
+
+function compileTerm(term: string, language: string | null | undefined): TermMatcher | null {
   const spec = parseKeywordSpec(term);
   if (spec.prefix || !SUPPORTED_TERM.test(spec.core)) return null;
-  if (spec.caseSensitive) return reader.hasCap(hash32(spec.core));
+  if (spec.caseSensitive) {
+    const capHash = hash32(spec.core);
+    return (reader) => reader.hasCap(capHash);
+  }
   const words = wordsOf(spec.core);
   if (words.length === 0) return null;
-  if (!words.every((word) => reader.hasWord(hash32(word)))) return false;
-  for (let i = 0; i + 1 < words.length; i++) {
-    if (!reader.hasPair(pairHash(words[i]!, words[i + 1]!))) return false;
+  const head = words.slice(0, -1);
+  const last = words[words.length - 1]!;
+  const headHashes = head.map(hash32);
+  const headPairs = head.slice(0, -1).map((word, i) => pairHash(word, head[i + 1]!));
+  // hash of every form of the last word → the forms (a hash can in theory be shared)
+  const forms = new Map<number, string[]>();
+  for (const form of inflectedForms(last, language)) {
+    const hash = hash32(form);
+    const known = forms.get(hash);
+    if (known) known.push(form);
+    else forms.set(hash, [form]);
   }
-  return true;
+  const previous = head[head.length - 1];
+  return (reader) => {
+    if (!headHashes.every((hash) => reader.hasWord(hash))) return false;
+    if (!headPairs.every((hash) => reader.hasPair(hash))) return false;
+    let found = false;
+    reader.forEachWord((hash) => {
+      if (found) return;
+      const candidates = forms.get(hash);
+      if (!candidates) return;
+      if (previous === undefined || candidates.some((form) => reader.hasPair(pairHash(previous, form)))) found = true;
+    });
+    return found;
+  };
+}
+
+type CompiledQuery = {
+  excludes: (TermMatcher | null)[];
+  includes: { term: string; match: TermMatcher | null }[];
+};
+
+const compiled = new WeakMap<QueryAst, Map<string, CompiledQuery>>();
+
+function compileQuery(ast: QueryAst, language: string | null | undefined): CompiledQuery {
+  const key = morphologyKey(language);
+  let byLanguage = compiled.get(ast);
+  if (!byLanguage) {
+    byLanguage = new Map();
+    compiled.set(ast, byLanguage);
+  }
+  let query = byLanguage.get(key);
+  if (!query) {
+    query = {
+      excludes: ast.exclude.map((term) => compileTerm(term, language)),
+      includes: [...ast.exactPhrases, ...ast.include].map((term) => ({ term, match: compileTerm(term, language) })),
+    };
+    byLanguage.set(key, query);
+  }
+  return query;
 }
 
 /**
  * The include term (exact phrases first, as findMatchedTerm does) a stored fingerprint
- * satisfies, or null. A monitoring with an exclusion the fingerprint cannot judge never
- * matches this way: it could not be told apart from a story the exclusion should drop.
+ * satisfies, or null. Keywords take the same word endings as in running text. A monitoring
+ * with an exclusion the fingerprint cannot judge never matches this way: it could not be told
+ * apart from a story the exclusion should drop.
  */
-export function findFingerprintMatch(ast: QueryAst, fingerprint: Uint8Array | null | undefined): string | null {
+export function findFingerprintMatch(
+  ast: QueryAst,
+  fingerprint: Uint8Array | null | undefined,
+  options: MatchOptions = {},
+): string | null {
   if (!fingerprint) return null;
   const reader = readerFor(fingerprint);
   if (!reader) return null;
+  const query = compileQuery(ast, options.language);
 
-  for (const term of ast.exclude) {
-    const found = termInFingerprint(term, reader);
-    if (found === null || found) return null;
+  for (const exclude of query.excludes) {
+    if (exclude === null || exclude(reader)) return null;
   }
-  for (const term of [...ast.exactPhrases, ...ast.include]) {
-    if (termInFingerprint(term, reader) === true) return term;
+  for (const include of query.includes) {
+    if (include.match?.(reader)) return include.term;
   }
   return null;
 }
 
-export function matchesFingerprint(ast: QueryAst, fingerprint: Uint8Array | null | undefined): boolean {
-  return findFingerprintMatch(ast, fingerprint) !== null;
+export function matchesFingerprint(ast: QueryAst, fingerprint: Uint8Array | null | undefined, options: MatchOptions = {}): boolean {
+  return findFingerprintMatch(ast, fingerprint, options) !== null;
 }

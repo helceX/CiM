@@ -83,11 +83,13 @@ export async function ingestSource(
     // names the brand in its first lines is a mention even when the headline
     // does not. The priority signal stays headline-only.
     const text = matchableText({ title: article.title, lead: raw.bodyText });
+    // Keywords take the word endings of the story's language (see @cim/core morphology).
+    const match = { language: raw.language ?? source.language };
     for (const query of activeQueries) {
-      if (!matchesText(query.queryAst, text)) continue;
-      const priority = computeMatchPriority(query.queryAst, article.title);
+      if (!matchesText(query.queryAst, text, match)) continue;
+      const priority = computeMatchPriority(query.queryAst, article.title, match);
       const organizationId = asOrganizationId(query.organizationId);
-      const matchedTerm = findMatchedTerm(query.queryAst, text);
+      const matchedTerm = findMatchedTerm(query.queryAst, text, match);
       const { matchType, matchedRule } = matchedTerm
         ? classifyMatchType(query.queryAst, matchedTerm, source.type)
         : { matchType: null, matchedRule: null };

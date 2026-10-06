@@ -36,7 +36,7 @@ describe("whole-word matching", () => {
   it("matches phrases as a unit with flexible whitespace, not across other words", () => {
     expect(hit("yapay zeka", "Yapay   Zeka yatırımı arttı")).toBe(true);
     expect(hit("yapay zeka", "yapay bir zeka değil")).toBe(false);
-    expect(hit("yapay zeka", "yapay zekaya karşı")).toBe(false);
+    expect(hit("yapay zeka", "yapay zekaya karşı")).toBe(true); // the last word takes endings
     expect(hit("yapay zeka", "yapay zeka'ya karşı")).toBe(true);
   });
 
@@ -83,7 +83,9 @@ describe("trailing * opens the end of the word", () => {
     expect(hit("banka*", "Bankası yeni şube açtı")).toBe(true);
     expect(hit("banka*", "banka")).toBe(true);
     expect(hit("banka*", "Kanka ve Dubanka")).toBe(false);
-    expect(hit("banka", "Bankalar zarar etti")).toBe(false);
+    expect(hit("banka", "Bankalar zarar etti")).toBe(true); // plain keywords take ordinary endings too
+    expect(hit("banka", "Bankacılık sektörü")).toBe(false); // …but "banka*" is the way to open a word fully
+    expect(hit("banka*", "Bankacılık sektörü")).toBe(true);
   });
 
   it("can combine with an abbreviation", () => {

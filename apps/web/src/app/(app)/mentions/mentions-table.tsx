@@ -111,7 +111,7 @@ export function MentionsTable({
         <EmptyState
           icon={<Inbox className="size-8" aria-hidden="true" />}
           title="No mentions match your filters."
-          description="Try widening the date range or clearing a filter. Keywords match whole words, so a short abbreviation will not match inside longer words."
+          description="Try widening the date range or clearing a filter. Keywords match whole words and their usual endings, so a short abbreviation will not match inside longer words."
 
         />
       ) : (

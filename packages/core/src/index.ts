@@ -3,6 +3,7 @@ export * from "./tokens";
 export * from "./authz";
 export * from "./query-ast";
 export * from "./keyword-match";
+export * from "./word-fingerprint";
 export * from "./turkish";
 export * from "./email-provider";
 export * from "./jobs";

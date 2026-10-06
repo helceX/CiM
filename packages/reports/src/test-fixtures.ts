@@ -44,6 +44,7 @@ function fakeArticle(overrides: Partial<Article> = {}): Article {
     storyClusterId: null,
     searchVector: null,
     print: null,
+    wordFingerprint: null,
     createdAt: new Date("2026-01-02T00:01:00Z"),
     ...overrides,
   };

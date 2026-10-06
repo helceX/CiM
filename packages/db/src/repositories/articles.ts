@@ -39,6 +39,8 @@ export async function insertArticle(
     authorProfileId?: string | null;
     // Printed-edition reference (edition date, page, viewer link) — null/absent for digital stories.
     print?: ArticlePrint | null;
+    // Hashed words of the headline and the feed's whole summary (@cim/core buildWordFingerprint).
+    wordFingerprint?: Uint8Array | null;
   },
 ) {
   // docs/architecture/ADR-002-SEARCH.md MVP tier — folded here (JS, not a
@@ -174,6 +176,7 @@ export async function listRecentArticlesForPreview(db: Db, days = 30, limit = 50
       id: articles.id,
       title: articles.title,
       storedExcerpt: articles.storedExcerpt,
+      wordFingerprint: articles.wordFingerprint,
       publishedAt: articles.publishedAt,
       sourceName: sources.name,
       sourceType: sources.type,

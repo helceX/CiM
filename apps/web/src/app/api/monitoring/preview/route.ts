@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { previewMonitoringQuerySchema } from "@cim/validation";
-import { astToBooleanQuery, matchesText, queryQualityWarning } from "@cim/core";
+import { astToBooleanQuery, matchesFingerprint, matchesText, queryQualityWarning } from "@cim/core";
 import { getAIProvider } from "@cim/ai";
 import { getEnv } from "@cim/config";
 import { db, listRecentArticlesForPreview } from "@cim/db";
@@ -27,7 +27,13 @@ export async function POST(request: Request) {
   const ast = parsed.data;
 
   const recentArticles = await listRecentArticlesForPreview(db, PREVIEW_WINDOW_DAYS);
-  const matches = recentArticles.filter((article) => matchesText(ast, matchableText({ title: article.title, lead: article.storedExcerpt })));
+  // Same rule as saving the monitoring (backfillMentionsForQuery): exact on the stored text, or a hit in the
+  // story's word fingerprint, so the preview count and the first result agree.
+  const matches = recentArticles.filter(
+    (article) =>
+      matchesText(ast, matchableText({ title: article.title, lead: article.storedExcerpt })) ||
+      matchesFingerprint(ast, article.wordFingerprint),
+  );
   const sample = matches.slice(0, SAMPLE_LIMIT).map((m) => ({
     title: m.title,
     sourceName: m.sourceName,

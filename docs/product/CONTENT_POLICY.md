@@ -10,6 +10,7 @@ that phrase in contracts or marketing.
 |---|---|
 | Only public RSS feeds / sitemaps; pages only if `robots.txt` allows | `packages/ingestion` (RSS, Sitemap, Web connectors) |
 | Never full text: title + link + time + excerpt ≤ 200 chars at a sentence/word boundary | `normalize.ts` `makeSnippet` |
+| Matching beyond the excerpt uses only a *word fingerprint* (hashes of words, not text; cannot be displayed or turned back into a sentence) | `packages/core/src/word-fingerprint.ts` |
 | Every result links back to the publisher's page | mention drawer, reports |
 | Polite polling: every real source once per 2 hours | `packages/core/src/crawl-interval.ts` |
 | Honest identity: `Mediaory-Bot/1.0 (+https://mediaory.io/bot)`; page explains it | `safe-fetch.ts`, `/bot` |

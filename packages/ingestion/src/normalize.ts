@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { buildWordFingerprint, matchableText } from "@cim/core";
 import type { Source } from "@cim/db/schema";
 import type { RawFetchResult } from "./connector";
 
@@ -41,5 +42,6 @@ export function normalizeToArticleInput(source: Source, raw: RawFetchResult) {
     publishedAt: raw.publishedAt,
     authorName: raw.authorName ?? null,
     print: raw.print ?? null,
+    wordFingerprint: buildWordFingerprint(matchableText({ title: raw.title, lead: raw.bodyText })),
   };
 }

@@ -15,10 +15,10 @@ import {
 import { testSourceUrl } from "@cim/ingestion";
 
 /** Small steady batches: the crawler's capacity and the disk are finite. */
-export const IMPORT_BATCH = 25;
-const CONCURRENCY = 3;
+export const IMPORT_BATCH = 50;
+const CONCURRENCY = 6;
 /** Don't add feeds while the crawl queue is already this busy. */
-export const CRAWL_BACKLOG_LIMIT = 400;
+export const CRAWL_BACKLOG_LIMIT = 1000;
 /** Don't add feeds once the database is this full a share of the volume. */
 export const DB_VOLUME_SHARE = 0.6;
 export const MAX_SOURCES = 9000;

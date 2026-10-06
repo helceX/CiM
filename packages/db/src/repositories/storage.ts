@@ -22,7 +22,7 @@ export async function listLargestTables(db: Db, limit = 8): Promise<TableSize[]>
 }
 
 /** How long unmatched stories are kept; `ARTICLE_CACHE_DAYS` overrides it on the worker (a smaller disk wants fewer days). */
-export const ARTICLE_CACHE_DAYS = 30;
+export const ARTICLE_CACHE_DAYS = 14;
 
 /**
  * Stored stories that no customer's monitoring matched are only a cache — for the

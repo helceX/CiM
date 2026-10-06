@@ -37,6 +37,10 @@ See also `CONTENT_POLICY.md` (licensing, takedown, snippet limits). Polling is p
 - **New monitoring:** when one is saved (or created in onboarding) the stories already stored for the last 30 days — the same window the preview uses — are matched at once (`backfillMentionsForQuery`), so the preview count and the first result agree. Those mentions are dated to the story, not to the save, so alert checks do not see a burst.
 - **Titles** are entity-decoded at ingest (`TÜİK&apos;in` → `TÜİK'in`); migration 0037 repaired the rows stored before that.
 
+## 2c. The world catalog
+
+`scripts/data/DÜNYA RSS PAKETİ/` is the operator's research pack (7,729 records, 5 Oct 2026). `scripts/import-world-pack.ts` turns it into `packages/core/src/world-catalog.generated.ts`: 4,657 candidate feeds after leaving out plain-http feeds (811), Reddit (RSS ends 13 Nov 2026), licence-required agencies and everything the Türkiye catalog already has (2,169 repeats). Admin → Sources → World catalog browses it by place (map + World → continent → country table), topic, text and "XML-checked only"; the list is filtered on the server (`/api/admin/catalog`), never shipped whole. A country is the pack's directory label or community focus, not where a publisher is registered; 1,018 feeds have no confirmed country and sit under "Global". Every feed is still fetch-tested before it is stored. Continent codes are three letters (EUR, ASI, AFR, NAM, SAM, OCE) so they cannot be confused with ISO country codes (AF, NA, SA).
+
 ## 3. "The whole internet" — why it is not how anyone does it
 No media-monitoring product crawls the entire web itself. Practical ways to get broad coverage:
 

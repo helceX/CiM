@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 /** Source types an operator may create by hand — the connectors that really exist. */
-export const ADMIN_SOURCE_TYPES = ["news", "newspaper", "magazine", "press", "blog", "website", "forum", "comments", "social", "youtube"] as const;
+export const ADMIN_SOURCE_TYPES = ["news", "newspaper", "magazine", "press", "blog", "website", "forum", "comments", "social", "youtube", "podcast"] as const;
 export const ADMIN_SOURCE_CONNECTORS = ["rss", "sitemap", "api"] as const;
 
 const httpsUrl = z
@@ -18,7 +18,13 @@ export const createSourceSchema = z.object({
   url: httpsUrl,
   connector: z.enum(ADMIN_SOURCE_CONNECTORS).default("rss"),
   type: z.enum(ADMIN_SOURCE_TYPES).default("news"),
-  language: z.enum(["tr", "en", "de", "fr", "es", "ar", "ru", "other"]).default("tr"),
+  // ISO 639 code ("tr", "en", "pt", "zh" …) or "other"; the world catalog carries many languages.
+  language: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .regex(/^([a-z]{2,3}|other)$/, "Use a language code such as tr, en or pt")
+    .default("tr"),
   // "ZZ" = no country (a global social feed); stored as null.
   country: z.string().trim().length(2).toUpperCase().default("TR"),
   licenseConfirmed: z.boolean().default(false),

@@ -16,7 +16,7 @@ type NewSource = {
   country: string;
 };
 
-async function post(path: string, body: unknown) {
+export async function post(path: string, body: unknown) {
   const response = await fetch(path, {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -476,7 +476,7 @@ export function CrawlToggle({ id, name, paused }: { id: string; name: string; pa
 
 export type CatalogEntry = { key: string; name: string; url: string; group: string; type: string; language: string; country: string };
 
-type BulkOutcome = { added: number; skipped: number; failed: { name: string; error: string }[] };
+export type BulkOutcome = { added: number; skipped: number; failed: { name: string; error: string }[] };
 
 /**
  * The Türkiye feed catalog: search, filter by category, add one feed, or add

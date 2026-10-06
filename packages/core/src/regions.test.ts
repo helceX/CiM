@@ -20,21 +20,31 @@ describe("regions", () => {
   });
 
   it("puts transcontinental countries under both continents", () => {
-    expect(continentsOfCountry("TR")).toEqual(["AS", "EU"]);
-    expect(countryInScope("TR", "EU")).toBe(true);
-    expect(countryInScope("TR", "AS")).toBe(true);
-    expect(countryInScope("TR", "AF")).toBe(false);
-    expect(countryInScope("DE", "AS")).toBe(false);
+    expect(continentsOfCountry("TR")).toEqual(["ASI", "EUR"]);
+    expect(countryInScope("TR", "EUR")).toBe(true);
+    expect(countryInScope("TR", "ASI")).toBe(true);
+    expect(countryInScope("TR", "AFR")).toBe(false);
+    expect(countryInScope("DE", "ASI")).toBe(false);
+  });
+
+  it("never mistakes a country for a continent (AF, NA, SA are Afghanistan, Namibia, Saudi Arabia)", () => {
+    expect(countryInScope("AF", "AF")).toBe(true);
+    expect(countryInScope("AF", "AFR")).toBe(false);
+    expect(countryInScope("NA", "NA")).toBe(true);
+    expect(countryInScope("NA", "AFR")).toBe(true); // Namibia is in Africa
+    expect(countryInScope("SA", "SAM")).toBe(false);
+    expect(countryInScope("SA", "ASI")).toBe(true);
+    expect(countryCodesInScope("SA")).toEqual(["SA"]);
   });
 
   it("scopes world, continent and country", () => {
     expect(countryInScope(null, "world")).toBe(true);
-    expect(countryInScope(null, "EU")).toBe(false);
+    expect(countryInScope(null, "EUR")).toBe(false);
     expect(countryInScope("tr", "TR")).toBe(true);
     expect(countryCodesInScope("world")).toBeNull();
     expect(countryCodesInScope("TR")).toEqual(["TR"]);
-    expect(countryCodesInScope("EU")).toContain("DE");
-    expect(countryCodesInScope("EU")).toContain("TR");
+    expect(countryCodesInScope("EUR")).toContain("DE");
+    expect(countryCodesInScope("EUR")).toContain("TR");
   });
 
   it("names unknown codes instead of failing", () => {

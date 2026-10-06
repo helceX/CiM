@@ -50,17 +50,19 @@ test("a platform admin browses sources by region and kind and pauses a slice", a
   seedSources(tag);
 
   await page.goto("/admin/sources");
-  await page.getByLabel("Filter sources").fill(tag);
+  // The world catalog below has its own World/Europe/Germany table — keep to the sources already added.
+  const current = page.getByRole("region", { name: /^Current sources/ });
+  await current.getByLabel("Filter sources").fill(tag);
 
   // World shows all three; the kind chips cluster them.
-  await expect(page.getByRole("row", { name: /^World 3$/ })).toBeVisible();
+  await expect(current.getByRole("row", { name: /^World 3$/ })).toBeVisible();
   await expect(page.getByText("News & press", { exact: false }).first()).toBeVisible();
 
   // Continent → country narrows the list (Türkiye is under both Europe and Asia).
-  await expect(page.getByRole("row", { name: /^Europe 3$/ })).toBeVisible();
-  await page.getByRole("button", { name: "Europe", exact: true }).click();
-  await expect(page.getByRole("row", { name: /^Germany 1$/ })).toBeVisible();
-  await page.getByRole("button", { name: "Germany", exact: true }).click();
+  await expect(current.getByRole("row", { name: /^Europe 3$/ })).toBeVisible();
+  await current.getByRole("button", { name: "Europe", exact: true }).click();
+  await expect(current.getByRole("row", { name: /^Germany 1$/ })).toBeVisible();
+  await current.getByRole("button", { name: "Germany", exact: true }).click();
   await expect(page.getByText(`${tag}-de-blog`, { exact: true })).toBeVisible();
   await expect(page.getByText(`${tag}-tr-news`, { exact: true })).toHaveCount(0);
 
@@ -79,8 +81,8 @@ test("a platform admin browses sources by region and kind and pauses a slice", a
   expect(sourceStatus(`${tag}-tr-forum`)).toBe("healthy");
 
   // Kind filter: only forums in Asia (Türkiye also counts as Asia).
-  await page.getByRole("button", { name: "Germany", exact: true }).click(); // un-select country
-  await page.getByRole("button", { name: "Asia", exact: true }).click();
+  await current.getByRole("button", { name: "Germany", exact: true }).click(); // un-select country
+  await current.getByRole("button", { name: "Asia", exact: true }).click();
   await page.getByRole("button", { name: /^Forums & comments/ }).click();
   await expect(page.getByText(`${tag}-tr-forum`, { exact: true })).toBeVisible();
   await expect(page.getByText(`${tag}-tr-news`, { exact: true })).toHaveCount(0);
@@ -107,4 +109,26 @@ test("a platform admin can add a print-clipping provider (JSON API) with a key",
   await page.getByRole("button", { name: "Test", exact: true }).click();
   await expect(page.getByRole("alert").filter({ hasText: "not allowed" })).toBeVisible();
   await expect(page.getByText("provider-secret-key")).toHaveCount(0);
+});
+
+test("a platform admin browses the world catalog by place and topic", async ({ page }) => {
+  const admin = await registerAndOnboard(page);
+  makePlatformAdmin(admin.email);
+  await page.goto("/admin/sources");
+
+  const world = page.getByRole("region", { name: "World catalog" });
+  await expect(world.getByText(/feeds in World/)).toBeVisible();
+
+  // Table: World → continent → country narrows the list.
+  await world.getByRole("button", { name: "Europe", exact: true }).click();
+  await expect(world.getByText(/feeds in Europe/)).toBeVisible();
+  await world.getByRole("button", { name: "Germany", exact: true }).click();
+  await expect(world.getByText(/feeds in Germany/)).toBeVisible();
+
+  // Topic and text filters apply on the server and are reflected in the count line.
+  await world.getByLabel("Topic of feed").selectOption("general");
+  await expect(world.getByText(/feeds in Germany · General news/)).toBeVisible();
+  await world.getByLabel("Find in world catalog").fill("zzqx-no-such-feed");
+  await expect(world.getByText(/^0 feeds in Germany/)).toBeVisible();
+  await expect(world.getByRole("button", { name: /Test & add all matching \(0\)/ })).toBeDisabled();
 });

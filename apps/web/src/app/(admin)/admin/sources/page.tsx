@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { CATALOG_GROUPS, TURKEY_SOURCE_CATALOG } from "@cim/core";
+import { WORLD_CATALOG_GROUP_LABELS, WORLD_SOURCE_CATALOG } from "@cim/core/world-catalog";
 import { db, listSourcesForAdmin } from "@cim/db";
 import { requireSuperAdmin } from "@/lib/admin";
 import { AddSocialFeedForm, CatalogBrowser } from "./source-controls";
 import { SourceExplorer } from "./source-explorer";
+import { WorldCatalogBrowser } from "./world-catalog-browser";
 
 const GROUP_LABEL: Record<string, string> = {
   general: "General news",
@@ -30,6 +32,12 @@ const GROUP_LABEL: Record<string, string> = {
 export default async function AdminSourcesPage() {
   await requireSuperAdmin();
   const sources = await listSourcesForAdmin(db);
+  const worldCountryCounts: Record<string, number> = {};
+  let worldGlobalCount = 0;
+  for (const entry of WORLD_SOURCE_CATALOG) {
+    if (entry.country) worldCountryCounts[entry.country] = (worldCountryCounts[entry.country] ?? 0) + 1;
+    else worldGlobalCount += 1;
+  }
   const addedUrls = new Set(sources.map((s) => s.url).filter((u): u is string => Boolean(u)));
 
   return (
@@ -90,6 +98,26 @@ export default async function AdminSourcesPage() {
             }))}
             addedUrls={[...addedUrls]}
             groupLabels={Object.fromEntries(CATALOG_GROUPS.map((g) => [g, GROUP_LABEL[g] ?? g]))}
+          />
+        </div>
+      </section>
+      <section aria-labelledby="world-heading">
+        <h2 id="world-heading" className="text-sm font-semibold text-foreground">
+          World catalog
+        </h2>
+        <p className="mt-1 max-w-3xl text-xs text-muted-foreground">
+          {WORLD_SOURCE_CATALOG.length.toLocaleString()} more candidate feeds from outlets, blogs, forums and podcasts
+          around the world (research pack of 5 Oct 2026; feeds already in the Türkiye catalog, plain-http feeds,
+          Reddit and licence-required agencies are left out). Browse by place — click a country on the map or a row in
+          the table — then add one feed or everything that matches. Each feed is fetch-tested before it is stored; the
+          pack&apos;s own XML check is shown as &quot;XML ✓&quot;. Many sites refuse server requests, so expect some to fail.
+          Country is the pack&apos;s directory label or community focus, not where a publisher is registered.
+        </p>
+        <div className="mt-3">
+          <WorldCatalogBrowser
+            countryCounts={worldCountryCounts}
+            globalCount={worldGlobalCount}
+            groupLabels={WORLD_CATALOG_GROUP_LABELS}
           />
         </div>
       </section>

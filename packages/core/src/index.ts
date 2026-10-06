@@ -3,6 +3,7 @@ export * from "./tokens";
 export * from "./authz";
 export * from "./query-ast";
 export * from "./keyword-match";
+export * from "./concepts";
 export { morphologyPacksFor, type MorphologyPack } from "./morphology";
 export * from "./word-fingerprint";
 export * from "./turkish";

@@ -27,10 +27,17 @@ export async function GET(request: Request) {
   // Monitoring groups of the day: the one the reader filtered on comes first,
   // the rest follow in the order the monitorings were created (their order on
   // the Monitoring page), so the same keyword always sits in the same place.
-  const seen = new Map<string, { id: string; name: string; createdAt: number }>();
-  for (const { mention, queryName, queryCreatedAt } of items) {
+  const seen = new Map<string, { id: string; name: string; createdAt: number; terms: string[]; aliasGroups: string[][] }>();
+  for (const { mention, queryName, queryCreatedAt, queryAst } of items) {
     if (!seen.has(mention.queryId)) {
-      seen.set(mention.queryId, { id: mention.queryId, name: queryName, createdAt: queryCreatedAt.getTime() });
+      seen.set(mention.queryId, {
+        id: mention.queryId,
+        name: queryName,
+        createdAt: queryCreatedAt.getTime(),
+        // the monitoring's keywords in the order it lists them, so concepts always appear in the same order
+        terms: [...queryAst.exactPhrases, ...queryAst.include],
+        aliasGroups: queryAst.aliasGroups ?? [],
+      });
     }
   }
   const queries = [...seen.values()]
@@ -41,7 +48,7 @@ export async function GET(request: Request) {
       }
       return a.createdAt - b.createdAt || a.name.localeCompare(b.name);
     })
-    .map(({ id, name }) => ({ id, name }));
+    .map(({ id, name, terms, aliasGroups }) => ({ id, name, terms, aliasGroups }));
 
   return NextResponse.json({
     truncated,

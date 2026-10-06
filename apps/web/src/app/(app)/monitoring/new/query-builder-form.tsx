@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button, Checkbox, Field, Input, Select, Textarea } from "@cim/ui";
 import {
   astToBooleanQuery,
+  conceptKey,
   mergeKeywords,
   parseBooleanQuery,
   parseKeywordList,
@@ -13,6 +14,7 @@ import {
 } from "@cim/core";
 import type { TrackingTarget } from "@cim/validation";
 import { TRACKING_TARGET_OPTIONS } from "@/lib/tracking-targets";
+import { AliasGroups } from "./alias-groups";
 import { RegionPicker } from "./region-picker";
 
 type Project = { id: string; name: string };
@@ -147,6 +149,7 @@ export function QueryBuilderForm({
   const [advancedText, setAdvancedText] = useState("");
   const [sourceCategories, setSourceCategories] = useState<string[]>(["news", "web"]);
   const [regionScopes, setRegionScopes] = useState<string[]>([]);
+  const [aliasGroups, setAliasGroups] = useState<string[][]>([]);
   const [preview, setPreview] = useState<PreviewResult | null>(null);
   const [isPreviewing, setIsPreviewing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -160,6 +163,12 @@ export function QueryBuilderForm({
         : parseBooleanQuery(advancedText),
     [mode, include, exclude, exactPhrases, advancedText],
   );
+
+  // A group only counts while its names are still keywords of the monitoring.
+  const effectiveAliasGroups = useMemo(() => {
+    const listed = new Set([...currentAst.include, ...currentAst.exactPhrases].map(conceptKey));
+    return aliasGroups.map((group) => group.filter((name) => listed.has(conceptKey(name)))).filter((group) => group.length >= 2);
+  }, [aliasGroups, currentAst.include, currentAst.exactPhrases]);
 
   function switchMode(next: "simple" | "advanced") {
     if (next === "advanced") {
@@ -224,6 +233,7 @@ export function QueryBuilderForm({
           include: currentAst.include,
           exclude: currentAst.exclude,
           exactPhrases: currentAst.exactPhrases,
+          aliasGroups: effectiveAliasGroups,
           sourceTypes: sourceCategories,
           regionScopes,
           trackingTarget,
@@ -322,6 +332,12 @@ export function QueryBuilderForm({
               values={exactPhrases}
               onChange={setExactPhrases}
               placeholder='e.g. "full company name"'
+            />
+            <AliasGroups
+              terms={[...include, ...exactPhrases]}
+              groups={aliasGroups}
+              onChange={setAliasGroups}
+              onAddTerms={(names) => setInclude((current) => mergeKeywords(current, names))}
             />
           </div>
         ) : (

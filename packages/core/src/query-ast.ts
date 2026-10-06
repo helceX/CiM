@@ -14,6 +14,11 @@ export type QueryAst = {
   include: string[];
   exclude: string[];
   exactPhrases: string[];
+  /**
+   * Names of the same thing (BTM = Bilgiyi Ticarileştirme Merkezi). Display only: matching still
+   * treats every name as an ordinary keyword; results are grouped by concept (see concepts.ts).
+   */
+  aliasGroups?: string[][];
 };
 
 export function emptyQueryAst(): QueryAst {

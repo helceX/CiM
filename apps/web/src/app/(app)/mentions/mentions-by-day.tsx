@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { Badge, Button } from "@cim/ui";
 import { ChevronRight, ExternalLink } from "lucide-react";
-import { SOURCE_KINDS, countryName, sourceKindOfType, sourceTypeBadge, type ArticlePrint } from "@cim/core";
+import { SOURCE_KINDS, conceptKey, conceptOfTerm, countryName, sourceKindOfType, sourceTypeBadge, type ArticlePrint } from "@cim/core";
 import type { MentionDaySummary, Tag } from "@cim/db";
 import { FilterBar } from "@/components/filter-bar";
 import { MentionDetailDrawer, type AssignableMember } from "./mention-detail-drawer";
@@ -26,7 +26,7 @@ type DayItem = {
   assigneeName: string | null;
   print: ArticlePrint | null;
 };
-type DayQuery = { id: string; name: string };
+type DayQuery = { id: string; name: string; terms: string[]; aliasGroups: string[][] };
 type DayState =
   | { status: "loading" }
   | { status: "error" }
@@ -142,6 +142,48 @@ function ItemList({ items, onOpen }: { items: DayItem[]; onOpen: (id: string) =>
   );
 }
 
+type ConceptGroup = { key: string; label: string; variants: string[]; items: DayItem[]; order: number };
+
+/** A monitoring's stories split by the thing they are about: names of one concept stay together. */
+function groupByConcept(query: DayQuery, items: DayItem[]): ConceptGroup[] {
+  const byKey = new Map<string, ConceptGroup>();
+  for (const item of items) {
+    const term = item.matchedTerms[0];
+    const concept = term ? conceptOfTerm(query.aliasGroups, term) : { label: "Other", variants: ["Other"] };
+    const key = conceptKey(concept.label);
+    let group = byKey.get(key);
+    if (!group) {
+      const variantKeys = new Set(concept.variants.map(conceptKey));
+      const position = query.terms.findIndex((candidate) => variantKeys.has(conceptKey(candidate)));
+      group = { key, label: concept.label, variants: concept.variants, items: [], order: position < 0 ? Number.MAX_SAFE_INTEGER : position };
+      byKey.set(key, group);
+    }
+    group.items.push(item);
+  }
+  return [...byKey.values()].sort((a, b) => a.order - b.order || a.label.localeCompare(b.label));
+}
+
+function KindClusters({ items, onOpen }: { items: DayItem[]; onOpen: (id: string) => void }) {
+  return (
+    <>
+      {SOURCE_KINDS.map((kind) => ({
+        kind,
+        kindItems: items.filter((item) => sourceKindOfType(item.sourceType) === kind.key),
+      }))
+        .filter((cluster) => cluster.kindItems.length > 0)
+        .map(({ kind, kindItems }) => (
+          <details key={kind.key} open className="rounded-lg border border-border/70">
+            <summary className="flex cursor-pointer items-center justify-between gap-2 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <span>{kind.label}</span>
+              <span className="font-normal normal-case">{kindItems.length}</span>
+            </summary>
+            <ItemList items={kindItems} onOpen={onOpen} />
+          </details>
+        ))}
+    </>
+  );
+}
+
 function DayBody({ state, onOpen }: { state: DayState | undefined; onOpen: (id: string) => void }) {
   if (!state || state.status === "loading") return <p className="px-4 py-6 text-sm text-muted-foreground">Loading…</p>;
   if (state.status === "error") {
@@ -152,40 +194,59 @@ function DayBody({ state, onOpen }: { state: DayState | undefined; onOpen: (id: 
     );
   }
   // One block per monitoring (the one filtered on first, then in Monitoring-page
-  // order), each with its own stories; inside a block the stories keep the
-  // kind-of-place clusters (news & press, blogs, forums, social, broadcast).
+  // order). Inside a monitoring that tracks several things — or one thing under
+  // several names (BTM = Bilgiyi Ticarileştirme Merkezi) — the stories are read
+  // per concept first; inside that they keep the kind-of-place clusters (news &
+  // press, blogs, forums, social, broadcast).
   const groups = state.queries
     .map((query) => ({ query, items: state.items.filter((item) => item.queryId === query.id) }))
     .filter((group) => group.items.length > 0);
 
   return (
     <div className="flex flex-col gap-3 px-3 pb-3">
-      {groups.map(({ query, items }) => (
-        <details key={query.id} open className="rounded-xl border border-border bg-background/30">
-          <summary className="flex cursor-pointer items-center justify-between gap-2 px-3 py-2.5 text-sm font-bold text-foreground">
-            <span className="min-w-0 truncate">{query.name}</span>
-            <span className="shrink-0 text-xs font-normal text-muted-foreground">
-              {items.length} {items.length === 1 ? "story" : "stories"}
-            </span>
-          </summary>
-          <div className="flex flex-col gap-2 border-t border-border p-2">
-            {SOURCE_KINDS.map((kind) => ({
-              kind,
-              kindItems: items.filter((item) => sourceKindOfType(item.sourceType) === kind.key),
-            }))
-              .filter((cluster) => cluster.kindItems.length > 0)
-              .map(({ kind, kindItems }) => (
-                <details key={kind.key} open className="rounded-lg border border-border/70">
-                  <summary className="flex cursor-pointer items-center justify-between gap-2 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    <span>{kind.label}</span>
-                    <span className="font-normal normal-case">{kindItems.length}</span>
-                  </summary>
-                  <ItemList items={kindItems} onOpen={onOpen} />
-                </details>
-              ))}
-          </div>
-        </details>
-      ))}
+      {groups.map(({ query, items }) => {
+        const concepts = groupByConcept(query, items);
+        return (
+          <details key={query.id} open className="rounded-xl border border-border bg-background/30">
+            <summary className="flex cursor-pointer items-center justify-between gap-2 px-3 py-2.5 text-sm font-bold text-foreground">
+              <span className="min-w-0 truncate">{query.name}</span>
+              <span className="shrink-0 text-xs font-normal text-muted-foreground">
+                {items.length} {items.length === 1 ? "story" : "stories"}
+              </span>
+            </summary>
+            <div className="flex flex-col gap-2 border-t border-border p-2">
+              {concepts.length <= 1 ? (
+                <KindClusters items={items} onOpen={onOpen} />
+              ) : (
+                concepts.map((concept) => (
+                  <details key={concept.key} open className="rounded-lg border border-border">
+                    <summary className="flex cursor-pointer flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm font-semibold text-foreground">
+                      <span className="flex min-w-0 flex-wrap items-center gap-2">
+                        {concept.label}
+                        {concept.variants.length > 1 ? (
+                          <span className="flex flex-wrap gap-1" aria-label="Names of this keyword">
+                            {concept.variants.slice(1).map((variant) => (
+                              <span key={variant} className="rounded-sm bg-secondary px-1.5 py-0.5 text-[11px] font-normal text-secondary-foreground">
+                                {variant}
+                              </span>
+                            ))}
+                          </span>
+                        ) : null}
+                      </span>
+                      <span className="shrink-0 text-xs font-normal text-muted-foreground">
+                        {concept.items.length} {concept.items.length === 1 ? "story" : "stories"}
+                      </span>
+                    </summary>
+                    <div className="flex flex-col gap-2 border-t border-border p-2">
+                      <KindClusters items={concept.items} onOpen={onOpen} />
+                    </div>
+                  </details>
+                ))
+              )}
+            </div>
+          </details>
+        );
+      })}
       {state.truncated ? <p className="px-1 text-xs text-muted-foreground">Showing the 300 most recent stories of this day — narrow the filters to see the rest.</p> : null}
     </div>
   );

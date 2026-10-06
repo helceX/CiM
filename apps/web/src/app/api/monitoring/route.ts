@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createMonitoringQuerySchema } from "@cim/validation";
-import { astToBooleanQuery, expandSourceCategoriesToTypes } from "@cim/core";
+import { astToBooleanQuery, conceptKey, expandSourceCategoriesToTypes } from "@cim/core";
 import {
   backfillMentionsForQuery,
   createMonitoringQueryWithPlanLimit,
@@ -46,7 +46,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Project not found" }, { status: 404 });
   }
 
-  const ast = { include: input.include, exclude: input.exclude, exactPhrases: input.exactPhrases };
+  // Every name of a concept is also an ordinary keyword, so a name that is not listed yet is added.
+  const listed = new Set([...input.include, ...input.exactPhrases].map(conceptKey));
+  const include = [...input.include];
+  for (const name of input.aliasGroups.flat()) {
+    if (!listed.has(conceptKey(name))) {
+      include.push(name);
+      listed.add(conceptKey(name));
+    }
+  }
+  const ast = { include, exclude: input.exclude, exactPhrases: input.exactPhrases, aliasGroups: input.aliasGroups };
   if (ast.include.length === 0 && ast.exactPhrases.length === 0 && ast.exclude.length === 0) {
     return NextResponse.json({ error: "Add at least one include, exclude, or exact-phrase term" }, { status: 400 });
   }

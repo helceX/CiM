@@ -146,6 +146,11 @@ export default async function MonitoringListPage() {
                   ) : (
                     <p className="truncate text-xs text-muted-foreground">{query.booleanQuery}</p>
                   )}
+                  {ast.aliasGroups && ast.aliasGroups.length > 0 ? (
+                    <p className="text-xs text-muted-foreground">
+                      Same thing: {ast.aliasGroups.map((group) => group.join(" = ")).join(" · ")}
+                    </p>
+                  ) : null}
                   <p className="text-xs text-muted-foreground">
                     Sources: {query.sourceTypes.join(", ")} · Where: {describeRegionScopes(query.regionScopes)} · Created{" "}
                     {new Date(query.createdAt).toLocaleDateString()}

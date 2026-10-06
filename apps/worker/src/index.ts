@@ -46,6 +46,7 @@ import { evaluateCreatorSpikeAlerts } from "./alerts/evaluate-creator-spike";
 import { processAiEnrichJob } from "./ai/enrich";
 import { processInsightGenerateJob } from "./ai/generate-insight";
 import { getEnv } from "@cim/config";
+import { crawlConcurrency } from "./crawl-concurrency";
 import { applyMigrations } from "@cim/db/migrate-runner";
 
 // Nothing else applies migrations to the production database (the deploy
@@ -100,7 +101,7 @@ const crawlSourceQueue = new Queue<CrawlSourceJobData>(QUEUE_NAMES.crawlSource, 
 const crawlSourceWorker = new Worker<CrawlSourceJobData>(
   QUEUE_NAMES.crawlSource,
   (job) => processCrawlSourceJob(job, sendEmailQueue),
-  { connection, concurrency: 5 },
+  { connection, concurrency: crawlConcurrency(process.env) },
 );
 
 const crawlSchedulerQueue = new Queue<CrawlSchedulerJobData>(

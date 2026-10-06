@@ -30,6 +30,13 @@ Türkiye catalog (~2,250 feeds: ~430 below plus ~1,800 from the verified list in
 custom RSS/sitemap form. Nothing is stored unless the feed was actually readable.
 See also `CONTENT_POLICY.md` (licensing, takedown, snippet limits). Polling is polite: every real source (RSS, API, sitemap, web) every 2 hours (never the 30 s scheduler tick).
 
+## 2b. How a story becomes a mention (and why a new monitoring is not empty)
+
+- **Where it runs:** the crawler lives on the server (the worker service), every 2 hours per source, around the clock. It does not depend on anyone's computer or on the app being open. The Monitoring page shows what it has actually done (sources scanned, last scan, stories in 24 h).
+- **What is matched:** the headline **plus the feed's own summary** (`matchableText`). Headline-only matching missed every story that names a brand only in its first lines. The 200-character stored snippet is unchanged (content policy); the longer summary is read at ingest and not kept.
+- **New monitoring:** when one is saved (or created in onboarding) the stories already stored for the last 30 days — the same window the preview uses — are matched at once (`backfillMentionsForQuery`), so the preview count and the first result agree. Those mentions are dated to the story, not to the save, so alert checks do not see a burst.
+- **Titles** are entity-decoded at ingest (`TÜİK&apos;in` → `TÜİK'in`); migration 0037 repaired the rows stored before that.
+
 ## 3. "The whole internet" — why it is not how anyone does it
 No media-monitoring product crawls the entire web itself. Practical ways to get broad coverage:
 

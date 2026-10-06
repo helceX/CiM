@@ -98,6 +98,11 @@ export async function createMentionIfNotExists(
     matchType?: string | null;
     matchConfidence?: string | null;
     matchedRule?: string | null;
+    // Set only when a story is matched after the fact (monitoring backfill):
+    // the mention is stamped with the story's own date, not "now", so a
+    // freshly-saved monitoring does not look like a sudden burst to the alert
+    // checks that count mentions per time window.
+    createdAt?: Date;
   },
 ): Promise<string | null> {
   const result = await db
@@ -112,6 +117,7 @@ export async function createMentionIfNotExists(
       matchType: input.matchType ?? null,
       matchConfidence: input.matchConfidence ?? null,
       matchedRule: input.matchedRule ?? null,
+      ...(input.createdAt ? { createdAt: input.createdAt } : {}),
     })
     .onConflictDoNothing({ target: [mentions.queryId, mentions.articleId] })
     .returning({ id: mentions.id });
@@ -340,6 +346,12 @@ export async function listMentionDays(
   };
 }
 
+export type MentionDayItem = MentionListItem & {
+  /** The monitoring the story matched — a story matched by two monitorings appears under both. */
+  queryName: string;
+  queryCreatedAt: Date;
+};
+
 /** Every mention of one day (capped), newest first — loaded when the day is opened. */
 export async function listMentionsForDay(
   db: Db,
@@ -347,16 +359,24 @@ export async function listMentionsForDay(
   filters: MentionFilters,
   day: string,
   limit = 300,
-): Promise<{ items: MentionListItem[]; truncated: boolean }> {
+): Promise<{ items: MentionDayItem[]; truncated: boolean }> {
   const where = and(
     mentionFiltersToWhere(organizationId, filters, await resolveSearchIds(db, organizationId, filters)),
     sql`${mentionDay} = ${day}`,
   );
   const items = await db
-    .select({ mention: mentions, article: articles, source: sources, assigneeName: assigneeNameColumn })
+    .select({
+      mention: mentions,
+      article: articles,
+      source: sources,
+      assigneeName: assigneeNameColumn,
+      queryName: monitoringQueries.name,
+      queryCreatedAt: monitoringQueries.createdAt,
+    })
     .from(mentions)
     .innerJoin(articles, eq(articles.id, mentions.articleId))
     .innerJoin(sources, eq(sources.id, articles.sourceId))
+    .innerJoin(monitoringQueries, eq(monitoringQueries.id, mentions.queryId))
     .leftJoin(users, eq(users.id, mentions.assignedToUserId))
     .where(where)
     .orderBy(desc(sql`coalesce(${articles.publishedAt}, ${mentions.createdAt})`), desc(mentions.id))

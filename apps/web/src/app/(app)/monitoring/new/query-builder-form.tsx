@@ -127,7 +127,14 @@ function ChipInput({
   );
 }
 
-export function QueryBuilderForm({ projects }: { projects: Project[] }) {
+export function QueryBuilderForm({
+  projects,
+  saveBlocked = false,
+}: {
+  projects: Project[];
+  /** The plan's monitoring cap is reached: keywords and preview still work, saving does not. */
+  saveBlocked?: boolean;
+}) {
   const router = useRouter();
   const [mode, setMode] = useState<"simple" | "advanced">("simple");
   const [name, setName] = useState("");
@@ -141,6 +148,7 @@ export function QueryBuilderForm({ projects }: { projects: Project[] }) {
   const [preview, setPreview] = useState<PreviewResult | null>(null);
   const [isPreviewing, setIsPreviewing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [upgradeUrl, setUpgradeUrl] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const currentAst: QueryAst = useMemo(
@@ -194,6 +202,7 @@ export function QueryBuilderForm({ projects }: { projects: Project[] }) {
 
   async function handleSave() {
     setError(null);
+    setUpgradeUrl(null);
     if (!projectId) {
       setError("No project available — complete onboarding first.");
       return;
@@ -220,6 +229,9 @@ export function QueryBuilderForm({ projects }: { projects: Project[] }) {
       const data = await response.json();
       if (!response.ok) {
         setError(data.error ?? "Something went wrong. Please try again.");
+        if (data.code === "plan_limit" && typeof data.upgradeUrl === "string") {
+          setUpgradeUrl(`${data.upgradeUrl}#upgrade`);
+        }
         return;
       }
       router.push("/monitoring");
@@ -394,11 +406,19 @@ export function QueryBuilderForm({ projects }: { projects: Project[] }) {
       {error ? (
         <p role="alert" className="text-sm text-danger">
           {error}
+          {upgradeUrl ? (
+            <>
+              {" "}
+              <a href={upgradeUrl} className="font-medium underline underline-offset-2">
+                See plan &amp; upgrade
+              </a>
+            </>
+          ) : null}
         </p>
       ) : null}
 
       <div className="flex justify-end">
-        <Button type="button" onClick={handleSave} disabled={isSubmitting}>
+        <Button type="button" onClick={handleSave} disabled={isSubmitting || saveBlocked}>
           {isSubmitting ? "Saving…" : "Save monitoring"}
         </Button>
       </div>

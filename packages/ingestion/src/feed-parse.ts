@@ -1,5 +1,5 @@
 import { XMLParser } from "fast-xml-parser";
-import { htmlToPlainText } from "./html-text";
+import { cleanInlineText, htmlToPlainText } from "./html-text";
 
 export type FeedItem = {
   externalId: string;
@@ -74,10 +74,10 @@ export function parseFeed(xml: string): FeedItem[] {
       return {
         externalId: guid,
         canonicalUrl: link,
-        title: textOf(item.title),
+        title: cleanInlineText(textOf(item.title)),
         bodyText: htmlToPlainText(description),
         publishedAt: parseDate(textOf(item.pubDate)),
-        authorName: textOf(item["dc:creator"]) || textOf(item.author) || null,
+        authorName: cleanInlineText(textOf(item["dc:creator"]) || textOf(item.author)) || null,
       };
     });
   }
@@ -95,10 +95,10 @@ export function parseFeed(xml: string): FeedItem[] {
       return {
         externalId: id,
         canonicalUrl: link,
-        title: textOf(entry.title),
+        title: cleanInlineText(textOf(entry.title)),
         bodyText: htmlToPlainText(content),
         publishedAt: parseDate(textOf(entry.updated) || textOf(entry.published)),
-        authorName: author ? textOf(author.name) || null : null,
+        authorName: author ? cleanInlineText(textOf(author.name)) || null : null,
       };
     });
   }

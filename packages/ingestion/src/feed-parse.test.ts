@@ -81,3 +81,17 @@ describe("parseFeed — errors", () => {
     expect(() => parseFeed("<not-a-feed><x/></not-a-feed>")).toThrow(/[Uu]nrecognized feed/);
   });
 });
+
+describe("parseFeed — encoded titles", () => {
+  it("decodes entities that arrive inside CDATA or double-encoded", () => {
+    const xml = `<?xml version="1.0"?><rss version="2.0"><channel>
+      <item><title><![CDATA[Kamu-İş, TÜİK&apos;in eylül enflasyonunu gerçekçi bulmadı]]></title><link>https://x.test/1</link></item>
+      <item><title>ENAG ve İTO rakamı TÜİK&amp;#8217;ten yüksek çıktı</title><link>https://x.test/2</link></item>
+      <item><title>Plain &amp; simple</title><link>https://x.test/3</link></item>
+    </channel></rss>`;
+    const items = parseFeed(xml);
+    expect(items[0]?.title).toBe("Kamu-İş, TÜİK'in eylül enflasyonunu gerçekçi bulmadı");
+    expect(items[1]?.title).toBe("ENAG ve İTO rakamı TÜİK’ten yüksek çıktı");
+    expect(items[2]?.title).toBe("Plain & simple");
+  });
+});

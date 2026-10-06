@@ -1,7 +1,7 @@
 import { and, eq, inArray, ne, notInArray, sql } from "drizzle-orm";
 import { hostMatchesDomain, hostOfUrl, isLicenseRequiredHost } from "@cim/core";
 import type { Db } from "../client";
-import { sources } from "../schema/content";
+import { articles, sources } from "../schema/content";
 import { isHostBlocked, listBlockedDomains } from "./compliance";
 
 /** Sources are global/reference data (ADR-001) — no tenant scoping here. */
@@ -190,4 +190,37 @@ export async function bulkSetSourcesCrawlEnabled(
     .where(and(scope, blockedIds.length > 0 ? notInArray(sources.id, blockedIds) : undefined))
     .returning({ id: sources.id });
   return { changed: rows.length, skippedBlocked: blockedIds.length };
+}
+
+export type CrawlCoverage = {
+  /** Sources the crawler scans (everything not paused). */
+  activeSources: number;
+  /** Of those, how many have been scanned at least once. */
+  scannedSources: number;
+  /** Most recent scan of any source; null before the first one. */
+  lastScanAt: Date | null;
+  /** Stories stored in the last 24 hours, across all sources. */
+  storiesLast24h: number;
+};
+
+/** What the crawler has actually been doing — shown on the Monitoring page so "is it running?" has an answer. */
+export async function getCrawlCoverage(db: Db): Promise<CrawlCoverage> {
+  const [sourceRow] = await db
+    .select({
+      active: sql<number>`count(*)::int`,
+      scanned: sql<number>`count(${sources.lastCheckedAt})::int`,
+      last: sql<Date | null>`max(${sources.lastCheckedAt})`,
+    })
+    .from(sources)
+    .where(ne(sources.status, "unavailable"));
+  const [articleRow] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(articles)
+    .where(sql`${articles.createdAt} >= now() - interval '24 hours'`);
+  return {
+    activeSources: Number(sourceRow?.active ?? 0),
+    scannedSources: Number(sourceRow?.scanned ?? 0),
+    lastScanAt: sourceRow?.last ? new Date(sourceRow.last) : null,
+    storiesLast24h: Number(articleRow?.n ?? 0),
+  };
 }

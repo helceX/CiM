@@ -24,10 +24,31 @@ export async function GET(request: Request) {
   const filters = mentionFiltersFromParams((key) => params.get(key), context.userId);
   const { items, truncated } = await listMentionsForDay(db, context.organizationId, filters, day);
 
+  // Monitoring groups of the day: the one the reader filtered on comes first,
+  // the rest follow in the order the monitorings were created (their order on
+  // the Monitoring page), so the same keyword always sits in the same place.
+  const seen = new Map<string, { id: string; name: string; createdAt: number }>();
+  for (const { mention, queryName, queryCreatedAt } of items) {
+    if (!seen.has(mention.queryId)) {
+      seen.set(mention.queryId, { id: mention.queryId, name: queryName, createdAt: queryCreatedAt.getTime() });
+    }
+  }
+  const queries = [...seen.values()]
+    .sort((a, b) => {
+      if (filters.queryId) {
+        if (a.id === filters.queryId) return -1;
+        if (b.id === filters.queryId) return 1;
+      }
+      return a.createdAt - b.createdAt || a.name.localeCompare(b.name);
+    })
+    .map(({ id, name }) => ({ id, name }));
+
   return NextResponse.json({
     truncated,
+    queries,
     items: items.map(({ mention, article, source, assigneeName }) => ({
       id: mention.id,
+      queryId: mention.queryId,
       title: article.title,
       url: article.canonicalUrl,
       sourceName: source.name,

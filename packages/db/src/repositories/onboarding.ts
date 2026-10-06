@@ -4,7 +4,7 @@ import { createProject } from "./projects";
 import { createMonitoringQueryWithPlanLimit } from "./billing";
 import type { OrganizationId } from "./tenant-scope";
 
-export type CompleteOnboardingResult = { ok: true; projectId: string } | { ok: false; limit: number };
+export type CompleteOnboardingResult = { ok: true; projectId: string; queryId: string } | { ok: false; limit: number };
 
 /** Thrown inside the transaction below to roll back createProject when the plan-limit check rejects the query — never surfaced past this function. */
 class PlanLimitRejected extends Error {
@@ -54,7 +54,7 @@ export async function createProjectWithMonitoringQuery(
         throw new PlanLimitRejected(result.limit);
       }
 
-      return { ok: true as const, projectId: project.id };
+      return { ok: true as const, projectId: project.id, queryId: result.query.id };
     });
   } catch (err) {
     if (err instanceof PlanLimitRejected) {

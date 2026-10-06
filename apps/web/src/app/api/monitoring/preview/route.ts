@@ -4,6 +4,7 @@ import { astToBooleanQuery, matchesText, queryQualityWarning } from "@cim/core";
 import { getAIProvider } from "@cim/ai";
 import { getEnv } from "@cim/config";
 import { db, listRecentArticlesForPreview } from "@cim/db";
+import { matchableText } from "@cim/core";
 import { requireOrgContext } from "@/lib/tenant";
 import { checkRateLimit } from "@/lib/rate-limit";
 
@@ -26,7 +27,7 @@ export async function POST(request: Request) {
   const ast = parsed.data;
 
   const recentArticles = await listRecentArticlesForPreview(db, PREVIEW_WINDOW_DAYS);
-  const matches = recentArticles.filter((article) => matchesText(ast, article.title));
+  const matches = recentArticles.filter((article) => matchesText(ast, matchableText({ title: article.title, lead: article.storedExcerpt })));
   const sample = matches.slice(0, SAMPLE_LIMIT).map((m) => ({
     title: m.title,
     sourceName: m.sourceName,

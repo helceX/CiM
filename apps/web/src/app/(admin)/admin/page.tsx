@@ -154,7 +154,7 @@ export default async function AdminOverviewPage() {
       </section>
 
       <section>
-        <h2 className="text-sm font-semibold text-foreground">Job queues</h2>
+        <h2 id="job-queues" className="scroll-mt-4 text-sm font-semibold text-foreground">Job queues</h2>
         <div className="mt-3 overflow-hidden rounded-lg border border-border">
           <table className="w-full text-sm">
             <thead className="border-b border-border bg-surface-muted text-left text-xs text-muted-foreground">

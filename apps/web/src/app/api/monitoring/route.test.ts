@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
  * Full-mock unit test — proves POST /api/monitoring requires
@@ -13,18 +13,30 @@ const requirePermission = vi.fn();
 const getProject = vi.fn();
 const createMonitoringQueryWithPlanLimit = vi.fn();
 const recordAuditLog = vi.fn();
+const backfillMentionsForQuery = vi.fn();
+const getCurrentUser = vi.fn();
 
 vi.mock("@/lib/tenant", () => ({
   requirePermission: (...args: unknown[]) => requirePermission(...args),
 }));
+vi.mock("@/lib/session", () => ({
+  getCurrentUser: (...args: unknown[]) => getCurrentUser(...args),
+}));
 vi.mock("@cim/db", () => ({
   db: {},
+  backfillMentionsForQuery: (...args: unknown[]) => backfillMentionsForQuery(...args),
   getProject: (...args: unknown[]) => getProject(...args),
   createMonitoringQueryWithPlanLimit: (...args: unknown[]) => createMonitoringQueryWithPlanLimit(...args),
   recordAuditLog: (...args: unknown[]) => recordAuditLog(...args),
 }));
 
 const { POST } = await import("./route");
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  getCurrentUser.mockResolvedValue({ id: "user-1", isPlatformSuperAdmin: false });
+  backfillMentionsForQuery.mockResolvedValue({ scanned: 0, created: 0 });
+});
 
 function makeRequest(body: Record<string, unknown>): Request {
   return new Request("http://localhost/api/monitoring", {
@@ -61,11 +73,48 @@ describe("POST /api/monitoring — requires monitoring:write", () => {
     getProject.mockResolvedValueOnce({ id: basePayload.projectId });
     createMonitoringQueryWithPlanLimit.mockResolvedValueOnce({
       ok: true,
-      query: { id: "query-1" },
+      query: { id: "query-1", sourceTypes: ["news"] },
     });
 
     const response = await POST(makeRequest(basePayload));
     expect(response.status).toBe(200);
     expect(createMonitoringQueryWithPlanLimit).toHaveBeenCalled();
+  });
+});
+
+describe("POST /api/monitoring — plan limit", () => {
+  function allowCreate() {
+    requirePermission.mockResolvedValueOnce({ organizationId: "org-1", userId: "user-1" });
+    getProject.mockResolvedValueOnce({ id: basePayload.projectId });
+  }
+
+  it("never caps a platform operator", async () => {
+    getCurrentUser.mockResolvedValue({ id: "user-1", isPlatformSuperAdmin: true });
+    allowCreate();
+    createMonitoringQueryWithPlanLimit.mockResolvedValueOnce({ ok: true, query: { id: "query-1", sourceTypes: ["news"] } });
+
+    const response = await POST(makeRequest(basePayload));
+    expect(response.status).toBe(200);
+    expect(createMonitoringQueryWithPlanLimit.mock.calls[0]?.[3]).toEqual({ unlimited: true });
+  });
+
+  it("applies the plan cap to everyone else and points to the upgrade page", async () => {
+    allowCreate();
+    createMonitoringQueryWithPlanLimit.mockResolvedValueOnce({ ok: false, limit: 1 });
+
+    const response = await POST(makeRequest(basePayload));
+    expect(response.status).toBe(409);
+    expect(createMonitoringQueryWithPlanLimit.mock.calls[0]?.[3]).toEqual({ unlimited: false });
+    expect(await response.json()).toMatchObject({ code: "plan_limit", upgradeUrl: "/settings?tab=billing" });
+  });
+
+  it("backfills stored stories after saving, and a backfill failure does not undo the save", async () => {
+    allowCreate();
+    createMonitoringQueryWithPlanLimit.mockResolvedValueOnce({ ok: true, query: { id: "query-1", sourceTypes: ["news"] } });
+    backfillMentionsForQuery.mockRejectedValueOnce(new Error("boom"));
+
+    const response = await POST(makeRequest(basePayload));
+    expect(response.status).toBe(200);
+    expect(backfillMentionsForQuery).toHaveBeenCalledTimes(1);
   });
 });

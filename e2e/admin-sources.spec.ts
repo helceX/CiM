@@ -53,12 +53,14 @@ test("a platform admin browses sources by region and kind and pauses a slice", a
   await page.getByLabel("Filter sources").fill(tag);
 
   // World shows all three; the kind chips cluster them.
-  await expect(page.getByRole("button", { name: /^World 3$/ })).toBeVisible();
+  await expect(page.getByRole("row", { name: /^World 3$/ })).toBeVisible();
   await expect(page.getByText("News & press", { exact: false }).first()).toBeVisible();
 
   // Continent → country narrows the list (Türkiye is under both Europe and Asia).
-  await page.getByRole("button", { name: /^Europe 3$/ }).click();
-  await page.getByRole("button", { name: /^Germany 1$/ }).click();
+  await expect(page.getByRole("row", { name: /^Europe 3$/ })).toBeVisible();
+  await page.getByRole("button", { name: "Europe", exact: true }).click();
+  await expect(page.getByRole("row", { name: /^Germany 1$/ })).toBeVisible();
+  await page.getByRole("button", { name: "Germany", exact: true }).click();
   await expect(page.getByText(`${tag}-de-blog`, { exact: true })).toBeVisible();
   await expect(page.getByText(`${tag}-tr-news`, { exact: true })).toHaveCount(0);
 
@@ -77,8 +79,8 @@ test("a platform admin browses sources by region and kind and pauses a slice", a
   expect(sourceStatus(`${tag}-tr-forum`)).toBe("healthy");
 
   // Kind filter: only forums in Asia (Türkiye also counts as Asia).
-  await page.getByRole("button", { name: /^Germany/ }).click(); // un-select country
-  await page.getByRole("button", { name: /^Asia/ }).click();
+  await page.getByRole("button", { name: "Germany", exact: true }).click(); // un-select country
+  await page.getByRole("button", { name: "Asia", exact: true }).click();
   await page.getByRole("button", { name: /^Forums & comments/ }).click();
   await expect(page.getByText(`${tag}-tr-forum`, { exact: true })).toBeVisible();
   await expect(page.getByText(`${tag}-tr-news`, { exact: true })).toHaveCount(0);

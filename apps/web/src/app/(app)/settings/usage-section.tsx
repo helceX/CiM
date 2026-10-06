@@ -15,18 +15,47 @@ export function UsageSection({
   usage,
   trackedKeywords,
   credits,
+  organizationName,
+  monitoringLimit,
 }: {
   plan: string;
   usage: FeatureUsageSnapshot | undefined;
   trackedKeywords: number;
   credits: CreditSummary;
+  organizationName: string;
+  /** `null` = no cap on this plan (or the viewer is a platform operator). */
+  monitoringLimit: number | null;
 }) {
+  const upgradeMail = `mailto:hello@mediaory.io?subject=${encodeURIComponent(
+    `Upgrade request — ${organizationName}`,
+  )}&body=${encodeURIComponent(
+    `Hello,\n\nPlease upgrade ${organizationName} from the ${plan} plan.\n`,
+  )}`;
   return (
     <section>
       <h2 className="text-sm font-semibold text-foreground">Plan & usage</h2>
       <p className="mt-1 text-sm text-foreground">
         Current plan: <span className="font-medium capitalize">{plan}</span>
       </p>
+      {monitoringLimit !== null ? (
+        <div
+          id="upgrade"
+          className="mt-3 flex flex-col gap-2 rounded-lg border border-border bg-muted/40 p-4 sm:flex-row sm:items-center sm:justify-between"
+        >
+          <p className="text-sm text-foreground">
+            The {plan} plan includes up to {monitoringLimit} monitoring{" "}
+            {monitoringLimit === 1 ? "query" : "queries"}. Starter and Pro remove that cap.
+            Upgrades are activated by our team for now — send a request and we reply the same
+            business day.
+          </p>
+          <a
+            href={upgradeMail}
+            className="inline-flex shrink-0 items-center justify-center rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground"
+          >
+            Request upgrade
+          </a>
+        </div>
+      ) : null}
       {usage ? (
         <>
           <dl className="mt-3 grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:grid-cols-3">

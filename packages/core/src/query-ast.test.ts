@@ -185,3 +185,13 @@ describe("query AST", () => {
     });
   });
 });
+
+describe("matchableText", () => {
+  it("joins the headline and the lead so a brand named only in the lead still matches", async () => {
+    const { matchableText, matchesText } = await import("./query-ast");
+    const ast = { include: ["Zorlu Holding"], exclude: [], exactPhrases: [] };
+    expect(matchesText(ast, "Enerji piyasasında hareket")).toBe(false);
+    expect(matchesText(ast, matchableText({ title: "Enerji piyasasında hareket", lead: "Zorlu Holding açıklama yaptı." }))).toBe(true);
+    expect(matchableText({ title: "Sadece başlık", lead: "  " })).toBe("Sadece başlık");
+  });
+});

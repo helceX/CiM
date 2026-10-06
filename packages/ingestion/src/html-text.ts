@@ -96,3 +96,13 @@ export function extractTitle(html: string): string | null {
   if (titleTag?.[1]) return sanitizeExtractedText(titleTag[1]);
   return null;
 }
+
+/**
+ * One-line visible text for short fields (titles, bylines): publishers often
+ * ship them HTML-encoded inside CDATA (`TÜİK&apos;in`, `&#8217;`), which the
+ * XML parser leaves alone. Decodes entities, drops any tag-shaped text and
+ * collapses whitespace. Run once, at the ingestion boundary.
+ */
+export function cleanInlineText(raw: string): string {
+  return sanitizeExtractedText(raw);
+}

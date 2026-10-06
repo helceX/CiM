@@ -55,7 +55,11 @@ async function countActiveMonitoringQueries(db: Db, organizationId: Organization
 export async function checkMonitoringQueryLimit(
   db: Db,
   organizationId: OrganizationId,
+  options: { unlimited?: boolean } = {},
 ): Promise<PlanLimitCheck> {
+  // Platform operators (isPlatformSuperAdmin) run the product itself and are
+  // never capped; the flag comes from the signed-in user, never client input.
+  if (options.unlimited) return { ok: true };
   const { plan } = await getSubscription(db, organizationId);
   const limit = getMonitoringQueryLimit(plan);
   if (limit === null) return { ok: true };
@@ -91,11 +95,12 @@ export async function createMonitoringQueryWithPlanLimit(
     sourceTypes: string[];
     trackingTarget?: string;
   },
+  options: { unlimited?: boolean } = {},
 ): Promise<CreateMonitoringQueryWithPlanLimitResult> {
   return db.transaction(async (tx) => {
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${organizationId}))`);
 
-    const check = await checkMonitoringQueryLimit(tx as unknown as Db, organizationId);
+    const check = await checkMonitoringQueryLimit(tx as unknown as Db, organizationId, options);
     if (!check.ok) return check;
 
     const query = await createMonitoringQuery(tx as unknown as Db, organizationId, input);

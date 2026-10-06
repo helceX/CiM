@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { completeOnboardingSchema } from "@cim/validation";
 import { astToBooleanQuery, emptyQueryAst, expandSourceCategoriesToTypes } from "@cim/core";
-import { createProjectWithMonitoringQuery, recordAuditLog, db, schema } from "@cim/db";
+import { backfillMentionsForQuery, createProjectWithMonitoringQuery, recordAuditLog, db, schema } from "@cim/db";
 import { requireOrgContext } from "@/lib/tenant";
 
 export async function POST(request: Request) {
@@ -55,6 +55,15 @@ export async function POST(request: Request) {
     );
   }
   const { projectId } = result;
+
+  // The first monitoring should show the stories already stored right away,
+  // not wait for the next crawl. Best effort — onboarding must not fail on it.
+  await backfillMentionsForQuery(db, context.organizationId, {
+    id: result.queryId,
+    projectId,
+    queryAst: ast,
+    sourceTypes,
+  }).catch((error) => console.error("[onboarding] backfill failed:", error));
 
   await recordAuditLog(db, context.organizationId, {
     actorUserId: context.userId,

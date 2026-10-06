@@ -25,6 +25,7 @@ export const QUEUE_NAMES = {
   syncSocialConnections: "sync_social_connections",
   importCatalog: "import_catalog",
   pruneArticles: "prune_articles",
+  weeklyArchive: "weekly_archive",
 } as const;
 
 export type SendEmailJobData = {
@@ -70,3 +71,5 @@ export type SyncSocialConnectionsJobData = Record<string, never>;
 export type ImportCatalogJobData = Record<string, never>;
 
 export type PruneArticlesJobData = Record<string, never>;
+
+export type WeeklyArchiveJobData = Record<string, never>;

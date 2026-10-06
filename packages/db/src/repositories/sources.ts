@@ -224,3 +224,10 @@ export async function getCrawlCoverage(db: Db): Promise<CrawlCoverage> {
     storiesLast24h: Number(articleRow?.n ?? 0),
   };
 }
+
+/** Which of these feed addresses are already stored as sources (exact match). */
+export async function findExistingSourceUrls(db: Db, urls: string[]): Promise<Set<string>> {
+  if (urls.length === 0) return new Set();
+  const rows = await db.select({ url: sources.url }).from(sources).where(inArray(sources.url, urls));
+  return new Set(rows.map((row) => row.url).filter((url): url is string => Boolean(url)));
+}

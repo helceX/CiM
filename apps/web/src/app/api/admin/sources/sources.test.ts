@@ -175,7 +175,7 @@ describe("bulk pause / resume API", () => {
   });
 
   it("turns a continent into its country codes and kinds into source types", async () => {
-    await bulk.POST(json({ enabled: false, region: "eu", kinds: ["forums"] }));
+    await bulk.POST(json({ enabled: false, region: "eur", kinds: ["forums"] }));
     const [, filter] = bulkSetSourcesCrawlEnabled.mock.calls[0]!;
     expect(filter.countries).toContain("DE");
     expect(filter.countries).toContain("TR");

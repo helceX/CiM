@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { matchesFingerprint } from "@cim/core";
 import type { Source } from "@cim/db/schema";
 import { SNIPPET_MAX_CHARS, computeContentHash, makeSnippet, normalizeToArticleInput } from "./normalize";
 import type { RawFetchResult } from "./connector";
@@ -65,6 +66,17 @@ describe("normalizeToArticleInput", () => {
       raw,
     );
     expect(article.storedExcerpt).toBeNull();
+  });
+
+  it("keeps a word fingerprint of the whole summary — also when no excerpt may be stored, and beyond the 200-character excerpt", () => {
+    const long: RawFetchResult = { ...raw, bodyText: `${"Genel gelişmeler sürüyor. ".repeat(30)} Quasarion Dynamics açıklama yaptı.` };
+    for (const canDisplayExcerpt of [true, false]) {
+      const article = normalizeToArticleInput(fakeSource({ canDisplayExcerpt }), long);
+      expect(article.storedExcerpt === null || article.storedExcerpt.length <= SNIPPET_MAX_CHARS + 1).toBe(true);
+      expect(article.storedExcerpt?.includes("Quasarion") ?? false).toBe(false);
+      const ast = { include: [], exclude: [], exactPhrases: ["Quasarion Dynamics"] };
+      expect(matchesFingerprint(ast, article.wordFingerprint)).toBe(true);
+    }
   });
 });
 

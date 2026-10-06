@@ -34,6 +34,19 @@ const tsvector = customType<{ data: string }>({
   },
 });
 
+/** Raw bytes (word fingerprints). Always handed to the driver as a Buffer. */
+const bytea = customType<{ data: Uint8Array; driverData: Buffer }>({
+  dataType() {
+    return "bytea";
+  },
+  toDriver(value) {
+    return Buffer.from(value);
+  },
+  fromDriver(value) {
+    return new Uint8Array(value);
+  },
+});
+
 /**
  * Global/reference data — NOT tenant-scoped (ADR-001, DATA_MODEL.md).
  * A Source is shared infrastructure; tenant meaning attaches via Mention.
@@ -101,6 +114,11 @@ export const articles = pgTable(
     // clippings from a provider): edition date, page and where the page can
     // be viewed. References only — see @cim/core print-media.ts.
     print: jsonb("print").$type<ArticlePrint>(),
+    // Hashed words of the headline plus the feed's whole summary (see @cim/core
+    // word-fingerprint.ts) — not text, never shown. Lets a monitoring saved later be
+    // matched against more than the stored 200-character excerpt. Null for stories
+    // stored before it existed.
+    wordFingerprint: bytea("word_fingerprint"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     // docs/architecture/ADR-002-SEARCH.md MVP tier — title + storedExcerpt,
     // Turkish-folded then tokenized with the 'simple' (no-stemming)

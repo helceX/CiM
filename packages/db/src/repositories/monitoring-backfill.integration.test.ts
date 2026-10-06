@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
+import { buildWordFingerprint } from "@cim/core";
 import { db } from "../client";
 import { articles, mentions, sources } from "../schema/content";
 import { organizations, workspaces } from "../schema/organizations";
@@ -48,6 +49,16 @@ describe("backfillMentionsForQuery (integration)", () => {
       { sourceId: newsSourceId, canonicalUrl: `https://bf.example/${stamp}/lead`, contentHash: `bf-${stamp}-2`, title: `Enerji piyasasında hareket ${stamp}`, storedExcerpt: "Zorlu Holding açıklama yaptı.", publishedAt: daysAgo(3) },
       { sourceId: newsSourceId, canonicalUrl: `https://bf.example/${stamp}/old`, contentHash: `bf-${stamp}-3`, title: `Zorlu Holding eski haber ${stamp}`, publishedAt: daysAgo(90) },
       { sourceId: newsSourceId, canonicalUrl: `https://bf.example/${stamp}/other`, contentHash: `bf-${stamp}-4`, title: `Alakasız başlık ${stamp}`, publishedAt: daysAgo(1) },
+      {
+        sourceId: newsSourceId,
+        canonicalUrl: `https://bf.example/${stamp}/fingerprint`,
+        contentHash: `bf-${stamp}-6`,
+        title: `Piyasa özeti ${stamp}`,
+        storedExcerpt: "Günün kısa özeti burada.",
+        // The brand is named far past the stored excerpt, in the feed's long summary.
+        wordFingerprint: buildWordFingerprint(`Piyasa özeti ${stamp}\n${"Genel gelişmeler sürüyor. ".repeat(20)} Quasarion Dynamics yeni fabrikasını açtı.`),
+        publishedAt: daysAgo(2),
+      },
       { sourceId: blogSourceId, canonicalUrl: `https://bf.example/${stamp}/blog`, contentHash: `bf-${stamp}-5`, title: `Zorlu Holding blog yazısı ${stamp}`, publishedAt: daysAgo(1) },
     ]);
   });
@@ -89,5 +100,37 @@ describe("backfillMentionsForQuery (integration)", () => {
       sourceTypes: ["news"],
     });
     expect(again.created).toBe(0);
+  });
+
+  it("also matches a story by the words of its whole summary, beyond the stored excerpt", async () => {
+    const ast = { include: [], exclude: [], exactPhrases: ["Quasarion Dynamics"] };
+    const query = await createMonitoringQuery(db, organizationId, {
+      projectId,
+      name: "Quasarion",
+      queryAst: ast,
+      booleanQuery: '"Quasarion Dynamics"',
+      sourceTypes: ["news"],
+    });
+    const result = await backfillMentionsForQuery(db, organizationId, { id: query.id, projectId, queryAst: ast, sourceTypes: ["news"] });
+    expect(result.created).toBe(1);
+
+    const [row] = await db.select().from(mentions).where(eq(mentions.queryId, query.id));
+    expect(row?.matchedTerms).toEqual(["Quasarion Dynamics"]);
+
+    // a story stored without a fingerprint (all older ones) is only matched on its stored text
+    const none = await createMonitoringQuery(db, organizationId, {
+      projectId,
+      name: "Absent",
+      queryAst: { include: [], exclude: [], exactPhrases: ["Quasarion Holdings"] },
+      booleanQuery: '"Quasarion Holdings"',
+      sourceTypes: ["news"],
+    });
+    const absent = await backfillMentionsForQuery(db, organizationId, {
+      id: none.id,
+      projectId,
+      queryAst: { include: [], exclude: [], exactPhrases: ["Quasarion Holdings"] },
+      sourceTypes: ["news"],
+    });
+    expect(absent.created).toBe(0);
   });
 });

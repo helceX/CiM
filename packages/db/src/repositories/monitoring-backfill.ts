@@ -1,5 +1,12 @@
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
-import { classifyMatchType, computeMatchPriority, findMatchedTerm, matchesText, matchableText } from "@cim/core";
+import {
+  classifyMatchType,
+  computeMatchPriority,
+  findFingerprintMatch,
+  findMatchedTerm,
+  matchesText,
+  matchableText,
+} from "@cim/core";
 import type { Db } from "../client";
 import { articles, sources } from "../schema/content";
 import type { QueryAst } from "../schema/monitoring";
@@ -15,7 +22,8 @@ const BATCH = 5_000;
  * one stayed empty until the sources were next crawled — even when the preview
  * had just shown matches. This walks the stories already stored (same 30-day
  * window as the preview, newest first, bounded) and creates the mentions the
- * ingest pipeline would have created, dated to the story rather than to now so
+ * ingest pipeline would have created (stories stored with a word fingerprint also match on
+ * words beyond the stored excerpt), dated to the story rather than to now so
  * the alert checks do not see a burst.
  */
 export async function backfillMentionsForQuery(
@@ -37,6 +45,7 @@ export async function backfillMentionsForQuery(
         id: articles.id,
         title: articles.title,
         lead: articles.storedExcerpt,
+        wordFingerprint: articles.wordFingerprint,
         publishedAt: articles.publishedAt,
         createdAt: articles.createdAt,
         sourceType: sources.type,
@@ -56,9 +65,13 @@ export async function backfillMentionsForQuery(
     scanned += rows.length;
 
     for (const row of rows) {
+      // The stored headline + 200-character excerpt are matched exactly; beyond that the
+      // story is only known by its word fingerprint (hashed words of the whole summary).
       const text = matchableText(row);
-      if (!matchesText(query.queryAst, text)) continue;
-      const matchedTerm = findMatchedTerm(query.queryAst, text);
+      const exact = matchesText(query.queryAst, text);
+      const fingerprintTerm = exact ? null : findFingerprintMatch(query.queryAst, row.wordFingerprint);
+      if (!exact && fingerprintTerm === null) continue;
+      const matchedTerm = exact ? findMatchedTerm(query.queryAst, text) : fingerprintTerm;
       const { matchType, matchedRule } = matchedTerm
         ? classifyMatchType(query.queryAst, matchedTerm, row.sourceType)
         : { matchType: null, matchedRule: null };

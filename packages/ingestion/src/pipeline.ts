@@ -153,21 +153,22 @@ async function maybeAssignStoryCluster(
   },
 ): Promise<void> {
   if (article.storyClusterId) return;
-  // Race: crawlSourceWorker runs at concurrency 5 (apps/worker/src/
-  // index.ts), and crawl-scheduler.ts fans out every active source's job
-  // in the same tick — so two different sources can both insert a new
-  // article for the same breaking story around the same time, exactly
-  // the case this clustering exists for. findSimilarRecentArticle
-  // doesn't filter out an already-clustered row, and setArticleStoryCluster
-  // is a plain unconditional UPDATE, so without serializing, both jobs'
-  // lookups can see the *other* article's storyClusterId as still null
-  // and each generate its own new cluster id, cross-writing each other's
-  // row — the two articles can end up on two different final cluster
-  // ids instead of sharing one. A single fixed-key advisory lock
-  // serializes every concurrent clustering attempt process-wide; cheap,
-  // since this only ever runs once per newly-inserted article that has a
-  // cross-source similarity match, the same pattern billing.ts's
-  // createMonitoringQueryWithPlanLimit already uses for its own race.
+  // Most stories have no look-alike from another source, so look first WITHOUT the lock and stop
+  // there: a lock held around every lookup made all concurrent crawls queue behind one another.
+  const candidate = await findSimilarRecentArticle(db, {
+    title: article.title,
+    excludeSourceId: article.sourceId,
+  });
+  if (!candidate) return;
+  // Race: crawlSourceWorker runs several jobs at once and crawl-scheduler.ts fans out every
+  // active source's job in the same tick — so two different sources can both insert a new
+  // article for the same breaking story around the same time, exactly the case this clustering
+  // exists for. setArticleStoryCluster is a plain unconditional UPDATE, so without serializing,
+  // both jobs can see the *other* article's storyClusterId as still null and each generate its
+  // own new cluster id, cross-writing each other's row. A single fixed-key advisory lock
+  // serializes the assignment (the lookup is repeated inside it, so it sees the other job's
+  // result); it is only taken when a look-alike exists, which is rare — the same pattern
+  // billing.ts's createMonitoringQueryWithPlanLimit already uses for its own race.
   await db.transaction(async (tx) => {
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext('story-cluster-assign'))`);
     const txDb = tx as unknown as Db;

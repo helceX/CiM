@@ -71,6 +71,11 @@ describe("processImportCatalogJob (integration)", () => {
     expect((await processImportCatalogJob({ ...base, env: {} })).note).toMatch(/DB_VOLUME_MB/);
     expect((await processImportCatalogJob({ ...base, env: { DB_VOLUME_MB: "1" } })).note).toMatch(/volume/);
     expect((await processImportCatalogJob({ ...base, crawlBacklog: async () => 5000 })).note).toMatch(/crawl queue/);
+    // long queue but moving (oldest job waited 20 minutes): not held back; stuck (3 hours): held back
+    const moving = await processImportCatalogJob({ ...base, crawlBacklog: async () => 1900, crawlOldestWaitMs: async () => 20 * 60_000, candidates: [] });
+    expect(moving.note).toMatch(/Finished/);
+    const stuck = await processImportCatalogJob({ ...base, crawlBacklog: async () => 1900, crawlOldestWaitMs: async () => 3 * 3_600_000 });
+    expect(stuck.note).toMatch(/catch up/);
     expect(await db.select().from(schema.sources).where(like(schema.sources.domain, `${stamp}%`))).toHaveLength(0);
 
     const [state] = await db.select().from(schema.catalogImportState).where(eq(schema.catalogImportState.id, 1));

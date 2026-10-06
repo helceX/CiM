@@ -1,0 +1,15 @@
+<?xml version='1.0' encoding='utf-8'?>
+<opml version="2.0">
+  <head>
+    <title>Doğrulama / bilgi kaynağı — adaylar dahil</title>
+  </head>
+  <body>
+    <outline text="Türkiye / Avrupa-Asya">
+      <outline text="Türkiye">
+        <outline text="Doğrulama / bilgi kaynağı">
+          <outline type="rss" text="Malumatfuruş" title="Malumatfuruş" xmlUrl="https://www.malumatfurus.org/feed/" htmlUrl="https://www.malumatfurus.org/" />
+        </outline>
+      </outline>
+    </outline>
+  </body>
+</opml>

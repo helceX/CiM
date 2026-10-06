@@ -1,0 +1,67 @@
+<?xml version='1.0' encoding='utf-8'?>
+<opml version="2.0">
+  <head>
+    <title>Sosyal haber / topluluk — adaylar dahil</title>
+  </head>
+  <body>
+    <outline text="Asya">
+      <outline text="Japonya">
+        <outline text="Sosyal haber / topluluk">
+          <outline type="rss" text="Hatena Bookmark" title="Hatena Bookmark" xmlUrl="https://b.hatena.ne.jp/hotentry.rss" htmlUrl="https://b.hatena.ne.jp/" />
+        </outline>
+      </outline>
+    </outline>
+    <outline text="Avrupa">
+      <outline text="İspanya">
+        <outline text="Sosyal haber / topluluk">
+          <outline type="rss" text="Meneame" title="Meneame" xmlUrl="https://www.meneame.net/rss" htmlUrl="https://www.meneame.net/" />
+        </outline>
+      </outline>
+    </outline>
+    <outline text="Kuzey Amerika">
+      <outline text="Kanada">
+        <outline text="Sosyal haber / topluluk">
+          <outline type="rss" text="Lemmy.ca" title="Lemmy.ca" xmlUrl="https://lemmy.ca/feeds/local.xml?sort=New" htmlUrl="https://lemmy.ca" />
+        </outline>
+      </outline>
+    </outline>
+    <outline text="Küresel / çok ülkeli">
+      <outline text="Almanca topluluk / çok ülkeli">
+        <outline text="Sosyal haber / topluluk">
+          <outline type="rss" text="Feddit.org" title="Feddit.org" xmlUrl="https://feddit.org/feeds/local.xml?sort=New" htmlUrl="https://feddit.org" />
+        </outline>
+      </outline>
+      <outline text="Fransızca topluluk / çok ülkeli">
+        <outline text="Sosyal haber / topluluk">
+          <outline type="rss" text="JLai.lu" title="JLai.lu" xmlUrl="https://jlai.lu/feeds/local.xml?sort=New" htmlUrl="https://jlai.lu" />
+        </outline>
+      </outline>
+      <outline text="Küresel">
+        <outline text="Sosyal haber / topluluk">
+          <outline type="rss" text="Lobsters" title="Lobsters" xmlUrl="https://lobste.rs/rss" htmlUrl="https://lobste.rs/" />
+          <outline type="rss" text="Slashdot" title="Slashdot" xmlUrl="http://rss.slashdot.org/Slashdot/slashdotMain" htmlUrl="https://rss.slashdot.org" />
+        </outline>
+      </outline>
+      <outline text="Küresel / çok ülkeli">
+        <outline text="Sosyal haber / topluluk">
+          <outline type="rss" text="Discuss.tchncs.de" title="Discuss.tchncs.de" xmlUrl="https://discuss.tchncs.de/feeds/local.xml?sort=New" htmlUrl="https://discuss.tchncs.de" />
+          <outline type="rss" text="Lemmy.ml" title="Lemmy.ml" xmlUrl="https://lemmy.ml/feeds/local.xml?sort=New" htmlUrl="https://lemmy.ml" />
+          <outline type="rss" text="Lemmy.World" title="Lemmy.World" xmlUrl="https://lemmy.world/feeds/local.xml?sort=New" htmlUrl="https://lemmy.world" />
+          <outline type="rss" text="Lemmy.zip" title="Lemmy.zip" xmlUrl="https://lemmy.zip/feeds/local.xml?sort=New" htmlUrl="https://lemmy.zip" />
+          <outline type="rss" text="MetaFilter" title="MetaFilter" xmlUrl="https://feeds.feedburner.com/Metafilter" htmlUrl="https://www.metafilter.com/" />
+          <outline type="rss" text="Programming.dev" title="Programming.dev" xmlUrl="https://programming.dev/feeds/local.xml?sort=New" htmlUrl="https://programming.dev" />
+          <outline type="rss" text="Slrpnk.net" title="Slrpnk.net" xmlUrl="https://slrpnk.net/feeds/local.xml?sort=New" htmlUrl="https://slrpnk.net" />
+          <outline type="rss" text="Sopuli.xyz" title="Sopuli.xyz" xmlUrl="https://sopuli.xyz/feeds/local.xml?sort=New" htmlUrl="https://sopuli.xyz" />
+          <outline type="rss" text="V2EX" title="V2EX" xmlUrl="https://www.v2ex.com/index.xml" htmlUrl="https://www.v2ex.com/" />
+        </outline>
+      </outline>
+    </outline>
+    <outline text="Okyanusya">
+      <outline text="Yeni Zelanda">
+        <outline text="Sosyal haber / topluluk">
+          <outline type="rss" text="Lemmy.nz" title="Lemmy.nz" xmlUrl="https://lemmy.nz/feeds/local.xml?sort=New" htmlUrl="https://lemmy.nz" />
+        </outline>
+      </outline>
+    </outline>
+  </body>
+</opml>

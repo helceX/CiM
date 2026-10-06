@@ -1,0 +1,29 @@
+<?xml version='1.0' encoding='utf-8'?>
+<opml version="2.0">
+  <head>
+    <title>Blog platformu / topluluk — adaylar dahil</title>
+  </head>
+  <body>
+    <outline text="Asya">
+      <outline text="Japonya">
+        <outline text="Blog platformu / topluluk">
+          <outline type="rss" text="Qiita" title="Qiita" xmlUrl="https://qiita.com/popular-items/feed" htmlUrl="https://qiita.com/" />
+          <outline type="rss" text="Zenn" title="Zenn" xmlUrl="https://zenn.dev/feed" htmlUrl="https://zenn.dev/" />
+        </outline>
+      </outline>
+    </outline>
+    <outline text="Küresel / çok ülkeli">
+      <outline text="Küresel">
+        <outline text="Blog platformu / topluluk">
+          <outline type="rss" text="DEV Community" title="DEV Community" xmlUrl="https://dev.to/feed" htmlUrl="https://dev.to/" />
+        </outline>
+      </outline>
+      <outline text="Küresel / çok ülkeli">
+        <outline text="Blog platformu / topluluk">
+          <outline type="rss" text="Bored Panda" title="Bored Panda" xmlUrl="https://www.boredpanda.com/feed/" htmlUrl="https://www.boredpanda.com/" />
+          <outline type="rss" text="Habr" title="Habr" xmlUrl="https://habr.com/en/rss/articles/" htmlUrl="https://habr.com/" />
+        </outline>
+      </outline>
+    </outline>
+  </body>
+</opml>

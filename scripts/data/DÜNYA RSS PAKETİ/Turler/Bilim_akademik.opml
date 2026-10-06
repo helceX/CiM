@@ -1,0 +1,25 @@
+<?xml version='1.0' encoding='utf-8'?>
+<opml version="2.0">
+  <head>
+    <title>Bilim / akademik — adaylar dahil</title>
+  </head>
+  <body>
+    <outline text="Küresel / çok ülkeli">
+      <outline text="Küresel / çok ülkeli">
+        <outline text="Bilim / akademik">
+          <outline type="rss" text="arXiv Computer Science" title="arXiv Computer Science" xmlUrl="https://rss.arxiv.org/rss/cs" htmlUrl="https://arxiv.org/list/cs/recent" />
+          <outline type="rss" text="arXiv Mathematics" title="arXiv Mathematics" xmlUrl="https://rss.arxiv.org/rss/math" htmlUrl="https://arxiv.org/list/math/recent" />
+          <outline type="rss" text="arXiv Physics" title="arXiv Physics" xmlUrl="https://rss.arxiv.org/rss/physics" htmlUrl="https://arxiv.org/list/physics/recent" />
+          <outline type="rss" text="PLOS ONE" title="PLOS ONE" xmlUrl="https://journals.plos.org/plosone/feed/atom" htmlUrl="https://journals.plos.org/plosone/" />
+        </outline>
+      </outline>
+    </outline>
+    <outline text="Türkiye / Avrupa-Asya">
+      <outline text="Türkiye">
+        <outline text="Bilim / akademik">
+          <outline type="rss" text="Evrim Ağacı" title="Evrim Ağacı" xmlUrl="https://evrimagaci.org/rss.xml" htmlUrl="https://github.com/bakinazik/rss" />
+        </outline>
+      </outline>
+    </outline>
+  </body>
+</opml>

@@ -1,0 +1,15 @@
+<?xml version='1.0' encoding='utf-8'?>
+<opml version="2.0">
+  <head>
+    <title>Veri / araştırma — adaylar dahil</title>
+  </head>
+  <body>
+    <outline text="Küresel / çok ülkeli">
+      <outline text="Küresel / çok ülkeli">
+        <outline text="Veri / araştırma">
+          <outline type="rss" text="Our World in Data" title="Our World in Data" xmlUrl="https://ourworldindata.org/atom.xml" htmlUrl="https://ourworldindata.org/" />
+        </outline>
+      </outline>
+    </outline>
+  </body>
+</opml>

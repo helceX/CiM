@@ -473,10 +473,11 @@ async function scheduleRepeatingJobs() {
     { every: 5 * 60_000 },
     { name: QUEUE_NAMES.importCatalog, data: {} },
   );
-  // Stories nobody's monitoring matched are only a 30-day cache; this keeps the disk from filling.
+  // Stories nobody's monitoring matched are only a cache; every 6 hours this keeps the disk from filling
+  // (and shortens the window by itself when the volume is nearly full).
   await pruneArticlesQueue.upsertJobScheduler(
     "prune-articles-repeat",
-    { pattern: "30 3 * * *" },
+    { pattern: "30 */6 * * *" },
     { name: QUEUE_NAMES.pruneArticles, data: {} },
   );
   // 04:00 UTC every day (07:00 in Türkiye): archive the last fully ended week. Daily is safe —

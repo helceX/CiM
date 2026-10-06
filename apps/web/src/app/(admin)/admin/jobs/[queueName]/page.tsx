@@ -2,7 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Button, EmptyState } from "@cim/ui";
 import { requireSuperAdmin } from "@/lib/admin";
-import { getFailedJobsForQueue, isKnownQueueName } from "@/lib/admin-queues";
+import { db, getSourceLabels } from "@cim/db";
+import { getFailedJobsForQueue, getQueuedJobsForQueue, isKnownQueueName } from "@/lib/admin-queues";
 
 /**
  * docs/product/FEATURE_MATRIX.md P2 "Full observability views" — the
@@ -26,7 +27,42 @@ export default async function AdminQueueJobsPage({
     notFound();
   }
 
-  const jobs = await getFailedJobsForQueue(queueName);
+  const [jobs, active, waiting] = await Promise.all([
+    getFailedJobsForQueue(queueName),
+    getQueuedJobsForQueue(queueName, "active", 50),
+    getQueuedJobsForQueue(queueName, "waiting", 50),
+  ]);
+  const sourceIds = [...new Set([...active, ...waiting].map((job) => job.sourceId).filter((id): id is string => id !== null))];
+  const labels = await getSourceLabels(db, sourceIds);
+
+  const queuedSection = (title: string, note: string, rows: typeof waiting) => (
+    <section>
+      <h2 className="text-sm font-semibold text-foreground">{title}</h2>
+      <p className="text-xs text-muted-foreground">{note}</p>
+      {rows.length === 0 ? (
+        <p className="mt-2 text-sm text-muted-foreground">None right now.</p>
+      ) : (
+        <div className="mt-2 overflow-hidden rounded-lg border border-border">
+          <table className="w-full text-sm">
+            <tbody className="divide-y divide-border">
+              {rows.map((job) => {
+                const label = job.sourceId ? labels.get(job.sourceId) : undefined;
+                return (
+                  <tr key={job.id}>
+                    <td className="px-4 py-2 text-foreground">
+                      {label ? label.name : <span className="font-mono text-xs">{job.name}</span>}
+                      <div className="break-all font-mono text-xs text-muted-foreground">{label?.url ?? job.data}</div>
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-2 text-xs text-muted-foreground">queued {new Date(job.createdAt).toLocaleString()}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  );
 
   return (
     <div className="flex flex-col gap-6">
@@ -35,12 +71,17 @@ export default async function AdminQueueJobsPage({
           ← Platform overview
         </Link>
         <h1 className="mt-2 text-lg font-semibold text-foreground">
-          Failed jobs — <span className="font-mono">{queueName}</span>
+          Jobs — <span className="font-mono">{queueName}</span>
         </h1>
         <p className="text-sm text-muted-foreground">
-          The {jobs.length} most recent failures, newest first.
+          Running and waiting jobs (up to 50 each, oldest first) and the {jobs.length} most recent failures.
         </p>
       </div>
+
+      {queuedSection("Running now", "Being processed at this moment.", active)}
+      {queuedSection("Waiting", "Next in line.", waiting)}
+
+      <h2 className="text-sm font-semibold text-foreground">Failed</h2>
 
       {jobs.length === 0 ? (
         <EmptyState title="No failed jobs" description="This queue has no failed jobs right now." />

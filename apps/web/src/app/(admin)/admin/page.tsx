@@ -221,7 +221,9 @@ export default async function AdminOverviewPage() {
               {queues.map((q) => (
                 <tr key={q.queueName}>
                   <td className="px-4 py-3 font-medium text-foreground">
-                    {q.queueName}
+                    <Link href={`/admin/jobs/${q.queueName}`} className="underline-offset-2 hover:underline">
+                      {q.queueName}
+                    </Link>
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">{q.waiting}</td>
                   <td className="px-4 py-3 text-muted-foreground">{q.active}</td>

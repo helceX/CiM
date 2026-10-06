@@ -6,6 +6,7 @@ import {
   findMatchedTerm,
   matchableText,
   matchesText,
+  sourceInRegionScopes,
 } from "@cim/core";
 import {
   asOrganizationId,
@@ -86,6 +87,7 @@ export async function ingestSource(
     // Keywords take the word endings of the story's language (see @cim/core morphology).
     const match = { language: raw.language ?? source.language };
     for (const query of activeQueries) {
+      if (!sourceInRegionScopes(source.country, query.regionScopes)) continue;
       if (!matchesText(query.queryAst, text, match)) continue;
       const priority = computeMatchPriority(query.queryAst, article.title, match);
       const organizationId = asOrganizationId(query.organizationId);

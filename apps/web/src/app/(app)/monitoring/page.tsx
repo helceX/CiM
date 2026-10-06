@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Badge, Button, EmptyState } from "@cim/ui";
 import { Radar } from "lucide-react";
-import { parseKeywordSpec } from "@cim/core";
+import { describeRegionScopes, parseKeywordSpec } from "@cim/core";
 import { countMentionsByQuery, db, getCrawlCoverage, listMonitoringQueries } from "@cim/db";
 import type { CrawlCoverage } from "@cim/db";
 import { requireOrgContext } from "@/lib/tenant";
@@ -147,7 +147,7 @@ export default async function MonitoringListPage() {
                     <p className="truncate text-xs text-muted-foreground">{query.booleanQuery}</p>
                   )}
                   <p className="text-xs text-muted-foreground">
-                    Sources: {query.sourceTypes.join(", ")} · Created{" "}
+                    Sources: {query.sourceTypes.join(", ")} · Where: {describeRegionScopes(query.regionScopes)} · Created{" "}
                     {new Date(query.createdAt).toLocaleDateString()}
                   </p>
                 </div>

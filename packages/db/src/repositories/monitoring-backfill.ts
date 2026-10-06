@@ -1,5 +1,6 @@
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import {
+  sourceInRegionScopes,
   classifyMatchType,
   computeMatchPriority,
   findFingerprintMatch,
@@ -29,7 +30,7 @@ const BATCH = 5_000;
 export async function backfillMentionsForQuery(
   db: Db,
   organizationId: OrganizationId,
-  query: { id: string; projectId: string; queryAst: QueryAst; sourceTypes: string[] },
+  query: { id: string; projectId: string; queryAst: QueryAst; sourceTypes: string[]; regionScopes?: string[] },
   options: { days?: number; scanLimit?: number } = {},
 ): Promise<{ scanned: number; created: number }> {
   const days = options.days ?? BACKFILL_WINDOW_DAYS;
@@ -50,6 +51,7 @@ export async function backfillMentionsForQuery(
         publishedAt: articles.publishedAt,
         createdAt: articles.createdAt,
         sourceType: sources.type,
+        sourceCountry: sources.country,
       })
       .from(articles)
       .innerJoin(sources, eq(sources.id, articles.sourceId))
@@ -66,6 +68,7 @@ export async function backfillMentionsForQuery(
     scanned += rows.length;
 
     for (const row of rows) {
+      if (!sourceInRegionScopes(row.sourceCountry, query.regionScopes)) continue;
       // The stored headline + 200-character excerpt are matched exactly; beyond that the
       // story is only known by its word fingerprint (hashed words of the whole summary).
       const text = matchableText(row);

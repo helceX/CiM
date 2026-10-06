@@ -5,6 +5,9 @@ import {
   countriesInContinent,
   countryCodesInScope,
   countryInScope,
+  describeRegionScopes,
+  normalizeRegionScopes,
+  sourceInRegionScopes,
   countryName,
   continentsOfCountry,
 } from "./regions";
@@ -65,5 +68,32 @@ describe("source kinds", () => {
     expect(sourceTypeBadge("unheard-of")).toBe("Other");
     expect(sourceKindOfType("forum")).toBe("forums");
     expect(sourceKindOfType("something-new")).toBe("feeds");
+  });
+});
+
+describe("monitoring region scopes", () => {
+  it("cleans a chosen list: known codes only, upper case, sorted, no duplicates; 'world' means everywhere", () => {
+    expect(normalizeRegionScopes(["tr", "eur", "TR", "zz", " de "])).toEqual(["DE", "EUR", "TR"]);
+    expect(normalizeRegionScopes(["TR", "world"])).toEqual([]);
+    expect(normalizeRegionScopes(null)).toEqual([]);
+    expect(normalizeRegionScopes(["", "  "])).toEqual([]);
+  });
+
+  it("decides by the source's country; a source with no country only counts when worldwide", () => {
+    expect(sourceInRegionScopes("DE", [])).toBe(true);
+    expect(sourceInRegionScopes(null, [])).toBe(true);
+    expect(sourceInRegionScopes("TR", ["TR"])).toBe(true);
+    expect(sourceInRegionScopes("DE", ["TR"])).toBe(false);
+    expect(sourceInRegionScopes(null, ["TR"])).toBe(false);
+    expect(sourceInRegionScopes("DE", ["EUR"])).toBe(true);
+    expect(sourceInRegionScopes("TR", ["EUR"])).toBe(true); // Türkiye is also in Europe
+    expect(sourceInRegionScopes("JP", ["EUR", "TR"])).toBe(false);
+    expect(sourceInRegionScopes("JP", ["EUR", "JP"])).toBe(true);
+  });
+
+  it("describes the choice for badges", () => {
+    expect(describeRegionScopes([])).toBe("Worldwide");
+    expect(describeRegionScopes(["TR"])).toBe("Türkiye");
+    expect(describeRegionScopes(["TR", "EUR"])).toBe("Europe, Türkiye");
   });
 });

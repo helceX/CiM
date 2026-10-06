@@ -111,6 +111,74 @@ describe("ingestSource (integration)", () => {
     expect(after.length).toBe(before.length);
   });
 
+  describe("monitoring region scope", () => {
+    class OneStoryConnector implements SourceConnector {
+      constructor(private readonly title: string) {}
+      async fetch(source: Source): Promise<RawFetchResult[]> {
+        return [
+          {
+            externalId: `${source.id}-scope`,
+            canonicalUrl: `https://${source.domain}/scope`,
+            title: this.title,
+            bodyText: this.title,
+            publishedAt: new Date(),
+            authorName: null,
+          },
+        ];
+      }
+      async healthCheck(): Promise<SourceHealth> {
+        return { status: "healthy" };
+      }
+    }
+
+    it("only creates a mention when the source's country is inside the monitoring's scope", async () => {
+      const stamp = Date.now();
+      const term = `Scopecorp${stamp}`;
+      const [trSource] = await db
+        .insert(schema.sources)
+        .values({ name: "Scope TR", domain: `scope-tr-${stamp}.example`, type: "news", connector: "mock", status: "healthy", canDisplayExcerpt: true, country: "TR" })
+        .returning();
+      const [deSource] = await db
+        .insert(schema.sources)
+        .values({ name: "Scope DE", domain: `scope-de-${stamp}.example`, type: "news", connector: "mock", status: "healthy", canDisplayExcerpt: true, country: "DE" })
+        .returning();
+      const [globalSource] = await db
+        .insert(schema.sources)
+        .values({ name: "Scope Global", domain: `scope-global-${stamp}.example`, type: "news", connector: "mock", status: "healthy", canDisplayExcerpt: true })
+        .returning();
+      if (!trSource || !deSource || !globalSource) throw new Error("scope sources");
+      const make = (name: string, regionScopes: string[]) =>
+        createMonitoringQuery(db, organizationId, {
+          projectId,
+          name,
+          queryAst: { include: [term], exclude: [], exactPhrases: [] },
+          booleanQuery: term,
+          sourceTypes: ["news"],
+          regionScopes,
+        });
+      const world = await make("scope world", []);
+      const local = await make("scope local", ["TR"]);
+      const europe = await make("scope europe", ["EUR"]);
+      const japan = await make("scope japan", ["JP"]);
+
+      try {
+        for (const source of [trSource, deSource, globalSource]) {
+          await ingestSource(db, source, new OneStoryConnector(`${term} announces results (${source.name})`));
+        }
+        const counts = async (queryId: string) =>
+          (await db.select().from(schema.mentions).where(eq(schema.mentions.queryId, queryId))).length;
+        expect(await counts(world.id)).toBe(3); // every source, including the global feed
+        expect(await counts(local.id)).toBe(1); // Türkiye only
+        expect(await counts(europe.id)).toBe(2); // Türkiye and Germany, not the country-less feed
+        expect(await counts(japan.id)).toBe(0);
+      } finally {
+        for (const source of [trSource, deSource, globalSource]) {
+          await db.delete(schema.sources).where(eq(schema.sources.id, source.id));
+        }
+      }
+    });
+  });
+
   describe("story clustering across sources", () => {
     /**
      * Returns one fixed item per fetch — lets the test control the exact

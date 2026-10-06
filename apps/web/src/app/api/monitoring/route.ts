@@ -61,6 +61,7 @@ export async function POST(request: Request) {
       queryAst: ast,
       booleanQuery: astToBooleanQuery(ast),
       sourceTypes: expandSourceCategoriesToTypes(input.sourceTypes),
+      regionScopes: input.regionScopes,
       trackingTarget: input.trackingTarget,
     },
     { unlimited: user?.isPlatformSuperAdmin === true },
@@ -85,6 +86,7 @@ export async function POST(request: Request) {
     projectId: project.id,
     queryAst: ast,
     sourceTypes: query.sourceTypes,
+    regionScopes: query.regionScopes,
   }).catch((error) => {
     console.error("[monitoring] backfill failed:", error);
     return { scanned: 0, created: 0 };

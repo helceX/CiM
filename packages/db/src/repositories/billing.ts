@@ -93,6 +93,7 @@ export async function createMonitoringQueryWithPlanLimit(
     queryAst: QueryAst;
     booleanQuery: string;
     sourceTypes: string[];
+    regionScopes?: string[];
     trackingTarget?: string;
   },
   options: { unlimited?: boolean } = {},

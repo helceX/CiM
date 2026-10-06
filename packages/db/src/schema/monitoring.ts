@@ -63,6 +63,9 @@ export const monitoringQueries = pgTable(
     queryAst: jsonb("query_ast").$type<QueryAst>().notNull(),
     booleanQuery: text("boolean_query").notNull(),
     sourceTypes: text("source_types").array().notNull().default([]),
+    // Where to look: continent codes (EUR, ASI …) and/or ISO country codes. Empty = worldwide.
+    // A story counts only when its source's country is inside (see @cim/core regions.ts).
+    regionScopes: text("region_scopes").array().notNull().default([]),
     // docs/product/USER_FLOWS.md onboarding step 1 ("What do you want to
     // track? company/brand/product/competitor/campaign/topic/person/
     // industry") — collected since Phase 1 but discarded into an audit-log

@@ -181,6 +181,7 @@ export async function listRecentArticlesForPreview(db: Db, days = 30, limit = 50
       publishedAt: articles.publishedAt,
       sourceName: sources.name,
       sourceType: sources.type,
+      sourceCountry: sources.country,
     })
     .from(articles)
     .innerJoin(sources, eq(sources.id, articles.sourceId))

@@ -22,6 +22,7 @@ export async function MarketingFooter() {
         { href: "/resources", label: nav("resources") },
         { href: "/contact", label: t("contact") },
         { href: "/terms", label: legal("footerTerms") },
+        { href: "/privacy", label: legal("footerPrivacy") },
         { href: "/bot", label: legal("footerBot") },
       ],
     },

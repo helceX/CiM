@@ -54,6 +54,12 @@ ENV HOSTNAME=0.0.0.0
 RUN addgroup --system --gid 1001 nodejs \
   && adduser --system --uid 1001 nextjs
 
+# Picture exports (PNG, and the chart inside an Excel file) are drawn by sharp's SVG renderer, which needs a
+# system font to write text with; the slim image has none.
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends fontconfig fonts-dejavu-core \
+  && rm -rf /var/lib/apt/lists/*
+
 # next.config.ts sets outputFileTracingRoot to the monorepo root, so the
 # standalone folder mirrors the monorepo layout (server entry at
 # apps/web/server.js) — copy it as-is rather than flattening it.

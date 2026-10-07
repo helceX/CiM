@@ -8,6 +8,7 @@ import {
   getDashboardSummary,
   getLatestInsightForOrganization,
   getMentionVolumeSeries,
+  listBrandMentions,
   listLatestRecommendationsForOrganization,
   listProjects,
   listRecentMentions,
@@ -76,6 +77,7 @@ export default async function DashboardPage() {
     recommendations,
     risk,
     brandGroupComparison,
+    brand,
   ] = await Promise.all([
     getDashboardSummary(db, context.organizationId, { sinceDays: 7 }),
     listRecentMentions(db, context.organizationId, { limit: 10 }),
@@ -87,6 +89,7 @@ export default async function DashboardPage() {
       freshSince: new Date(Date.now() - RISK_FRESHNESS_HOURS * 60 * 60 * 1000),
     }),
     getBrandGroupComparison(db, context.organizationId, { sinceDays: 7 }),
+    listBrandMentions(db, context.organizationId, { limit: 8, sinceDays: 30 }),
   ]);
   const hasCompetitor = competitorComparison.some(
     (row) => row.trackingTarget === "competitor",
@@ -198,13 +201,70 @@ export default async function DashboardPage() {
 
       <PinnedVisualsSection organizationId={context.organizationId} />
 
-      <section>
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-foreground">Top stories</h2>
-          <Link href="/mentions" className="text-xs text-primary underline underline-offset-2">
-            View all mentions
-          </Link>
-        </div>
+      {brand.names.length > 0 ? (
+        <section aria-labelledby="your-brand-heading">
+          <div className="flex items-center justify-between">
+            <h2 id="your-brand-heading" className="text-sm font-semibold text-foreground">
+              Your brand in the news
+            </h2>
+            <Link href="/mentions" className="text-xs text-primary underline underline-offset-2">
+              View all mentions
+            </Link>
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Stories that name{" "}
+            <strong className="font-semibold text-foreground">{brand.names.join(" · ")}</strong> directly — last 30 days.
+          </p>
+          <div className="mt-3 overflow-hidden rounded-lg border border-border">
+            {brand.items.length === 0 ? (
+              <EmptyState
+                title="No story names your company yet"
+                description="Stories show up here the moment a source writes your company's name in a headline or its first lines."
+                className="border-none"
+              />
+            ) : (
+              <ul className="divide-y divide-border">
+                {brand.items.map(({ mention, article, source, matchedName, where }) => (
+                  <li key={mention.id} className="flex flex-col gap-1 px-4 py-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-sm font-medium text-foreground">
+                        <Link
+                          href={`/mentions?open=${mention.id}`}
+                          className="hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                        >
+                          {article.title}
+                        </Link>
+                      </p>
+                      {mention.sentiment ? (
+                        <Badge tone={SENTIMENT_TONE[mention.sentiment as keyof typeof SENTIMENT_TONE]}>{mention.sentiment}</Badge>
+                      ) : null}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {source.name}
+                      {article.publishedAt ? ` · ${new Date(article.publishedAt).toLocaleDateString()}` : ""} · names{" "}
+                      <span className="text-foreground">{matchedName}</span> in the {where}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </section>
+      ) : (
+        <section aria-labelledby="top-stories-heading">
+          <div className="flex items-center justify-between">
+            <h2 id="top-stories-heading" className="text-sm font-semibold text-foreground">Latest stories</h2>
+            <Link href="/mentions" className="text-xs text-primary underline underline-offset-2">
+              View all mentions
+            </Link>
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Add your company&apos;s name (and its short name) to a monitoring to see here the stories that name you
+            directly.{" "}
+            <Link href="/monitoring" className="text-primary underline underline-offset-2">
+              Open monitoring
+            </Link>
+          </p>
         <div className="mt-3 overflow-hidden rounded-lg border border-border">
           {recentMentions.length === 0 ? (
             <EmptyState
@@ -259,7 +319,8 @@ export default async function DashboardPage() {
             </ul>
           )}
         </div>
-      </section>
+        </section>
+      )}
     </div>
   );
 }

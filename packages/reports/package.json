@@ -10,6 +10,7 @@
     "./templates": "./src/templates.ts",
     "./sections": "./src/sections.ts",
     "./xlsx": "./src/render-xlsx.ts",
+    "./visual": "./src/render-visual.ts",
     "./archive": "./src/archive/index.ts"
   },
   "scripts": {

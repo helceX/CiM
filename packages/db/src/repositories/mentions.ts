@@ -1,4 +1,5 @@
 import { and, count, desc, eq, gte, inArray, isNull, sql } from "drizzle-orm";
+import { companyNames, keywordMatches, prepareText } from "@cim/core";
 import type { Db } from "../client";
 import { articles, mentions, sources, type Tag } from "../schema/content";
 import { monitoringQueries, type QueryAst } from "../schema/monitoring";
@@ -19,6 +20,73 @@ import {
   type MentionCommentWithAuthor,
 } from "./mention-comments";
 import { listRelatedArticles, type RelatedArticle } from "./articles";
+
+export type BrandMention = MentionListItem & {
+  /** Which of the company's names the story carries (full name or short name). */
+  matchedName: string;
+  /** Where in the story: its headline, or its lead. */
+  where: "headline" | "lead";
+};
+
+/**
+ * Stories that NAME the company directly — the full name or the short name of a monitoring's company — in
+ * their headline or lead, newest first. Not "stories some keyword matched": a story only counts when the company
+ * itself is written there. Returns the names it looked for, so the Dashboard can say what "your brand" means.
+ */
+export async function listBrandMentions(
+  db: Db,
+  organizationId: OrganizationId,
+  options: { limit?: number; sinceDays?: number } = {},
+): Promise<{ names: string[]; items: BrandMention[] }> {
+  const limit = options.limit ?? 8;
+  const queries = await db
+    .select({ id: monitoringQueries.id, queryAst: monitoringQueries.queryAst })
+    .from(monitoringQueries)
+    .where(
+      and(
+        eq(monitoringQueries.organizationId, organizationId),
+        isNull(monitoringQueries.deletedAt),
+        eq(monitoringQueries.status, "active"),
+        sql`${monitoringQueries.queryAst} -> 'company' is not null`,
+      ),
+    );
+  const names = [...new Set(queries.flatMap((query) => companyNames(query.queryAst)))];
+  if (names.length === 0) return { names, items: [] };
+
+  const rows = await db
+    .select({ mention: mentions, article: articles, source: sources, assigneeName: assigneeNameColumn })
+    .from(mentions)
+    .innerJoin(articles, eq(articles.id, mentions.articleId))
+    .innerJoin(sources, eq(sources.id, articles.sourceId))
+    .leftJoin(users, eq(users.id, mentions.assignedToUserId))
+    .where(
+      and(
+        eq(mentions.organizationId, organizationId),
+        inArray(mentions.queryId, queries.map((query) => query.id)),
+        sql`${mentions.status} != 'archived'`,
+        gte(sql`coalesce(${articles.publishedAt}, ${mentions.createdAt})`, new Date(Date.now() - (options.sinceDays ?? 30) * 86_400_000)),
+      ),
+    )
+    .orderBy(desc(sql`coalesce(${articles.publishedAt}, ${mentions.createdAt})`), desc(mentions.id))
+    .limit(400);
+
+  const seen = new Set<string>();
+  const items: BrandMention[] = [];
+  for (const row of rows) {
+    if (seen.has(row.article.id)) continue; // one story, however many monitorings found it
+    const headline = prepareText(row.article.title);
+    const lead = prepareText(row.article.storedExcerpt ?? "");
+    const options2 = { language: row.article.language };
+    const inHeadline = names.find((name) => keywordMatches(name, headline, options2));
+    const inLead = inHeadline ? undefined : names.find((name) => keywordMatches(name, lead, options2));
+    const matchedName = inHeadline ?? inLead;
+    if (!matchedName) continue;
+    seen.add(row.article.id);
+    items.push({ ...row, matchedName, where: inHeadline ? "headline" : "lead" });
+    if (items.length >= limit) break;
+  }
+  return { names, items };
+}
 
 export type MentionListItem = {
   mention: typeof mentions.$inferSelect;

@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { test, expect } from "@playwright/test";
 import { db, schema } from "@cim/db";
-import { registerAndOnboard } from "./helpers";
+import { openDayClusters, registerAndOnboard } from "./helpers";
 import { simulateCrawl } from "./simulate";
 
 /**
@@ -29,7 +29,7 @@ test("create a monitoring query, preview real matches, save it, and see it produ
   await db.insert(schema.subscriptions).values({ organizationId: org.id, plan: "pro" });
 
   await page.goto("/monitoring/new");
-  await page.getByLabel("Name").fill("Daily Tech Wire watch");
+  await page.locator("#name").fill("Daily Tech Wire watch");
   await page.getByLabel("Include").fill("Daily Tech Wire");
   await page.getByLabel("Include").press("Enter");
   await expect(page.getByRole("button", { name: "Remove Daily Tech Wire" })).toBeVisible();
@@ -74,9 +74,27 @@ test("create a monitoring query, preview real matches, save it, and see it produ
   await expect(page.getByText("Showing only mentions from monitoring")).toBeVisible();
   // Days are collapsed buttons; opening one shows its stories with the keyword that matched.
   await page.locator("main button[aria-expanded]").first().click();
+  await openDayClusters(page);
   await expect(
     page.getByRole("list", { name: "Matched keywords" }).first().getByText("Daily Tech Wire"),
   ).toBeVisible();
   await page.getByRole("button", { name: /Show all monitoring/ }).click();
   await expect(page.getByText("Showing only mentions from monitoring")).toHaveCount(0);
+
+  // A saved monitoring can be edited: renamed, given a company and one more keyword, and saved again.
+  await page.goto("/monitoring");
+  await page.getByRole("link", { name: "Edit Daily Tech Wire watch" }).click();
+  await expect(page.getByRole("heading", { name: "Edit monitoring" })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole("button", { name: "Remove Daily Tech Wire" })).toBeVisible();
+  await page.locator("#name").fill("Daily Tech Wire watch v2");
+  await page.getByLabel("Company name").fill("Daily Tech Wire Media");
+  await page.getByLabel("Short name").fill("DTW");
+  await page.getByLabel("Include").fill("girişimci, girişimcilik");
+  await page.getByLabel("Include").press("Enter");
+  // forms of one word are grouped without being asked
+  await expect(page.getByText("Grouped automatically")).toBeVisible();
+  await page.getByRole("button", { name: "Save changes" }).click();
+  await expect(page).toHaveURL(/\/monitoring$/, { timeout: 8000 });
+  await expect(page.getByRole("heading", { name: "Daily Tech Wire watch v2" })).toBeVisible();
+  await expect(page.getByText("Daily Tech Wire Media = DTW").first()).toBeVisible();
 });

@@ -35,6 +35,13 @@ export async function POST(request: Request) {
       (matchesText(ast, matchableText({ title: article.title, lead: article.storedExcerpt }), { language: article.language }) ||
         matchesFingerprint(ast, article.wordFingerprint, { language: article.language })),
   );
+  // Where the matches come from — shows the chosen scope is what is actually applied.
+  const countryCounts = new Map<string, number>();
+  for (const match of matches) countryCounts.set(match.sourceCountry ?? "", (countryCounts.get(match.sourceCountry ?? "") ?? 0) + 1);
+  const byCountry = [...countryCounts.entries()]
+    .map(([code, count]) => ({ code: code || null, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 8);
   const sample = matches.slice(0, SAMPLE_LIMIT).map((m) => ({
     title: m.title,
     sourceName: m.sourceName,
@@ -76,6 +83,7 @@ export async function POST(request: Request) {
   return NextResponse.json({
     windowDays: PREVIEW_WINDOW_DAYS,
     matchCount: matches.length,
+    byCountry,
     sample,
     warning: queryQualityWarning(ast),
     aiAssessment,

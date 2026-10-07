@@ -5,6 +5,9 @@ import { useRouter } from "next/navigation";
 import { Button, Checkbox, Field, Input, Select, Textarea } from "@cim/ui";
 import {
   astToBooleanQuery,
+  autoKeywordClusters,
+  countryName,
+  collapseTypesToCategories,
   conceptKey,
   mergeKeywords,
   parseBooleanQuery,
@@ -19,6 +22,19 @@ import { RegionPicker } from "./region-picker";
 
 type Project = { id: string; name: string };
 
+/** A saved monitoring being edited. */
+export type ExistingMonitoring = {
+  id: string;
+  projectId: string;
+  name: string;
+  trackingTarget: string;
+  queryAst: QueryAst;
+  sourceTypes: string[];
+  regionScopes: string[];
+  brandGroupId: string | null;
+};
+type BrandGroupOption = { id: string; name: string };
+
 const SOURCE_CATEGORIES: { value: string; label: string }[] = [
   { value: "news", label: "News" },
   { value: "web", label: "Web" },
@@ -32,6 +48,7 @@ const SOURCE_CATEGORIES: { value: string; label: string }[] = [
 type PreviewResult = {
   matchCount: number;
   windowDays: number;
+  byCountry?: { code: string | null; count: number }[];
   sample: { title: string; sourceName: string; publishedAt: string | null }[];
   warning: string | null;
   aiAssessment: { text: string; confidence: number; method: string } | null;
@@ -133,23 +150,35 @@ function ChipInput({
 export function QueryBuilderForm({
   projects,
   saveBlocked = false,
+  existing,
+  brandGroups = [],
 }: {
   projects: Project[];
   /** The plan's monitoring cap is reached: keywords and preview still work, saving does not. */
   saveBlocked?: boolean;
+  /** Set when editing a saved monitoring: the form starts from it and saves with PATCH. */
+  existing?: ExistingMonitoring;
+  /** Groups a monitoring can be filed under (Settings → Brand groups); used to read results together. */
+  brandGroups?: BrandGroupOption[];
 }) {
   const router = useRouter();
+  const editing = Boolean(existing);
   const [mode, setMode] = useState<"simple" | "advanced">("simple");
-  const [name, setName] = useState("");
-  const [trackingTarget, setTrackingTarget] = useState<TrackingTarget>("company");
-  const [projectId, setProjectId] = useState(projects[0]?.id ?? "");
-  const [include, setInclude] = useState<string[]>([]);
-  const [exclude, setExclude] = useState<string[]>([]);
-  const [exactPhrases, setExactPhrases] = useState<string[]>([]);
+  const [name, setName] = useState(existing?.name ?? "");
+  const [trackingTarget, setTrackingTarget] = useState<TrackingTarget>((existing?.trackingTarget as TrackingTarget | undefined) ?? "company");
+  const [projectId, setProjectId] = useState(existing?.projectId ?? projects[0]?.id ?? "");
+  const [include, setInclude] = useState<string[]>(existing?.queryAst.include ?? []);
+  const [exclude, setExclude] = useState<string[]>(existing?.queryAst.exclude ?? []);
+  const [exactPhrases, setExactPhrases] = useState<string[]>(existing?.queryAst.exactPhrases ?? []);
   const [advancedText, setAdvancedText] = useState("");
-  const [sourceCategories, setSourceCategories] = useState<string[]>(["news", "web"]);
-  const [regionScopes, setRegionScopes] = useState<string[]>([]);
-  const [aliasGroups, setAliasGroups] = useState<string[][]>([]);
+  const [sourceCategories, setSourceCategories] = useState<string[]>(
+    existing ? collapseTypesToCategories(existing.sourceTypes) : ["news", "web"],
+  );
+  const [regionScopes, setRegionScopes] = useState<string[]>(existing?.regionScopes ?? []);
+  const [aliasGroups, setAliasGroups] = useState<string[][]>(existing?.queryAst.aliasGroups ?? []);
+  const [companyName, setCompanyName] = useState(existing?.queryAst.company?.name ?? "");
+  const [companyShort, setCompanyShort] = useState(existing?.queryAst.company?.short ?? "");
+  const [brandGroupId, setBrandGroupId] = useState(existing?.brandGroupId ?? "");
   const [preview, setPreview] = useState<PreviewResult | null>(null);
   const [isPreviewing, setIsPreviewing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -164,8 +193,11 @@ export function QueryBuilderForm({
     [mode, include, exclude, exactPhrases, advancedText],
   );
 
+  // Forms of one word (girişimci · girişimcilik · girişimcinin) are read together on their own.
+  const autoClusters = useMemo(() => autoKeywordClusters(currentAst.include), [currentAst.include]);
+
   // A group only counts while its names are still keywords of the monitoring.
-  const effectiveAliasGroups = useMemo(() => {
+  const usableAliasGroups = useMemo(() => {
     const listed = new Set([...currentAst.include, ...currentAst.exactPhrases].map(conceptKey));
     return aliasGroups.map((group) => group.filter((name) => listed.has(conceptKey(name)))).filter((group) => group.length >= 2);
   }, [aliasGroups, currentAst.include, currentAst.exactPhrases]);
@@ -220,11 +252,11 @@ export function QueryBuilderForm({
     }
     setIsSubmitting(true);
     try {
-      const response = await fetch("/api/monitoring", {
-        method: "POST",
+      const response = await fetch(existing ? `/api/monitoring/${existing.id}` : "/api/monitoring", {
+        method: existing ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          projectId,
+          ...(existing ? {} : { projectId }),
           name:
             name ||
             currentAst.include[0] ||
@@ -233,10 +265,11 @@ export function QueryBuilderForm({
           include: currentAst.include,
           exclude: currentAst.exclude,
           exactPhrases: currentAst.exactPhrases,
-          aliasGroups: effectiveAliasGroups,
+          aliasGroups: usableAliasGroups,
           sourceTypes: sourceCategories,
           regionScopes,
           trackingTarget,
+          company: companyName.trim() ? { name: companyName.trim(), short: companyShort.trim() || undefined } : undefined,
         }),
       });
       const data = await response.json();
@@ -246,6 +279,14 @@ export function QueryBuilderForm({
           setUpgradeUrl(`${data.upgradeUrl}#upgrade`);
         }
         return;
+      }
+      // Filing under a group is a separate, already-existing call.
+      if (existing && brandGroupId !== (existing.brandGroupId ?? "")) {
+        await fetch("/api/brand-groups/assign", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ queryId: existing.id, brandGroupId: brandGroupId || null }),
+        }).catch(() => undefined);
       }
       router.push("/monitoring");
       router.refresh();
@@ -279,7 +320,25 @@ export function QueryBuilderForm({
         </Select>
       </Field>
 
-      {projects.length > 1 ? (
+      <div className="flex flex-col gap-3 rounded-lg border border-border p-4">
+        <div>
+          <span className="text-sm font-medium text-foreground">Company (optional)</span>
+          <p className="text-xs text-muted-foreground">
+            The full name and, if it has one, the short name. Both are searched, read as one thing, and the Dashboard
+            lists the stories that name your company directly.
+          </p>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-[2fr_1fr]">
+          <Field id="company-name" label="Company name">
+            <Input value={companyName} onChange={(e) => setCompanyName(e.target.value)} placeholder="e.g. İstanbul Ticaret Odası" />
+          </Field>
+          <Field id="company-short" label="Short name">
+            <Input value={companyShort} onChange={(e) => setCompanyShort(e.target.value)} placeholder="e.g. İTO" disabled={!companyName.trim()} />
+          </Field>
+        </div>
+      </div>
+
+      {projects.length > 1 && !editing ? (
         <Field id="project" label="Project" required>
           <Select value={projectId} onChange={(e) => setProjectId(e.target.value)}>
             {projects.map((project) => (
@@ -339,6 +398,25 @@ export function QueryBuilderForm({
               onChange={setAliasGroups}
               onAddTerms={(names) => setInclude((current) => mergeKeywords(current, names))}
             />
+            {autoClusters.length > 0 ? (
+              <div className="flex flex-col gap-1.5 rounded-md bg-surface-muted p-3">
+                <span className="text-sm font-medium text-foreground">Grouped automatically</span>
+                <p className="text-xs text-muted-foreground">
+                  Forms of the same word are read under one heading in your results — you do not need to do anything.
+                </p>
+                <ul className="flex flex-col gap-1 text-sm">
+                  {autoClusters.map((cluster) => (
+                    <li key={cluster.join("|")} className="flex flex-wrap items-center gap-1.5">
+                      <strong className="text-foreground">{cluster[0]}</strong>
+                      <span className="text-muted-foreground">←</span>
+                      {cluster.slice(1).map((word) => (
+                        <span key={word} className="rounded-sm bg-background px-1.5 py-0.5 text-xs text-muted-foreground">{word}</span>
+                      ))}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
           </div>
         ) : (
           <Field
@@ -355,6 +433,23 @@ export function QueryBuilderForm({
           </Field>
         )}
       </div>
+
+      {editing && brandGroups.length > 0 ? (
+        <Field
+          id="brand-group"
+          label="Group"
+          hint="Monitorings in the same group are read together under one heading in Mentions (for example every version of the same brand). Leave it empty to group by name — “BTM Monitoring v1, v2, v3” are grouped as “BTM Monitoring” automatically."
+        >
+          <Select value={brandGroupId} onChange={(e) => setBrandGroupId(e.target.value)}>
+            <option value="">Automatic (by name)</option>
+            {brandGroups.map((group) => (
+              <option key={group.id} value={group.id}>
+                {group.name}
+              </option>
+            ))}
+          </Select>
+        </Field>
+      ) : null}
 
       <div className="flex flex-col gap-2">
         <span className="text-sm font-medium text-foreground">Sources</span>
@@ -396,6 +491,15 @@ export function QueryBuilderForm({
               {preview.matchCount === 1 ? "" : "s"} from the last {preview.windowDays}{" "}
               days.
             </p>
+            {preview.byCountry && preview.byCountry.length > 0 ? (
+              <p className="text-xs text-muted-foreground">
+                Where they come from:{" "}
+                {preview.byCountry
+                  .map((entry) => `${entry.code ? countryName(entry.code) : "Source country unknown"} ${entry.count}`)
+                  .join(" · ")}
+                {regionScopes.length > 0 ? " — only the places you chose are counted." : ""}
+              </p>
+            ) : null}
             {preview.warning ? <p className="text-warning">{preview.warning}</p> : null}
             {preview.aiAssessment ? (
               <div className="rounded-md bg-surface-muted p-2">
@@ -440,7 +544,7 @@ export function QueryBuilderForm({
 
       <div className="flex justify-end">
         <Button type="button" onClick={handleSave} disabled={isSubmitting || saveBlocked}>
-          {isSubmitting ? "Saving…" : "Save monitoring"}
+          {isSubmitting ? "Saving…" : editing ? "Save changes" : "Save monitoring"}
         </Button>
       </div>
     </div>

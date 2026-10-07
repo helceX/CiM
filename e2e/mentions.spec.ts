@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { test, expect } from "@playwright/test";
-import { registerAndOnboard } from "./helpers";
+import { openDayClusters, registerAndOnboard } from "./helpers";
 import { latestEmailLinkFor, markArticlesAsPrint } from "./db";
 import { simulateCrawl } from "./simulate";
 
@@ -55,6 +55,10 @@ test.describe("mentions", () => {
 
     await dayButton.click();
     await expect(dayButton).toHaveAttribute("aria-expanded", "true");
+    // A day opens to its monitoring, which stays closed until it is clicked.
+    await page.locator("main li details").first().waitFor();
+    await expect(page.getByRole("link", { name: /Open story/ }).first()).toBeHidden();
+    await openDayClusters(page);
     // The cluster for news & press, and each story marked with what kind of place it came from.
     await expect(page.getByText("News & press", { exact: true }).first()).toBeVisible();
     await expect(page.getByText("Digital news", { exact: true }).first()).toBeVisible();
@@ -74,6 +78,7 @@ test.describe("mentions", () => {
     markArticlesAsPrint("Daily Tech Wire");
     await page.goto("/mentions");
     await page.locator("main button[aria-expanded]").first().click();
+    await openDayClusters(page);
 
     await expect(page.getByText("Test Gazetesi · Oct 1, 2026 · p. 12").first()).toBeVisible();
     const viewPage = page.getByRole("link", { name: /View page of Test Gazetesi/ }).first();

@@ -352,6 +352,8 @@ export type MentionDayItem = MentionListItem & {
   queryCreatedAt: Date;
   /** The monitoring's keyword structure, for grouping a day's stories by concept. */
   queryAst: QueryAst;
+  /** The group a person filed the monitoring under, if any. */
+  queryBrandGroupId: string | null;
 };
 
 /** Every mention of one day (capped), newest first — loaded when the day is opened. */
@@ -375,6 +377,7 @@ export async function listMentionsForDay(
       queryName: monitoringQueries.name,
       queryCreatedAt: monitoringQueries.createdAt,
       queryAst: monitoringQueries.queryAst,
+      queryBrandGroupId: monitoringQueries.brandGroupId,
     })
     .from(mentions)
     .innerJoin(articles, eq(articles.id, mentions.articleId))

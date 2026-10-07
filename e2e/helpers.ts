@@ -75,3 +75,20 @@ export async function login(page: Page, email: string, password: string): Promis
   // Sign-in is a real server round trip; on a loaded CI runner it can exceed 5s.
   await expect(page).toHaveURL(/\/dashboard/, { timeout: 20_000 });
 }
+
+/**
+ * Opens a day's monitoring clusters. A day opens to its monitorings (or a family of them), and each of
+ * those stays closed until clicked — so this clicks every closed `summary` inside the opened day,
+ * nested ones included, by real user clicks.
+ */
+export async function openDayClusters(page: import("@playwright/test").Page): Promise<void> {
+  // The day's stories are fetched when it opens; wait for the first cluster to exist.
+  await page.locator("main li details").first().waitFor({ timeout: 10_000 });
+  for (let round = 0; round < 30; round += 1) {
+    const closed = page.locator("main li details:not([open]) > summary");
+    const n = await closed.count();
+    if (n === 0) return;
+    // The outermost closed ones first; opening them reveals the next level.
+    await closed.first().click();
+  }
+}

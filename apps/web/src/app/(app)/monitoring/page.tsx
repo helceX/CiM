@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { Badge, Button, EmptyState } from "@cim/ui";
 import { Radar } from "lucide-react";
-import { describeRegionScopes, parseKeywordSpec } from "@cim/core";
-import { countMentionsByQuery, db, getCrawlCoverage, listMonitoringQueries } from "@cim/db";
+import { autoKeywordClusters, companyNames, describeRegionScopes, parseKeywordSpec } from "@cim/core";
+import { countMentionsByQuery, db, getCrawlCoverage, listBrandGroups, listMonitoringQueries } from "@cim/db";
 import type { CrawlCoverage } from "@cim/db";
 import { requireOrgContext } from "@/lib/tenant";
+import { monitoringFamily } from "@/lib/monitoring-families";
 
 /** Small suffix on a chip when the keyword has a stricter-than-default rule. */
 function KeywordRule({ term }: { term: string }) {
@@ -63,11 +64,23 @@ function CoverageStrip({ coverage }: { coverage: CrawlCoverage }) {
 
 export default async function MonitoringListPage() {
   const context = await requireOrgContext();
-  const [queries, counts, coverage] = await Promise.all([
+  const [queries, counts, coverage, brandGroups] = await Promise.all([
     listMonitoringQueries(db, context.organizationId),
     countMentionsByQuery(db, context.organizationId),
     getCrawlCoverage(db),
+    listBrandGroups(db, context.organizationId),
   ]);
+  const canEdit = context.permissions.includes("monitoring:write");
+
+  // Monitorings of one family (BTM Monitoring v1, v2, v3) sit together.
+  const groupNames = new Map(brandGroups.map((group) => [group.id, group.name]));
+  const families = new Map<string, { label: string; mapped: boolean; items: typeof queries }>();
+  for (const query of queries) {
+    const family = monitoringFamily(query, groupNames);
+    const entry = families.get(family.key) ?? { label: family.label, mapped: family.mapped, items: [] };
+    entry.items.push(query);
+    families.set(family.key, entry);
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -98,8 +111,20 @@ export default async function MonitoringListPage() {
           }
         />
       ) : (
-        <ul className="flex flex-col gap-3">
-          {queries.map((query) => {
+        <div className="flex flex-col gap-6">
+          {[...families.values()].map((family) => (
+            <section key={family.label} aria-label={family.label} className="flex flex-col gap-3">
+              {family.items.length > 1 || family.mapped ? (
+                <h2 className="flex items-baseline gap-2 text-sm font-semibold text-foreground">
+                  {family.label}
+                  <span className="text-xs font-normal text-muted-foreground">
+                    {family.items.length} monitoring{family.items.length === 1 ? "" : "s"}
+                    {family.mapped ? " · your group" : " · grouped by name"}
+                  </span>
+                </h2>
+              ) : null}
+              <ul className="flex flex-col gap-3">
+          {family.items.map((query) => {
             const count = counts.get(query.id) ?? { total: 0, last7Days: 0 };
             const ast = query.queryAst;
             const keywords = [
@@ -146,6 +171,19 @@ export default async function MonitoringListPage() {
                   ) : (
                     <p className="truncate text-xs text-muted-foreground">{query.booleanQuery}</p>
                   )}
+                  {companyNames(ast).length > 0 ? (
+                    <p className="text-xs text-muted-foreground">
+                      Company: <span className="text-foreground">{companyNames(ast).join(" = ")}</span>
+                    </p>
+                  ) : null}
+                  {autoKeywordClusters(ast.include).length > 0 ? (
+                    <p className="text-xs text-muted-foreground">
+                      Grouped automatically:{" "}
+                      {autoKeywordClusters(ast.include)
+                        .map((cluster) => cluster.join(" · "))
+                        .join(" | ")}
+                    </p>
+                  ) : null}
                   {ast.aliasGroups && ast.aliasGroups.length > 0 ? (
                     <p className="text-xs text-muted-foreground">
                       Same thing: {ast.aliasGroups.map((group) => group.join(" = ")).join(" · ")}
@@ -169,11 +207,23 @@ export default async function MonitoringListPage() {
                     View mentions
                     <span className="sr-only"> for {query.name}</span>
                   </Link>
+                  {canEdit ? (
+                    <Link
+                      href={`/monitoring/${query.id}/edit`}
+                      className="text-sm text-primary underline underline-offset-2"
+                    >
+                      Edit
+                      <span className="sr-only"> {query.name}</span>
+                    </Link>
+                  ) : null}
                 </div>
               </li>
             );
           })}
-        </ul>
+              </ul>
+            </section>
+          ))}
+        </div>
       )}
     </div>
   );

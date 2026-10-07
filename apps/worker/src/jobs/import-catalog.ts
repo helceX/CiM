@@ -12,7 +12,7 @@ import {
   recordCatalogImportRun,
   type Db,
 } from "@cim/db";
-import { testSourceUrl } from "@cim/ingestion";
+import { discoverFeed, testSourceUrl } from "@cim/ingestion";
 
 /** Small steady batches: the crawler's capacity and the disk are finite. */
 export const IMPORT_BATCH = 50;
@@ -42,6 +42,8 @@ export type ImportDeps = {
   now?: () => Date;
   candidates?: readonly ImportCandidate[];
   testFeed?: typeof testSourceUrl;
+  /** Looks for a feed on an organisation's web page (candidates marked `discover`). */
+  findFeed?: typeof discoverFeed;
 };
 
 export type ImportResult = { added: number; failed: number; skipped: number; note: string | null };
@@ -103,6 +105,7 @@ export async function processImportCatalogJob(deps: ImportDeps): Promise<ImportR
   if (picked.length === 0) return stop("Finished — every catalog feed has been added or tried.");
 
   const testFeed = deps.testFeed ?? testSourceUrl;
+  const findFeed = deps.findFeed ?? discoverFeed;
   const result: ImportResult = { added: 0, failed: 0, skipped: 0, note: null };
   const queue = [...picked];
   async function worker() {
@@ -115,15 +118,33 @@ export async function processImportCatalogJob(deps: ImportDeps): Promise<ImportR
           result.skipped += 1;
           continue;
         }
-        const test = await testFeed(entry.url, "rss");
-        if (!test.ok) {
-          await recordCatalogImportAttempt(database, { url: entry.url, catalogKey: entry.key, status: "failed", error: test.message });
-          result.failed += 1;
-          continue;
+        let feedUrl = entry.url;
+        if (entry.discover) {
+          // A web page, not a feed: the feed found there is what gets stored (and policy-checked).
+          const found = await findFeed(entry.url);
+          if (!found.ok) {
+            await recordCatalogImportAttempt(database, { url: entry.url, catalogKey: entry.key, status: "failed", error: found.message });
+            result.failed += 1;
+            continue;
+          }
+          feedUrl = found.feedUrl;
+          const foundPolicy = await checkSourcePolicy(database, feedUrl, false);
+          if (foundPolicy) {
+            await recordCatalogImportAttempt(database, { url: entry.url, catalogKey: entry.key, status: "skipped", error: foundPolicy });
+            result.skipped += 1;
+            continue;
+          }
+        } else {
+          const test = await testFeed(entry.url, "rss");
+          if (!test.ok) {
+            await recordCatalogImportAttempt(database, { url: entry.url, catalogKey: entry.key, status: "failed", error: test.message });
+            result.failed += 1;
+            continue;
+          }
         }
         const created = await createSource(database, {
           name: entry.name,
-          url: entry.url,
+          url: feedUrl,
           connector: "rss",
           type: entry.type,
           language: entry.language,

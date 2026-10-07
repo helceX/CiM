@@ -1,5 +1,5 @@
 import { TURKEY_SOURCE_CATALOG } from "./source-catalog";
-import { WORLD_SOURCE_CATALOG } from "./world-catalog";
+import { STARTUP_PAGE_CANDIDATES, WORLD_SOURCE_CATALOG } from "./world-catalog";
 
 /**
  * What the background catalog import adds, and in which order. Imported as
@@ -22,6 +22,8 @@ export type ImportCandidate = {
   country: string;
   verified: boolean;
   rank: number;
+  /** `url` is an organisation's web page, not a feed: look for its feed there before adding anything. */
+  discover?: boolean;
 };
 
 const LATE_WORLD_GROUPS = new Set(["blogs", "forums", "podcasts", "video", "social", "reference"]);
@@ -49,6 +51,18 @@ export const CATALOG_IMPORT_ORDER: readonly ImportCandidate[] = [
     language: e.language || "other",
     country: e.country || "ZZ",
     verified: e.verified,
-    rank: e.verified ? 1 : LATE_WORLD_GROUPS.has(e.group) ? 4 : 3,
+    rank: e.group === "startup" || e.verified ? 1 : LATE_WORLD_GROUPS.has(e.group) ? 4 : 3,
+  })),
+  // Startup / funding organisations with no RSS in the directory: Türkiye's first, the rest with the world feeds.
+  ...STARTUP_PAGE_CANDIDATES.map<ImportCandidate>((e) => ({
+    key: e.key,
+    name: e.name,
+    url: e.url,
+    type: e.type,
+    language: e.language || "other",
+    country: e.country || "ZZ",
+    verified: false,
+    rank: e.country === "TR" ? 1 : 3,
+    discover: true,
   })),
 ].sort((a, b) => rank(a) - rank(b));

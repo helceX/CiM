@@ -63,6 +63,15 @@ Variables (web **and** worker): `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_
 
 Optional, worker only: `ARCHIVE_DELETE_AFTER_DAYS` (28–3650). Once an archived week ended that many days ago, and its files are re-verified in R2, its mentions are deleted from Postgres. Unset = nothing is ever deleted because of the archive.
 
+## 2f. Startup, incubator and funding sources
+
+The operator's directories (`scripts/data/Turkiye_Startup_Proje.md`, `Proje_Yazanlar_ve_Kuluckalar.md`, 6 Oct 2026) list ~390 rows: incubators, technology parks, development agencies, funders, grant calls and startup media. Only about 40 distinct rows have an RSS address; the rest are web pages ("RSS adresi belirlenmedi"). Their "XML could not be verified" notes mostly mean the research tool's own network could not reach the publisher, not that the feed is dead.
+
+- **Feeds the directories list** are added to the world catalog as the `startup` group (a feed another catalog already has counts once) and imported ahead of the unchecked world feeds.
+- **Pages with no listed feed** (~260 sites, one per host) are catalog candidates marked `discover`. The background import asks each page for a feed: robots.txt must allow Mediaory-Bot, the page's `<link rel="alternate" type="application/rss+xml">` tags are read, then the usual paths (`/feed/`, `/feed`, `/rss`, `/rss.xml`, `/index.xml`, `/atom.xml`) — at most six addresses, comment feeds skipped. A feed is stored only if it parses with at least one item (the same test as "add source"). A site with no feed is not added and is retried once, days later. Nothing is scraped from the page.
+- Türkiye's pages go first; the rest import with the world feeds, under the same disk and crawl-queue guards as every import.
+- Regenerate with `pnpm exec tsx scripts/import-startup-pack.ts` after the directories change.
+
 ## 3. "The whole internet" — why it is not how anyone does it
 No media-monitoring product crawls the entire web itself. Practical ways to get broad coverage:
 

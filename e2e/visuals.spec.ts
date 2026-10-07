@@ -76,12 +76,17 @@ test("pin a visual to the Dashboard, export it as CSV, edit it, unpin it", async
   await page.goto(detailUrl);
   const [download] = await Promise.all([
     page.waitForEvent("download"),
-    page.getByRole("link", { name: "Export CSV" }).click(),
+    (async () => {
+      await page.locator("summary", { hasText: "Export" }).click();
+      await page.getByRole("link", { name: /^CSV/ }).click();
+    })(),
   ]);
   expect(download.suggestedFilename()).toBe("daily-volume.csv");
   const fs = await import("node:fs/promises");
   const csv = await fs.readFile((await download.path())!, "utf8");
-  expect(csv.startsWith('"Day","Mentions"\r\n')).toBe(true);
+  // Excel-ready: a byte-order mark and a separator hint first, then the header row.
+  expect(csv.startsWith("\uFEFFsep=,\r\n")).toBe(true);
+  expect(csv.replace("\uFEFFsep=,\r\n", "").startsWith('"Day","Mentions"\r\n')).toBe(true);
 
   // Edit keeps the visual and changes it.
   await page.getByRole("link", { name: "Edit" }).click();
@@ -134,14 +139,30 @@ test("a visual can be limited to a monitoring query and exported as XLSX", async
   await expect(page.getByRole("group", { name: "Monitoring queries" }).getByLabel(account.keyword)).toBeChecked();
   await page.goBack();
 
-  const [download] = await Promise.all([
-    page.waitForEvent("download"),
-    page.getByRole("link", { name: "Export XLSX" }).click(),
-  ]);
-  expect(download.suggestedFilename()).toBe("only-my-query.xlsx");
   const fs = await import("node:fs/promises");
-  const bytes = await fs.readFile((await download.path())!);
-  expect(bytes.subarray(0, 2).toString("ascii")).toBe("PK");
+  const exportAs = async (name: RegExp) => {
+    const [download] = await Promise.all([
+      page.waitForEvent("download"),
+      (async () => {
+        // the menu stays open after a download; only open it when it is closed
+        if (!(await page.getByRole("link", { name }).isVisible())) await page.locator("summary", { hasText: "Export" }).click();
+        await page.getByRole("link", { name }).click();
+      })(),
+    ]);
+    return { name: download.suggestedFilename(), bytes: await fs.readFile((await download.path())!) };
+  };
+
+  const excel = await exportAs(/^Excel/);
+  expect(excel.name).toBe("only-my-query.xlsx");
+  expect(excel.bytes.subarray(0, 2).toString("ascii")).toBe("PK");
+
+  // The picture exports: what the dashboard draws, as PNG and SVG.
+  const png = await exportAs(/^PNG/);
+  expect(png.name).toBe("only-my-query.png");
+  expect(png.bytes.subarray(1, 4).toString("ascii")).toBe("PNG");
+  const svg = await exportAs(/^SVG/);
+  expect(svg.name).toBe("only-my-query.svg");
+  expect(svg.bytes.toString("utf8").startsWith("<svg")).toBe(true);
 });
 
 test("a preset question fills in the builder", async ({ page }) => {

@@ -119,3 +119,13 @@ describe("summarizeVisualRows", () => {
     });
   });
 });
+
+import { csvForExcel } from "./visuals";
+
+describe("csvForExcel", () => {
+  it("adds a byte-order mark and a separator hint so Excel splits the columns", () => {
+    const csv = csvForExcel('"Source","Mentions"\r\n"Ç",1\r\n');
+    expect(csv.startsWith("\uFEFFsep=,\r\n")).toBe(true);
+    expect(csv.endsWith('"Ç",1\r\n')).toBe(true);
+  });
+});

@@ -48,7 +48,11 @@ describe("visual CSV export", () => {
     const disposition = res.headers.get("content-disposition")!;
     expect(disposition).toMatch(/^attachment; filename="[a-z0-9-]+\.csv"$/);
     expect(disposition).not.toMatch(/[\r\n]/);
-    const body = await res.text();
+    const bytes = Buffer.from(await res.arrayBuffer());
+    // Excel on a Turkish-locale computer needs a UTF-8 byte-order mark and a separator hint to split columns and keep Türkçe letters
+    expect([...bytes.subarray(0, 3)]).toEqual([0xef, 0xbb, 0xbf]);
+    const body = bytes.toString("utf8");
+    expect(body).toContain("sep=,\r\n");
     expect(body).toContain(`"'=cmd|' /C calc'!A0",2`);
   });
 
@@ -69,5 +73,47 @@ describe("visual CSV export", () => {
     // A real workbook is a zip container; its contents are covered in packages/reports (renderVisualXlsx).
     const bytes = Buffer.from(await res.arrayBuffer());
     expect(bytes.subarray(0, 2).toString("ascii")).toBe("PK");
+  });
+
+  describe("pictures of the visual", () => {
+    beforeEach(() => {
+      getSavedVisual.mockResolvedValue({ id: uuid, name: "Board volume", kind: "chart", spec: { ...spec, periodDays: 30, chartType: "bar" } });
+      runVisual.mockResolvedValue({ rows: [{ label: "Webrazzi", value: 12 }], truncated: false });
+    });
+    const pictureRequest = (format: string, extra = "") => new Request(`http://localhost/api/visuals/x/export?format=${format}${extra}`);
+
+    it("serves the chart as an SVG file, light or dark", async () => {
+      const dark = await GET(pictureRequest("svg"), params(uuid));
+      expect(dark.headers.get("content-type")).toContain("image/svg+xml");
+      expect(dark.headers.get("content-disposition")).toBe('attachment; filename="board-volume.svg"');
+      const darkSvg = await dark.text();
+      expect(darkSvg).toContain("<svg");
+      expect(darkSvg).toContain("Board volume");
+      const light = await (await GET(pictureRequest("svg", "&theme=light"), params(uuid))).text();
+      expect(light).not.toBe(darkSvg);
+    });
+
+    it("serves a self-contained HTML page", async () => {
+      const res = await GET(pictureRequest("html"), params(uuid));
+      expect(res.headers.get("content-type")).toContain("text/html");
+      const html = await res.text();
+      expect(html).toContain("<svg");
+      expect(html).toContain("<table>");
+    });
+
+    it("serves a real PNG", async () => {
+      const res = await GET(pictureRequest("png"), params(uuid));
+      expect(res.status).toBe(200);
+      expect(res.headers.get("content-type")).toBe("image/png");
+      const bytes = Buffer.from(await res.arrayBuffer());
+      expect(bytes.subarray(1, 4).toString("ascii")).toBe("PNG");
+    });
+
+    it("puts the chart picture inside the Excel file", async () => {
+      const res = await GET(pictureRequest("xlsx"), params(uuid));
+      const bytes = Buffer.from(await res.arrayBuffer());
+      expect(bytes.subarray(0, 2).toString("ascii")).toBe("PK");
+      expect(bytes.includes(Buffer.from("xl/media/image"))).toBe(true);
+    });
   });
 });

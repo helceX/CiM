@@ -49,18 +49,32 @@ export default async function VisualPage({ params }: { params: Promise<{ id: str
         </div>
         <div className="flex flex-wrap items-start gap-2">
           {parsed.success ? (
-            <Button asChild variant="secondary" size="sm">
-              <a href={`/api/visuals/${visual.id}/export`} download>
-                Export CSV
-              </a>
-            </Button>
-          ) : null}
-          {parsed.success ? (
-            <Button asChild variant="secondary" size="sm">
-              <a href={`/api/visuals/${visual.id}/export?format=xlsx`} download>
-                Export XLSX
-              </a>
-            </Button>
+            <details className="group relative">
+              <summary className="inline-flex h-8 cursor-pointer list-none items-center gap-1.5 rounded-md border border-border bg-secondary px-3 text-sm font-medium text-secondary-foreground hover:bg-secondary/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+                Export
+                <span aria-hidden="true" className="text-muted-foreground transition-transform group-open:rotate-180">▾</span>
+              </summary>
+              <ul className="absolute right-0 z-20 mt-1 flex w-72 flex-col rounded-lg border border-border bg-surface p-1 shadow-xl">
+                {[
+                  { format: "png", label: "PNG picture", hint: "as shown on the dashboard — for slides and documents" },
+                  { format: "svg", label: "SVG picture", hint: "sharp at any size" },
+                  { format: "html", label: "HTML page", hint: "picture + numbers, opens offline" },
+                  { format: "xlsx", label: "Excel", hint: "formatted table with the chart inside" },
+                  { format: "csv", label: "CSV", hint: "the raw numbers" },
+                ].map((item) => (
+                  <li key={item.format}>
+                    <a
+                      href={`/api/visuals/${visual.id}/export?format=${item.format}`}
+                      download
+                      className="flex flex-col rounded-md px-3 py-2 text-sm text-foreground hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                    >
+                      <span className="font-medium">{item.label}</span>
+                      <span className="text-xs text-muted-foreground">{item.hint}</span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </details>
           ) : null}
           {canWrite ? (
             <>

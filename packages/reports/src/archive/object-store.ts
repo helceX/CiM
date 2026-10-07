@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { AwsClient } from "aws4fetch";
 
 /**
@@ -48,12 +49,18 @@ export class ObjectStore {
     if (!response.ok) throw new Error(`Object storage refused the upload (HTTP ${response.status}).`);
   }
 
-  /** The stored size in bytes, or null when the object does not exist. */
-  async head(key: string): Promise<{ bytes: number } | null> {
-    const response = await this.send(this.urlFor(key), { method: "HEAD" });
+  /**
+   * What the bucket reports for an object, or null when it does not exist. The check asks for the
+   * stored bytes as they are ("identity") — a text file may otherwise be reported at its compressed
+   * size — and passes on the ETag (an MD5 for a single upload) so the comparison does not depend on
+   * the size alone.
+   */
+  async head(key: string): Promise<{ bytes: number; etag?: string } | null> {
+    const response = await this.send(this.urlFor(key), { method: "HEAD", headers: { "accept-encoding": "identity" } });
     if (response.status === 404) return null;
     if (!response.ok) throw new Error(`Object storage check failed (HTTP ${response.status}).`);
-    return { bytes: Number(response.headers.get("content-length") ?? 0) };
+    const etag = response.headers.get("etag")?.replace(/^W\//, "").replace(/"/g, "").toLowerCase();
+    return { bytes: Number(response.headers.get("content-length") ?? 0), ...(etag ? { etag } : {}) };
   }
 
   async delete(key: string): Promise<void> {
@@ -68,4 +75,18 @@ export class ObjectStore {
     const signed = await this.client.sign(url.toString(), { method: "GET", aws: { signQuery: true } });
     return signed.url;
   }
+}
+
+/** What an uploaded body is expected to look like when read back: its size and MD5. */
+export function expectedStored(body: Uint8Array | string): { bytes: number; md5: string } {
+  const bytes = typeof body === "string" ? new TextEncoder().encode(body) : body;
+  return { bytes: bytes.byteLength, md5: createHash("md5").update(bytes).digest("hex") };
+}
+
+/**
+ * True when the bucket's copy is the one that was uploaded: the same MD5 ETag, or — when the bucket
+ * reports none, or a different kind of tag — the same size.
+ */
+export function storedMatches(stored: { bytes: number; etag?: string }, expected: { bytes: number; md5: string }): boolean {
+  return stored.etag === expected.md5 || stored.bytes === expected.bytes;
 }

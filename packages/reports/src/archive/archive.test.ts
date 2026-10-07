@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import ExcelJS from "exceljs";
 import type { ArchiveMention } from "@cim/db";
-import { ObjectStore, r2ConfigFromEnv } from "./object-store";
+import { ObjectStore, expectedStored, storedMatches, r2ConfigFromEnv } from "./object-store";
 import { renderArchiveHtml, safeHref } from "./render-archive-html";
 import { renderArchiveXlsx } from "./render-archive-xlsx";
 
@@ -42,19 +42,25 @@ describe("ObjectStore", () => {
   const config = { accountId: "acct", accessKeyId: "AKID", secretAccessKey: "secret", bucket: "mediaory-archive" };
 
   it("signs uploads, checks and deletes against the bucket's R2 address", async () => {
-    const calls: { url: string; method: string; auth: string | null; type: string | null }[] = [];
+    const calls: { url: string; method: string; auth: string | null; type: string | null; encoding: string | null }[] = [];
     const fetchMock = vi.fn(async (request: Request) => {
-      calls.push({ url: request.url, method: request.method, auth: request.headers.get("authorization"), type: request.headers.get("content-type") });
+      calls.push({ url: request.url, method: request.method, auth: request.headers.get("authorization"), type: request.headers.get("content-type"), encoding: request.headers.get("accept-encoding") });
       return request.method === "HEAD" ? new Response(null, { status: 200, headers: { "content-length": "42" } }) : new Response(null, { status: 200 });
     });
     const store = new ObjectStore(config, fetchMock as unknown as typeof fetch);
     await store.put("org/1/2026-W40/archive.html", "<p>hi</p>", "text/html; charset=utf-8", "archive 2026-W40.html");
     expect(await store.head("org/1/2026-W40/archive.html")).toEqual({ bytes: 42 });
+    expect(calls[1]!.encoding).toBe("identity");
     await store.delete("org/1/2026-W40/archive.html");
     expect(calls.map((c) => c.method)).toEqual(["PUT", "HEAD", "DELETE"]);
     expect(calls[0]!.url).toBe("https://acct.r2.cloudflarestorage.com/mediaory-archive/org/1/2026-W40/archive.html");
     expect(calls[0]!.auth).toMatch(/^AWS4-HMAC-SHA256 Credential=AKID\//);
     expect(calls[0]!.type).toBe("text/html; charset=utf-8");
+  });
+
+  it("reads the ETag the bucket reports, without quotes or a weak marker", async () => {
+    const store = new ObjectStore(config, (async () => new Response(null, { status: 200, headers: { "content-length": "7", etag: 'W/"ABC123"' } })) as unknown as typeof fetch);
+    expect(await store.head("x")).toEqual({ bytes: 7, etag: "abc123" });
   });
 
   it("reports a missing object as null and surfaces refusals", async () => {
@@ -128,5 +134,25 @@ describe("renderArchiveXlsx", () => {
     expect(sheet.getRow(2).getCell("L").value).toMatchObject({ hyperlink: "https://example.com/haber/1" });
     expect(sheet.getRow(3).getCell("L").value ?? "").toBe("");
     expect(workbook.getWorksheet("Summary")).toBeDefined();
+  });
+});
+
+describe("storedMatches", () => {
+  const expected = expectedStored("<p>héllo</p>");
+
+  it("measures the uploaded bytes (not characters) and an MD5", () => {
+    expect(expected.bytes).toBe(new TextEncoder().encode("<p>héllo</p>").byteLength);
+    expect(expected.md5).toMatch(/^[0-9a-f]{32}$/);
+    expect(expectedStored(new TextEncoder().encode("<p>héllo</p>"))).toEqual(expected);
+  });
+
+  it("accepts the same MD5 even when the reported size differs (a compressed copy)", () => {
+    expect(storedMatches({ bytes: 20, etag: expected.md5 }, expected)).toBe(true);
+  });
+
+  it("accepts the same size when there is no usable tag, and refuses when neither agrees", () => {
+    expect(storedMatches({ bytes: expected.bytes }, expected)).toBe(true);
+    expect(storedMatches({ bytes: expected.bytes, etag: "deadbeef-2" }, expected)).toBe(true);
+    expect(storedMatches({ bytes: 3, etag: "deadbeef" }, expected)).toBe(false);
   });
 });

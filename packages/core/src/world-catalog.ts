@@ -1,3 +1,5 @@
+import { inferCountryFromHost } from "./country-from-host";
+import { hostOfUrl } from "./restricted-publishers";
 import { feedIdentity, TURKEY_SOURCE_CATALOG } from "./source-catalog";
 import { WORLD_CATALOG_ROWS } from "./world-catalog.generated";
 import { STARTUP_FEED_ROWS, STARTUP_PAGE_ROWS } from "./startup-catalog.generated";
@@ -75,7 +77,8 @@ const PACK_SOURCES: readonly WorldCatalogSource[] = WORLD_CATALOG_ROWS.map(
     url,
     type,
     language,
-    country,
+    // The pack leaves the country blank when it could not confirm one; a country's own web ending still places it.
+    country: country || inferCountryFromHost(hostOfUrl(url)) || "",
     group: group as WorldCatalogGroup,
     verified: verified === 1,
   }),
@@ -93,7 +96,7 @@ const startupFeeds: WorldCatalogSource[] = (() => {
     const identity = feedIdentity(url);
     if (known.has(identity)) continue;
     known.add(identity);
-    out.push({ key: `startup-${out.length + 1}`, name, url, type, language, country, group: "startup", verified: verified === 1 });
+    out.push({ key: `startup-${out.length + 1}`, name, url, type, language, country: country || inferCountryFromHost(hostOfUrl(url)) || "", group: "startup", verified: verified === 1 });
   }
   return out;
 })();

@@ -1,4 +1,6 @@
 import { TURKEY_SOURCE_CATALOG } from "./source-catalog";
+import { inferCountryFromHost } from "./country-from-host";
+import { hostOfUrl } from "./restricted-publishers";
 import { STARTUP_PAGE_CANDIDATES, WORLD_SOURCE_CATALOG } from "./world-catalog";
 
 /**
@@ -49,7 +51,7 @@ export const CATALOG_IMPORT_ORDER: readonly ImportCandidate[] = [
     url: e.url,
     type: e.type,
     language: e.language || "other",
-    country: e.country || "ZZ",
+    country: e.country || inferCountryFromHost(hostOfUrl(e.url)) || "ZZ",
     verified: e.verified,
     rank: e.group === "startup" || e.verified ? 1 : LATE_WORLD_GROUPS.has(e.group) ? 4 : 3,
   })),
@@ -60,9 +62,9 @@ export const CATALOG_IMPORT_ORDER: readonly ImportCandidate[] = [
     url: e.url,
     type: e.type,
     language: e.language || "other",
-    country: e.country || "ZZ",
+    country: e.country || inferCountryFromHost(hostOfUrl(e.url)) || "ZZ",
     verified: false,
-    rank: e.country === "TR" ? 1 : 3,
+    rank: (e.country || inferCountryFromHost(hostOfUrl(e.url))) === "TR" ? 1 : 3,
     discover: true,
   })),
 ].sort((a, b) => rank(a) - rank(b));

@@ -58,7 +58,7 @@ export function HeaderBar({
     >
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
         <Link href="/" aria-label={homeLabel} className="text-lg text-white">
-          <Wordmark />
+          <Wordmark surface="dark" />
         </Link>
 
         <nav className="hidden items-center gap-1 md:flex" aria-label="Main">

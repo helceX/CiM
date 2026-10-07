@@ -4,6 +4,7 @@ export * from "./authz";
 export * from "./query-ast";
 export * from "./keyword-match";
 export * from "./concepts";
+export * from "./country-from-host";
 export * from "./monitoring-input";
 export { morphologyPacksFor, type MorphologyPack } from "./morphology";
 export * from "./word-fingerprint";

@@ -133,3 +133,12 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans);
 }
+
+/* The logo comes in two wordmark colours; show the one that reads on the current theme. */
+.mp-logo-on-light { display: none; }
+:root[data-theme="light"] .mp-logo-on-dark { display: none; }
+:root[data-theme="light"] .mp-logo-on-light { display: block; }
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) .mp-logo-on-dark { display: none; }
+  :root:not([data-theme="dark"]) .mp-logo-on-light { display: block; }
+}

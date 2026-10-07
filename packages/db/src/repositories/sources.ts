@@ -1,5 +1,5 @@
-import { and, eq, inArray, ne, notInArray, sql } from "drizzle-orm";
-import { hostMatchesDomain, hostOfUrl, isLicenseRequiredHost } from "@cim/core";
+import { and, eq, inArray, isNull, ne, notInArray, sql } from "drizzle-orm";
+import { hostMatchesDomain, hostOfUrl, inferCountryFromHost, isLicenseRequiredHost } from "@cim/core";
 import type { Db } from "../client";
 import { articles, sources } from "../schema/content";
 import { isHostBlocked, listBlockedDomains } from "./compliance";
@@ -190,6 +190,34 @@ export async function bulkSetSourcesCrawlEnabled(
     .where(and(scope, blockedIds.length > 0 ? notInArray(sources.id, blockedIds) : undefined))
     .returning({ id: sources.id });
   return { changed: rows.length, skippedBlocked: blockedIds.length };
+}
+
+/**
+ * Gives sources with no country the one their web address points to (bebka.org.tr → Türkiye, spiegel.de → Germany),
+ * so they appear in the right country cluster and count for a monitoring limited to that country. Only a country's
+ * own ending is used; .com/.org sites stay unknown. Never overwrites a country that is already set.
+ */
+export async function fillMissingSourceCountries(db: Db): Promise<{ checked: number; updated: number; byCountry: Record<string, number> }> {
+  const rows = await db.select({ id: sources.id, domain: sources.domain }).from(sources).where(isNull(sources.country));
+  const idsByCountry = new Map<string, string[]>();
+  for (const row of rows) {
+    const code = inferCountryFromHost(row.domain);
+    if (code) idsByCountry.set(code, [...(idsByCountry.get(code) ?? []), row.id]);
+  }
+  const byCountry: Record<string, number> = {};
+  let updated = 0;
+  for (const [code, ids] of idsByCountry) {
+    for (let i = 0; i < ids.length; i += 500) {
+      const changed = await db
+        .update(sources)
+        .set({ country: code, updatedAt: new Date() })
+        .where(and(inArray(sources.id, ids.slice(i, i + 500)), isNull(sources.country)))
+        .returning({ id: sources.id });
+      updated += changed.length;
+      byCountry[code] = (byCountry[code] ?? 0) + changed.length;
+    }
+  }
+  return { checked: rows.length, updated, byCountry };
 }
 
 export type CrawlCoverage = {

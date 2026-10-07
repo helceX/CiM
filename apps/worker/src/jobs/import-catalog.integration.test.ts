@@ -90,4 +90,29 @@ describe("processImportCatalogJob (integration)", () => {
     expect(attempt?.status).toBe("skipped");
     await db.delete(schema.catalogImportAttempts).where(eq(schema.catalogImportAttempts.catalogKey, blocked.key));
   });
+  it("looks for a feed on an organisation's web page and stores the feed it finds, not the page", async () => {
+    const page = candidate(7, { url: `https://${stamp}-7.example/`, discover: true, type: "website" });
+    const found = await processImportCatalogJob({
+      ...base,
+      candidates: [page],
+      findFeed: async (url) => ({ ok: true, feedUrl: `${url}news/feed.xml`, itemCount: 4 }),
+    });
+    expect(found).toMatchObject({ added: 1, failed: 0 });
+    const rows = await db.select().from(schema.sources).where(like(schema.sources.domain, `${stamp}%`));
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ url: `https://${stamp}-7.example/news/feed.xml`, connector: "rss", type: "website" });
+  });
+
+  it("stores nothing for a page with no readable feed, and says why", async () => {
+    const page = candidate(8, { url: `https://${stamp}-8.example/`, discover: true });
+    const none = await processImportCatalogJob({
+      ...base,
+      candidates: [page],
+      findFeed: async () => ({ ok: false, message: "No readable feed was found." }),
+    });
+    expect(none).toMatchObject({ added: 0, failed: 1 });
+    expect(await db.select().from(schema.sources).where(like(schema.sources.domain, `${stamp}%`))).toHaveLength(0);
+    const attempt = await db.select().from(schema.catalogImportAttempts).where(like(schema.catalogImportAttempts.catalogKey, `${stamp}%`));
+    expect(attempt[0]).toMatchObject({ status: "failed", error: "No readable feed was found." });
+  });
 });

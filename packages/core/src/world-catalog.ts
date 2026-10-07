@@ -1,4 +1,6 @@
+import { feedIdentity, TURKEY_SOURCE_CATALOG } from "./source-catalog";
 import { WORLD_CATALOG_ROWS } from "./world-catalog.generated";
+import { STARTUP_FEED_ROWS, STARTUP_PAGE_ROWS } from "./startup-catalog.generated";
 
 /**
  * The world RSS pack (7,700 candidates researched by the operator, 5 Oct 2026),
@@ -27,7 +29,8 @@ export type WorldCatalogGroup =
   | "podcasts"
   | "video"
   | "social"
-  | "reference";
+  | "reference"
+  | "startup";
 
 export const WORLD_CATALOG_GROUP_LABELS: Record<WorldCatalogGroup, string> = {
   general: "General news",
@@ -46,6 +49,7 @@ export const WORLD_CATALOG_GROUP_LABELS: Record<WorldCatalogGroup, string> = {
   video: "Video channels",
   social: "Social & microblogs",
   reference: "Reference, wikis & dictionaries",
+  startup: "Startups, incubators & funding",
 };
 
 export type WorldCatalogSource = {
@@ -64,7 +68,7 @@ export type WorldCatalogSource = {
   verified: boolean;
 };
 
-export const WORLD_SOURCE_CATALOG: readonly WorldCatalogSource[] = WORLD_CATALOG_ROWS.map(
+const PACK_SOURCES: readonly WorldCatalogSource[] = WORLD_CATALOG_ROWS.map(
   ([id, name, url, country, language, type, group, verified]) => ({
     key: `world-${id}`,
     name,
@@ -76,3 +80,51 @@ export const WORLD_SOURCE_CATALOG: readonly WorldCatalogSource[] = WORLD_CATALOG
     verified: verified === 1,
   }),
 );
+
+/**
+ * The startup / project-funding directories (6 Oct 2026): incubators, technology
+ * parks, development agencies, funders and startup media. Feeds the directories list
+ * are candidates like the rest; a feed another catalog already has counts once.
+ */
+const startupFeeds: WorldCatalogSource[] = (() => {
+  const known = new Set([...TURKEY_SOURCE_CATALOG, ...PACK_SOURCES].map((entry) => feedIdentity(entry.url)));
+  const out: WorldCatalogSource[] = [];
+  for (const [name, url, country, language, type, verified] of STARTUP_FEED_ROWS) {
+    const identity = feedIdentity(url);
+    if (known.has(identity)) continue;
+    known.add(identity);
+    out.push({ key: `startup-${out.length + 1}`, name, url, type, language, country, group: "startup", verified: verified === 1 });
+  }
+  return out;
+})();
+
+export const WORLD_SOURCE_CATALOG: readonly WorldCatalogSource[] = [...PACK_SOURCES, ...startupFeeds];
+
+export type StartupPageCandidate = {
+  key: string;
+  name: string;
+  /** The organisation's web page — NOT a feed. A feed is looked for there before anything is stored. */
+  url: string;
+  type: string;
+  language: string;
+  country: string;
+};
+
+/**
+ * Organisations the directories list with no RSS address. The background import
+ * asks each page for a feed (robots.txt permitting) and adds the source only when
+ * one reads; a page without a feed is left alone. A page on a host that already
+ * has a catalog feed is left out.
+ */
+export const STARTUP_PAGE_CANDIDATES: readonly StartupPageCandidate[] = (() => {
+  const knownHosts = new Set([...TURKEY_SOURCE_CATALOG, ...WORLD_SOURCE_CATALOG].map((entry) => new URL(entry.url).hostname.replace(/^www\./, "")));
+  const seen = new Set<string>();
+  const out: StartupPageCandidate[] = [];
+  for (const [name, url, country, language, type] of STARTUP_PAGE_ROWS) {
+    const host = new URL(url).hostname.replace(/^www\./, "");
+    if (knownHosts.has(host) || seen.has(host)) continue;
+    seen.add(host);
+    out.push({ key: `startup-page-${out.length + 1}`, name, url, type, language, country });
+  }
+  return out;
+})();

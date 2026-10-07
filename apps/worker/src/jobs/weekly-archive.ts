@@ -18,7 +18,7 @@ import {
   type Db,
 } from "@cim/db";
 import type { ArchiveFile } from "@cim/db/schema";
-import { ObjectStore, r2ConfigFromEnv, renderArchiveHtml, renderArchiveXlsx } from "@cim/reports/archive";
+import { expectedStored, ObjectStore, r2ConfigFromEnv, renderArchiveHtml, renderArchiveXlsx, storedMatches } from "@cim/reports/archive";
 import { queueOutboxEmail } from "../email";
 
 export type ArchiveDeps = {
@@ -90,9 +90,12 @@ export async function processWeeklyArchiveJob(deps: ArchiveDeps = {}): Promise<A
         const key = `${prefix}/${name}`;
         await store.put(key, body, contentType, `mediaory-${period.label}-${name}`);
         const stored = await store.head(key);
-        const bytes = typeof body === "string" ? new TextEncoder().encode(body).byteLength : body.byteLength;
-        if (!stored || stored.bytes !== bytes) throw new Error(`Stored copy of ${name} does not match what was uploaded.`);
-        files.push({ name, key, bytes, contentType });
+        const expected = expectedStored(body);
+        if (!stored) throw new Error(`${name} was not found in storage after the upload.`);
+        if (!storedMatches(stored, expected)) {
+          throw new Error(`Stored copy of ${name} does not match what was uploaded (uploaded ${expected.bytes} bytes, storage reports ${stored.bytes}${stored.etag ? `, tag ${stored.etag}` : ""}).`);
+        }
+        files.push({ name, key, bytes: expected.bytes, contentType });
       };
       await upload("archive.html", html, "text/html; charset=utf-8");
       await upload("mentions.xlsx", xlsx, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");

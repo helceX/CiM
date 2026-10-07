@@ -78,5 +78,12 @@ RUN addgroup --system --gid 1001 worker \
 
 COPY --from=builder --chown=worker:worker /repo ./
 
+# `playwright install --with-deps` above ran in the BUILDER stage, so the browser binary was copied
+# into this image but the system libraries it loads (NSS, GTK/ATK, fonts, ...) were not — report
+# PDFs failed with "error while loading shared libraries". Install them here, as root, in the
+# image that actually runs the worker.
+RUN node packages/reports/node_modules/playwright/cli.js install-deps chromium \
+  && rm -rf /var/lib/apt/lists/*
+
 USER worker
 CMD ["apps/worker/node_modules/.bin/tsx", "apps/worker/src/index.ts"]

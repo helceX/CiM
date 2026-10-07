@@ -44,7 +44,9 @@ export default async function AdminSourcesPage() {
     if (entry.country) worldCountryCounts[entry.country] = (worldCountryCounts[entry.country] ?? 0) + 1;
     else worldGlobalCount += 1;
   }
-  const addedUrls = new Set(sources.map((s) => s.url).filter((u): u is string => Boolean(u)));
+  const sourceUrls = new Set(sources.map((s) => s.url).filter((u): u is string => Boolean(u)));
+  // Only the catalog addresses that are already sources — not every source's address — go to the browser.
+  const addedCatalogUrls = TURKEY_SOURCE_CATALOG.filter((entry) => sourceUrls.has(entry.url)).map((entry) => entry.url);
 
   return (
     <div className="flex flex-col gap-8">
@@ -117,7 +119,7 @@ export default async function AdminSourcesPage() {
               language: entry.language,
               country: entry.country,
             }))}
-            addedUrls={[...addedUrls]}
+            addedUrls={addedCatalogUrls}
             groupLabels={Object.fromEntries(CATALOG_GROUPS.map((g) => [g, GROUP_LABEL[g] ?? g]))}
           />
         </div>

@@ -51,23 +51,23 @@ export async function processGenerateReportJob(
 
     const html = renderReportHtml(data);
     const csv = renderReportCsv(data);
-    const [pdf, xlsx] = await Promise.all([
-      renderHtmlToPdf(html, { executablePath: getEnv().PLAYWRIGHT_CHROMIUM_PATH }),
-      renderReportXlsx(data),
-    ]);
+    const xlsx = await renderReportXlsx(data);
 
-    await createReportFile(db, {
-      reportRunId: run.id,
-      format: "pdf",
-      mimeType: "application/pdf",
-      data: pdf,
-    });
-    await createReportFile(db, {
-      reportRunId: run.id,
-      format: "csv",
-      mimeType: "text/csv",
-      data: Buffer.from(csv, "utf-8"),
-    });
+    // The PDF needs a headless browser; if the machine cannot start one the run still completes with
+    // the HTML page (print-ready), CSV and spreadsheet, and says why the PDF is missing.
+    let pdf: Buffer | null = null;
+    let pdfNote: string | undefined;
+    try {
+      pdf = await renderHtmlToPdf(html, { executablePath: getEnv().PLAYWRIGHT_CHROMIUM_PATH });
+    } catch (pdfError) {
+      const reason = pdfError instanceof Error ? pdfError.message.split("\n")[0] : String(pdfError);
+      pdfNote = `The PDF could not be produced (${reason}); the HTML, CSV and Excel files are available.`;
+      console.error(`[worker] report PDF failed (run ${run.id}):`, pdfError);
+    }
+
+    if (pdf) await createReportFile(db, { reportRunId: run.id, format: "pdf", mimeType: "application/pdf", data: pdf });
+    await createReportFile(db, { reportRunId: run.id, format: "html", mimeType: "text/html; charset=utf-8", data: Buffer.from(html, "utf-8") });
+    await createReportFile(db, { reportRunId: run.id, format: "csv", mimeType: "text/csv", data: Buffer.from(csv, "utf-8") });
     await createReportFile(db, {
       reportRunId: run.id,
       format: "xlsx",
@@ -75,14 +75,14 @@ export async function processGenerateReportJob(
       data: xlsx,
     });
 
-    await markReportRunCompleted(db, run.id);
+    await markReportRunCompleted(db, run.id, pdfNote);
     console.log(`[worker] generated report "${report.name}" (run ${run.id})`);
 
     if (run.requestedByUserId) {
       await createNotificationForUser(db, organizationId, run.requestedByUserId, {
         kind: "report",
         title: report.name,
-        body: `Your report "${report.name}" is ready to download.`,
+        body: `Your report "${report.name}" is ready to download.${pdfNote ? " (PDF unavailable — HTML, CSV and Excel are ready.)" : ""}`,
       });
     }
   } catch (error) {

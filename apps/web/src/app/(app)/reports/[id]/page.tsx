@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { Badge } from "@cim/ui";
-import { db, getActiveReportShareLink, getReport, listReportRuns } from "@cim/db";
+import { db, getActiveReportShareLink, getReport, listReportRunFormats, listReportRuns } from "@cim/db";
 import { getReportTemplate } from "@cim/reports/templates";
 import { requireOrgContext } from "@/lib/tenant";
 import { RunAgainButton } from "./run-again-button";
@@ -31,6 +31,7 @@ export default async function ReportDetailPage({
   if (!report) notFound();
 
   const runs = await listReportRuns(db, report.id);
+  const formatsByRun = await listReportRunFormats(db, runs.map((run) => run.id));
   const template = getReportTemplate(report.templateKey);
   const canManageSchedule = context.permissions.includes("reports:write");
 
@@ -101,25 +102,21 @@ export default async function ReportDetailPage({
                   </td>
                   <td className="px-4 py-3">
                     {run.status === "completed" ? (
-                      <div className="flex gap-3">
-                        <a
-                          className="text-primary underline underline-offset-2"
-                          href={`/api/reports/${report.id}/runs/${run.id}/download?format=pdf`}
-                        >
-                          PDF
-                        </a>
-                        <a
-                          className="text-primary underline underline-offset-2"
-                          href={`/api/reports/${report.id}/runs/${run.id}/download?format=csv`}
-                        >
-                          CSV
-                        </a>
-                        <a
-                          className="text-primary underline underline-offset-2"
-                          href={`/api/reports/${report.id}/runs/${run.id}/download?format=xlsx`}
-                        >
-                          XLSX
-                        </a>
+                      <div className="flex flex-col gap-1">
+                        <div className="flex flex-wrap gap-3">
+                          {(["pdf", "html", "csv", "xlsx"] as const)
+                            .filter((format) => (formatsByRun.get(run.id) ?? []).includes(format))
+                            .map((format) => (
+                              <a
+                                key={format}
+                                className="text-primary underline underline-offset-2"
+                                href={`/api/reports/${report.id}/runs/${run.id}/download?format=${format}`}
+                              >
+                                {format === "xlsx" ? "Excel" : format.toUpperCase()}
+                              </a>
+                            ))}
+                        </div>
+                        {run.error ? <p className="text-xs text-muted-foreground">{run.error}</p> : null}
                       </div>
                     ) : (
                       <span className="text-muted-foreground">Not available</span>

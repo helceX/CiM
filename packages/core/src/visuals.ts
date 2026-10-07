@@ -156,3 +156,12 @@ export function summarizeVisualRows(
     latest: time ? (rows.at(-1)?.value ?? null) : null,
   };
 }
+
+/**
+ * The same CSV, made to open correctly in Excel: a UTF-8 byte-order mark (so Türkçe letters are not garbled) and
+ * a `sep=,` hint (so a computer set to Turkish — where Excel expects ";" — still splits the columns instead of
+ * showing everything as one line of text).
+ */
+export function csvForExcel(csv: string): string {
+  return `\uFEFFsep=,\r\n${csv}`;
+}

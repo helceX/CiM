@@ -223,6 +223,10 @@ function addVisualSheet(workbook: ExcelJS.Workbook, visual: ReportVisual): void 
   ];
   styleHeaderRow(sheet.getRow(1));
   sheet.addRows(visual.rows.map((row) => ({ label: sanitizeCellValue(row.label), value: row.value })));
+  // Real numbers with a number format (thousands separator, % for shares), right-aligned like a table in the app.
+  const valueColumn = sheet.getColumn("value");
+  valueColumn.numFmt = visual.measure === "negative_share" ? '0.0"%"' : "#,##0";
+  valueColumn.alignment = { horizontal: "right" };
 }
 
 const SECTION_SHEET_BUILDERS: Record<
@@ -294,11 +298,24 @@ export async function renderReportXlsx(data: ReportData): Promise<Buffer> {
 }
 
 
-/** A workbook with a single sheet for one saved visual (the "Export XLSX" on a visual's page). */
-export async function renderVisualXlsx(visual: ReportVisual): Promise<Buffer> {
+/**
+ * A workbook for one saved visual (the "Export Excel" on a visual's page): the numbers as a real table,
+ * and — when a picture is supplied — the chart exactly as the dashboard shows it, placed beside the table.
+ */
+export async function renderVisualXlsx(
+  visual: ReportVisual,
+  options: { chartPng?: { data: Buffer; width: number; height: number } } = {},
+): Promise<Buffer> {
   const workbook = new ExcelJS.Workbook();
   brandWorkbook(workbook, `Mediaory — ${visual.name}`);
   addVisualSheet(workbook, visual);
   for (const sheet of workbook.worksheets) finishSheet(sheet);
+  const sheet = workbook.worksheets[0];
+  if (sheet && options.chartPng) {
+    const id = workbook.addImage({ base64: options.chartPng.data.toString("base64"), extension: "png" });
+    const width = 760;
+    sheet.addImage(id, { tl: { col: 3, row: 0.4 }, ext: { width, height: Math.round((options.chartPng.height / options.chartPng.width) * width) } });
+    sheet.getColumn(3).width = 4; // a gutter between the table and the picture
+  }
   return Buffer.from(await workbook.xlsx.writeBuffer());
 }

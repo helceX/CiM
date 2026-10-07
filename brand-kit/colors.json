@@ -1,0 +1,9 @@
+{
+  "cyan": "#00C7FA",
+  "sky": "#0096F8",
+  "blue": "#0026EA",
+  "deepBlue": "#0003AA",
+  "violet": "#6F26F7",
+  "ink": "#05051A",
+  "gradient": ["#6F26F7", "#0026EA", "#00C7FA"]
+}

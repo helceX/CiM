@@ -22,20 +22,24 @@
     "db:seed": "pnpm --filter @cim/db seed"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["esbuild", "msgpackr-extract"]
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "msgpackr-extract"
+    ]
   },
   "devDependencies": {
     "@axe-core/playwright": "4.10.2",
     "@cim/db": "workspace:*",
     "@cim/ingestion": "workspace:*",
-    "drizzle-orm": "0.45.2",
+    "@eslint/js": "10.0.1",
     "@playwright/test": "1.63.0",
     "@types/node": "22.15.0",
+    "drizzle-orm": "0.45.2",
     "eslint": "10.11.0",
-    "@eslint/js": "10.0.1",
-    "typescript-eslint": "8.70.0",
     "prettier": "3.6.2",
+    "sharp": "0.35.4",
     "typescript": "6.0.3",
+    "typescript-eslint": "8.70.0",
     "vitest": "5.0.1"
   }
 }

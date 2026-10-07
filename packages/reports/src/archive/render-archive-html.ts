@@ -1,5 +1,6 @@
 import { SOURCE_KINDS, countryName, sourceKindOfType, sourceTypeBadge } from "@cim/core";
 import type { ArchiveMention } from "@cim/db";
+import { BRAND_LOGO_DATA_URI, BRAND_LOGO_LIGHT_DATA_URI } from "../brand";
 
 const ESCAPES: Record<string, string> = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
 export function escapeHtml(value: string): string {
@@ -32,8 +33,8 @@ export type ArchiveHtmlInput = {
 };
 
 const CSS = `
-:root{--bg:#f6f7fb;--card:#fff;--ink:#14161f;--muted:#5d6475;--line:#e3e6ef;--accent:#6a3dff;--pos:#0b8a4a;--neg:#c42b3a;--neu:#5d6475}
-@media (prefers-color-scheme:dark){:root{--bg:#0e1017;--card:#171a24;--ink:#eef0f6;--muted:#9aa2b6;--line:#272c3b;--accent:#9d86ff;--pos:#3ccf85;--neg:#ff6b78;--neu:#9aa2b6}}
+:root{--bg:#f6f7fb;--card:#fff;--ink:#14161f;--muted:#5d6475;--line:#e3e6ef;--accent:#0026ea;--pos:#0b8a4a;--neg:#c42b3a;--neu:#5d6475}
+@media (prefers-color-scheme:dark){:root{--bg:#0e1017;--card:#171a24;--ink:#eef0f6;--muted:#9aa2b6;--line:#272c3b;--accent:#6fa8ff;--pos:#3ccf85;--neg:#ff6b78;--neu:#9aa2b6}}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
 main{max-width:980px;margin:0 auto;padding:24px 16px 64px}
 h1{font-size:1.5rem;margin:.2rem 0}h2{font-size:1rem;margin:0}.muted{color:var(--muted)}
@@ -112,8 +113,8 @@ export function renderArchiveHtml(input: ArchiveHtmlInput): string {
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex">
 <title>${escapeHtml(title)}</title><style>${CSS}</style></head>
-<body><main>
-<header class="top"><div class="muted">Mediaory · weekly archive</div><h1>${escapeHtml(input.organizationName)}</h1>
+<body>
+<div style="height:6px;background:linear-gradient(90deg,#6f26f7,#0026ea 55%,#00c7fa)"></div><main><header class="top"><picture><source srcset="${BRAND_LOGO_LIGHT_DATA_URI}" media="(prefers-color-scheme: dark)"><img src="${BRAND_LOGO_DATA_URI}" alt="Mediaory" style="height:32px;width:auto;display:block"></picture><div class="muted" style="margin-top:6px">Weekly archive</div><h1>${escapeHtml(input.organizationName)}</h1>
 <div class="muted">${escapeHtml(input.periodLabel)} · ${escapeHtml(input.periodStart)} to ${escapeHtml(input.periodEnd)}</div>
 <div class="stats"><span class="stat">${mentions.length.toLocaleString("en-GB")} mentions</span><span class="stat">${sources.toLocaleString("en-GB")} sources</span>
 <span class="stat">${sentimentCount("positive")} positive</span><span class="stat">${sentimentCount("neutral")} neutral</span><span class="stat">${sentimentCount("negative")} negative</span>

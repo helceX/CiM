@@ -2,10 +2,11 @@ import { NextResponse } from "next/server";
 import { db, getReport, getReportFile, getReportRun } from "@cim/db";
 import { requireOrgContext } from "@/lib/tenant";
 
-const EXTENSION: Record<"pdf" | "csv" | "xlsx", string> = {
+const EXTENSION: Record<"pdf" | "csv" | "xlsx" | "html", string> = {
   pdf: "pdf",
   csv: "csv",
   xlsx: "xlsx",
+  html: "html",
 };
 
 export async function GET(
@@ -21,9 +22,9 @@ export async function GET(
 
   const { id, runId } = await params;
   const format = new URL(request.url).searchParams.get("format");
-  if (format !== "pdf" && format !== "csv" && format !== "xlsx") {
+  if (format !== "pdf" && format !== "csv" && format !== "xlsx" && format !== "html") {
     return NextResponse.json(
-      { error: "format must be pdf, csv, or xlsx" },
+      { error: "format must be pdf, html, csv, or xlsx" },
       { status: 400 },
     );
   }

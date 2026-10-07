@@ -1,4 +1,4 @@
-import { and, desc, eq, isNull, ne, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, ne, sql } from "drizzle-orm";
 import type { Db } from "../client";
 import { organizations, projects } from "../schema/organizations";
 import { reportFiles, reportRuns, reportShareLinks, reports } from "../schema/reports";
@@ -194,11 +194,25 @@ export async function markReportRunRunning(db: Db, reportRunId: string): Promise
 export async function markReportRunCompleted(
   db: Db,
   reportRunId: string,
+  /** Shown beside a completed run — e.g. the PDF could not be drawn but the other files are there. */
+  note?: string,
 ): Promise<void> {
   await db
     .update(reportRuns)
-    .set({ status: "completed", completedAt: new Date() })
+    .set({ status: "completed", completedAt: new Date(), ...(note ? { error: note.slice(0, 500) } : {}) })
     .where(eq(reportRuns.id, reportRunId));
+}
+
+/** Which files each run has, so a run only offers downloads that exist. */
+export async function listReportRunFormats(db: Db, reportRunIds: string[]): Promise<Map<string, string[]>> {
+  const formats = new Map<string, string[]>();
+  if (reportRunIds.length === 0) return formats;
+  const rows = await db
+    .select({ reportRunId: reportFiles.reportRunId, format: reportFiles.format })
+    .from(reportFiles)
+    .where(inArray(reportFiles.reportRunId, reportRunIds));
+  for (const row of rows) formats.set(row.reportRunId, [...(formats.get(row.reportRunId) ?? []), row.format]);
+  return formats;
 }
 
 /** brief/USER_FLOWS.md §5 — failure surfaces with its error, never a silently missing report. */
@@ -217,7 +231,7 @@ export async function createReportFile(
   db: Db,
   input: {
     reportRunId: string;
-    format: "pdf" | "csv" | "xlsx";
+    format: "pdf" | "csv" | "xlsx" | "html";
     mimeType: string;
     data: Buffer;
   },
@@ -234,7 +248,7 @@ export async function createReportFile(
 export async function getReportFile(
   db: Db,
   reportRunId: string,
-  format: "pdf" | "csv" | "xlsx",
+  format: "pdf" | "csv" | "xlsx" | "html",
 ) {
   const [row] = await db
     .select()

@@ -3,18 +3,18 @@ import { countryName, sourceTypeBadge } from "@cim/core";
 import type { ArchiveMention } from "@cim/db";
 import { sanitizeCellValue } from "../sanitize-cell";
 import { safeHref } from "./render-archive-html";
+import { addLogo, brandWorkbook, finishSheet } from "../xlsx-style";
 
 /** The same mentions as a spreadsheet (one row each, with a clickable link) plus a one-sheet summary. */
 export async function renderArchiveXlsx(input: { organizationName: string; periodLabel: string; mentions: ArchiveMention[] }): Promise<Buffer> {
   const workbook = new ExcelJS.Workbook();
-  workbook.creator = "Mediaory";
+  brandWorkbook(workbook, `Mediaory archive ${input.periodLabel}`);
 
   const summary = workbook.addWorksheet("Summary");
   summary.columns = [
     { header: "Metric", key: "metric", width: 28 },
     { header: "Value", key: "value", width: 30 },
   ];
-  summary.getRow(1).font = { bold: true };
   const count = (s: string) => input.mentions.filter((m) => m.sentiment === s).length;
   summary.addRows([
     { metric: "Organization", value: sanitizeCellValue(input.organizationName) },
@@ -42,8 +42,6 @@ export async function renderArchiveXlsx(input: { organizationName: string; perio
     { header: "Link", key: "link", width: 40 },
     { header: "Excerpt", key: "excerpt", width: 80 },
   ];
-  sheet.getRow(1).font = { bold: true };
-  sheet.views = [{ state: "frozen", ySplit: 1 }];
   for (const m of input.mentions) {
     const href = safeHref(m.url);
     sheet.addRow({
@@ -62,5 +60,8 @@ export async function renderArchiveXlsx(input: { organizationName: string; perio
       excerpt: m.excerpt ? sanitizeCellValue(m.excerpt) : "",
     });
   }
+  finishSheet(summary, { filter: false });
+  finishSheet(sheet);
+  addLogo(workbook, summary, 3);
   return Buffer.from(await workbook.xlsx.writeBuffer());
 }

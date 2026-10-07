@@ -4,14 +4,14 @@ import { DIMENSION_LABELS, MEASURE_LABELS } from "@cim/core";
 import { isVisualSectionKey, type ReportSectionKey } from "./sections";
 import type { ReportVisual } from "./gather-data";
 import { sanitizeCellValue } from "./sanitize-cell";
+import { addLogo, brandWorkbook, finishSheet } from "./xlsx-style";
 
 function formatDate(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
-function styleHeaderRow(row: ExcelJS.Row): void {
-  row.font = { bold: true };
-}
+/** Headers are styled for every sheet at the end (finishSheet); kept as a no-op marker where the sheets declare them. */
+function styleHeaderRow(_row: ExcelJS.Row): void {}
 
 function addSummarySheet(workbook: ExcelJS.Workbook, data: ReportData): void {
   const sheet = workbook.addWorksheet("Summary");
@@ -267,7 +267,7 @@ const FIXED_TEMPLATE_SECTIONS: Record<
  */
 export async function renderReportXlsx(data: ReportData): Promise<Buffer> {
   const workbook = new ExcelJS.Workbook();
-  workbook.created = new Date();
+  brandWorkbook(workbook, `Mediaory report — ${data.projectName}`);
 
   addSummarySheet(workbook, data);
 
@@ -285,6 +285,10 @@ export async function renderReportXlsx(data: ReportData): Promise<Buffer> {
     SECTION_SHEET_BUILDERS[key](workbook, data);
   }
 
+  for (const sheet of workbook.worksheets) finishSheet(sheet, { filter: sheet.name !== "Summary" });
+  const summary = workbook.getWorksheet("Summary");
+  if (summary) addLogo(workbook, summary, 3);
+
   const buffer = await workbook.xlsx.writeBuffer();
   return Buffer.from(buffer);
 }
@@ -293,7 +297,8 @@ export async function renderReportXlsx(data: ReportData): Promise<Buffer> {
 /** A workbook with a single sheet for one saved visual (the "Export XLSX" on a visual's page). */
 export async function renderVisualXlsx(visual: ReportVisual): Promise<Buffer> {
   const workbook = new ExcelJS.Workbook();
-  workbook.created = new Date();
+  brandWorkbook(workbook, `Mediaory — ${visual.name}`);
   addVisualSheet(workbook, visual);
+  for (const sheet of workbook.worksheets) finishSheet(sheet);
   return Buffer.from(await workbook.xlsx.writeBuffer());
 }

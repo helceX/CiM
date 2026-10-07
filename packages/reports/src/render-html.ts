@@ -3,6 +3,7 @@ import { MEASURE_LABELS, DIMENSION_LABELS, isTimeDimension } from "@cim/core";
 import type { ReportVisual } from "./gather-data";
 import { REPORT_SECTION_LABELS, isVisualSectionKey, type ReportSectionKey } from "./sections";
 import { getReportTemplate } from "./templates";
+import { BRAND, BRAND_CSS, brandFooterHtml, brandHeaderHtml } from "./brand";
 
 const SENTIMENT_BADGE: Record<string, string> = {
   positive: "background:oklch(52% 0.13 150 / 15%);color:oklch(38% 0.13 150);",
@@ -38,13 +39,13 @@ function volumeBarChart(series: ReportData["volumeSeries"]): string {
       const height = Math.round((point.count / max) * 80);
       const x = i * barWidth;
       const y = 90 - height;
-      return `<rect x="${x + barWidth * 0.15}" y="${y}" width="${barWidth * 0.7}" height="${height}" rx="1" fill="oklch(38% 0.11 260)" />`;
+      return `<rect x="${x + barWidth * 0.15}" y="${y}" width="${barWidth * 0.7}" height="${height}" rx="1" fill="${BRAND.blue}" />`;
     })
     .join("");
   const first = series[0]?.date ?? "";
   const last = series[series.length - 1]?.date ?? "";
   return `
-    <svg viewBox="0 0 600 100" width="600" height="100" role="img" aria-label="Mention volume trend">
+    <svg viewBox="0 0 600 100" style="width:100%;height:auto" role="img" aria-label="Mention volume trend">
       <line x1="0" y1="90" x2="600" y2="90" stroke="oklch(90% 0.005 260)" stroke-width="1" />
       ${bars}
     </svg>
@@ -182,11 +183,11 @@ function visualSection(visual: ReportVisual): string {
     const bars = rows
       .map((row, i) => {
         const height = Math.round(((row.value ?? 0) / max) * 80);
-        return `<rect x="${i * barWidth + barWidth * 0.15}" y="${90 - height}" width="${barWidth * 0.7}" height="${height}" rx="1" fill="oklch(38% 0.11 260)" />`;
+        return `<rect x="${i * barWidth + barWidth * 0.15}" y="${90 - height}" width="${barWidth * 0.7}" height="${height}" rx="1" fill="${BRAND.blue}" />`;
       })
       .join("");
     return `${heading}
-      <svg viewBox="0 0 600 100" width="600" height="100" role="img" aria-label="${escapeHtml(visual.name)}">
+      <svg viewBox="0 0 600 100" style="width:100%;height:auto" role="img" aria-label="${escapeHtml(visual.name)}">
         <line x1="0" y1="90" x2="600" y2="90" stroke="oklch(90% 0.005 260)" stroke-width="1" />${bars}
       </svg>
       <div class="chart-axis"><span>${escapeHtml(rows[0]!.label)}</span><span>peak ${formatVisualValue(max, measure)}</span><span>${escapeHtml(rows[rows.length - 1]!.label)}</span></div>`;
@@ -196,7 +197,7 @@ function visualSection(visual: ReportVisual): string {
   const body = rows
     .map((row) => {
       const width = Math.round(((row.value ?? 0) / max) * 100);
-      return `<tr><td>${escapeHtml(row.label)}</td><td style="width:45%"><div style="background:oklch(38% 0.11 260);height:8px;border-radius:2px;width:${width}%"></div></td><td style="text-align:right">${escapeHtml(formatVisualValue(row.value, measure))}</td></tr>`;
+      return `<tr><td>${escapeHtml(row.label)}</td><td style="width:45%"><div style="background:${BRAND.gradient};height:8px;border-radius:4px;width:${width}%"></div></td><td style="text-align:right">${escapeHtml(formatVisualValue(row.value, measure))}</td></tr>`;
     })
     .join("");
   return `${heading}<table><thead><tr><th>${escapeHtml(DIMENSION_LABELS[dimension])}</th><th></th><th style="text-align:right">${escapeHtml(MEASURE_LABELS[measure])}</th></tr></thead><tbody>${body}</tbody></table>`;
@@ -247,39 +248,17 @@ export function renderReportHtml(data: ReportData): string {
 <html>
 <head>
 <meta charset="utf-8" />
-<style>
-  * { box-sizing: border-box; }
-  body {
-    font-family: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
-    color: oklch(20% 0.01 260);
-    background: oklch(100% 0 0);
-    margin: 0;
-    padding: 32px;
-    font-size: 12px;
-  }
-  h1 { font-size: 20px; margin: 0 0 4px; }
-  .meta { color: oklch(48% 0.01 260); font-size: 11px; margin-bottom: 24px; }
-  .kpi-row { display: flex; gap: 16px; margin-bottom: 28px; }
-  .kpi { flex: 1; border: 1px solid oklch(90% 0.005 260); border-radius: 8px; padding: 12px; }
-  .kpi .label { color: oklch(48% 0.01 260); font-size: 10px; text-transform: uppercase; letter-spacing: 0.03em; }
-  .kpi .value { font-size: 20px; font-weight: 600; margin-top: 4px; }
-  section { margin-bottom: 28px; }
-  h2 { font-size: 13px; font-weight: 600; margin: 0 0 10px; }
-  table { width: 100%; border-collapse: collapse; font-size: 11px; }
-  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid oklch(90% 0.005 260); }
-  th { color: oklch(48% 0.01 260); font-weight: 500; text-transform: uppercase; font-size: 9px; }
-  .badge { display: inline-block; padding: 1px 8px; border-radius: 4px; font-size: 10px; font-weight: 500; }
-  .empty { color: oklch(48% 0.01 260); font-style: italic; }
-  .chart-axis { display: flex; justify-content: space-between; font-size: 10px; color: oklch(48% 0.01 260); margin-top: 4px; }
-  footer { margin-top: 32px; padding-top: 12px; border-top: 1px solid oklch(90% 0.005 260); color: oklch(48% 0.01 260); font-size: 10px; }
-</style>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>${escapeHtml(templateName)} — ${escapeHtml(data.projectName)} · Mediaory</title>
+<style>${BRAND_CSS}</style>
 </head>
 <body>
+  ${brandHeaderHtml("Media monitoring report")}
   <h1>${escapeHtml(templateName)} — ${escapeHtml(data.projectName)}</h1>
   <p class="meta">${formatDate(data.periodStart)} to ${formatDate(data.periodEnd)}</p>
   ${kpiRow(data)}
   ${sections}
-  <footer>Generated by Mediaory. All figures are aggregated directly from monitored mentions — no estimated or fabricated values.</footer>
+  ${brandFooterHtml("All figures are aggregated directly from monitored mentions — no estimated or fabricated values.")}
 </body>
 </html>`;
 }

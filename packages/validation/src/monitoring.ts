@@ -2,8 +2,15 @@ import { z } from "zod";
 import { normalizeAliasGroups, normalizeRegionScopes } from "@cim/core";
 import { sourceTypeSelectionSchema, trackingTargetSchema } from "./onboarding";
 
-export const createMonitoringQuerySchema = z.object({
-  projectId: z.uuid(),
+const companySchema = z
+  .object({
+    name: z.string().trim().max(160).default(""),
+    short: z.string().trim().max(40).optional(),
+  })
+  .optional()
+  .transform((company) => (company && company.name ? { name: company.name, ...(company.short ? { short: company.short } : {}) } : undefined));
+
+const monitoringFields = {
   name: z.string().trim().min(1, "Name is required").max(160),
   include: z.array(z.string().trim().min(1).max(120)).max(50).default([]),
   exclude: z.array(z.string().trim().min(1).max(120)).max(50).default([]),
@@ -22,7 +29,14 @@ export const createMonitoringQuerySchema = z.object({
     .default([])
     .transform((scopes) => normalizeRegionScopes(scopes)),
   trackingTarget: trackingTargetSchema.default("company"),
-});
+  /** The company being tracked: full name and optional short name (both are searched; see QueryAst.company). */
+  company: companySchema,
+};
+
+export const createMonitoringQuerySchema = z.object({ projectId: z.uuid(), ...monitoringFields });
+/** Editing a monitoring: the same fields, no project change. */
+export const updateMonitoringQuerySchema = z.object(monitoringFields);
+export type UpdateMonitoringQueryInput = z.infer<typeof updateMonitoringQuerySchema>;
 export type CreateMonitoringQueryInput = z.infer<typeof createMonitoringQuerySchema>;
 
 export const previewMonitoringQuerySchema = z.object({

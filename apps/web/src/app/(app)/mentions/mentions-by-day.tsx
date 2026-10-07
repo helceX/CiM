@@ -26,7 +26,8 @@ type DayItem = {
   assigneeName: string | null;
   print: ArticlePrint | null;
 };
-type DayQuery = { id: string; name: string; terms: string[]; aliasGroups: string[][] };
+type DayFamily = { key: string; label: string; mapped: boolean };
+type DayQuery = { id: string; name: string; terms: string[]; aliasGroups: string[][]; family: DayFamily };
 type DayState =
   | { status: "loading" }
   | { status: "error" }
@@ -184,6 +185,50 @@ function KindClusters({ items, onOpen }: { items: DayItem[]; onOpen: (id: string
   );
 }
 
+function MonitoringBlock({ query, items, onOpen }: { query: DayQuery; items: DayItem[]; onOpen: (id: string) => void }) {
+  const concepts = groupByConcept(query, items);
+  return (
+    <details className="rounded-xl border border-border bg-background/30">
+      <summary className="flex cursor-pointer items-center justify-between gap-2 px-3 py-2.5 text-sm font-bold text-foreground">
+        <span className="min-w-0 truncate">{query.name}</span>
+        <span className="shrink-0 text-xs font-normal text-muted-foreground">
+          {items.length} {items.length === 1 ? "story" : "stories"}
+        </span>
+      </summary>
+      <div className="flex flex-col gap-2 border-t border-border p-2">
+        {concepts.length <= 1 ? (
+          <KindClusters items={items} onOpen={onOpen} />
+        ) : (
+          concepts.map((concept) => (
+            <details key={concept.key} className="rounded-lg border border-border">
+              <summary className="flex cursor-pointer flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm font-semibold text-foreground">
+                <span className="flex min-w-0 flex-wrap items-center gap-2">
+                  {concept.label}
+                  {concept.variants.length > 1 ? (
+                    <span className="flex flex-wrap gap-1" aria-label="Names of this keyword">
+                      {concept.variants.slice(1).map((variant) => (
+                        <span key={variant} className="rounded-sm bg-secondary px-1.5 py-0.5 text-[11px] font-normal text-secondary-foreground">
+                          {variant}
+                        </span>
+                      ))}
+                    </span>
+                  ) : null}
+                </span>
+                <span className="shrink-0 text-xs font-normal text-muted-foreground">
+                  {concept.items.length} {concept.items.length === 1 ? "story" : "stories"}
+                </span>
+              </summary>
+              <div className="flex flex-col gap-2 border-t border-border p-2">
+                <KindClusters items={concept.items} onOpen={onOpen} />
+              </div>
+            </details>
+          ))
+        )}
+      </div>
+    </details>
+  );
+}
+
 function DayBody({ state, onOpen }: { state: DayState | undefined; onOpen: (id: string) => void }) {
   if (!state || state.status === "loading") return <p className="px-4 py-6 text-sm text-muted-foreground">Loading…</p>;
   if (state.status === "error") {
@@ -193,60 +238,46 @@ function DayBody({ state, onOpen }: { state: DayState | undefined; onOpen: (id: 
       </p>
     );
   }
-  // One block per monitoring (the one filtered on first, then in Monitoring-page
-  // order). Inside a monitoring that tracks several things — or one thing under
-  // several names (BTM = Bilgiyi Ticarileştirme Merkezi) — the stories are read
-  // per concept first; inside that they keep the kind-of-place clusters (news &
-  // press, blogs, forums, social, broadcast).
-  const groups = state.queries
+  // Read in layers, each closed until opened: monitorings of one family (BTM Monitoring v1, v2, v3 — or the
+  // group the customer filed them under) share one cluster; inside it each monitoring; inside that the
+  // things it tracks (forms of one word, or several names of one entity, are one concept); inside that the
+  // kind of place (news & press, blogs, forums, social, broadcast). A family of one is shown as that monitoring.
+  const perQuery = state.queries
     .map((query) => ({ query, items: state.items.filter((item) => item.queryId === query.id) }))
     .filter((group) => group.items.length > 0);
+  const families: { family: DayFamily; members: typeof perQuery }[] = [];
+  for (const entry of perQuery) {
+    const existing = families.find((f) => f.family.key === entry.query.family.key);
+    if (existing) existing.members.push(entry);
+    else families.push({ family: entry.query.family, members: [entry] });
+  }
 
   return (
     <div className="flex flex-col gap-3 px-3 pb-3">
-      {groups.map(({ query, items }) => {
-        const concepts = groupByConcept(query, items);
-        return (
-          <details key={query.id} open className="rounded-xl border border-border bg-background/30">
+      {families.map(({ family, members }) =>
+        members.length === 1 ? (
+          <MonitoringBlock key={members[0]!.query.id} query={members[0]!.query} items={members[0]!.items} onOpen={onOpen} />
+        ) : (
+          <details key={family.key} className="rounded-xl border border-border bg-background/30">
             <summary className="flex cursor-pointer items-center justify-between gap-2 px-3 py-2.5 text-sm font-bold text-foreground">
-              <span className="min-w-0 truncate">{query.name}</span>
+              <span className="flex min-w-0 flex-wrap items-center gap-2">
+                <span className="min-w-0 truncate">{family.label}</span>
+                <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] font-medium text-secondary-foreground">
+                  {members.length} monitorings
+                </span>
+              </span>
               <span className="shrink-0 text-xs font-normal text-muted-foreground">
-                {items.length} {items.length === 1 ? "story" : "stories"}
+                {members.reduce((sum, m) => sum + m.items.length, 0)} stories
               </span>
             </summary>
             <div className="flex flex-col gap-2 border-t border-border p-2">
-              {concepts.length <= 1 ? (
-                <KindClusters items={items} onOpen={onOpen} />
-              ) : (
-                concepts.map((concept) => (
-                  <details key={concept.key} open className="rounded-lg border border-border">
-                    <summary className="flex cursor-pointer flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm font-semibold text-foreground">
-                      <span className="flex min-w-0 flex-wrap items-center gap-2">
-                        {concept.label}
-                        {concept.variants.length > 1 ? (
-                          <span className="flex flex-wrap gap-1" aria-label="Names of this keyword">
-                            {concept.variants.slice(1).map((variant) => (
-                              <span key={variant} className="rounded-sm bg-secondary px-1.5 py-0.5 text-[11px] font-normal text-secondary-foreground">
-                                {variant}
-                              </span>
-                            ))}
-                          </span>
-                        ) : null}
-                      </span>
-                      <span className="shrink-0 text-xs font-normal text-muted-foreground">
-                        {concept.items.length} {concept.items.length === 1 ? "story" : "stories"}
-                      </span>
-                    </summary>
-                    <div className="flex flex-col gap-2 border-t border-border p-2">
-                      <KindClusters items={concept.items} onOpen={onOpen} />
-                    </div>
-                  </details>
-                ))
-              )}
+              {members.map(({ query, items }) => (
+                <MonitoringBlock key={query.id} query={query} items={items} onOpen={onOpen} />
+              ))}
             </div>
           </details>
-        );
-      })}
+        ),
+      )}
       {state.truncated ? <p className="px-1 text-xs text-muted-foreground">Showing the 300 most recent stories of this day — narrow the filters to see the rest.</p> : null}
     </div>
   );

@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import AxeBuilder from "@axe-core/playwright";
 import { test, expect, type Page } from "@playwright/test";
-import { registerAndOnboard } from "./helpers";
+import { openDayClusters, registerAndOnboard } from "./helpers";
 import { simulateCrawl } from "./simulate";
 
 /**
@@ -157,6 +157,7 @@ test.describe("a11y + keyboard operability: overlays and nav", () => {
     await page.goto("/mentions");
     const dayButton = page.locator("main button[aria-expanded]").first();
     await dayButton.click();
+    await openDayClusters(page);
     await expect(page.getByText("News & press", { exact: true }).first()).toBeVisible();
 
     const violations = await scan(page);

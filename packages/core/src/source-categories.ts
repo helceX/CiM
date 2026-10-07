@@ -46,6 +46,14 @@ export function expandSourceCategoriesToTypes(categories: string[]): string[] {
   return [...expanded];
 }
 
+/** The inverse of {@link expandSourceCategoriesToTypes}: the categories whose source types a monitoring stores. */
+export function collapseTypesToCategories(types: readonly string[]): string[] {
+  const stored = new Set(types);
+  return Object.entries(SOURCE_CATEGORY_TO_SOURCE_TYPES)
+    .filter(([category, categoryTypes]) => category !== "all" && categoryTypes.some((type) => stored.has(type)))
+    .map(([category]) => category);
+}
+
 /**
  * How the admin groups `Source.type` values into the kinds of place a story
  * comes from — news sites, blogs, forums, social, audio/video, feeds. One

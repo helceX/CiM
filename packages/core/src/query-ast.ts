@@ -19,7 +19,20 @@ export type QueryAst = {
    * treats every name as an ordinary keyword; results are grouped by concept (see concepts.ts).
    */
   aliasGroups?: string[][];
+  /**
+   * The company this monitoring is about — its full name and, when it has one, its short name
+   * (İstanbul Ticaret Odası / İTO). Both are searched like any keyword; the Dashboard's "Your brand"
+   * view lists the stories that name the company directly.
+   */
+  company?: { name: string; short?: string };
 };
+
+/** The company's names (full, then short) when the monitoring has a company. */
+export function companyNames(ast: Pick<QueryAst, "company"> | null | undefined): string[] {
+  const company = ast?.company;
+  if (!company?.name.trim()) return [];
+  return [company.name.trim(), ...(company.short?.trim() ? [company.short.trim()] : [])];
+}
 
 export function emptyQueryAst(): QueryAst {
   return { include: [], exclude: [], exactPhrases: [] };

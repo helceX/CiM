@@ -74,6 +74,45 @@ export async function createMonitoringQuery(
   return query;
 }
 
+/**
+ * Edits a monitoring: its name, what it searches, where it looks and which kinds of source count.
+ * Stories it already matched stay as mentions — removing a keyword never deletes history.
+ */
+export async function updateMonitoringQuery(
+  db: Db,
+  organizationId: OrganizationId,
+  queryId: string,
+  patch: {
+    name: string;
+    queryAst: QueryAst;
+    booleanQuery: string;
+    sourceTypes: string[];
+    regionScopes: string[];
+    trackingTarget?: string;
+  },
+) {
+  const [query] = await db
+    .update(monitoringQueries)
+    .set({
+      name: patch.name,
+      queryAst: patch.queryAst,
+      booleanQuery: patch.booleanQuery,
+      sourceTypes: patch.sourceTypes,
+      regionScopes: patch.regionScopes,
+      ...(patch.trackingTarget ? { trackingTarget: patch.trackingTarget } : {}),
+      updatedAt: new Date(),
+    })
+    .where(
+      and(
+        eq(monitoringQueries.organizationId, organizationId),
+        eq(monitoringQueries.id, queryId),
+        isNull(monitoringQueries.deletedAt),
+      ),
+    )
+    .returning();
+  return query;
+}
+
 export async function getMonitoringQuery(
   db: Db,
   organizationId: OrganizationId,

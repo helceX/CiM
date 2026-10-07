@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
-import { db, listMentionsForDay } from "@cim/db";
+import { effectiveAliasGroups } from "@cim/core";
+import { db, listBrandGroups, listMentionsForDay } from "@cim/db";
+import { monitoringFamily } from "@/lib/monitoring-families";
 import { mentionFiltersFromParams } from "@/lib/mention-filters";
 import { requireOrgContext } from "@/lib/tenant";
 
@@ -27,8 +29,12 @@ export async function GET(request: Request) {
   // Monitoring groups of the day: the one the reader filtered on comes first,
   // the rest follow in the order the monitorings were created (their order on
   // the Monitoring page), so the same keyword always sits in the same place.
-  const seen = new Map<string, { id: string; name: string; createdAt: number; terms: string[]; aliasGroups: string[][] }>();
-  for (const { mention, queryName, queryCreatedAt, queryAst } of items) {
+  const groupNames = new Map((await listBrandGroups(db, context.organizationId)).map((group) => [group.id, group.name]));
+  const seen = new Map<
+    string,
+    { id: string; name: string; createdAt: number; terms: string[]; aliasGroups: string[][]; family: { key: string; label: string; mapped: boolean } }
+  >();
+  for (const { mention, queryName, queryCreatedAt, queryAst, queryBrandGroupId } of items) {
     if (!seen.has(mention.queryId)) {
       seen.set(mention.queryId, {
         id: mention.queryId,
@@ -36,7 +42,10 @@ export async function GET(request: Request) {
         createdAt: queryCreatedAt.getTime(),
         // the monitoring's keywords in the order it lists them, so concepts always appear in the same order
         terms: [...queryAst.exactPhrases, ...queryAst.include],
-        aliasGroups: queryAst.aliasGroups ?? [],
+        // the customer's own groups plus forms of one word (girişimci · girişimcilik) found automatically
+        aliasGroups: effectiveAliasGroups(queryAst.aliasGroups, queryAst.include),
+        // monitorings of one family (BTM Monitoring v1, v2, v3 — or one group the customer chose) are read together
+        family: monitoringFamily({ name: queryName, brandGroupId: queryBrandGroupId }, groupNames),
       });
     }
   }
@@ -48,7 +57,7 @@ export async function GET(request: Request) {
       }
       return a.createdAt - b.createdAt || a.name.localeCompare(b.name);
     })
-    .map(({ id, name, terms, aliasGroups }) => ({ id, name, terms, aliasGroups }));
+    .map(({ id, name, terms, aliasGroups, family }) => ({ id, name, terms, aliasGroups, family }));
 
   return NextResponse.json({
     truncated,

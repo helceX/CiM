@@ -1,9 +1,9 @@
 import { afterAll, describe, expect, it } from "vitest";
-import { eq } from "drizzle-orm";
+import { eq, like } from "drizzle-orm";
 import { db } from "../client";
 import { sources } from "../schema/content";
 import { blockedDomains } from "../schema/compliance";
-import { bulkSetSourcesCrawlEnabled, createSource, listActiveSources, setSourceCrawlEnabled } from "./sources";
+import { bulkSetSourcesCrawlEnabled, createSource, fillMissingSourceCountries, listActiveSources, setSourceCrawlEnabled } from "./sources";
 
 describe("admin source management (integration)", () => {
   const unique = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -131,5 +131,30 @@ describe("admin source management (integration)", () => {
       expect(result).toEqual({ changed: 0, skippedBlocked: 1 });
       expect(await statusOf("blocked")).toBe("unavailable");
     });
+  });
+});
+
+describe("fillMissingSourceCountries (integration)", () => {
+  const tag = `fillc${Date.now()}`;
+
+  afterAll(async () => {
+    await db.delete(sources).where(like(sources.domain, `${tag}%`));
+  });
+
+  it("places sources by their country's own ending and leaves general ones and set ones alone", async () => {
+    const make = async (suffix: string, country: string | null) => {
+      const domain = `${tag}-${suffix}`;
+      const [row] = await db.insert(sources).values({ name: domain, domain, type: "news", connector: "rss", country }).returning();
+      return row!.id;
+    };
+    const ids = [await make("a.org.tr", null), await make("b.co.uk", null), await make("c.com", null), await make("d.de", "AT")];
+    const result = await fillMissingSourceCountries(db);
+    expect(result.updated).toBeGreaterThanOrEqual(2);
+    const country = async (id: string) => (await db.select().from(sources).where(eq(sources.id, id)))[0]!.country;
+    expect(await country(ids[0]!)).toBe("TR");
+    expect(await country(ids[1]!)).toBe("GB");
+    expect(await country(ids[2]!)).toBeNull();
+    expect(await country(ids[3]!)).toBe("AT"); // already set: never overwritten
+    expect((await fillMissingSourceCountries(db)).updated).toBe(0); // nothing left to place
   });
 });

@@ -1,40 +1,37 @@
 import { cn } from "../lib/cn";
 
 /**
- * The Mediaory mark: a signal line that traces an "M" — two peaks rising
- * out of the noise. Drawn in currentColor so it follows whatever text
- * color surrounds it (and any gradient a marketing surface paints on it).
+ * The Mediaory mark — the circle with the speech bubble — as the real logo artwork
+ * (brand-kit/logo, copied to /brand by scripts/build-brand-assets.ts).
  */
 export function WordmarkGlyph({ className }: { className?: string }) {
   return (
-    <svg
-      viewBox="0 0 24 24"
-      width="1.25em"
-      height="1.25em"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.4"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-      className={className}
-    >
-      <path d="M3.5 19V7.5L9 14l3-8.5 3 8.5 5.5-6.5V19" />
-    </svg>
+    <img src="/brand/mediaory-mark.png" alt="" aria-hidden="true" width={20} height={18} className={cn("inline-block h-[1.15em] w-auto", className)} />
   );
 }
 
+/**
+ * The Mediaory logo. `surface` says what it sits on: the logo has a dark wordmark for light
+ * surfaces and a white one for dark surfaces; "auto" follows the panel's theme.
+ */
 export function Wordmark({
   className,
-  glyph = true,
+  surface = "auto",
 }: {
   className?: string;
+  /** Kept for existing callers: `glyph={false}` was the text-only variant, which the logo replaces. */
   glyph?: boolean;
+  surface?: "auto" | "dark" | "light";
 }) {
+  const imgClass = "h-full w-auto";
   return (
-    <span className={cn("inline-flex items-center gap-2 font-semibold tracking-tight", className)}>
-      {glyph ? <WordmarkGlyph /> : null}
-      <span>Mediaory</span>
+    <span className={cn("mp-logo inline-flex h-8 items-center", className)} role="img" aria-label="Mediaory">
+      {surface !== "light" ? (
+        <img src="/brand/mediaory-logo-light.png" alt="" aria-hidden="true" width={113} height={32} className={cn(imgClass, surface === "auto" && "mp-logo-on-dark")} />
+      ) : null}
+      {surface !== "dark" ? (
+        <img src="/brand/mediaory-logo.png" alt="" aria-hidden="true" width={113} height={32} className={cn(imgClass, surface === "auto" && "mp-logo-on-light")} />
+      ) : null}
     </span>
   );
 }

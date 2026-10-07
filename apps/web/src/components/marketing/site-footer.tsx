@@ -38,7 +38,7 @@ export async function MarketingFooter() {
     <footer className="relative border-t border-[var(--mk-line)] bg-[var(--mk-ink)]/60">
       <div className="mx-auto grid max-w-6xl gap-10 px-4 py-14 md:grid-cols-[1.6fr_repeat(3,1fr)]">
         <div className="flex flex-col gap-4">
-          <Wordmark className="text-xl text-white" />
+          <Wordmark surface="dark" />
           <p className="max-w-xs text-sm text-[var(--mk-muted)]">{t("tagline")}</p>
         </div>
         {columns.map((column) => (

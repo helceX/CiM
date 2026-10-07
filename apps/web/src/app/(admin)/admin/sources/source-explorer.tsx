@@ -112,6 +112,30 @@ export function SourceExplorer({ sources }: { sources: ExplorerSource[] }) {
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
 
+  async function fillCountries() {
+    setBusy(true);
+    setNotice(null);
+    try {
+      const response = await fetch("/api/admin/sources/countries", { method: "POST" });
+      const data = (await response.json().catch(() => ({}))) as { updated?: number; checked?: number; byCountry?: Record<string, number>; error?: string };
+      if (!response.ok) throw new Error(data.error ?? "Could not fill in countries.");
+      const top = Object.entries(data.byCountry ?? {})
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([code, n]) => `${countryName(code)} ${n}`)
+        .join(", ");
+      setNotice({
+        tone: "ok",
+        text: data.updated ? `Placed ${data.updated} of ${data.checked} sources: ${top}.` : `Nothing to place — none of the ${data.checked} sources has a country ending in its address.`,
+      });
+      router.refresh();
+    } catch (error) {
+      setNotice({ tone: "error", text: error instanceof Error ? error.message : "Could not fill in countries." });
+    } finally {
+      setBusy(false);
+    }
+  }
+
   const real = useMemo(() => sources.filter((s) => CRAWLABLE.has(s.connector)), [sources]);
   const isPaused = (s: ExplorerSource) => s.status === "unavailable";
 
@@ -318,6 +342,20 @@ export function SourceExplorer({ sources }: { sources: ExplorerSource[] }) {
             </tbody>
           </table>
         </div>
+        {unknownCount > 0 ? (
+          <div className="mt-3 flex flex-col gap-2 rounded-lg border border-border p-3 text-sm">
+            <p className="text-muted-foreground">
+              <strong className="text-foreground">{unknownCount.toLocaleString()}</strong> sources have no country yet, so they sit under
+              &ldquo;Unknown&rdquo; and only count for worldwide monitorings. Sources are placed by their web address — a .tr site
+              goes to Türkiye, a .de site to Germany; .com/.org sites stay unknown.
+            </p>
+            <div>
+              <Button type="button" size="sm" variant="secondary" disabled={busy} onClick={() => void fillCountries()}>
+                Fill in countries from site addresses
+              </Button>
+            </div>
+          </div>
+        ) : null}
       </div>
 
       {/* Add a feed to exactly the region being browsed */}

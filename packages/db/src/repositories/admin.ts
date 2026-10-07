@@ -78,6 +78,27 @@ export async function listSourcesForAdmin(db: Db): Promise<AdminSourceRow[]> {
     .orderBy(desc(sources.lastCheckedAt));
 }
 
+/** How many sources are in each health state — one small query instead of loading every source. */
+export async function countSourcesByStatus(db: Db): Promise<Record<string, number>> {
+  const result = await db.execute<{ status: string; n: number }>(sql`select status, count(*)::int as n from sources group by status`);
+  return Object.fromEntries(result.rows.map((row) => [row.status, row.n]));
+}
+
+/**
+ * A bounded look at source health for the Overview: the sources that need attention first
+ * (error, blocked, delayed), then the rest by most recent check. The full list is on /admin/sources.
+ */
+export async function listSourceHealthSample(db: Db, limit = 200): Promise<AdminSourceRow[]> {
+  const result = await db.execute<Omit<AdminSourceRow, "lastCheckedAt"> & { lastCheckedAt: string | null }>(sql`
+    select id, name, domain, type, connector, url, country, language, status, last_checked_at as "lastCheckedAt"
+    from sources
+    order by case status when 'error' then 0 when 'blocked' then 1 when 'delayed' then 2 when 'healthy' then 3 else 4 end,
+             last_checked_at desc nulls last
+    limit ${limit}
+  `);
+  return result.rows.map((row) => ({ ...row, lastCheckedAt: row.lastCheckedAt ? new Date(row.lastCheckedAt) : null }));
+}
+
 export type PlatformTotals = {
   totalOrganizations: number;
   totalUsers: number;

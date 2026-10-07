@@ -6,15 +6,19 @@ import {
   countOpenTakedownRequests,
   db,
   getDatabaseSizeBytes,
+  countSourcesByStatus,
   getPlatformTotals,
   listLargestTables,
   listOrganizationsForAdmin,
-  listSourcesForAdmin,
+  listSourceHealthSample,
 } from "@cim/db";
 import { requireSuperAdmin } from "@/lib/admin";
 import { getQueueHealth } from "@/lib/admin-queues";
 import { KpiRow } from "@/components/kpi-row";
 import { StoragePrune } from "./storage-prune";
+
+/** How many sources the Overview lists (the full list, with filters, is on /admin/sources). */
+const SOURCE_SAMPLE = 200;
 
 const SOURCE_STATUS_TONE: Record<string, "success" | "warning" | "danger" | "neutral"> =
   {
@@ -92,13 +96,15 @@ export default async function AdminOverviewPage() {
           console.error("[admin] listOrganizationsForAdmin failed:", error);
           return { ok: false as const, organizations: [] };
         }),
-      listSourcesForAdmin(db)
+      listSourceHealthSample(db, SOURCE_SAMPLE)
         .then((sources) => ({ ok: true as const, sources }))
         .catch((error: unknown) => {
-          console.error("[admin] listSourcesForAdmin failed:", error);
+          console.error("[admin] listSourceHealthSample failed:", error);
           return { ok: false as const, sources: [] };
         }),
     ]);
+  const statusCounts = await countSourcesByStatus(db).catch(() => ({}) as Record<string, number>);
+  const sourceTotal = Object.values(statusCounts).reduce((sum, n) => sum + n, 0);
   const openTakedowns = await countOpenTakedownRequests(db).catch(() => 0);
   const totals = totalsResult.totals;
   const redisHealthy = queueResult.ok;
@@ -284,66 +290,80 @@ export default async function AdminOverviewPage() {
         </div>
       </section>
 
-      <section>
-        <div className="flex items-center gap-3">
-          <h2 className="text-sm font-semibold text-foreground">Source health</h2>
+      <section aria-labelledby="source-health-heading">
+        <div className="flex flex-wrap items-center gap-3">
+          <h2 id="source-health-heading" className="text-sm font-semibold text-foreground">Source health</h2>
           {!sourcesResult.ok ? (
             <Badge tone="danger">Unavailable — query failed</Badge>
           ) : null}
+          {(["healthy", "delayed", "error", "blocked", "unavailable"] as const)
+            .filter((status) => (statusCounts[status] ?? 0) > 0)
+            .map((status) => (
+              <Badge key={status} tone={SOURCE_STATUS_TONE[status] ?? "neutral"}>
+                {statusCounts[status]!.toLocaleString()} {status === "unavailable" ? "paused" : status}
+              </Badge>
+            ))}
         </div>
-        <div className="mt-3 overflow-hidden rounded-lg border border-border">
-          <table className="w-full text-sm">
-            <thead className="border-b border-border bg-surface-muted text-left text-xs text-muted-foreground">
-              <tr>
-                <th className="px-4 py-2 font-medium">Name</th>
-                <th className="px-4 py-2 font-medium">Type</th>
-                <th className="px-4 py-2 font-medium">Connector</th>
-                <th className="px-4 py-2 font-medium">Status</th>
-                <th className="px-4 py-2 font-medium">Capabilities</th>
-                <th className="px-4 py-2 font-medium">Last checked</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {sources.map((source) => {
-                const capabilities = getConnectorCapabilities(source.connector);
-                return (
-                  <tr key={source.id}>
-                    <td className="px-4 py-3 font-medium text-foreground">
-                      {source.name}
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">{source.type}</td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {source.connector}
-                    </td>
-                    <td className="px-4 py-3">
-                      <Badge tone={SOURCE_STATUS_TONE[source.status] ?? "neutral"}>
-                        {source.status}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex flex-wrap gap-1">
-                        <Badge tone={CAPABILITY_TONE[capabilities.realTimeSearch]}>
-                          Real-time: {CAPABILITY_LABEL[capabilities.realTimeSearch]}
-                        </Badge>
-                        <Badge tone={CAPABILITY_TONE[capabilities.engagementMetrics]}>
-                          Engagement: {CAPABILITY_LABEL[capabilities.engagementMetrics]}
-                        </Badge>
-                        <Badge tone={CAPABILITY_TONE[capabilities.officialApi]}>
-                          Official API: {CAPABILITY_LABEL[capabilities.officialApi]}
-                        </Badge>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {source.lastCheckedAt
-                        ? source.lastCheckedAt.toLocaleString()
-                        : "Not available"}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <details className="group mt-3 rounded-lg border border-border">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-medium text-foreground hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+            <span>
+              Show the sources that need attention first
+              <span className="ml-2 font-normal text-muted-foreground">
+                ({Math.min(SOURCE_SAMPLE, sourceTotal).toLocaleString()} of {sourceTotal.toLocaleString()})
+              </span>
+            </span>
+            <span aria-hidden="true" className="text-muted-foreground transition-transform group-open:rotate-180">▾</span>
+          </summary>
+          <div className="overflow-x-auto border-t border-border">
+            <table className="w-full text-sm">
+              <thead className="border-b border-border bg-surface-muted text-left text-xs text-muted-foreground">
+                <tr>
+                  <th className="px-4 py-2 font-medium">Name</th>
+                  <th className="px-4 py-2 font-medium">Type</th>
+                  <th className="px-4 py-2 font-medium">Connector</th>
+                  <th className="px-4 py-2 font-medium">Status</th>
+                  <th className="px-4 py-2 font-medium">Capabilities</th>
+                  <th className="px-4 py-2 font-medium">Last checked</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {sources.map((source) => {
+                  const capabilities = getConnectorCapabilities(source.connector);
+                  return (
+                    <tr key={source.id}>
+                      <td className="px-4 py-3 font-medium text-foreground">{source.name}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{source.type}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{source.connector}</td>
+                      <td className="px-4 py-3">
+                        <Badge tone={SOURCE_STATUS_TONE[source.status] ?? "neutral"}>{source.status}</Badge>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-wrap gap-1">
+                          <Badge tone={CAPABILITY_TONE[capabilities.realTimeSearch]}>
+                            Real-time: {CAPABILITY_LABEL[capabilities.realTimeSearch]}
+                          </Badge>
+                          <Badge tone={CAPABILITY_TONE[capabilities.engagementMetrics]}>
+                            Engagement: {CAPABILITY_LABEL[capabilities.engagementMetrics]}
+                          </Badge>
+                          <Badge tone={CAPABILITY_TONE[capabilities.officialApi]}>
+                            Official API: {CAPABILITY_LABEL[capabilities.officialApi]}
+                          </Badge>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {source.lastCheckedAt ? source.lastCheckedAt.toLocaleString() : "Not available"}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+            <p className="border-t border-border px-4 py-3 text-xs text-muted-foreground">
+              Every source, with filters and pause controls, is on{" "}
+              <Link href="/admin/sources" className="text-primary underline underline-offset-2">Crawl sources</Link>.
+            </p>
+          </div>
+        </details>
       </section>
     </div>
   );

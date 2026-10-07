@@ -5,7 +5,9 @@ import { organizations, sources, users, workspaces } from "../schema/index";
 import { createProject } from "./projects";
 import {
   checkDatabaseHealth,
+  countSourcesByStatus,
   getPlatformTotals,
+  listSourceHealthSample,
   listOrganizationsForAdmin,
   listRecentEmailsForAdmin,
   listSourcesForAdmin,
@@ -97,6 +99,18 @@ describe("admin repository (integration)", () => {
     const rows = await listSourcesForAdmin(db);
     const row = rows.find((r) => r.id === sourceId);
     expect(row?.status).toBe("error");
+  });
+
+  it("summarises source health by status and lists a bounded sample with the broken ones first", async () => {
+    const counts = await countSourcesByStatus(db);
+    expect(counts.error).toBeGreaterThanOrEqual(1);
+    const sample = await listSourceHealthSample(db, 5);
+    expect(sample.length).toBeLessThanOrEqual(5);
+    // error comes before healthy in the ordering, so a failing source is never pushed out of a small sample by healthy ones
+    const firstHealthy = sample.findIndex((r) => r.status === "healthy");
+    const lastError = sample.map((r) => r.status).lastIndexOf("error");
+    if (firstHealthy !== -1 && lastError !== -1) expect(lastError).toBeLessThan(firstHealthy);
+    expect(sample[0]?.status).toBe("error");
   });
 
   it("computes platform totals that include the test organization", async () => {

@@ -48,6 +48,9 @@ const SOURCE_CATEGORIES: { value: string; label: string }[] = [
 type PreviewResult = {
   matchCount: number;
   windowDays: number;
+  /** How many of the newest stories were scanned, and how far back that reached. */
+  scanned?: number;
+  scannedSince?: string | null;
   byCountry?: { code: string | null; count: number }[];
   sample: { title: string; sourceName: string; publishedAt: string | null }[];
   warning: string | null;
@@ -489,8 +492,15 @@ export function QueryBuilderForm({
             <p className="text-foreground">
               Your query matched {preview.matchCount} result
               {preview.matchCount === 1 ? "" : "s"} from the last {preview.windowDays}{" "}
-              days.
+              {preview.windowDays === 1 ? "day" : "days"}.
             </p>
+            {preview.scanned ? (
+              <p className="text-xs text-muted-foreground">
+                Searched the newest {preview.scanned.toLocaleString("en-US")} stories
+                {preview.scannedSince ? ` (back to ${new Date(preview.scannedSince).toLocaleString(undefined, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })})` : ""} and
+                every stored story that contains your words.
+              </p>
+            ) : null}
             {preview.byCountry && preview.byCountry.length > 0 ? (
               <p className="text-xs text-muted-foreground">
                 Where they come from:{" "}

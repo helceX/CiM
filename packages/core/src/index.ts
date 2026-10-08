@@ -6,6 +6,7 @@ export * from "./keyword-match";
 export * from "./concepts";
 export * from "./country-from-host";
 export * from "./monitoring-input";
+export * from "./monitoring-check";
 export { morphologyPacksFor, type MorphologyPack } from "./morphology";
 export * from "./word-fingerprint";
 export * from "./turkish";

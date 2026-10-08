@@ -72,6 +72,25 @@ The operator's directories (`scripts/data/Turkiye_Startup_Proje.md`, `Proje_Yaza
 - Türkiye's pages go first; the rest import with the world feeds, under the same disk and crawl-queue guards as every import.
 - Regenerate with `pnpm exec tsx scripts/import-startup-pack.ts` after the directories change.
 
+## 2g. "Why is my monitoring quiet?" — the check
+
+Several monitorings run side by side and never affect one another: every collected story is matched against every active monitoring on its own (a story two monitorings match becomes one mention for each), and saving a new monitoring only adds its own mentions. When one monitoring looks silent the cause is upstream of it, and **Monitoring → "Check this monitoring"** measures it from the live data instead of guessing (`GET /api/monitoring/[id]/check`, rate-limited, read-only, bounded by a 15-second statement timeout):
+
+| Measured | What it tells |
+|---|---|
+| Sources it can read (of all active sources) | Active sources of the monitoring's source types **and** inside its region. 0 means nothing can reach it. |
+| Crawler last scanned | Newest `last_checked_at` of any source. Older than 4 hours = the crawler (worker) is not running, for every monitoring alike. |
+| Stories collected from those sources, last 24 h | Whether the crawler is delivering at all. |
+| How often each keyword's words appear (24 h / 7 days) | Counted through the full-text index on headline + stored excerpt, as word starts and in any capitals (a superset of what the exact rules accept). A rare name with 0 here is simply not in the news. |
+| Held by this monitoring (24 h / 7 days / total) | Its mentions. |
+| Matching stories it is missing | Among stories collected after the monitoring was last saved (within 48 h) that contain its words, those its own rules accept but that have no mention. **Always 0 when ingestion works**; anything else is a defect and the page names the stories. |
+
+The verdict (`explainMonitoringCheck` in `@cim/core`) reports the first thing wrong, in that order: no source in scope → crawler stopped → nothing collected → missing stories; otherwise "Working" (mentions in the last 24 h) or "Running normally, nothing new" with the likely reason (rare keywords; an ALL-CAPS keyword such as BTM only matches the exact capitals; whole words only).
+
+**Day view.** Opening a day on Mentions loads up to 150 stories **per monitoring** (not 300 for the whole day), so a broad monitoring cannot push a narrow one off the page; a monitoring with more says "newest N of M stories".
+
+**Preview.** The query builder's preview used to judge only the 500 newest stories — a few minutes of the crawl — while saying "last 30 days". It now searches the newest 20,000 stories (the same kind of scan saving the monitoring does, including words beyond the stored excerpt through the word fingerprint) **and every stored story that contains the keywords' words** (full-text index), and says how far back the stored stories go and how many it scanned.
+
 ## 3. "The whole internet" — why it is not how anyone does it
 No media-monitoring product crawls the entire web itself. Practical ways to get broad coverage:
 

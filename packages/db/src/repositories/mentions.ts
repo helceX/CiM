@@ -424,38 +424,70 @@ export type MentionDayItem = MentionListItem & {
   queryBrandGroupId: string | null;
 };
 
-/** Every mention of one day (capped), newest first — loaded when the day is opened. */
+/** How many stories of one monitoring a day shows before it says "the newest N of M". */
+export const DAY_STORIES_PER_MONITORING = 150;
+
+export type MentionDay = {
+  items: MentionDayItem[];
+  /** True when at least one monitoring has more stories this day than were returned. */
+  truncated: boolean;
+  /** Every story of the day per monitoring (not only the returned ones), keyed by query id. */
+  totals: Record<string, number>;
+};
+
+/**
+ * The mentions of one day, newest first — loaded when the day is opened.
+ *
+ * The cap applies to each monitoring on its own, not to the day as a whole: a broad monitoring that
+ * matches hundreds of stories a day must not push a narrow one off the page, so with two or more
+ * monitorings running every one of them keeps its newest `limit` stories.
+ */
 export async function listMentionsForDay(
   db: Db,
   organizationId: OrganizationId,
   filters: MentionFilters,
   day: string,
-  limit = 300,
-): Promise<{ items: MentionDayItem[]; truncated: boolean }> {
+  limit = DAY_STORIES_PER_MONITORING,
+): Promise<MentionDay> {
   const where = and(
     mentionFiltersToWhere(organizationId, filters, await resolveSearchIds(db, organizationId, filters)),
     sql`${mentionDay} = ${day}`,
   );
-  const items = await db
-    .select({
-      mention: mentions,
-      article: articles,
-      source: sources,
-      assigneeName: assigneeNameColumn,
-      queryName: monitoringQueries.name,
-      queryCreatedAt: monitoringQueries.createdAt,
-      queryAst: monitoringQueries.queryAst,
-      queryBrandGroupId: monitoringQueries.brandGroupId,
-    })
+  const totalRows = await db
+    .select({ queryId: mentions.queryId, total: count() })
     .from(mentions)
     .innerJoin(articles, eq(articles.id, mentions.articleId))
-    .innerJoin(sources, eq(sources.id, articles.sourceId))
-    .innerJoin(monitoringQueries, eq(monitoringQueries.id, mentions.queryId))
-    .leftJoin(users, eq(users.id, mentions.assignedToUserId))
     .where(where)
-    .orderBy(desc(sql`coalesce(${articles.publishedAt}, ${mentions.createdAt})`), desc(mentions.id))
-    .limit(limit + 1);
-  return { items: items.slice(0, limit), truncated: items.length > limit };
+    .groupBy(mentions.queryId);
+  const totals = Object.fromEntries(totalRows.map((row) => [row.queryId, Number(row.total)]));
+
+  const perQuery = await Promise.all(
+    totalRows.map((row) =>
+      db
+        .select({
+          mention: mentions,
+          article: articles,
+          source: sources,
+          assigneeName: assigneeNameColumn,
+          queryName: monitoringQueries.name,
+          queryCreatedAt: monitoringQueries.createdAt,
+          queryAst: monitoringQueries.queryAst,
+          queryBrandGroupId: monitoringQueries.brandGroupId,
+        })
+        .from(mentions)
+        .innerJoin(articles, eq(articles.id, mentions.articleId))
+        .innerJoin(sources, eq(sources.id, articles.sourceId))
+        .innerJoin(monitoringQueries, eq(monitoringQueries.id, mentions.queryId))
+        .leftJoin(users, eq(users.id, mentions.assignedToUserId))
+        .where(and(where, eq(mentions.queryId, row.queryId)))
+        .orderBy(desc(sql`coalesce(${articles.publishedAt}, ${mentions.createdAt})`), desc(mentions.id))
+        .limit(limit),
+    ),
+  );
+
+  const when = (item: MentionDayItem) => (item.article.publishedAt ?? item.mention.createdAt).getTime();
+  const items = perQuery.flat().sort((a, b) => when(b) - when(a) || b.mention.id.localeCompare(a.mention.id));
+  return { items, truncated: Object.values(totals).some((total) => total > limit), totals };
 }
 
 export type MentionSocialAuthor = {

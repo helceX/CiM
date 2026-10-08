@@ -224,8 +224,9 @@ describe("brand groups (integration)", () => {
     const foreignQuery = await listMentionsFiltered(db, a.organizationId, { queryId: usQ1.id }, { page: 1, pageSize: 50 });
     expect(foreignQuery.totalCount).toBe(0);
     const counts = await countMentionsByQuery(db, c.organizationId);
-    expect(counts.get(usQ1.id)).toEqual({ total: 2, last7Days: 2 });
-    expect(counts.get(themQ.id)).toEqual({ total: 1, last7Days: 1 });
+    expect(counts.get(usQ1.id)).toMatchObject({ total: 2, last7Days: 2 });
+    expect(counts.get(usQ1.id)?.latestAt).toBeInstanceOf(Date);
+    expect(counts.get(themQ.id)).toMatchObject({ total: 1, last7Days: 1 });
     expect((await countMentionsByQuery(db, a.organizationId)).get(usQ1.id)).toBeUndefined();
   });
 

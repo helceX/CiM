@@ -125,7 +125,7 @@ export default async function MonitoringListPage() {
               ) : null}
               <ul className="flex flex-col gap-3">
           {family.items.map((query) => {
-            const count = counts.get(query.id) ?? { total: 0, last7Days: 0 };
+            const count = counts.get(query.id) ?? { total: 0, last7Days: 0, latestAt: null };
             const ast = query.queryAst;
             const keywords = [
               ...ast.include.map((term) => ({ term, kind: "include" as const })),
@@ -200,6 +200,15 @@ export default async function MonitoringListPage() {
                     <span className="text-muted-foreground">in 7 days</span>
                   </p>
                   <p className="text-xs text-muted-foreground">{count.total} total</p>
+                  <p className="text-xs text-muted-foreground">
+                    {count.latestAt ? (
+                      <>
+                        Latest story <time dateTime={count.latestAt.toISOString()} title={count.latestAt.toISOString()}>{ago(count.latestAt)}</time>
+                      </>
+                    ) : (
+                      "No stories yet"
+                    )}
+                  </p>
                   <Link
                     href={`/mentions?query=${query.id}`}
                     className="text-sm text-primary underline underline-offset-2"

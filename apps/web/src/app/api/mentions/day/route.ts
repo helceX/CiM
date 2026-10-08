@@ -24,7 +24,7 @@ export async function GET(request: Request) {
   if (!DAY.test(day)) return NextResponse.json({ error: "Invalid day." }, { status: 400 });
 
   const filters = mentionFiltersFromParams((key) => params.get(key), context.userId);
-  const { items, truncated } = await listMentionsForDay(db, context.organizationId, filters, day);
+  const { items, truncated, totals } = await listMentionsForDay(db, context.organizationId, filters, day);
 
   // Monitoring groups of the day: the one the reader filtered on comes first,
   // the rest follow in the order the monitorings were created (their order on
@@ -61,6 +61,8 @@ export async function GET(request: Request) {
 
   return NextResponse.json({
     truncated,
+    // every story of the day per monitoring — a monitoring shows its newest ones and says how many more there are
+    totals,
     queries,
     items: items.map(({ mention, article, source, assigneeName }) => ({
       id: mention.id,

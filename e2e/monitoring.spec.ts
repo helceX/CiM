@@ -69,6 +69,9 @@ test("create a monitoring query, preview real matches, save it, and see it produ
   // The Monitoring list links straight to that query's own mentions, and
   // the Mentions table says which keyword matched.
   await page.goto("/monitoring");
+  // Each monitoring says when it last found a story: the onboarding one found nothing, the new one did.
+  await expect(page.getByText("No stories yet")).toBeVisible();
+  await expect(page.getByText(/Latest story/)).toBeVisible();
   await page.getByRole("link", { name: /View mentions/ }).first().click();
   await expect(page).toHaveURL(/\/mentions\?query=/);
   await expect(page.getByText("Showing only mentions from monitoring")).toBeVisible();

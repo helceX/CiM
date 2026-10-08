@@ -89,10 +89,59 @@ describe("mention days (integration)", () => {
     expect(day.items.map((i) => i.article.title)).toEqual(["Morning story", "Printed story", "Late night story"]);
     expect(day.truncated).toBe(false);
     expect((await listMentionsForDay(db, org.organizationId, {}, "2026-10-01", 2)).truncated).toBe(true);
-    expect(await listMentionsForDay(db, other.organizationId, {}, "2026-09-29")).toEqual({ items: [], truncated: false });
+    expect(await listMentionsForDay(db, other.organizationId, {}, "2026-09-29")).toEqual({ items: [], truncated: false, totals: {} });
 
     // Filters narrow the days too.
     const filtered = await listMentionDays(db, org.organizationId, { queryId: org.queryId, sentiment: "negative" }, { page: 1, pageSize: 10 });
     expect(filtered).toEqual({ days: [], totalDays: 0 });
+  });
+
+  it("keeps every monitoring on the day — a broad one cannot push a narrow one off the page", async () => {
+    const org = await makeOrg("c");
+    const narrow = org.queryId;
+    const broad = (
+      await createMonitoringQuery(db, org.organizationId, {
+        projectId: org.projectId,
+        name: "Broad",
+        queryAst: { include: ["y"], exclude: [], exactPhrases: [] },
+        booleanQuery: "y",
+        sourceTypes: ["news"],
+      })
+    ).id;
+    const [source] = await db
+      .insert(sources)
+      .values({ name: `${tag}-fair`, domain: `${tag}-fair.example`, type: "news", connector: "mock" })
+      .returning();
+    let n = 1000;
+    async function add(queryId: string, publishedAt: string, title: string) {
+      n += 1;
+      const [article] = await db
+        .insert(articles)
+        .values({ sourceId: source!.id, canonicalUrl: `https://${tag}.example/f${n}`, contentHash: `${tag}-f${n}`, title, publishedAt: new Date(publishedAt) })
+        .returning();
+      await db.insert(mentions).values({
+        organizationId: org.organizationId,
+        projectId: org.projectId,
+        queryId,
+        articleId: article!.id,
+        matchedTerms: ["x"],
+      });
+    }
+
+    // The narrow monitoring has one early-morning story; the broad one has five that are all newer.
+    await add(narrow, "2026-10-02T03:00:00Z", "Narrow story");
+    for (let i = 0; i < 5; i += 1) await add(broad, `2026-10-02T1${i}:00:00Z`, `Broad story ${i}`);
+
+    const day = await listMentionsForDay(db, org.organizationId, {}, "2026-10-02", 3);
+    expect(day.items.filter((item) => item.mention.queryId === narrow).map((item) => item.article.title)).toEqual(["Narrow story"]);
+    expect(day.items.filter((item) => item.mention.queryId === broad).map((item) => item.article.title)).toEqual([
+      "Broad story 4",
+      "Broad story 3",
+      "Broad story 2",
+    ]);
+    expect(day.totals).toEqual({ [narrow]: 1, [broad]: 5 });
+    expect(day.truncated).toBe(true);
+    // Newest first across the whole day.
+    expect(day.items.map((item) => item.article.title)).toEqual(["Broad story 4", "Broad story 3", "Broad story 2", "Narrow story"]);
   });
 });

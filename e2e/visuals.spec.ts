@@ -46,6 +46,17 @@ test("build a visual with a live preview, save it, see it as chart and table, de
   await expect(page.getByText("No visuals yet.")).toBeVisible();
 });
 
+test("a preview answer that is not a preview shows an error instead of crashing the builder", async ({ page }) => {
+  await registerAndOnboard(page);
+  // A 200 whose body is not the preview (an interrupted response, a proxy page) used to crash the whole page.
+  await page.route("**/api/visuals/preview", (route) => route.fulfill({ status: 200, contentType: "text/plain", body: "" }));
+  await page.goto("/visuals/new");
+  await expect(page.getByText("Couldn't compute this preview.")).toBeVisible();
+  await expect(page.getByLabel("Name")).toBeVisible();
+  await page.getByLabel("Name").fill("Still usable");
+  await expect(page.getByLabel("Name")).toHaveValue("Still usable");
+});
+
 test("a visual id from nowhere is a 404, not an error page", async ({ page }) => {
   await registerAndOnboard(page);
   const response = await page.goto("/visuals/00000000-0000-4000-8000-000000000000");

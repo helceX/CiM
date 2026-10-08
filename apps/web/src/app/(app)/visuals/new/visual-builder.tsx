@@ -185,9 +185,11 @@ export function VisualBuilder({
           body: JSON.stringify(spec),
           signal: controller.signal,
         });
-        const data = await response.json().catch(() => ({}));
-        if (!response.ok) {
-          setPreviewError(data.error ?? "Couldn't compute this preview.");
+        const data = await response.json().catch(() => null);
+        // An answer without rows (a body that is not the preview, even with a 200) must not reach the page: it would
+        // crash the whole builder at the first `preview.rows`.
+        if (!response.ok || !data || !Array.isArray(data.rows)) {
+          setPreviewError(data?.error ?? "Couldn't compute this preview.");
           setPreview(null);
           return;
         }

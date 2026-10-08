@@ -11,7 +11,7 @@ import {
   listNotifications,
   schema,
 } from "@cim/db";
-import { ingestSource, MockNewsConnector } from "@cim/ingestion";
+import { ingestSource, MockNewsConnector, type RawFetchResult, type SourceConnector } from "@cim/ingestion";
 import { evaluateNewMentionAlerts } from "./evaluate";
 import { evaluateSpikeAlerts } from "./evaluate-spikes";
 import { evaluateSentimentShiftAlerts } from "./evaluate-sentiment-shift";
@@ -728,5 +728,57 @@ describe("alert engine (integration)", () => {
 
     const notifications = await listNotifications(db, organizationId, userId, { limit: 50 });
     expect(notifications.some((n) => n.title === quietRule.name)).toBe(false);
+  });
+
+  it("fires each monitoring's own alert when several monitorings run at once", async () => {
+    const stamp = Date.now();
+    const alpha = `multialert-alpha-${stamp}`;
+    const beta = `multialert-beta-${stamp}`;
+    const [source] = await db
+      .select()
+      .from(schema.sources)
+      .where(eq(schema.sources.id, sourceId));
+    if (!source) throw new Error("test source missing");
+
+    const make = async (name: string, term: string) => {
+      const query = await createMonitoringQuery(db, organizationId, {
+        projectId,
+        name,
+        queryAst: { include: [term], exclude: [], exactPhrases: [] },
+        booleanQuery: term,
+        sourceTypes: ["news"],
+      });
+      const rule = await createAlertRule(db, organizationId, {
+        projectId,
+        queryId: query.id,
+        createdByUserId: userId,
+        name: `${name} rule`,
+        type: "keyword",
+        channels: ["in_app"],
+        cooldownMinutes: 60,
+      });
+      return rule;
+    };
+    const alphaRule = await make(`Alpha ${stamp}`, alpha);
+    const betaRule = await make(`Beta ${stamp}`, beta);
+
+    const story = (title: string, index: number): RawFetchResult => ({
+      externalId: `${stamp}-${index}`,
+      canonicalUrl: `https://alert-multi-${stamp}.example/${index}`,
+      title,
+      bodyText: title,
+      publishedAt: new Date(),
+      authorName: null,
+    });
+    const connector: SourceConnector = {
+      fetch: async () => [story(`${alpha} announces a launch`, 1), story(`${beta} announces a launch`, 2)],
+      healthCheck: async () => ({ status: "healthy" }),
+    };
+    const result = await ingestSource(db, source, connector);
+    await evaluateNewMentionAlerts(emailQueue, result.newMentions);
+
+    const notifications = await listNotifications(db, organizationId, userId, { limit: 100 });
+    expect(notifications.filter((n) => n.title === alphaRule.name)).toHaveLength(1);
+    expect(notifications.filter((n) => n.title === betaRule.name)).toHaveLength(1);
   });
 });

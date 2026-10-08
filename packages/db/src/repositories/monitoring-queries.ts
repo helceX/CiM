@@ -1,4 +1,4 @@
-import { and, desc, eq, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, isNull, max, sql } from "drizzle-orm";
 import type { Db } from "../client";
 import { monitoringQueries, type QueryAst } from "../schema/monitoring";
 import { mentions } from "../schema/content";
@@ -26,22 +26,24 @@ export async function listMonitoringQueries(
 /**
  * How much each query has produced, for the Monitoring list: all-time and
  * last-7-days counts (archived mentions excluded, same as the Mentions
- * inbox). Keyed by query id; a query with no mentions is simply absent.
+ * inbox) and when its latest story was found. Keyed by query id; a query
+ * with no mentions is simply absent.
  */
 export async function countMentionsByQuery(
   db: Db,
   organizationId: OrganizationId,
-): Promise<Map<string, { total: number; last7Days: number }>> {
+): Promise<Map<string, { total: number; last7Days: number; latestAt: Date | null }>> {
   const rows = await db
     .select({
       queryId: mentions.queryId,
       total: sql<number>`count(*)::int`,
       last7Days: sql<number>`count(*) filter (where ${mentions.createdAt} >= now() - interval '7 days')::int`,
+      latestAt: max(mentions.createdAt),
     })
     .from(mentions)
     .where(and(eq(mentions.organizationId, organizationId), sql`${mentions.status} != 'archived'`))
     .groupBy(mentions.queryId);
-  return new Map(rows.map((row) => [row.queryId, { total: row.total, last7Days: row.last7Days }]));
+  return new Map(rows.map((row) => [row.queryId, { total: row.total, last7Days: row.last7Days, latestAt: row.latestAt }]));
 }
 
 export async function createMonitoringQuery(

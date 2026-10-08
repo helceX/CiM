@@ -234,6 +234,15 @@ body:has(.mp) .text-primary { color: var(--mp-link); }
   border-right: 1px solid var(--mp-line);
 }
 .mp[data-mp-theme="light"] .mp-sidebar { background: rgb(255 255 255 / 0.7); }
+
+/*
+ * The logo has a white wordmark for the dark canvas and a dark one for the light canvas. The
+ * panel's theme is its own switch (data-mp-theme), not the computer's colour scheme, so the
+ * swap follows that attribute.
+ */
+.mp .mp-logo-paper { display: none; }
+.mp[data-mp-theme="light"] .mp-logo-ink { display: none; }
+.mp[data-mp-theme="light"] .mp-logo-paper { display: block; }
 .mp-topbar {
   background: rgb(8 9 22 / 0.55);
   backdrop-filter: blur(14px);

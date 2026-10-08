@@ -2,6 +2,7 @@ import { afterAll, describe, expect, it } from "vitest";
 import { eq, like } from "drizzle-orm";
 import { buildWordFingerprint, explainMonitoringCheck, matchableText } from "@cim/core";
 import { db } from "../client";
+import { alertEvents, alertRules } from "../schema/alerts";
 import { articles, sources } from "../schema/content";
 import { monitoringQueries } from "../schema/monitoring";
 import { organizations, workspaces } from "../schema/index";
@@ -99,6 +100,14 @@ describe("monitoring check (integration)", () => {
     await hold(org.organizationId, org.projectId, rareQuery.id, opens.id, rare);
     await hold(org.organizationId, org.projectId, rareQuery.id, older.id, rare);
     await hold(org.organizationId, org.projectId, localQuery.id, raises.id, common);
+    // Notifications come from alert rules, one set per monitoring: the Türkiye monitoring has an active rule that fired,
+    // the ghost one only a paused rule, the rare one none.
+    const [localRule] = await db
+      .insert(alertRules)
+      .values({ organizationId: org.organizationId, projectId: org.projectId, queryId: localQuery.id, name: "Local rule", type: "keyword", channels: ["in_app"] })
+      .returning();
+    await db.insert(alertRules).values({ organizationId: org.organizationId, projectId: org.projectId, queryId: ghostQuery.id, name: "Paused rule", type: "keyword", channels: ["in_app"], status: "paused" });
+    await db.insert(alertEvents).values({ organizationId: org.organizationId, alertRuleId: localRule!.id, triggerSummary: "1 new mention" });
     // Another organization holding the same story must not change this organization's numbers.
     const otherQuery = await createMonitoringQuery(db, other.organizationId, {
       projectId: other.projectId,
@@ -125,6 +134,8 @@ describe("monitoring check (integration)", () => {
     expect(check.missed.count).toBe(1);
     expect(check.missed.checked).toBe(3);
     expect(check.missedSamples.map((sample) => sample.title)).toEqual([`${rare} hires a chief`]);
+    expect(check.alerts).toEqual({ active: 0, total: 0 });
+    expect(check.lastAlertAt).toBeNull();
     expect(explainMonitoringCheck(check).level).toBe("problem");
 
     // The Türkiye-only monitoring reads only Türkiye's sources and holds everything it should.
@@ -132,6 +143,8 @@ describe("monitoring check (integration)", () => {
     expect(local.keywords).toEqual([{ term: common, last24h: 1, last7d: 1 }]);
     expect(local.missed).toEqual({ count: 0, checked: 1 });
     expect(local.mentions.total).toBe(1);
+    expect(local.alerts).toEqual({ active: 1, total: 1 });
+    expect(local.lastAlertAt).toBeInstanceOf(Date);
     expect(explainMonitoringCheck(local).level).toBe("ok");
 
     // A name nobody has written: running normally, simply quiet.
@@ -139,7 +152,9 @@ describe("monitoring check (integration)", () => {
     expect(quiet.keywords).toEqual([{ term: ghost, last24h: 0, last7d: 0 }]);
     expect(quiet.mentions.total).toBe(0);
     expect(quiet.missed).toEqual({ count: 0, checked: 0 });
+    expect(quiet.alerts).toEqual({ active: 0, total: 1 });
     expect(explainMonitoringCheck(quiet).level).toBe("quiet");
+    expect(explainMonitoringCheck(quiet).advice.at(-1)).toContain("paused");
 
     // One organization cannot check another's monitoring.
     expect(await getMonitoringCheck(db, other.organizationId, rareQuery.id)).toBeNull();

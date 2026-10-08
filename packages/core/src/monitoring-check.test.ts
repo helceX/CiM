@@ -37,6 +37,7 @@ const healthy: MonitoringCheckFacts = {
     { term: "Bilgiyi Ticarileştirme Merkezi", last24h: 0, last7d: 0 },
   ],
   mentions: { last24h: 0, last7d: 1, total: 4 },
+  alerts: { active: 1, total: 1 },
   missed: { count: 0, checked: 3 },
 };
 
@@ -90,5 +91,17 @@ describe("explainMonitoringCheck", () => {
   it("says plainly when the keywords' words never appeared in a week", () => {
     const verdict = explainMonitoringCheck({ ...healthy, keywords: [{ term: "Rare", last24h: 0, last7d: 0 }] });
     expect(verdict.advice[0]).toContain("None of the keywords' words appeared");
+  });
+
+  it("tells a monitoring without an alert rule that it sends no notifications, whatever else is true", () => {
+    const none = explainMonitoringCheck({ ...healthy, alerts: { active: 0, total: 0 } });
+    expect(none.level).toBe("quiet");
+    expect(none.advice.at(-1)).toContain("No alert rule is set on this monitoring");
+    const paused = explainMonitoringCheck({ ...healthy, mentions: { last24h: 3, last7d: 3, total: 3 }, alerts: { active: 0, total: 2 } });
+    expect(paused.level).toBe("ok");
+    expect(paused.advice.at(-1)).toContain("paused");
+    expect(explainMonitoringCheck({ ...healthy, sources: { inScope: 0, active: 10 }, alerts: { active: 0, total: 0 } }).advice.at(-1)).toContain("No alert rule");
+    // With an active rule nothing is added.
+    expect(explainMonitoringCheck(healthy).advice.join(" ")).not.toContain("alert rule");
   });
 });

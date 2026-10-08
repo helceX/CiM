@@ -23,6 +23,8 @@ const check = {
   stories: { last24h: 41_000 },
   keywords: [{ term: "BTM", last24h: 0, last7d: 3 }],
   mentions: { last24h: 0, last7d: 1, total: 4 },
+  alerts: { active: 0, total: 0 },
+  lastAlertAt: null,
   missed: { count: 0, checked: 3 },
   missedSamples: [],
 };
@@ -59,6 +61,9 @@ describe("GET /api/monitoring/[id]/check", () => {
     expect(body.keywords).toEqual([{ term: "BTM", last24h: 0, last7d: 3 }]);
     expect(body.query.latestMentionAt).toBe("2026-10-07T10:00:00.000Z");
     expect(body.query).not.toHaveProperty("createdAt");
+    // No alert rule: the verdict says the monitoring sends no notifications.
+    expect(body.alerts).toEqual({ active: 0, total: 0, lastFiredAt: null });
+    expect(body.verdict.advice.at(-1)).toContain("No alert rule is set on this monitoring");
   });
 
   it("rate-limits the check per organization", async () => {

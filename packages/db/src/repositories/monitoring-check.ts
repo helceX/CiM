@@ -8,6 +8,7 @@ import {
   type MonitoringCheckFacts,
 } from "@cim/core";
 import type { Db } from "../client";
+import { alertEvents, alertRules } from "../schema/alerts";
 import { articles, mentions, sources } from "../schema/content";
 import { getMonitoringQuery } from "./monitoring-queries";
 import type { OrganizationId } from "./tenant-scope";
@@ -31,6 +32,8 @@ export type MonitoringCheck = MonitoringCheckFacts & {
     updatedAt: Date;
     latestMentionAt: Date | null;
   };
+  /** When any alert rule on this monitoring last fired. */
+  lastAlertAt: Date | null;
   /** Up to five stories that match the rules but are not held (see `missed`). */
   missedSamples: { title: string; sourceName: string; fetchedAt: Date }[];
 };
@@ -101,6 +104,19 @@ export async function getMonitoringCheck(
       })
       .from(mentions)
       .where(and(eq(mentions.organizationId, organizationId), eq(mentions.queryId, query.id)));
+
+    const [alertRow] = await txDb
+      .select({
+        active: sql<number>`count(*) filter (where ${alertRules.status} = 'active')::int`,
+        total: sql<number>`count(*)::int`,
+      })
+      .from(alertRules)
+      .where(and(eq(alertRules.organizationId, organizationId), eq(alertRules.queryId, query.id)));
+    const [lastAlert] = await txDb
+      .select({ at: max(alertEvents.createdAt) })
+      .from(alertEvents)
+      .innerJoin(alertRules, eq(alertRules.id, alertEvents.alertRuleId))
+      .where(and(eq(alertRules.organizationId, organizationId), eq(alertRules.queryId, query.id)));
 
     let storiesLast24h = 0;
     const keywords: MonitoringCheck["keywords"] = [];
@@ -191,6 +207,8 @@ export async function getMonitoringCheck(
       stories: { last24h: storiesLast24h },
       keywords,
       mentions: { last24h: Number(mentionRow?.last24h ?? 0), last7d: Number(mentionRow?.last7d ?? 0), total: Number(mentionRow?.total ?? 0) },
+      alerts: { active: Number(alertRow?.active ?? 0), total: Number(alertRow?.total ?? 0) },
+      lastAlertAt: lastAlert?.at ?? null,
       missed: { count: missed.length, checked: candidates.length },
       missedSamples: missed.slice(0, 5).map((story) => ({ title: story.title, sourceName: story.sourceName, fetchedAt: story.fetchedAt })),
     };

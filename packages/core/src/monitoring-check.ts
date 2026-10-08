@@ -47,6 +47,8 @@ export type MonitoringCheckFacts = {
   /** How often each keyword's words appear in stories collected from the sources in scope. */
   keywords: { term: string; last24h: number; last7d: number }[];
   mentions: { last24h: number; last7d: number; total: number };
+  /** Alert rules on this monitoring — notifications come only from these. */
+  alerts: { active: number; total: number };
   missed: {
     /** Stories collected after the monitoring was last saved that its rules accept but it does not hold. */
     count: number;
@@ -75,8 +77,24 @@ function plural(count: number, singular: string, pluralForm = `${singular}s`): s
   return `${count.toLocaleString("en-US")} ${count === 1 ? singular : pluralForm}`;
 }
 
-/** The first thing wrong, in the order a person would look: sources, crawler, collection, saving — then "quiet" or "ok". */
+/**
+ * The first thing wrong, in the order a person would look: sources, crawler, collection, saving — then "quiet" or "ok".
+ * Whatever the outcome, a monitoring with no active alert rule is told that it sends no notifications: stories
+ * arriving and being told about them are different things.
+ */
 export function explainMonitoringCheck(facts: MonitoringCheckFacts): MonitoringVerdict {
+  const verdict = explainStories(facts);
+  if (facts.alerts.active === 0) {
+    verdict.advice.push(
+      facts.alerts.total === 0
+        ? "No alert rule is set on this monitoring, so it sends no notifications even when stories arrive — create one under Alerts."
+        : "Every alert rule on this monitoring is paused, so it sends no notifications — resume one under Alerts.",
+    );
+  }
+  return verdict;
+}
+
+function explainStories(facts: MonitoringCheckFacts): MonitoringVerdict {
   if (facts.sources.inScope === 0) {
     return {
       level: "problem",

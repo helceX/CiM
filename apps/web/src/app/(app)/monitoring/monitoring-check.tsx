@@ -11,6 +11,7 @@ type Check = {
   stories: { last24h: number };
   keywords: { term: string; last24h: number; last7d: number }[];
   mentions: { last24h: number; last7d: number; total: number };
+  alerts: { active: number; total: number; lastFiredAt: string | null };
   missed: { count: number; checked: number };
   missedSamples: { title: string; sourceName: string; fetchedAt: string }[];
 };
@@ -95,6 +96,16 @@ function CheckResult({ check }: { check: Check }) {
         <Row
           label="Held by this monitoring"
           value={`${number(check.mentions.last24h)} in 24 h · ${number(check.mentions.last7d)} in 7 days · ${number(check.mentions.total)} in total`}
+        />
+        <Row
+          label="Alert rules (notifications) on this monitoring"
+          value={
+            check.alerts.total === 0
+              ? "none — it sends no notifications"
+              : `${number(check.alerts.active)} active of ${number(check.alerts.total)}${
+                  check.alerts.lastFiredAt ? ` · last fired ${new Date(check.alerts.lastFiredAt).toLocaleString(undefined, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}` : " · never fired"
+                }`
+          }
         />
         <Row
           label="Matching stories it is missing"

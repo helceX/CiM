@@ -44,6 +44,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     stories: check.stories,
     keywords: check.keywords,
     mentions: check.mentions,
+    alerts: { ...check.alerts, lastFiredAt: check.lastAlertAt?.toISOString() ?? null },
     missed: check.missed,
     missedSamples: check.missedSamples.map((sample) => ({ ...sample, fetchedAt: sample.fetchedAt.toISOString() })),
     query: {

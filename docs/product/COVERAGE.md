@@ -83,6 +83,7 @@ Several monitorings run side by side and never affect one another: every collect
 | Stories collected from those sources, last 24 h | Whether the crawler is delivering at all. |
 | How often each keyword's words appear (24 h / 7 days) | Counted through the full-text index on headline + stored excerpt, as word starts and in any capitals (a superset of what the exact rules accept). A rare name with 0 here is simply not in the news. |
 | Held by this monitoring (24 h / 7 days / total) | Its mentions. |
+| Alert rules (notifications) on this monitoring | Notifications come **only** from alert rules (Alerts page), one set per monitoring — saving a monitoring creates none. No active rule = no notification, however many stories arrive. |
 | Matching stories it is missing | Among stories collected after the monitoring was last saved (within 48 h) that contain its words, those its own rules accept but that have no mention. **Always 0 when ingestion works**; anything else is a defect and the page names the stories. |
 
 The verdict (`explainMonitoringCheck` in `@cim/core`) reports the first thing wrong, in that order: no source in scope → crawler stopped → nothing collected → missing stories; otherwise "Working" (mentions in the last 24 h) or "Running normally, nothing new" with the likely reason (rare keywords; an ALL-CAPS keyword such as BTM only matches the exact capitals; whole words only).

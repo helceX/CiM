@@ -1,3 +1,4 @@
+import AxeBuilder from "@axe-core/playwright";
 import { eq } from "drizzle-orm";
 import { test, expect } from "@playwright/test";
 import { db, schema } from "@cim/db";
@@ -47,8 +48,8 @@ test("create a monitoring query, preview real matches, save it, and see it produ
   await page.unroute("**/api/monitoring/preview");
 
   await page.getByRole("button", { name: "Preview" }).click();
-  await expect(page.getByText(/Your query matched \d+ results? from the last 30 days\./)).toBeVisible();
-  const matchText = await page.getByText(/Your query matched \d+ results? from the last 30 days\./).innerText();
+  await expect(page.getByText(/Your query matched \d+ results? from the last \d+ days?\./)).toBeVisible();
+  const matchText = await page.getByText(/Your query matched \d+ results? from the last \d+ days?\./).innerText();
   const matchCount = Number(matchText.match(/matched (\d+)/)?.[1] ?? "0");
   expect(matchCount).toBeGreaterThan(0);
 
@@ -72,6 +73,14 @@ test("create a monitoring query, preview real matches, save it, and see it produ
   // Each monitoring says when it last found a story: the onboarding one found nothing, the new one did.
   await expect(page.getByText("No stories yet")).toBeVisible();
   await expect(page.getByText(/Latest story/)).toBeVisible();
+
+  // "Is it running? Why so few stories?" — the check measures this monitoring from the live data when asked.
+  await page.getByRole("button", { name: "Check this monitoring: Daily Tech Wire watch" }).click();
+  await expect(page.getByText("Sources it can read")).toBeVisible();
+  await expect(page.getByText(/[1-9]\d* in 24 h · [1-9]\d* in 7 days · [1-9]\d* in total/)).toBeVisible();
+  await expect(page.getByText("Matching stories it is missing")).toBeVisible();
+  const violations = (await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "best-practice"]).analyze()).violations;
+  expect(violations).toEqual([]);
   await page.getByRole("link", { name: /View mentions/ }).first().click();
   await expect(page).toHaveURL(/\/mentions\?query=/);
   await expect(page.getByText("Showing only mentions from monitoring")).toBeVisible();

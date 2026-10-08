@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { previewMonitoringQuerySchema } from "@cim/validation";
-import { astToBooleanQuery, matchesFingerprint, matchesText, queryQualityWarning, sourceInRegionScopes } from "@cim/core";
+import { astToBooleanQuery, matchesFingerprint, matchesText, queryQualityWarning, sourceInRegionScopes, termsToTsQuery } from "@cim/core";
 import { getAIProvider } from "@cim/ai";
 import { getEnv } from "@cim/config";
-import { db, listRecentArticlesForPreview } from "@cim/db";
+import { db, listStoriesForPreview } from "@cim/db";
 import { matchableText } from "@cim/core";
 import { requireOrgContext } from "@/lib/tenant";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -26,15 +26,22 @@ export async function POST(request: Request) {
   }
   const ast = parsed.data;
 
-  const recentArticles = await listRecentArticlesForPreview(db, PREVIEW_WINDOW_DAYS);
+  // The newest stories (what saving the monitoring would scan) plus every stored story containing the keywords'
+  // words — a rare name is not lost among the thousands of stories collected each day.
+  const { stories, scanned, scannedSince, windowDays } = await listStoriesForPreview(db, {
+    tsQuery: termsToTsQuery([...ast.exactPhrases, ...ast.include]),
+    days: PREVIEW_WINDOW_DAYS,
+  });
   // Same rule as saving the monitoring (backfillMentionsForQuery): exact on the stored text, or a hit in the
   // story's word fingerprint, so the preview count and the first result agree.
-  const matches = recentArticles.filter(
-    (article) =>
-      sourceInRegionScopes(article.sourceCountry, ast.regionScopes) &&
-      (matchesText(ast, matchableText({ title: article.title, lead: article.storedExcerpt }), { language: article.language }) ||
-        matchesFingerprint(ast, article.wordFingerprint, { language: article.language })),
-  );
+  const matches = stories
+    .filter(
+      (article) =>
+        sourceInRegionScopes(article.sourceCountry, ast.regionScopes) &&
+        (matchesText(ast, matchableText({ title: article.title, lead: article.storedExcerpt }), { language: article.language }) ||
+          matchesFingerprint(ast, article.wordFingerprint, { language: article.language })),
+    )
+    .sort((a, b) => b.fetchedAt.getTime() - a.fetchedAt.getTime());
   // Where the matches come from — shows the chosen scope is what is actually applied.
   const countryCounts = new Map<string, number>();
   for (const match of matches) countryCounts.set(match.sourceCountry ?? "", (countryCounts.get(match.sourceCountry ?? "") ?? 0) + 1);
@@ -65,7 +72,7 @@ export async function POST(request: Request) {
       try {
         const result = await provider.reviewQuery({
           booleanQuery: astToBooleanQuery(ast),
-          windowDays: PREVIEW_WINDOW_DAYS,
+          windowDays,
           matchCount: matches.length,
           sample,
         });
@@ -81,8 +88,10 @@ export async function POST(request: Request) {
   }
 
   return NextResponse.json({
-    windowDays: PREVIEW_WINDOW_DAYS,
+    windowDays,
     matchCount: matches.length,
+    scanned,
+    scannedSince: scannedSince?.toISOString() ?? null,
     byCountry,
     sample,
     warning: queryQualityWarning(ast),

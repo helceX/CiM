@@ -31,6 +31,7 @@ export * from "./repositories/api-keys";
 export * from "./repositories/teams";
 export * from "./repositories/billing";
 export * from "./repositories/monitoring-backfill";
+export * from "./repositories/monitoring-check";
 export * from "./repositories/catalog-import";
 export * from "./repositories/storage";
 export * from "./repositories/billing-profile";

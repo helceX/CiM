@@ -8,6 +8,7 @@ import {
   insertArticle,
   listRecentArticlesForPreview,
   listRelatedArticles,
+  listStoriesForPreview,
   setArticleStoryCluster,
 } from "./articles";
 
@@ -158,6 +159,41 @@ describe("articles repository (integration)", () => {
 
     const preview = await listRecentArticlesForPreview(db, 30, 500);
     expect(preview.some((row) => row.id === article.id)).toBe(false);
+  });
+
+  it("lists every stored story containing a rare keyword's words for a preview, even when newer stories fill the scan", async () => {
+    const stamp = Date.now();
+    const rare = `Previewrare${stamp}`;
+    const make = async (title: string, hoursAgo: number) => {
+      const article = await insertArticle(db, {
+        sourceId,
+        canonicalUrl: `https://articles-test.example/preview-${stamp}-${hoursAgo}-${title.length}`,
+        contentHash: `articles-preview-${stamp}-${hoursAgo}-${title.length}`,
+        title,
+        storedExcerpt: "",
+        language: "en",
+        publishedAt: null,
+        authorName: null,
+      });
+      await db.update(articles).set({ fetchedAt: new Date(Date.now() - hoursAgo * 3_600_000) }).where(eq(articles.id, article.id));
+      return article;
+    };
+    const old = await make(`${rare} opens a new plant`, 100);
+    await make(`Unrelated story one ${stamp}`, 1);
+    await make(`Unrelated story two ${stamp}`, 2);
+
+    // The newest-stories scan is shorter than the keyword's age (3 stories scanned at most), so only the full-text
+    // candidates can bring the old story in.
+    const withoutIndex = await listStoriesForPreview(db, { tsQuery: null, days: 30, scanLimit: 2 });
+    expect(withoutIndex.stories.some((story) => story.id === old.id)).toBe(false);
+
+    const withIndex = await listStoriesForPreview(db, { tsQuery: `(${rare.toLowerCase()}:*)`, days: 30, scanLimit: 2 });
+    expect(withIndex.stories.some((story) => story.id === old.id)).toBe(true);
+    expect(withIndex.stories.filter((story) => story.id === old.id)).toHaveLength(1);
+    expect(withIndex.scanned).toBe(2);
+    expect(withIndex.scannedSince).toBeInstanceOf(Date);
+    expect(withIndex.windowDays).toBeGreaterThanOrEqual(5);
+    expect(withIndex.windowDays).toBeLessThanOrEqual(30);
   });
 
   describe("story clustering (findSimilarRecentArticle / listRelatedArticles)", () => {

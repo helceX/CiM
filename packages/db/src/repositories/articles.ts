@@ -1,4 +1,4 @@
-import { eq, or, sql } from "drizzle-orm";
+import { and, desc, eq, gte, min, or, sql } from "drizzle-orm";
 import { turkishFold, type ArticlePrint } from "@cim/core";
 import type { Db } from "../client";
 import { articles, sources } from "../schema/content";
@@ -70,6 +70,80 @@ export async function insertArticle(
   });
   if (!existing) throw new Error("Failed to insert article");
   return existing;
+}
+
+export type PreviewStory = {
+  id: string;
+  title: string;
+  storedExcerpt: string | null;
+  wordFingerprint: Uint8Array | null;
+  language: string | null;
+  publishedAt: Date | null;
+  fetchedAt: Date;
+  sourceName: string;
+  sourceType: string;
+  sourceCountry: string | null;
+};
+
+const PREVIEW_COLUMNS = {
+  id: articles.id,
+  title: articles.title,
+  storedExcerpt: articles.storedExcerpt,
+  wordFingerprint: articles.wordFingerprint,
+  language: articles.language,
+  publishedAt: articles.publishedAt,
+  fetchedAt: articles.fetchedAt,
+  sourceName: sources.name,
+  sourceType: sources.type,
+  sourceCountry: sources.country,
+} as const;
+
+/**
+ * The stories a preview judges. Two sets, so a rare keyword is not lost among the thousands of stories the
+ * crawler collects every day: the newest `scanLimit` stories (exactly what saving the monitoring would scan,
+ * including a keyword that sits beyond the stored excerpt, found through the word fingerprint) and every
+ * stored story whose headline or excerpt contains the words of `tsQuery` (found through the full-text
+ * index, whatever its age). The caller applies the monitoring's own matching rules to the union.
+ *
+ * Also says how far back the stored stories go (`windowDays`) and how far back the newest-stories scan
+ * reached (`scannedSince`), so the preview can state what it actually looked at.
+ */
+export async function listStoriesForPreview(
+  db: Db,
+  input: { tsQuery: string | null; days?: number; scanLimit?: number; candidateLimit?: number },
+): Promise<{ stories: PreviewStory[]; scanned: number; scannedSince: Date | null; windowDays: number }> {
+  const days = input.days ?? 30;
+  const scanLimit = input.scanLimit ?? 20_000;
+  const candidateLimit = input.candidateLimit ?? 5_000;
+  const inWindow = gte(articles.fetchedAt, sql`now() - (${days}::text || ' days')::interval`);
+
+  const recent = await db
+    .select(PREVIEW_COLUMNS)
+    .from(articles)
+    .innerJoin(sources, eq(sources.id, articles.sourceId))
+    .where(inWindow)
+    .orderBy(desc(articles.fetchedAt))
+    .limit(scanLimit);
+  const containing = input.tsQuery
+    ? await db
+        .select(PREVIEW_COLUMNS)
+        .from(articles)
+        .innerJoin(sources, eq(sources.id, articles.sourceId))
+        .where(and(inWindow, sql`${articles.searchVector} @@ to_tsquery('simple', ${input.tsQuery})`))
+        .orderBy(desc(articles.fetchedAt))
+        .limit(candidateLimit)
+    : [];
+  const seen = new Set(recent.map((story) => story.id));
+  const stories = [...recent, ...containing.filter((story) => !seen.has(story.id))];
+
+  const [oldest] = await db.select({ at: min(articles.fetchedAt) }).from(articles).where(inWindow);
+  const stored = oldest?.at ? Math.ceil((Date.now() - oldest.at.getTime()) / 86_400_000) : days;
+  return {
+    stories,
+    scanned: recent.length,
+    scannedSince: recent.at(-1)?.fetchedAt ?? null,
+    windowDays: Math.min(days, Math.max(1, stored)),
+  };
 }
 
 /**

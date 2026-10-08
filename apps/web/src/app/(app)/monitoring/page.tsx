@@ -6,6 +6,7 @@ import { countMentionsByQuery, db, getCrawlCoverage, listBrandGroups, listMonito
 import type { CrawlCoverage } from "@cim/db";
 import { requireOrgContext } from "@/lib/tenant";
 import { monitoringFamily } from "@/lib/monitoring-families";
+import { MonitoringCheck } from "./monitoring-check";
 
 /** Small suffix on a chip when the keyword has a stricter-than-default rule. */
 function KeywordRule({ term }: { term: string }) {
@@ -193,6 +194,7 @@ export default async function MonitoringListPage() {
                     Sources: {query.sourceTypes.join(", ")} · Where: {describeRegionScopes(query.regionScopes)} · Created{" "}
                     {new Date(query.createdAt).toLocaleDateString()}
                   </p>
+                  <MonitoringCheck queryId={query.id} name={query.name} />
                 </div>
                 <div className="flex shrink-0 items-center gap-4 sm:flex-col sm:items-end sm:gap-1">
                   <p className="text-sm text-foreground">

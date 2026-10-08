@@ -9,9 +9,9 @@ export function AppSidebar() {
   const pathname = usePathname();
   return (
     <aside className="mp-sidebar sticky top-0 hidden h-screen w-60 shrink-0 md:flex md:flex-col">
-      <div className="flex h-16 items-center px-5">
+      <div className="flex h-20 items-center px-5">
         <Link href="/dashboard" aria-label="Mediaory dashboard" className="text-base text-foreground">
-          <Wordmark />
+          <Wordmark surface="panel" className="h-12" />
         </Link>
       </div>
       <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 pb-4" aria-label="Primary">

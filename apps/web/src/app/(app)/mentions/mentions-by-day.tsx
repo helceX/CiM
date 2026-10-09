@@ -2,9 +2,21 @@
 
 import { useRef, useState } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { Badge, Button } from "@cim/ui";
+import { Badge, Button, Checkbox } from "@cim/ui";
 import { ChevronRight, ExternalLink } from "lucide-react";
-import { SOURCE_KINDS, conceptKey, conceptOfTerm, countryName, sourceKindOfType, sourceTypeBadge, type ArticlePrint } from "@cim/core";
+import {
+  SOURCE_KINDS,
+  conceptKey,
+  conceptOfTerm,
+  countryName,
+  priorityRank,
+  signalLevelLabel,
+  sourceKindOfType,
+  sourceTypeBadge,
+  visibleAtFocus,
+  type ArticlePrint,
+  type FocusLevel,
+} from "@cim/core";
 import type { MentionDaySummary, Tag } from "@cim/db";
 import { FilterBar } from "@/components/filter-bar";
 import { MentionDetailDrawer, type AssignableMember } from "./mention-detail-drawer";
@@ -23,11 +35,25 @@ type DayItem = {
   matchedTerms: string[];
   sentiment: string | null;
   priority: string;
+  /** An ordering key inside a priority; null for a story that has not been scored yet. */
+  signalScore: number | null;
+  /** Why the story is here and where it ranks, in one line; null when it has not been scored yet. */
+  why: string | null;
+  /** Stories sharing this are the same story reported by several outlets. */
+  storyClusterId: string | null;
   assigneeName: string | null;
   print: ArticlePrint | null;
 };
 type DayFamily = { key: string; label: string; mapped: boolean };
-type DayQuery = { id: string; name: string; terms: string[]; aliasGroups: string[][]; family: DayFamily };
+type DayQuery = {
+  id: string;
+  name: string;
+  terms: string[];
+  aliasGroups: string[][];
+  family: DayFamily;
+  /** What the person wants to see without asking; null = everything (a monitoring saved before this existed). */
+  focus: FocusLevel | null;
+};
 type DayState =
   | { status: "loading" }
   | { status: "error" }
@@ -70,10 +96,35 @@ function TypeBadge({ type }: { type: string }) {
   );
 }
 
+/** Most important first, then the best-scored, then the newest. */
+function byImportance(a: DayItem, b: DayItem): number {
+  return (
+    priorityRank(b.priority) - priorityRank(a.priority) ||
+    (b.signalScore ?? 0) - (a.signalScore ?? 0) ||
+    Date.parse(b.publishedAt) - Date.parse(a.publishedAt)
+  );
+}
+
+/**
+ * One row per story: the same story reported by several outlets is one row (the most important report, then the
+ * earliest) with the other outlets one click below it, instead of the same headline ten times.
+ */
+function groupSameStory(items: DayItem[]): { lead: DayItem; others: DayItem[] }[] {
+  const groups = new Map<string, DayItem[]>();
+  for (const item of [...items].sort(byImportance)) {
+    const key = item.storyClusterId ?? `solo:${item.id}`;
+    groups.set(key, [...(groups.get(key) ?? []), item]);
+  }
+  return [...groups.values()].map(([lead, ...others]) => ({
+    lead: lead!,
+    others: others.sort((a, b) => Date.parse(a.publishedAt) - Date.parse(b.publishedAt)),
+  }));
+}
+
 function ItemList({ items, onOpen }: { items: DayItem[]; onOpen: (id: string) => void }) {
   return (
       <ul className="divide-y divide-border border-t border-border">
-        {items.map((item) => (
+        {groupSameStory(items).map(({ lead: item, others }) => (
           <li key={item.id} className="flex flex-col gap-1.5 px-3 py-2.5 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
@@ -112,6 +163,11 @@ function ItemList({ items, onOpen }: { items: DayItem[]; onOpen: (id: string) =>
                   ) : null}
                 </p>
               ) : null}
+              {item.why ? (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  <span className="font-medium text-foreground">Why you see this:</span> {item.why}
+                </p>
+              ) : null}
               {item.matchedTerms.length > 0 ? (
                 <ul className="mt-1.5 flex flex-wrap gap-1" aria-label="Matched keywords">
                   {item.matchedTerms.slice(0, 4).map((term) => (
@@ -121,12 +177,32 @@ function ItemList({ items, onOpen }: { items: DayItem[]; onOpen: (id: string) =>
                   ))}
                 </ul>
               ) : null}
+              {others.length > 0 ? (
+                <details className="mt-1.5 text-xs">
+                  <summary className="cursor-pointer text-muted-foreground">
+                    Also reported by {others.length} other {others.length === 1 ? "outlet" : "outlets"}
+                  </summary>
+                  <ul className="mt-1 flex flex-col gap-0.5 pl-3">
+                    {others.map((other) => (
+                      <li key={other.id}>
+                        <button
+                          type="button"
+                          onClick={() => onOpen(other.id)}
+                          className="rounded-sm text-left text-muted-foreground hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                        >
+                          {other.sourceName} — {other.title}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              ) : null}
             </div>
             <div className="flex shrink-0 items-center gap-2">
               {item.sentiment ? (
                 <Badge tone={SENTIMENT_TONE[item.sentiment as keyof typeof SENTIMENT_TONE] ?? "neutral"}>{item.sentiment}</Badge>
               ) : null}
-              {item.priority !== "normal" ? <Badge tone={item.priority === "low" ? "neutral" : "warning"}>{item.priority}</Badge> : null}
+              {item.priority !== "normal" ? <Badge tone={item.priority === "low" ? "neutral" : "warning"}>{signalLevelLabel(item.priority)}</Badge> : null}
               <a
                 href={item.url}
                 target="_blank"
@@ -190,33 +266,60 @@ function storyCount(shown: number, total: number): string {
   return `${total} ${total === 1 ? "story" : "stories"}`;
 }
 
+/** What a focus folds away, in words. */
+function foldedKind(focus: FocusLevel | null): string {
+  return focus === "essentials" ? "worth a look and passing mentions" : "passing mentions";
+}
+
 function MonitoringBlock({
   query,
   items,
   total,
+  showAll,
   onOpen,
 }: {
   query: DayQuery;
   items: DayItem[];
-  /** Every story this monitoring has on the day; more than `items.length` when the day shows only the newest. */
+  /** Every story this monitoring has on the day; more than `items.length` when the day shows only the most important. */
   total: number;
+  /** Show everything, ignoring what the monitoring folds away. */
+  showAll: boolean;
   onOpen: (id: string) => void;
 }) {
-  const concepts = groupByConcept(query, items);
+  // What the person asked to see without asking (the monitoring's focus) is shown; the rest is folded, not hidden.
+  const focus = showAll ? null : query.focus;
+  const shown = items.filter((item) => visibleAtFocus(item.priority, focus));
+  const folded = items.filter((item) => !visibleAtFocus(item.priority, focus));
+  const important = items.filter((item) => priorityRank(item.priority) >= priorityRank("high")).length;
+  const concepts = groupByConcept(query, shown);
   return (
     <details className="rounded-xl border border-border bg-background/30">
       <summary className="flex cursor-pointer items-center justify-between gap-2 px-3 py-2.5 text-sm font-bold text-foreground">
         <span className="min-w-0 truncate">{query.name}</span>
-        <span className="shrink-0 text-xs font-normal text-muted-foreground">{storyCount(items.length, total)}</span>
+        <span className="shrink-0 text-xs font-normal text-muted-foreground">
+          {storyCount(items.length, total)}
+          {important > 0 ? (
+            <>
+              {" · "}
+              <span className="font-semibold text-foreground">{important} important</span>
+            </>
+          ) : null}
+        </span>
       </summary>
       <div className="flex flex-col gap-2 border-t border-border p-2">
         {total > items.length ? (
           <p className="px-1 text-xs text-muted-foreground">
-            This monitoring found {total} stories on this day; the newest {items.length} are listed — narrow the filters to see the rest.
+            This monitoring found {total} stories on this day; the {items.length} most important are listed — narrow the filters to see the rest.
           </p>
         ) : null}
-        {concepts.length <= 1 ? (
-          <KindClusters items={items} onOpen={onOpen} />
+        {shown.length === 0 && folded.length > 0 ? (
+          <p className="px-1 text-xs text-muted-foreground">
+            {query.focus === "essentials" ? "Nothing important" : "Nothing worth a look"} on this day — the {folded.length === 1 ? "story" : `${folded.length} stories`} below{" "}
+            {folded.length === 1 ? "is" : "are"} folded away, one click from view.
+          </p>
+        ) : null}
+        {shown.length === 0 ? null : concepts.length <= 1 ? (
+          <KindClusters items={shown} onOpen={onOpen} />
         ) : (
           concepts.map((concept) => (
             <details key={concept.key} className="rounded-lg border border-border">
@@ -243,12 +346,20 @@ function MonitoringBlock({
             </details>
           ))
         )}
+        {folded.length > 0 ? (
+          <details className="rounded-lg border border-dashed border-border">
+            <summary className="cursor-pointer px-3 py-2 text-xs text-muted-foreground">
+              {folded.length} more {folded.length === 1 ? "story" : "stories"} folded away — {foldedKind(query.focus)}
+            </summary>
+            <ItemList items={folded} onOpen={onOpen} />
+          </details>
+        ) : null}
       </div>
     </details>
   );
 }
 
-function DayBody({ state, onOpen }: { state: DayState | undefined; onOpen: (id: string) => void }) {
+function DayBody({ state, showAll, onOpen }: { state: DayState | undefined; showAll: boolean; onOpen: (id: string) => void }) {
   if (!state || state.status === "loading") return <p className="px-4 py-6 text-sm text-muted-foreground">Loading…</p>;
   if (state.status === "error") {
     return (
@@ -278,7 +389,7 @@ function DayBody({ state, onOpen }: { state: DayState | undefined; onOpen: (id: 
     <div className="flex flex-col gap-3 px-3 pb-3">
       {families.map(({ family, members }) =>
         members.length === 1 ? (
-          <MonitoringBlock key={members[0]!.query.id} query={members[0]!.query} items={members[0]!.items} total={members[0]!.total} onOpen={onOpen} />
+          <MonitoringBlock key={members[0]!.query.id} query={members[0]!.query} items={members[0]!.items} total={members[0]!.total} showAll={showAll} onOpen={onOpen} />
         ) : (
           <details key={family.key} className="rounded-xl border border-border bg-background/30">
             <summary className="flex cursor-pointer items-center justify-between gap-2 px-3 py-2.5 text-sm font-bold text-foreground">
@@ -294,7 +405,7 @@ function DayBody({ state, onOpen }: { state: DayState | undefined; onOpen: (id: 
             </summary>
             <div className="flex flex-col gap-2 border-t border-border p-2">
               {members.map(({ query, items, total }) => (
-                <MonitoringBlock key={query.id} query={query} items={items} total={total} onOpen={onOpen} />
+                <MonitoringBlock key={query.id} query={query} items={items} total={total} showAll={showAll} onOpen={onOpen} />
               ))}
             </div>
           </details>
@@ -337,9 +448,15 @@ export function MentionsByDay({
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const [loaded, setLoaded] = useState<Record<string, DayState>>({});
   const [selectedMentionId, setSelectedMentionId] = useState<string | null>(null);
+  // Folded stories (below a monitoring's focus) stay one click away; this opens all of them at once.
+  const [showAll, setShowAll] = useState(false);
   const inFlight = useRef(new Set<string>());
 
   const totalPages = Math.max(1, Math.ceil(totalDays / pageSize));
+  // The switch only means something once an opened day has a monitoring that folds stories away.
+  const hasFocus = Object.values(loaded).some(
+    (state) => state.status === "ready" && state.queries.some((query) => query.focus === "essentials" || query.focus === "balanced"),
+  );
 
   async function load(day: string) {
     if (inFlight.current.has(day)) return;
@@ -403,6 +520,12 @@ export function MentionsByDay({
         </p>
       ) : null}
       <FilterBar extraKeys={["query"]} searchPlaceholder="Search mentions…" selects={buildMentionSelects(tags, brandGroups)} />
+      {hasFocus ? (
+        <label className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Checkbox checked={showAll} onCheckedChange={(checked) => setShowAll(checked === true)} />
+          Show every story, including the ones folded away
+        </label>
+      ) : null}
 
       {days.length === 0 ? (
         <p className="rounded-2xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
@@ -440,12 +563,15 @@ export function MentionsByDay({
                       <span className="pl-1 text-sm font-semibold tabular-nums text-foreground">
                         {day.total} {day.total === 1 ? "story" : "stories"}
                       </span>
+                      {day.important > 0 ? (
+                        <span className="rounded-full bg-warning/15 px-2 py-0.5 text-xs font-semibold text-warning">{day.important} important</span>
+                      ) : null}
                     </span>
                   </button>
                 </h2>
                 {isOpen ? (
                   <div id={panelId} className="border-t border-border pt-3">
-                    <DayBody state={loaded[day.day]} onOpen={setSelectedMentionId} />
+                    <DayBody state={loaded[day.day]} showAll={showAll} onOpen={setSelectedMentionId} />
                   </div>
                 ) : null}
               </li>

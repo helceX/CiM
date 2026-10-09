@@ -23,11 +23,13 @@ const SOURCE_TYPES: { value: SourceTypeSelection; label: string }[] = [
   { value: "all", label: "All available sources" },
 ];
 
+// Each answer does something real (api/onboarding/complete): the first two create an alert rule for your first
+// monitoring; the digest and the weekly archive e-mails reach everyone in the organization without one.
 const NOTIFICATION_PREFERENCES: { value: NotificationPreference; label: string; desc: string }[] = [
-  { value: "instant", label: "Instant", desc: "Notify me as soon as something matches." },
-  { value: "high_priority_only", label: "High priority only", desc: "Only critical/high alerts." },
-  { value: "daily_digest", label: "Daily digest", desc: "One summary email per day." },
-  { value: "weekly_summary", label: "Weekly summary", desc: "One summary email per week." },
+  { value: "instant", label: "Every new story", desc: "An alert in the app whenever new stories match. Expect a lot." },
+  { value: "high_priority_only", label: "Important stories only", desc: "An alert only when a story that matters appears — not for every mention." },
+  { value: "daily_digest", label: "Daily digest", desc: "No alerts. One summary e-mail a day, with the most important stories first." },
+  { value: "weekly_summary", label: "Weekly archive", desc: "No alerts. The weekly archive e-mail, with everything found that week." },
 ];
 
 const TOTAL_STEPS = 5;
@@ -41,7 +43,7 @@ export function OnboardingWizard() {
   const [keywords, setKeywords] = useState<string[]>([]);
   const [sourceTypes, setSourceTypes] = useState<SourceTypeSelection[]>(["news", "web"]);
   const [notificationPreference, setNotificationPreference] =
-    useState<NotificationPreference>("daily_digest");
+    useState<NotificationPreference>("high_priority_only");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 

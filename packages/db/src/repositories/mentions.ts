@@ -1,5 +1,5 @@
 import { and, count, desc, eq, gte, inArray, isNull, sql } from "drizzle-orm";
-import { companyNames, keywordMatches, prepareText } from "@cim/core";
+import { companyNames, keywordMatches, prepareText, type GoalKey, type SignalReason } from "@cim/core";
 import type { Db } from "../client";
 import { articles, mentions, sources, type Tag } from "../schema/content";
 import { monitoringQueries, type QueryAst } from "../schema/monitoring";
@@ -20,6 +20,7 @@ import {
   type MentionCommentWithAuthor,
 } from "./mention-comments";
 import { listRelatedArticles, type RelatedArticle } from "./articles";
+import { mentionPriorityRank } from "./priority-rank";
 
 export type BrandMention = MentionListItem & {
   /** Which of the company's names the story carries (full name or short name). */
@@ -166,6 +167,10 @@ export async function createMentionIfNotExists(
     matchType?: string | null;
     matchConfidence?: string | null;
     matchedRule?: string | null;
+    // How much the story matters to this monitoring and why (@cim/core scoreSignal); `priority` above
+    // carries the level. Omitted by callers that predate signals — the scoring job fills those in.
+    signalScore?: number | null;
+    signalReasons?: SignalReason[] | null;
     // Set only when a story is matched after the fact (monitoring backfill):
     // the mention is stamped with the story's own date, not "now", so a
     // freshly-saved monitoring does not look like a sudden burst to the alert
@@ -185,6 +190,8 @@ export async function createMentionIfNotExists(
       matchType: input.matchType ?? null,
       matchConfidence: input.matchConfidence ?? null,
       matchedRule: input.matchedRule ?? null,
+      signalScore: input.signalScore ?? null,
+      signalReasons: input.signalReasons ?? null,
       ...(input.createdAt ? { createdAt: input.createdAt } : {}),
     })
     .onConflictDoNothing({ target: [mentions.queryId, mentions.articleId] })
@@ -196,6 +203,8 @@ export type MentionFilters = {
   projectId?: string;
   sentiment?: "positive" | "neutral" | "negative" | "unclassified";
   priority?: "low" | "normal" | "high" | "critical";
+  // At least this important: "high" = important only, "normal" = worth a look and above (passing mentions left out).
+  minPriority?: "normal" | "high";
   search?: string;
   sinceDays?: number;
   includeArchived?: boolean;
@@ -237,6 +246,9 @@ function mentionFiltersToWhere(
     filters.includeArchived ? undefined : sql`${mentions.status} != 'archived'`,
     filters.projectId ? eq(mentions.projectId, filters.projectId) : undefined,
     filters.priority ? eq(mentions.priority, filters.priority) : undefined,
+    filters.minPriority
+      ? inArray(mentions.priority, filters.minPriority === "high" ? ["high", "critical"] : ["normal", "high", "critical"])
+      : undefined,
     filters.sentiment === "unclassified"
       ? sql`${mentions.sentiment} is null`
       : filters.sentiment
@@ -352,6 +364,8 @@ export type MentionDaySummary = {
   /** YYYY-MM-DD */
   day: string;
   total: number;
+  /** How many of the day's mentions are important (priority high or critical). */
+  important: number;
   /** Mentions per `Source.type`, for the badges on a collapsed day. */
   byType: Record<string, number>;
 };
@@ -378,7 +392,11 @@ export async function listMentionDays(
   const offset = (pagination.page - 1) * pagination.pageSize;
 
   const dayRows = await db
-    .select({ day: mentionDay, total: count() })
+    .select({
+      day: mentionDay,
+      total: count(),
+      important: sql<number>`count(*) filter (where ${mentions.priority} in ('high', 'critical'))::int`,
+    })
     .from(mentions)
     .innerJoin(articles, eq(articles.id, mentions.articleId))
     .where(where)
@@ -409,6 +427,7 @@ export async function listMentionDays(
     days: dayRows.map((row) => ({
       day: row.day,
       total: Number(row.total),
+      important: Number(row.important),
       byType: Object.fromEntries(typeRows.filter((t) => t.day === row.day).map((t) => [t.type, Number(t.total)])),
     })),
   };
@@ -436,11 +455,13 @@ export type MentionDay = {
 };
 
 /**
- * The mentions of one day, newest first — loaded when the day is opened.
+ * The mentions of one day — loaded when the day is opened. The page puts the most important first and folds
+ * the rest by the monitoring's focus; when a monitoring has more stories than fit, the ones kept are the most
+ * important, then the newest.
  *
  * The cap applies to each monitoring on its own, not to the day as a whole: a broad monitoring that
  * matches hundreds of stories a day must not push a narrow one off the page, so with two or more
- * monitorings running every one of them keeps its newest `limit` stories.
+ * monitorings running every one of them keeps its best `limit` stories.
  */
 export async function listMentionsForDay(
   db: Db,
@@ -480,7 +501,14 @@ export async function listMentionsForDay(
         .innerJoin(monitoringQueries, eq(monitoringQueries.id, mentions.queryId))
         .leftJoin(users, eq(users.id, mentions.assignedToUserId))
         .where(and(where, eq(mentions.queryId, row.queryId)))
-        .orderBy(desc(sql`coalesce(${articles.publishedAt}, ${mentions.createdAt})`), desc(mentions.id))
+        // The cap keeps what matters: most important first, then newest. (A busy day shows its best `limit`
+        // stories, not just its latest.)
+        .orderBy(
+          desc(mentionPriorityRank()),
+          desc(sql`coalesce(${mentions.signalScore}, 0)`),
+          desc(sql`coalesce(${articles.publishedAt}, ${mentions.createdAt})`),
+          desc(mentions.id),
+        )
         .limit(limit),
     ),
   );
@@ -501,6 +529,8 @@ export type MentionSocialAuthor = {
 
 export type MentionDetail = MentionListItem & {
   queryName: string;
+  /** What the monitoring was set up to look for (risks, opportunities …), minus plain coverage; empty if none were chosen. */
+  queryGoals: GoalKey[];
   aiEntities: MentionEntityRow[];
   aiTopics: MentionTopicRow[];
   tags: Tag[];
@@ -538,6 +568,7 @@ export async function getMentionDetail(
       article: articles,
       source: sources,
       queryName: monitoringQueries.name,
+      queryAst: monitoringQueries.queryAst,
       assigneeName: assigneeNameColumn,
       socialPlatform: socialProfiles.platform,
       socialHandle: socialProfiles.handle,
@@ -566,6 +597,7 @@ export async function getMentionDetail(
       : Promise.resolve([]),
   ]);
   const {
+    queryAst,
     socialPlatform,
     socialHandle,
     socialDisplayName,
@@ -587,6 +619,7 @@ export async function getMentionDetail(
       : null;
   return {
     ...rest,
+    queryGoals: (queryAst.intent?.goals ?? []).filter((goal) => goal !== "coverage"),
     aiEntities,
     aiTopics,
     tags,

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { Badge, Button, EmptyState } from "@cim/ui";
 import { Inbox } from "lucide-react";
+import { describeSignal, signalLevelLabel } from "@cim/core";
 import type { MentionsPage, Tag } from "@cim/db";
 import { FilterBar } from "@/components/filter-bar";
 import { MentionDetailDrawer, type AssignableMember } from "./mention-detail-drawer";
@@ -147,6 +148,11 @@ export function MentionsTable({
                       {article.title}
                       <span className="sr-only"> — open details</span>
                     </button>
+                    {describeSignal(mention.priority, mention.signalReasons)?.short ? (
+                      <span className="mt-1 block text-xs font-normal text-muted-foreground">
+                        {describeSignal(mention.priority, mention.signalReasons)?.short}
+                      </span>
+                    ) : null}
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">{source.name}</td>
                   <td className="px-4 py-3">
@@ -173,7 +179,7 @@ export function MentionsTable({
                         PRIORITY_TONE[mention.priority as keyof typeof PRIORITY_TONE]
                       }
                     >
-                      {mention.priority}
+                      {signalLevelLabel(mention.priority)}
                     </Badge>
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">

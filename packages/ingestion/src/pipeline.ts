@@ -2,14 +2,17 @@ import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
 import {
   classifyMatchType,
-  computeMatchPriority,
+  describeSignal,
   findMatchedTerm,
   matchableText,
   matchesText,
   sourceInRegionScopes,
+  type SignalLevel,
 } from "@cim/core";
 import {
+  applyCoverageToCluster,
   asOrganizationId,
+  countClusterOutlets,
   createMentionIfNotExists,
   findExistingArticle,
   findOrCreateSocialProfile,
@@ -17,6 +20,7 @@ import {
   insertArticle,
   listActiveMonitoringQueriesForSourceType,
   setArticleStoryCluster,
+  signalFor,
   touchSocialProfile,
   type Db,
   type OrganizationId,
@@ -30,7 +34,13 @@ export type NewMentionRecord = {
   organizationId: OrganizationId;
   projectId: string;
   queryId: string;
-  priority: "high" | "normal";
+  /** How much the story matters to the monitoring (see @cim/core signal.ts). */
+  priority: SignalLevel;
+  /** What an alert says about the story, so a notification is readable without opening the app. */
+  title?: string;
+  sourceName?: string;
+  /** Why it ranks where it does ("The headline names “X” …"). */
+  why?: string | null;
 };
 
 export type IngestSourceResult = {
@@ -75,10 +85,13 @@ export async function ingestSource(
         ...normalized,
         authorProfileId: await resolveAuthorProfileId(db, raw),
       }));
+    let clusterId = existing?.storyClusterId ?? null;
     if (!existing) {
       articlesCreated += 1;
-      await maybeAssignStoryCluster(db, article);
+      clusterId = await maybeAssignStoryCluster(db, article);
     }
+    // How many outlets carry this story: a story many outlets run is more important than one that stands alone.
+    const outlets = clusterId ? await countClusterOutlets(db, clusterId) : 1;
 
     // Headline plus the feed's own summary (see matchableText): a story that
     // names the brand in its first lines is a mention even when the headline
@@ -89,7 +102,14 @@ export async function ingestSource(
     for (const query of activeQueries) {
       if (!sourceInRegionScopes(source.country, query.regionScopes)) continue;
       if (!matchesText(query.queryAst, text, match)) continue;
-      const priority = computeMatchPriority(query.queryAst, article.title, match);
+      // How much it matters to THIS monitoring and why: where its words are, whether it names the thing
+      // itself, the goals the person chose, the reach of the story (@cim/core scoreSignal).
+      const signal = signalFor(
+        query,
+        { title: article.title, lead: raw.bodyText ?? null, language: match.language ?? null, sourceType: source.type },
+        outlets,
+      );
+      const priority = signal.level;
       const organizationId = asOrganizationId(query.organizationId);
       const matchedTerm = findMatchedTerm(query.queryAst, text, match);
       const { matchType, matchedRule } = matchedTerm
@@ -110,6 +130,8 @@ export async function ingestSource(
         // null (a query with no include/exactPhrase terms at all).
         matchedTerms: matchedTerm ? [matchedTerm] : query.queryAst.include,
         priority,
+        signalScore: signal.score,
+        signalReasons: signal.reasons,
         matchType,
         matchedRule,
       });
@@ -120,9 +142,14 @@ export async function ingestSource(
           projectId: query.projectId,
           queryId: query.id,
           priority,
+          title: article.title,
+          sourceName: source.name,
+          why: describeSignal(priority, signal.reasons)?.short ?? null,
         });
       }
     }
+    // The story just gained an outlet: the mentions of the same story elsewhere pick up its wider reach.
+    if (!existing && clusterId && outlets >= 3) await applyCoverageToCluster(db, clusterId);
   }
 
   return {
@@ -151,15 +178,15 @@ async function maybeAssignStoryCluster(
     title: string;
     storyClusterId: string | null;
   },
-): Promise<void> {
-  if (article.storyClusterId) return;
+): Promise<string | null> {
+  if (article.storyClusterId) return article.storyClusterId;
   // Most stories have no look-alike from another source, so look first WITHOUT the lock and stop
   // there: a lock held around every lookup made all concurrent crawls queue behind one another.
   const candidate = await findSimilarRecentArticle(db, {
     title: article.title,
     excludeSourceId: article.sourceId,
   });
-  if (!candidate) return;
+  if (!candidate) return null;
   // Race: crawlSourceWorker runs several jobs at once and crawl-scheduler.ts fans out every
   // active source's job in the same tick — so two different sources can both insert a new
   // article for the same breaking story around the same time, exactly the case this clustering
@@ -169,19 +196,20 @@ async function maybeAssignStoryCluster(
   // serializes the assignment (the lookup is repeated inside it, so it sees the other job's
   // result); it is only taken when a look-alike exists, which is rare — the same pattern
   // billing.ts's createMonitoringQueryWithPlanLimit already uses for its own race.
-  await db.transaction(async (tx) => {
+  return db.transaction(async (tx) => {
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext('story-cluster-assign'))`);
     const txDb = tx as unknown as Db;
     const similar = await findSimilarRecentArticle(txDb, {
       title: article.title,
       excludeSourceId: article.sourceId,
     });
-    if (!similar) return;
+    if (!similar) return null;
     const storyClusterId = similar.storyClusterId ?? randomUUID();
     await setArticleStoryCluster(txDb, article.id, storyClusterId);
     if (!similar.storyClusterId) {
       await setArticleStoryCluster(txDb, similar.id, storyClusterId);
     }
+    return storyClusterId;
   });
 }
 

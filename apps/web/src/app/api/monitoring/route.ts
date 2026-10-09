@@ -4,6 +4,7 @@ import { assembleQueryAst, astToBooleanQuery, expandSourceCategoriesToTypes } fr
 import {
   backfillMentionsForQuery,
   createMonitoringQueryWithPlanLimit,
+  createNotifyRuleForQuery,
   getProject,
   recordAuditLog,
   db,
@@ -87,10 +88,29 @@ export async function POST(request: Request) {
     queryAst: ast,
     sourceTypes: query.sourceTypes,
     regionScopes: query.regionScopes,
+    trackingTarget: query.trackingTarget,
   }).catch((error) => {
     console.error("[monitoring] backfill failed:", error);
     return { scanned: 0, created: 0 };
   });
+
+  // "How should we tell you?": the answer becomes a real alert rule (it used to be ignored). Best effort:
+  // a failure here must not undo a saved monitoring — the rule can be added in Alerts.
+  let alertRuleId: string | null = null;
+  if (input.notify && input.notify.mode !== "none") {
+    const rule = await createNotifyRuleForQuery(db, context.organizationId, {
+      projectId: project.id,
+      queryId: query.id,
+      createdByUserId: context.userId,
+      monitoringName: query.name,
+      mode: input.notify.mode,
+      email: input.notify.email,
+    }).catch((error) => {
+      console.error("[monitoring] could not create the alert rule:", error);
+      return null;
+    });
+    alertRuleId = rule?.id ?? null;
+  }
 
   await recordAuditLog(db, context.organizationId, {
     actorUserId: context.userId,
@@ -99,5 +119,5 @@ export async function POST(request: Request) {
     targetId: query.id,
   });
 
-  return NextResponse.json({ ok: true, queryId: query.id, backfilled: backfill.created });
+  return NextResponse.json({ ok: true, queryId: query.id, backfilled: backfill.created, alertRuleId });
 }

@@ -2,7 +2,16 @@ import type { Queue } from "bullmq";
 import type { SendEmailJobData } from "@cim/core";
 import { db, getActiveAlertRulesForQuery } from "@cim/db";
 import type { NewMentionRecord } from "@cim/ingestion";
+import type { AlertItem } from "./alert-email";
 import { fireAlert } from "./notify";
+
+/** The stories an alert lists, most important first, as the e-mail and the webhook show them. */
+function alertItems(records: NewMentionRecord[]): AlertItem[] {
+  const rank: Record<string, number> = { high: 3, normal: 2, low: 1 };
+  return [...records]
+    .sort((a, b) => (rank[b.priority] ?? 0) - (rank[a.priority] ?? 0))
+    .flatMap((record) => (record.title ? [{ title: record.title, sourceName: record.sourceName ?? "", why: record.why ?? null }] : []));
+}
 
 /**
  * Runs right after ingestSource() (docs/architecture/ARCHITECTURE.md —
@@ -32,6 +41,7 @@ export async function evaluateNewMentionAlerts(
           await fireAlert(emailQueue, rule, {
             triggerSummary: `${records.length} new mention${records.length === 1 ? "" : "s"} matched "${rule.name}"`,
             mentionIds: records.map((r) => r.mentionId),
+            items: alertItems(records),
           });
         } else if (rule.type === "high_relevance") {
           const highPriority = records.filter((r) => r.priority === "high");
@@ -39,6 +49,7 @@ export async function evaluateNewMentionAlerts(
           await fireAlert(emailQueue, rule, {
             triggerSummary: `${highPriority.length} high-relevance mention${highPriority.length === 1 ? "" : "s"} matched "${rule.name}"`,
             mentionIds: highPriority.map((r) => r.mentionId),
+            items: alertItems(highPriority),
           });
         }
       } catch (error) {

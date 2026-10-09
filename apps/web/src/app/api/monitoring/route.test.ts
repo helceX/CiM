@@ -14,6 +14,7 @@ const getProject = vi.fn();
 const createMonitoringQueryWithPlanLimit = vi.fn();
 const recordAuditLog = vi.fn();
 const backfillMentionsForQuery = vi.fn();
+const createNotifyRuleForQuery = vi.fn();
 const getCurrentUser = vi.fn();
 
 vi.mock("@/lib/tenant", () => ({
@@ -26,6 +27,7 @@ vi.mock("@cim/db", () => ({
   db: {},
   backfillMentionsForQuery: (...args: unknown[]) => backfillMentionsForQuery(...args),
   getProject: (...args: unknown[]) => getProject(...args),
+  createNotifyRuleForQuery: (...args: unknown[]) => createNotifyRuleForQuery(...args),
   createMonitoringQueryWithPlanLimit: (...args: unknown[]) => createMonitoringQueryWithPlanLimit(...args),
   recordAuditLog: (...args: unknown[]) => recordAuditLog(...args),
 }));
@@ -36,6 +38,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   getCurrentUser.mockResolvedValue({ id: "user-1", isPlatformSuperAdmin: false });
   backfillMentionsForQuery.mockResolvedValue({ scanned: 0, created: 0 });
+  createNotifyRuleForQuery.mockResolvedValue({ id: "rule-1" });
 });
 
 function makeRequest(body: Record<string, unknown>): Request {
@@ -139,5 +142,59 @@ describe("POST /api/monitoring — scope and concepts", () => {
     expect(created.queryAst.aliasGroups).toEqual([["BTM", "Bilgiyi Ticarileştirme Merkezi"]]);
     expect(created.queryAst.include).toEqual(["BTM", "Bilgiyi Ticarileştirme Merkezi"]);
     expect(backfillMentionsForQuery.mock.calls[0]?.[2]).toMatchObject({ regionScopes: ["TR"] });
+  });
+});
+
+describe("POST /api/monitoring — what the person wants from it", () => {
+  function allowCreate() {
+    requirePermission.mockResolvedValueOnce({ organizationId: "org-1", userId: "user-1" });
+    getProject.mockResolvedValueOnce({ id: basePayload.projectId });
+    createMonitoringQueryWithPlanLimit.mockResolvedValueOnce({
+      ok: true,
+      query: { id: "query-1", name: "Brand watch", sourceTypes: ["news"], regionScopes: [], trackingTarget: "company" },
+    });
+  }
+
+  it("keeps the goals, the focus and the person's own words on the query", async () => {
+    allowCreate();
+    const response = await POST(
+      makeRequest({ ...basePayload, intent: { goals: ["risk", "opportunity", "bogus"], focus: "essentials", signalWords: ["Q3", "q3"] } }),
+    );
+    expect(response.status).toBe(200);
+    expect(createMonitoringQueryWithPlanLimit.mock.calls[0]?.[2].queryAst.intent).toEqual({
+      goals: ["risk", "opportunity"],
+      focus: "essentials",
+      signalWords: ["Q3"],
+    });
+    expect(backfillMentionsForQuery.mock.calls[0]?.[2]).toMatchObject({ trackingTarget: "company" });
+  });
+
+  it("turns 'tell me about important stories' into an alert rule, in-app and by e-mail when asked", async () => {
+    allowCreate();
+    const response = await POST(makeRequest({ ...basePayload, notify: { mode: "important", email: true } }));
+    expect(await response.json()).toMatchObject({ ok: true, alertRuleId: "rule-1" });
+    expect(createNotifyRuleForQuery).toHaveBeenCalledWith(
+      {},
+      "org-1",
+      expect.objectContaining({ projectId: basePayload.projectId, queryId: "query-1", createdByUserId: "user-1", monitoringName: "Brand watch", mode: "important", email: true }),
+    );
+  });
+
+  it("creates no rule for 'I will look myself' or when nothing was asked", async () => {
+    allowCreate();
+    expect((await (await POST(makeRequest({ ...basePayload, notify: { mode: "none" } }))).json()).alertRuleId).toBeNull();
+    allowCreate();
+    expect((await (await POST(makeRequest(basePayload))).json()).alertRuleId).toBeNull();
+    expect(createNotifyRuleForQuery).not.toHaveBeenCalled();
+  });
+
+  it("still saves the monitoring when the alert rule cannot be created", async () => {
+    allowCreate();
+    createNotifyRuleForQuery.mockRejectedValueOnce(new Error("boom"));
+    const spy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const response = await POST(makeRequest({ ...basePayload, notify: { mode: "every" } }));
+    spy.mockRestore();
+    expect(response.status).toBe(200);
+    expect((await response.json()).alertRuleId).toBeNull();
   });
 });

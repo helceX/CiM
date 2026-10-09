@@ -21,8 +21,8 @@ import { evaluateCompetitorAlerts } from "./evaluate-competitor";
 /**
  * Integration test (docs/testing/TEST_STRATEGY.md) — proves the alert
  * engine end to end against real Postgres: keyword alerts fire on any
- * new mention, high-relevance alerts fire only on an exact-phrase match,
- * cooldown suppresses a duplicate notification, and spike alerts fire
+ * new mention, high-relevance alerts fire only for stories that matter
+ * (a name in a news headline — not a topic word in one), cooldown suppresses a duplicate notification, and spike alerts fire
  * off the real statistical baseline query.
  */
 describe("alert engine (integration)", () => {
@@ -148,19 +148,39 @@ describe("alert engine (integration)", () => {
     );
   });
 
-  it("fires a high-relevance alert only on an exact-phrase match, not a loose keyword match", async () => {
-    const looseQuery = await createMonitoringQuery(db, organizationId, {
+  it("fires a high-relevance alert for a name in a news headline, not for a topic word in one", async () => {
+    // A subject being followed: its word in a headline is worth a look, not important.
+    const topicQuery = await createMonitoringQuery(db, organizationId, {
       projectId,
-      name: "High relevance — loose",
+      name: "High relevance — topic",
       queryAst: { include: ["Alert Test Wire"], exclude: [], exactPhrases: [] },
       booleanQuery: "Alert Test Wire",
       sourceTypes: ["news"],
+      trackingTarget: "topic",
     });
-    const looseRule = await createAlertRule(db, organizationId, {
+    const topicRule = await createAlertRule(db, organizationId, {
       projectId,
-      queryId: looseQuery.id,
+      queryId: topicQuery.id,
       createdByUserId: userId,
-      name: "High relevance rule (loose)",
+      name: "High relevance rule (topic)",
+      type: "high_relevance",
+      channels: ["in_app"],
+      cooldownMinutes: 60,
+    });
+    // A thing with a name: the same words in the headline of a news outlet are important.
+    const nameQuery = await createMonitoringQuery(db, organizationId, {
+      projectId,
+      name: "High relevance — name",
+      queryAst: { include: ["Alert Test Wire"], exclude: [], exactPhrases: [] },
+      booleanQuery: "Alert Test Wire",
+      sourceTypes: ["news"],
+      trackingTarget: "company",
+    });
+    const nameRule = await createAlertRule(db, organizationId, {
+      projectId,
+      queryId: nameQuery.id,
+      createdByUserId: userId,
+      name: "High relevance rule (name)",
       type: "high_relevance",
       channels: ["in_app"],
       cooldownMinutes: 60,
@@ -172,13 +192,16 @@ describe("alert engine (integration)", () => {
       .where(eq(schema.sources.id, sourceId));
     if (!source) throw new Error("test source missing");
     const result = await ingestSource(db, source, new MockNewsConnector());
+    expect(result.newMentions.find((record) => record.queryId === nameQuery.id)?.priority).toBe("high");
+    expect(result.newMentions.find((record) => record.queryId === topicQuery.id)?.priority).toBe("normal");
 
     await evaluateNewMentionAlerts(emailQueue, result.newMentions);
 
     const notifications = await listNotifications(db, organizationId, userId, {
       limit: 50,
     });
-    expect(notifications.some((n) => n.title === looseRule.name)).toBe(false);
+    expect(notifications.some((n) => n.title === nameRule.name)).toBe(true);
+    expect(notifications.some((n) => n.title === topicRule.name)).toBe(false);
   });
 
   it("computes a spike alert off the real statistical baseline and fires above threshold", async () => {

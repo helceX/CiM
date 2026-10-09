@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { completeOnboardingSchema } from "@cim/validation";
 import { astToBooleanQuery, emptyQueryAst, expandSourceCategoriesToTypes } from "@cim/core";
-import { backfillMentionsForQuery, createProjectWithMonitoringQuery, recordAuditLog, db, schema } from "@cim/db";
+import { backfillMentionsForQuery, createNotifyRuleForQuery, createProjectWithMonitoringQuery, recordAuditLog, db, schema, type NotifyMode } from "@cim/db";
 import { requireOrgContext } from "@/lib/tenant";
 
 export async function POST(request: Request) {
@@ -63,7 +63,20 @@ export async function POST(request: Request) {
     projectId,
     queryAst: ast,
     sourceTypes,
+    trackingTarget: input.trackingTarget,
   }).catch((error) => console.error("[onboarding] backfill failed:", error));
+
+  // "How should we notify you?" used to be recorded and ignored. Instant and high-priority-only are alert rules;
+  // the daily digest and the weekly archive e-mails reach every member without one.
+  const notifyMode: NotifyMode =
+    input.notificationPreference === "instant" ? "every" : input.notificationPreference === "high_priority_only" ? "important" : "none";
+  await createNotifyRuleForQuery(db, context.organizationId, {
+    projectId,
+    queryId: result.queryId,
+    createdByUserId: context.userId,
+    monitoringName: `${input.projectName} monitoring`,
+    mode: notifyMode,
+  }).catch((error) => console.error("[onboarding] could not create the alert rule:", error));
 
   await recordAuditLog(db, context.organizationId, {
     actorUserId: context.userId,

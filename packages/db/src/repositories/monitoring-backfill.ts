@@ -2,7 +2,6 @@ import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import {
   sourceInRegionScopes,
   classifyMatchType,
-  computeMatchPriority,
   findFingerprintMatch,
   findMatchedTerm,
   matchesText,
@@ -12,6 +11,7 @@ import type { Db } from "../client";
 import { articles, sources } from "../schema/content";
 import type { QueryAst } from "../schema/monitoring";
 import { createMentionIfNotExists } from "./mentions";
+import { countOutletsByCluster, signalFor } from "./signals";
 import type { OrganizationId } from "./tenant-scope";
 
 export const BACKFILL_WINDOW_DAYS = 30;
@@ -30,7 +30,15 @@ const BATCH = 5_000;
 export async function backfillMentionsForQuery(
   db: Db,
   organizationId: OrganizationId,
-  query: { id: string; projectId: string; queryAst: QueryAst; sourceTypes: string[]; regionScopes?: string[] },
+  query: {
+    id: string;
+    projectId: string;
+    queryAst: QueryAst;
+    sourceTypes: string[];
+    regionScopes?: string[];
+    /** company, brand, topic … — decides whether a name or a subject is being tracked (see scoreSignal). */
+    trackingTarget?: string | null;
+  },
   options: { days?: number; scanLimit?: number } = {},
 ): Promise<{ scanned: number; created: number }> {
   const days = options.days ?? BACKFILL_WINDOW_DAYS;
@@ -50,6 +58,7 @@ export async function backfillMentionsForQuery(
         language: articles.language,
         publishedAt: articles.publishedAt,
         createdAt: articles.createdAt,
+        clusterId: articles.storyClusterId,
         sourceType: sources.type,
         sourceCountry: sources.country,
       })
@@ -66,6 +75,7 @@ export async function backfillMentionsForQuery(
       .offset(scanned);
     if (rows.length === 0) break;
     scanned += rows.length;
+    const outlets = await countOutletsByCluster(db, rows.flatMap((row) => (row.clusterId ? [row.clusterId] : [])));
 
     for (const row of rows) {
       if (!sourceInRegionScopes(row.sourceCountry, query.regionScopes)) continue;
@@ -80,12 +90,15 @@ export async function backfillMentionsForQuery(
       const { matchType, matchedRule } = matchedTerm
         ? classifyMatchType(query.queryAst, matchedTerm, row.sourceType)
         : { matchType: null, matchedRule: null };
+      const signal = signalFor(query, row, row.clusterId ? (outlets.get(row.clusterId) ?? 1) : 1);
       const id = await createMentionIfNotExists(db, organizationId, {
         projectId: query.projectId,
         queryId: query.id,
         articleId: row.id,
         matchedTerms: matchedTerm ? [matchedTerm] : query.queryAst.include,
-        priority: computeMatchPriority(query.queryAst, row.title, match),
+        priority: signal.level,
+        signalScore: signal.score,
+        signalReasons: signal.reasons,
         matchType,
         matchedRule,
         createdAt: row.publishedAt ?? row.createdAt,

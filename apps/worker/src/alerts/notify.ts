@@ -12,6 +12,7 @@ import {
 import type { AlertRule } from "@cim/db/schema";
 import { safeFetch } from "@cim/ingestion";
 import { queueOutboxEmail } from "../email";
+import { MAX_ALERT_ITEMS, renderAlertEmailBody, type AlertItem } from "./alert-email";
 
 /**
  * Fires one alert rule: atomic cooldown check + AlertEvent insert (brief
@@ -25,7 +26,7 @@ import { queueOutboxEmail } from "../email";
 export async function fireAlert(
   emailQueue: Queue<SendEmailJobData>,
   rule: AlertRule,
-  input: { triggerSummary: string; mentionIds: string[] },
+  input: { triggerSummary: string; mentionIds: string[]; items?: AlertItem[] },
 ): Promise<boolean> {
   const organizationId = asOrganizationId(rule.organizationId);
   const event = await createAlertEventIfNotInCooldown(db, organizationId, rule, input);
@@ -67,7 +68,7 @@ export async function fireAlert(
         {
           toEmail,
           subject: `[Alert] ${rule.name}`,
-          bodyText: `${input.triggerSummary}\n\nOpen alerts: ${link}`,
+          bodyText: renderAlertEmailBody(input, link),
           kind: "alert",
         },
         `alert "${rule.name}"`,
@@ -76,7 +77,7 @@ export async function fireAlert(
   }
 
   if (rule.channels.includes("webhook")) {
-    await deliverWebhook(organizationId, rule, event.id, input.triggerSummary);
+    await deliverWebhook(organizationId, rule, event.id, input.triggerSummary, input.items);
   }
 
   return true;
@@ -104,6 +105,7 @@ async function deliverWebhook(
   rule: AlertRule,
   alertEventId: string,
   triggerSummary: string,
+  items: AlertItem[] = [],
 ): Promise<void> {
   const webhookUrl = await getOrganizationWebhookUrl(db, organizationId);
   if (!webhookUrl) return;
@@ -118,6 +120,7 @@ async function deliverWebhook(
         alertRuleId: rule.id,
         alertRuleName: rule.name,
         triggerSummary,
+        items: items.slice(0, MAX_ALERT_ITEMS),
         firedAt: new Date().toISOString(),
       }),
     });

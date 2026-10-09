@@ -15,10 +15,14 @@ export function mentionFiltersFromParams(get: (key: string) => string | undefine
   };
   const assigned = get("assigned");
   const since = get("since");
+  const min = get("min");
   return {
     search: get("q") || undefined,
     sentiment: (get("sentiment") || undefined) as MentionFilters["sentiment"],
-    priority: (get("priority") || undefined) as MentionFilters["priority"],
+    // "Importance" in the filter bar: important only, worth a look and up, or only the passing mentions that a
+    // monitoring's focus folds away. (?priority= still works for links made before the filter was renamed.)
+    priority: (min === "low" ? "low" : get("priority") || undefined) as MentionFilters["priority"],
+    minPriority: min === "high" || min === "normal" ? min : undefined,
     sinceDays: since ? Number(since) : undefined,
     // "me" is the only client-facing value; the id comes from the session.
     assignedToUserId: assigned === "me" ? currentUserId : undefined,

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Badge, Button, EmptyState } from "@cim/ui";
 import { Radar } from "lucide-react";
-import { autoKeywordClusters, companyNames, describeRegionScopes, parseKeywordSpec } from "@cim/core";
+import { autoKeywordClusters, companyNames, describeRegionScopes, intentSummary, parseKeywordSpec } from "@cim/core";
 import { countMentionsByQuery, db, getCrawlCoverage, listBrandGroups, listMonitoringQueries } from "@cim/db";
 import type { CrawlCoverage } from "@cim/db";
 import { requireOrgContext } from "@/lib/tenant";
@@ -194,6 +194,27 @@ export default async function MonitoringListPage() {
                     Sources: {query.sourceTypes.join(", ")} · Where: {describeRegionScopes(query.regionScopes)} · Created{" "}
                     {new Date(query.createdAt).toLocaleDateString()}
                   </p>
+                  {(() => {
+                    const summary = intentSummary(ast.intent);
+                    if (summary) {
+                      return (
+                        <p className="text-xs text-muted-foreground">
+                          Looking for: <span className="text-foreground">{summary.looking}</span> · Showing:{" "}
+                          <span className="text-foreground">{summary.showing}</span>
+                        </p>
+                      );
+                    }
+                    return canEdit ? (
+                      <p className="text-xs text-muted-foreground">
+                        Shows every story.{" "}
+                        <Link href={`/monitoring/${query.id}/edit`} className="text-primary underline underline-offset-2">
+                          Choose what matters
+                          <span className="sr-only"> for {query.name}</span>
+                        </Link>{" "}
+                        to see the important ones first.
+                      </p>
+                    ) : null;
+                  })()}
                   <MonitoringCheck queryId={query.id} name={query.name} />
                 </div>
                 <div className="flex shrink-0 items-center gap-4 sm:flex-col sm:items-end sm:gap-1">

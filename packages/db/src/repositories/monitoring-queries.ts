@@ -152,6 +152,7 @@ export async function listActiveMonitoringQueriesForSourceType(db: Db, sourceTyp
       booleanQuery: monitoringQueries.booleanQuery,
       sourceTypes: monitoringQueries.sourceTypes,
       regionScopes: monitoringQueries.regionScopes,
+      trackingTarget: monitoringQueries.trackingTarget,
       status: monitoringQueries.status,
       createdAt: monitoringQueries.createdAt,
       updatedAt: monitoringQueries.updatedAt,

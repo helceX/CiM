@@ -69,6 +69,8 @@ function fakeMention(overrides: Partial<Mention> = {}): Mention {
     aiMethod: null,
     aiAnalyzedAt: null,
     priority: "normal",
+    signalScore: null,
+    signalReasons: null,
     status: "new",
     reviewFeedback: null,
     assignedToUserId: null,

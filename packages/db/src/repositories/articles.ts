@@ -32,6 +32,14 @@ export async function findExistingArticle(
 
 export async function insertArticle(
   db: Db,
+  input: Parameters<typeof insertArticleWithOutcome>[1],
+) {
+  return (await insertArticleWithOutcome(db, input)).article;
+}
+
+/** Reports whether this call inserted the row, so a losing crawl does not cluster it again. */
+export async function insertArticleWithOutcome(
+  db: Db,
   input: {
     sourceId: string;
     canonicalUrl: string;
@@ -61,7 +69,7 @@ export async function insertArticle(
     .values({ ...input, searchVector: sql`to_tsvector('simple', ${folded})` })
     .onConflictDoNothing()
     .returning();
-  if (article) return article;
+  if (article) return { article, created: true };
 
   // Race: findExistingArticle (the caller, pipeline.ts's ingestSource)
   // found nothing, but another concurrent crawl of the same source
@@ -77,7 +85,7 @@ export async function insertArticle(
     contentHash: input.contentHash,
   });
   if (!existing) throw new Error("Failed to insert article");
-  return existing;
+  return { article: existing, created: false };
 }
 
 export type PreviewStory = {

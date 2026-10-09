@@ -81,4 +81,3 @@ export async function PATCH(
   });
   return NextResponse.json({ followup: result });
 }
-

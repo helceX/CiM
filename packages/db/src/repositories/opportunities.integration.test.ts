@@ -170,4 +170,3 @@ describe("opportunity profile and follow-up (integration)", () => {
     });
   });
 });
-

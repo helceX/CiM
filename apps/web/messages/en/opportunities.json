@@ -16,7 +16,7 @@
     "languages": "Preferred source languages",
     "commaSeparated": "Separate terms with commas.",
     "saveProfile": "Save profile",
-    "saving": "Saving",
+    "saving": "Saving…",
     "profileSaved": "Profile saved.",
     "saveFailed": "Could not save. Check your connection and try again.",
     "signalsTitle": "Opportunity signals",
@@ -30,7 +30,7 @@
     "profileOverlap": "profile overlap",
     "whyMatched": "Why this matched",
     "matchedThemes": "Matched profile terms",
-    "themeReason": "The stored headline or excerpt mentions "{theme}".",
+    "themeReason": "The stored headline or excerpt mentions “{theme}”.",
     "noThemeMatch": "No target profile term appears in the stored headline or excerpt.",
     "verificationTitle": "Verify with the publisher",
     "checkOpenStatus": "Check whether the opportunity is still open.",
@@ -71,4 +71,3 @@
     }
   }
 }
-

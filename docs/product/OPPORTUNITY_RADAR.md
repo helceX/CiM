@@ -1,4 +1,4 @@
-# Opportunity Radar - Phase 1
+# Opportunity Radar — Phase 1
 
 Opportunity Radar reuses Mediaory's existing tenant-scoped Mentions and
 publisher sources. It does not search grant directories independently and
@@ -41,4 +41,3 @@ Phase 1 excludes crawling grant directories, AI eligibility claims, generated
 deadlines or amounts, automatic application drafting, reminders, and external
 opportunity APIs. Those need separate source evidence, retention, and product
 decisions.
-

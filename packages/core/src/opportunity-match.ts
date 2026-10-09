@@ -42,7 +42,7 @@ export function explainOpportunityMatch(input: {
     ).size,
   );
   const reasons = matchedThemes.map(
-    (theme) => `The source text mentions the profile theme "${theme}".`,
+    (theme) => `The source text mentions the profile theme “${theme}”.`,
   );
   if (reasons.length === 0)
     reasons.push("No profile theme was found in the stored headline or excerpt.");
@@ -76,4 +76,3 @@ export function explainOpportunityMatch(input: {
     },
   };
 }
-

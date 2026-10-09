@@ -224,4 +224,3 @@ export async function saveOpportunityFollowup(
     .returning();
   return followup ?? null;
 }
-

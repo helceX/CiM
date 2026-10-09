@@ -35,4 +35,3 @@ CREATE TABLE IF NOT EXISTS "opportunity_followups" (
 );
 CREATE UNIQUE INDEX IF NOT EXISTS "opportunity_followups_org_mention_uidx" ON "opportunity_followups" ("organization_id", "mention_id");
 CREATE INDEX IF NOT EXISTS "opportunity_followups_org_status_due_idx" ON "opportunity_followups" ("organization_id", "status", "due_at");
-

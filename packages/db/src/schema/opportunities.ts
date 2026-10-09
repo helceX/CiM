@@ -79,4 +79,3 @@ export const opportunityFollowups = pgTable(
 
 export type OpportunityProfile = typeof opportunityProfiles.$inferSelect;
 export type OpportunityFollowup = typeof opportunityFollowups.$inferSelect;
-

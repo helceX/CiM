@@ -332,7 +332,7 @@ export function OpportunitiesClient({
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                      {t("signalLabel")} � {candidate.sourceName} (
+                      {t("signalLabel")} · {candidate.sourceName} (
                       {candidate.sourceDomain})
                     </p>
                     <h3 className="mt-2 text-base font-semibold">
@@ -350,7 +350,7 @@ export function OpportunitiesClient({
                       {candidate.publishedAt
                         ? new Date(candidate.publishedAt).toLocaleDateString()
                         : t("unknown")}{" "}
-                      � {t("observed")}:{" "}
+                      · {t("observed")}:{" "}
                       {new Date(candidate.observedAt).toLocaleDateString()}
                     </p>
                   </div>
@@ -521,4 +521,3 @@ function TextField({
     </label>
   );
 }
-

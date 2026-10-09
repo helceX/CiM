@@ -94,3 +94,47 @@ Connect button.
   marks the connection *Needs attention* and sends a "Reconnect" notification.
 - First connection looks back 3 days at most, so it does not flood.
 - Disconnecting deletes the tokens and every event collected from that account.
+
+## 4. What is free? (checked 9 October 2026)
+
+Question from the owner: *are there free ways to follow X, YouTube and other networks?* The honest answer is
+"for YouTube, Reddit, Mastodon and Bluesky yes, within limits; for X no". Everything below comes from vendor
+documentation and third-party guides read on that date — **nothing was tested live** (the build environment has no
+outbound access to these hosts), and prices and limits change, so check the linked pages before relying on a number.
+
+| Network | Free route | What it gives | Limits and catches | In Mediaory |
+|---|---|---|---|---|
+| YouTube | Channel / playlist RSS (`feeds/videos.xml?channel_id=…`) | New videos of named channels | Latest ~15; needs the `UC…` channel ID | **Built** (route 1) |
+| YouTube | Data API v3 `search.list` with a free API key | Keyword search across all public videos | 10,000 quota units per day per Google project; one search costs 100 units → **about 100 searches a day**; quota cannot be bought, only extended by an audit form; `channels.list`/`videos.list` cost 1 unit | Not built; candidate (see below) |
+| YouTube | Comments on a connected channel (OAuth) | Comments on the customer's own videos | 1 unit per poll | **Built** (route 3) |
+| Reddit | RSS for a community, a user or a search (`search.rss?q=…`) | ~25 newest items per feed | Reddit often blocks cloud IPs (403/429); the official API's free tier is non-commercial only and commercial use needs an agreement; RSS use in a commercial product is a grey area | **Built** (route 1), best effort |
+| Mastodon | Hashtag and account RSS; `/api/v1/timelines/tag/{tag}` without a token | Public posts of a tag or account | Whether a server allows tokenless timelines is its admin's choice (large ones restrict); search is weak without a token; small Turkish audience | **Built** (route 1: RSS) |
+| Bluesky | Profile RSS (`bsky.app/profile/<handle>/rss`); `app.bsky.feed.searchPosts` | Posts of a profile; keyword search | Keyword search is free but, per third-party reports, **needs a signed-in session** (an app password) | Profile feeds **built**; search not built |
+| Threads | `threads_keyword_search` | Public posts by keyword | Free API, but Meta **app review** is required; Meta's page (updated Jan 2026) gives 2,200 queries per 24 h per user; without approval you only search your own posts | Not built |
+| X | **None for new developers** | — | Third-party guides report the free tier ended for new sign-ups on 6 Feb 2026; pay-per-use now (about US$0.005 per post read, own-account reads cheaper). X's own pricing page is the source of truth | Connected account (mentions of the customer's own account) **built**, pay-per-use on the customer's developer account |
+| Instagram / Facebook | Hashtag search on a business account | Public posts under a hashtag | 30 unique hashtags per 7 days per account, app review needed; CrowdTangle closed in 2024 | Not built |
+| LinkedIn, TikTok | — | — | No public brand-keyword API for companies; TikTok's Research API is for academic institutions | Not possible |
+| Telegram | Public channels have a web preview (`t.me/s/<channel>`) | Posts of a public channel | No official keyword search; reading the preview page is scraping — treat as route 2 (your own bridge) | Not built |
+| Hacker News | Algolia search API, no key | Tech / startup discussions by keyword | English-language, small Turkish relevance | Not built |
+
+### What this means for the product
+
+- **Already free and built:** YouTube channels, Reddit, Mastodon and Bluesky profile feeds (route 1). They need no
+  keys and no customer set-up; an operator adds them in Admin → Sources → Social feeds.
+- **Cheapest next step with real value — YouTube keyword search.** One free API key (`YOUTUBE_API_KEY`, Google
+  Cloud, no billing) lets the worker run each distinct customer keyword once a day: 100 searches a day covers about
+  100 distinct keywords across all customers. It would find videos that mention a brand without following the
+  channel. Needs the key entered in Railway Variables (web and worker), a quota guard and a clear "searched once a
+  day" note in the UI. Not built yet — say "başla" if you want it.
+- **Not worth building now:** X keyword search (paid), Instagram/Facebook/LinkedIn/TikTok (no usable public API),
+  Threads (review process for a small Turkish audience). If a customer needs them, a licensed data provider through
+  the existing *Clipping / data provider (JSON API)* source is the honest route.
+
+### Sources
+
+- [X API pricing 2026 — Blotato](https://www.blotato.com/blog/twitter-api-pricing), [bundle.social](https://bundle.social/blog/x-api-pricing-2026-costs-limits), [SocialCrawl](https://www.socialcrawl.dev/blog/x-twitter-api-2026)
+- [YouTube Data API — quota cost calculator (Google)](https://developers.google.com/youtube/v3/determine_quota_cost), [Phyllo — is the YouTube API free in 2026](https://www.getphyllo.com/post/is-the-youtube-api-free-in-2026-quota-limits-costs-when-to-pay)
+- [Bluesky `searchPosts` (official docs)](https://docs.bsky.app/docs/api/app-bsky-feed-search-posts)
+- [Mastodon.py — timelines](https://mastodonpy.readthedocs.io/en/latest/07_timelines.html), [Mastodon API rate limits](https://docs-p.joinmastodon.org/api/rate-limits/)
+- [Reddit API pricing — Octolens](https://octolens.com/blog/reddit-api-pricing), [Reddit API key, limits, alternatives — SocialCrawl](https://www.socialcrawl.dev/blog/reddit-api-key-limits-alternatives-2026), [Reddit RSS — Feeder](https://feeder.co/knowledge-base/rss-feed-creation/reddit-rss)
+- [Threads keyword search (Meta)](https://developers.facebook.com/documentation/threads/keyword-search)

@@ -2,10 +2,12 @@
 
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { Button, Field, Input } from "@cim/ui";
 import { TurnstileWidget } from "@/components/turnstile-widget";
 
 export function RegisterForm({ turnstileSiteKey = null }: { turnstileSiteKey?: string | null }) {
+  const legal = useTranslations("legal.forms");
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [captchaReset, setCaptchaReset] = useState(0);
   const [submitted, setSubmitted] = useState(false);
@@ -112,6 +114,21 @@ export function RegisterForm({ turnstileSiteKey = null }: { turnstileSiteKey?: s
       ) : null}
 
       <TurnstileWidget siteKey={turnstileSiteKey} onToken={setCaptchaToken} resetKey={captchaReset} />
+
+      <p className="text-xs text-muted-foreground">
+        {legal.rich("accountNotice", {
+          terms: (chunks) => (
+            <Link href="/terms" className="text-primary underline underline-offset-2">
+              {chunks}
+            </Link>
+          ),
+          privacy: (chunks) => (
+            <Link href="/privacy" className="text-primary underline underline-offset-2">
+              {chunks}
+            </Link>
+          ),
+        })}
+      </p>
 
       <Button
         type="submit"

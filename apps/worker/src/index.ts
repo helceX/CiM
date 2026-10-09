@@ -21,6 +21,7 @@ import {
   type ImportCatalogJobData,
   type PruneArticlesJobData,
   type ScoreSignalsJobData,
+  type PurgePrivacyJobData,
   type WeeklyArchiveJobData,
   captureException,
   configureErrorReporting,
@@ -40,6 +41,7 @@ import { processImportCatalogJob } from "./jobs/import-catalog";
 import { processPruneArticlesJob } from "./jobs/prune-articles";
 import { processWeeklyArchiveJob } from "./jobs/weekly-archive";
 import { processScoreSignalsJob } from "./jobs/score-signals";
+import { processPurgePrivacyJob } from "./jobs/purge-privacy";
 import { evaluateSpikeAlerts } from "./alerts/evaluate-spikes";
 import { evaluateSentimentShiftAlerts } from "./alerts/evaluate-sentiment-shift";
 import { evaluateEmergingTopicAlerts } from "./alerts/evaluate-emerging-topics";
@@ -330,6 +332,18 @@ const scoreSignalsWorker = new Worker<ScoreSignalsJobData>(
   { connection, concurrency: 1 },
 );
 
+const purgePrivacyQueue = new Queue<PurgePrivacyJobData>(QUEUE_NAMES.purgePrivacy, {
+  connection,
+  defaultJobOptions: DEFAULT_JOB_OPTIONS,
+});
+const purgePrivacyWorker = new Worker<PurgePrivacyJobData>(
+  QUEUE_NAMES.purgePrivacy,
+  async () => {
+    await processPurgePrivacyJob();
+  },
+  { connection, concurrency: 1 },
+);
+
 const allWorkers = [
   sendEmailWorker,
   crawlSourceWorker,
@@ -352,6 +366,7 @@ const allWorkers = [
   pruneArticlesWorker,
   weeklyArchiveWorker,
   scoreSignalsWorker,
+  purgePrivacyWorker,
 ];
 // Off unless SENTRY_DSN is set. Tags carry only the queue and job id — never job data.
 configureErrorReporting({
@@ -517,6 +532,13 @@ async function scheduleRepeatingJobs() {
     { every: 2 * 60_000 },
     { name: QUEUE_NAMES.scoreSignals, data: {} },
   );
+  // KVKK housekeeping once a day, after the other daily passes: old sessions and tokens go, and
+  // organizations deleted 30+ days ago are erased for good (docs/product/KVKK.md).
+  await purgePrivacyQueue.upsertJobScheduler(
+    "purge-privacy-repeat",
+    { pattern: "0 9 * * *" },
+    { name: QUEUE_NAMES.purgePrivacy, data: {} },
+  );
   console.log(
     "Schedulers registered: source crawl (30s), signal scoring (2m), spike alert check (60s), " +
       "sentiment shift alert check (60s), emerging topic alert check (60s), " +
@@ -559,6 +581,7 @@ async function shutdown() {
   await importCatalogQueue.close();
   await pruneArticlesQueue.close();
   await weeklyArchiveQueue.close();
+  await purgePrivacyQueue.close();
   process.exit(0);
 }
 

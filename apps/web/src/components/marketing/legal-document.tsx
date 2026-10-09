@@ -1,6 +1,7 @@
 import { Reveal } from "./reveal";
 
-export type LegalSection = { title: string; body: string[] };
+/** `body` paragraphs come first, then the bullet `items`, then the closing `after` paragraphs. */
+export type LegalSection = { title: string; body: string[]; items?: string[]; after?: string[] };
 
 /** Long-form legal/policy text: numbered sections, readable line length. */
 export function LegalDocument({ sections, updated }: { sections: LegalSection[]; updated?: string }) {
@@ -19,6 +20,16 @@ export function LegalDocument({ sections, updated }: { sections: LegalSection[];
               </h2>
               <div className="mt-3 flex flex-col gap-3 text-[var(--mk-muted)]">
                 {section.body.map((paragraph) => (
+                  <p key={paragraph}>{paragraph}</p>
+                ))}
+                {section.items?.length ? (
+                  <ul className="flex list-disc flex-col gap-2 pl-6 marker:text-[var(--mk-cyan)]">
+                    {section.items.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                ) : null}
+                {section.after?.map((paragraph) => (
                   <p key={paragraph}>{paragraph}</p>
                 ))}
               </div>

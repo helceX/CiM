@@ -1,4 +1,4 @@
-import { index, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { index, jsonb, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import { users } from "./users";
 
 /**
@@ -38,5 +38,26 @@ export const takedownRequests = pgTable(
   (table) => [index("takedown_requests_status_idx").on(table.status, table.createdAt)],
 );
 
+/**
+ * KVKK accountability: the record that personal data was erased (the erasure regulation expects
+ * these records to be kept). Not tenant data and holds no personal data — only ids and counts — so
+ * it can safely outlive the organization it describes.
+ */
+export const erasureLog = pgTable(
+  "erasure_log",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    /** organization_erased */
+    kind: text("kind").notNull(),
+    /** the organization (or other subject) whose data was erased */
+    subjectId: uuid("subject_id").notNull(),
+    /** counts of what was erased, e.g. { mentions: 1200, archiveFiles: 8 } */
+    detail: jsonb("detail").$type<Record<string, number>>().notNull().default({}),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("erasure_log_kind_idx").on(table.kind, table.createdAt)],
+);
+
 export type BlockedDomain = typeof blockedDomains.$inferSelect;
 export type TakedownRequest = typeof takedownRequests.$inferSelect;
+export type ErasureLogEntry = typeof erasureLog.$inferSelect;

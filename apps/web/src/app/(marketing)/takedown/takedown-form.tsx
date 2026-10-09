@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { TurnstileWidget } from "@/components/turnstile-widget";
 
@@ -9,6 +10,7 @@ const field =
 
 export function TakedownForm({ turnstileSiteKey }: { turnstileSiteKey: string | null }) {
   const t = useTranslations("legal.takedown");
+  const forms = useTranslations("legal.forms");
   const [status, setStatus] = useState<"idle" | "sending" | "done" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
@@ -99,6 +101,15 @@ export function TakedownForm({ turnstileSiteKey }: { turnstileSiteKey: string | 
       >
         {status === "sending" ? t("sending") : t("submit")}
       </button>
+      <p className="text-sm text-[var(--mk-muted)]">
+        {forms.rich("takedownNotice", {
+          privacy: (chunks) => (
+            <Link href="/privacy" className="underline underline-offset-2 hover:text-white">
+              {chunks}
+            </Link>
+          ),
+        })}
+      </p>
     </form>
   );
 }

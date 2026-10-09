@@ -554,65 +554,154 @@
     "footerTerms": "Kullanım Şartları",
     "footerBot": "Yayıncılar için",
     "privacy": {
+      "updated": "Son güncelleme: 9 Ekim 2026",
       "eyebrow": "Hukuki",
       "title": "Gizlilik ve KVKK",
       "accent": "Aydınlatma Metni",
-      "lead": "Mediaory'nin hangi kişisel verileri neden, ne kadar süreyle işlediği ve KVKK kapsamındaki haklarınız. Sade bir dille yazılmıştır.",
+      "lead": "Mediaory'nin hangi kişisel verileri neden ve hangi hukuki sebeple işlediği, kimlere aktardığı, ne kadar süre sakladığı ve 6698 sayılı KVKK kapsamındaki haklarınız. Sade bir dille yazılmıştır.",
+      "controller": {
+        "title": "Veri sorumlusu",
+        "intro": "Bu metin, 6698 sayılı Kişisel Verilerin Korunması Kanunu'nun (KVKK) 10. maddesi uyarınca hazırlanmıştır. Aşağıda açıklanan hesap, fatura iletişimi, kullanım ve form verileri bakımından veri sorumlusu:",
+        "address": "Adres: {address}",
+        "mersis": "MERSİS no: {mersis}",
+        "taxId": "Vergi no: {taxId}",
+        "kep": "Kayıtlı elektronik posta (KEP): {kep}",
+        "contact": "İletişim: {email}",
+        "customers": "Bir müşteri çalışma alanına kişisel veri koyarsa (ör. yorumlarda iş arkadaşlarının adları), bunun neden ve nasıl kullanılacağına müşteri karar verir; Mediaory bu verileri müşteri adına işler. Talep üzerine bir veri işleme eki sunulur. Herkese açık kaynaklar için 5. bölüme bakın."
+      },
       "sections": [
         {
-          "title": "Biz kimiz",
+          "title": "Hangi kişisel verileri işliyoruz",
           "body": [
-            "Mediaory bir medya ve web izleme hizmetidir. Aşağıda anlatılan hesap, fatura iletişimi ve kullanım verileri bakımından Mediaory veri sorumlusudur. İletişim: hello@mediaory.io.",
-            "Müşterilerimiz adına herkese açık kaynaklardan dizinlediğimiz başlık, kısa özet ve kamuya açık yazar adları bakımından arama ve dizinleme hizmeti sunarız; bkz. 4. bölüm."
-          ]
-        },
-        {
-          "title": "Müşterilerle ilgili işlediğimiz veriler",
-          "body": [
-            "Hesap verileri: ad, e-posta adresi, hashlenmiş parola, bağlı olduğunuz organizasyon, rolünüz ve gönderdiğiniz veya aldığınız davetler.",
-            "Sizin oluşturduğunuz çalışma alanı verileri: izleme anahtar kelimeleri ve sorguları, uyarı kuralları, raporlar ve dışa aktarımlar, etiketler, yorumlar, atamalar ve organizasyonunuzun ayarları.",
-            "Hizmet verileri: oturumlar, güvenlik ve denetim kayıtları, kullanım sayaçları (ör. kaç anahtar kelime veya rapor kullandığınız) ve hizmeti kötüye kullanıma karşı korumak için kullanılan IP adresi, tarayıcı türü gibi teknik veriler.",
-            "Bir sosyal medya hesabı bağlarsanız, o hesabın herkese açık verilerini okumak için gereken bağlantı bilgisini tutarız; hesaptan başka bir şey tutmayız."
+            "İşlenen veriler, Mediaory'yi nasıl kullandığınıza göre değişir:"
+          ],
+          "items": [
+            "Hesap verileri: ad, soyad, e-posta adresi, unvan, dil ve saat dilimi tercihleri ve hashlenmiş parola.",
+            "Organizasyon ve fatura iletişimi verileri: bağlı olduğunuz organizasyon ve rolünüz. Fatura profili eklerseniz girdiğiniz şirket unvanı, vergi dairesi, vergi numarası, adres ve fatura e-postası.",
+            "Oluşturduğunuz çalışma alanı içeriği: izleme anahtar kelimeleri ve sorguları, uyarı kuralları, etiketler, yorumlar, atamalar, raporlar ve dışa aktarımlar ile organizasyonunuzun ayarları.",
+            "Güvenlik ve kullanım verileri: oturumlar, IP adresi ve tarayıcı türü, güvenlik ve denetim kayıtları, kullanım sayaçları (ör. kaç anahtar kelime veya rapor kullandığınız) ve hata kayıtları.",
+            "Bağlı hesaplar: bir YouTube veya X hesabı bağlarsanız erişim anahtarlarını (şifrelenmiş olarak) ve hesabın herkese açık tanımlayıcısını saklarız; yalnızca bağlantının izin verdiğini okuruz.",
+            "Formlar: iletişim, içerik kaldırma ve veri talebi formlarına yazdıklarınız; ad ve e-posta adresiniz dahil.",
+            "Herkese açık kaynaklarda adı geçen kişiler: bkz. 5. bölüm."
           ]
         },
         {
           "title": "Neden ve hangi hukuki sebeple işliyoruz",
           "body": [
-            "İstediğiniz hizmeti sunmak ve güvenliğini sağlamak için (sözleşmenin ifası; güvenlik ve kötüye kullanımı önleme konusundaki meşru menfaatimiz). Doğrulama, uyarı, özet ve haftalık arşiv bağlantısı gibi hizmet e-postalarını göndermek için. Hukuki yükümlülüklerimizi yerine getirmek için. Kişisel verileri satmayız ve çalışma alanı verilerinizi yapay zekâ modellerini eğitmek için kullanmayız."
+            "Kişisel verileri satmayız, reklam için kullanmayız ve çalışma alanı verilerinizi yapay zekâ modellerini eğitmek için kullanmayız.",
+            "KVKK'nın 5. maddesi kapsamında şu hukuki sebeplere dayanırız:"
+          ],
+          "items": [
+            "Hesabınızı oluşturmak, yönetmek ve hizmeti sunmak: sözleşmenin kurulması veya ifası (m. 5/2-c).",
+            "Doğrulama, davet, uyarı, özet ve haftalık arşiv bağlantısı gibi hizmet e-postaları: sözleşmenin ifası (m. 5/2-c). Pazarlama e-postası göndermiyoruz.",
+            "Hizmetin güvenliğini sağlamak, kötüye kullanımı önlemek ve hataları gidermek: haklarınıza zarar vermemek kaydıyla meşru menfaatimiz (m. 5/2-f).",
+            "Müşterilerin medya yansımasını izleyebilmesi için herkese açık kaynakları dizinlemek: bizim ve müşterilerimizin meşru menfaati; veri, 5. bölümde anlatılan asgari düzeyde tutulur (m. 5/2-f).",
+            "Fatura ve muhasebe kayıtları: hukuki yükümlülük (m. 5/2-ç).",
+            "Taleplerinizi ve şikâyetlerinizi yanıtlamak; bir hakkı tesis etmek, kullanmak veya korumak: m. 5/2-e ve 5/2-f.",
+            "Bir sosyal medya hesabı bağlamak: açık rızanız; bağlantıyı kaldırarak istediğiniz zaman geri alabilirsiniz (m. 5/1)."
+          ]
+        },
+        {
+          "title": "Kişisel verileri nasıl topluyoruz",
+          "body": [],
+          "items": [
+            "Doğrudan sizden: kayıt olurken, hizmeti kullanırken veya bize yazarken.",
+            "Otomatik olarak: Mediaory'yi kullandığınızda çerezler ve benzeri teknolojiler (12. bölüm) ile sunucu ve güvenlik kayıtları aracılığıyla.",
+            "Bağladığınız platformlardan, yetkinizle.",
+            "Herkese açık kaynaklardan — RSS/Atom akışları, site haritaları ve herkese açık web sayfaları — 5. bölümde anlatılan içerik için."
           ]
         },
         {
           "title": "Herkese açık kaynaklardaki içerik",
           "body": [
-            "Herkese açık kaynakları dizinleriz. Her haber için başlığı, bağlantıyı, yayın zamanını, kaynak veriyorsa kamuya açık yazar adını ve en çok 200 karakterlik bir özeti saklarız. Eşleştirme için ayrıca bir kelime parmak izi saklarız: başlık ve özetteki kelimelerin özet değerleri; bunlar metne geri dönüştürülemez.",
-            "Hiçbir müşterinin izlemesiyle eşleşmeyen haberler 14 gün sonra silinir. Eşleşenler müşterinin çalışma alanında mention olarak, müşterinin kendi saklama ayarı onları silene kadar durur ve müşterinin haftalık arşivinde yer alır.",
-            "Kamuya açık haberlerde adı geçen kişiler müşterimiz değildir. Hakkınızdaki bir içeriğin kaldırılmasını isterseniz veya bir sorunuz varsa bize ulaşın (bkz. 9. bölüm); yayıncılar içerik kaldırma formunu kullanabilir."
+            "Herkese açık kaynakları dizinleriz. Her haber için başlığı, bağlantıyı, yayın zamanını, kaynak veriyorsa kamuya açık yazar adını ve en çok 200 karakterlik bir özeti saklarız; haberin tam metnini veya görsellerini saklamayız. Eşleştirme için ayrıca bir kelime parmak izi saklarız: başlık ve özetteki kelimelerin özet (hash) değerleri; bunlar metne geri dönüştürülemez.",
+            "Basın haberleri adı geçen kişiler hakkında hassas bilgiler içerebilir. Bu kişilerin profilini çıkarmayız. Hiçbir müşterinin izlemesiyle eşleşmeyen haberler 14 gün sonra silinir. Eşleşenler, müşterinin çalışma alanında bahsetme (mention) olarak, müşterinin kendi saklama ayarı onları silene veya organizasyon silinene kadar durur ve müşterinin haftalık arşivinde yer alır.",
+            "Kamuya açık haberlerde adı geçen kişiler müşterimiz değildir. Hakkınızdaki bir haberin dizinimizden kaldırılmasını isterseniz veya bir sorunuz varsa bize haberin bağlantısını gönderin (10. bölüm); yayıncılar içerik kaldırma formunu kullanabilir."
           ]
         },
         {
-          "title": "Verilerin aktarıldığı taraflar",
+          "title": "Kimlere aktarıyoruz",
           "body": [
-            "Mediaory'yi çalıştırmak için hizmet sağlayıcılar kullanırız: bulut barındırma ve veritabanı, haftalık arşivler için nesne depolama, e-posta gönderim hizmeti ve yapay zekâ özellikleri açıksa özet üretmek için başlık ve kısa özetleri alan bir yapay zekâ sağlayıcısı. Bunlar verileri bizim talimatımızla işler. Bazıları Türkiye dışındadır; bu nedenle veriler yurt dışına aktarılabilir. Gerektiğinde kanunun izin verdiği güvencelere dayanırız.",
-            "Verileri yalnızca kanunen gerektiğinde yetkili makamlara açıklarız."
+            "Kişisel verileri yalnızca şu gruplarla paylaşırız:"
+          ],
+          "items": [
+            "Verileri bizim talimatımızla işleyen hizmet sağlayıcılarımız: bulut barındırma ve veritabanı, arşivler için nesne depolama, e-posta gönderimi, herkese açık formlarda bot koruması ve — yalnızca yapay zekâ özellikleri açıksa — bir yapay zekâ sağlayıcısı. Her birinin amacı ve işlediği veriler hizmet sağlayıcılar sayfasında listelenir.",
+            "Bağladığınız platformlar (Google/YouTube, X): yalnızca o bağlantı için veri alışverişi yapılır.",
+            "Organizasyonunuzdaki diğer üyeler: adınızı, e-posta adresinizi, rolünüzü ve çalışma alanına koyduğunuz içeriği görür.",
+            "Yetkili kamu kurum ve kuruluşları, mahkemeler ve profesyonel danışmanlarımız: kanunen gerektiğinde veya bir hakkı tesis etmek, kullanmak ya da korumak için."
+          ]
+        },
+        {
+          "title": "Yurt dışına aktarım",
+          "body": [
+            "Mediaory'yi çalıştırmamıza yardım eden hizmet sağlayıcılar Türkiye dışında, ağırlıklı olarak Amerika Birleşik Devletleri ve Avrupa Birliği'ndedir; bu nedenle hizmeti kullandığınızda kişisel veriler yurt dışına aktarılır. KVKK'nın 9. maddesinin 2024'te değiştirilmesinden bu yana yurt dışına düzenli aktarımlar, yalnızca açık rızaya değil kanunun saydığı güvencelere dayanır: yeterlilik kararı, Kurul'un standart sözleşmesi, bağlayıcı şirket kuralları veya onaylı taahhütname. Aktarımlarımız 9. maddeye uygun biçimde yapılır.",
+            "Belirli bir sağlayıcı için hangi güvencenin geçerli olduğunu bize sorabilirsiniz (10. bölüm)."
           ]
         },
         {
           "title": "Ne kadar saklıyoruz",
+          "body": [],
+          "items": [
+            "Hesap verileri: hesabınız var olduğu sürece. Hesabınızı sildiğinizde adınız, e-posta adresiniz ve diğer kişisel bilgileriniz geri döndürülemez biçimde anonimleştirilir ve oturumlarınız kapatılır.",
+            "Organizasyon verileri: bir organizasyon silindiğinde üyeler hemen erişimi kaybeder; ona bağlı her şey — bahsetmeler, raporlar, yorumlar, arşiv dosyaları — 30 gün sonra kalıcı olarak silinir.",
+            "Hiçbir izlemeyle eşleşmeyen haberler: 14 gün sonra silinir. Eşleşenler, organizasyonun saklama ayarı onları silene veya organizasyon silinene kadar bahsetme olarak durur.",
+            "Oturumlar ve tek kullanımlık anahtarlar (doğrulama, parola sıfırlama, davetler): süresi dolduktan veya kullanıldıktan 30 gün sonra silinir.",
+            "Fatura ve muhasebe kayıtları: kanunun gerektirdiği süre boyunca.",
+            "İletişim, içerik kaldırma ve veri talebi formları: talebi yürütmek ve nasıl yanıtladığımızı gösterebilmek için gereken süre boyunca."
+          ]
+        },
+        {
+          "title": "Haklarınız",
           "body": [
-            "Hesap ve çalışma alanı verileri: hesap var olduğu sürece ve siz sildikten sonra silme tamamlanana kadar. Organizasyonu veya hesabınızı silmek, ona bağlı verileri kaldırır. Haftalık arşivler, organizasyon silene veya kapanana kadar erişilebilir kalır. Güvenlik ve denetim kayıtları, koruma ve hukuki amaçlar için gereken sınırlı süre saklanır."
+            "KVKK'nın 11. maddesi uyarınca şu haklara sahipsiniz:"
+          ],
+          "items": [
+            "kişisel verilerinizin işlenip işlenmediğini öğrenmek;",
+            "işlenmişse buna ilişkin bilgi talep etmek;",
+            "işlenme amacını ve amacına uygun kullanılıp kullanılmadığını öğrenmek;",
+            "yurt içinde veya yurt dışında aktarıldığı üçüncü kişileri bilmek;",
+            "eksik veya yanlış işlenmişse düzeltilmesini ve bunun aktarıldığı kişilere bildirilmesini istemek;",
+            "işlenmesini gerektiren sebepler ortadan kalktığında silinmesini, yok edilmesini veya anonim hale getirilmesini (m. 7) ve bunun aktarıldığı kişilere bildirilmesini istemek;",
+            "yalnızca otomatik analiz sonucu aleyhinize ortaya çıkan bir sonuca itiraz etmek;",
+            "kanuna aykırı işlenmesi nedeniyle uğradığınız zararın giderilmesini talep etmek."
+          ]
+        },
+        {
+          "title": "Haklarınızı nasıl kullanırsınız",
+          "body": [
+            "hello@mediaory.io adresine veya 1. bölümdeki adrese ya da KEP adresine yazın. Kim olduğunuzu ve ne istediğinizi belirtin; verilerinizin başkasına verilmemesi için kimliğinizi doğrulamak üzere bilgi isteyebiliriz.",
+            "En kısa sürede ve en geç 30 gün içinde, ücretsiz yanıtlarız. Yanıtlamak ayrıca bir maliyet gerektiriyorsa Kişisel Verileri Koruma Kurulu'nun belirlediği ücret alınabilir.",
+            "Müşteriyseniz hesap verilerinizi dışa aktarabilir, hesabınızı veya organizasyonunuzu Ayarlar'dan kendiniz silebilirsiniz.",
+            "Yanıtımızdan memnun kalmazsanız veya süresinde yanıt alamazsanız Kişisel Verileri Koruma Kurulu'na (kvkk.gov.tr) şikâyette bulunabilirsiniz."
           ]
         },
         {
           "title": "Güvenlik",
           "body": [
-            "Parolalar hashlenerek saklanır, oturumlar korunur, erişim rollerle sınırlandırılır ve her istek ait olduğu organizasyona göre denetlenir. Hiçbir sistem tamamen güvenli değildir; bir ihlal sizi etkilerse kanunun gerektirdiği şekilde size ve yetkili makamlara bildiririz."
+            "Riske uygun teknik ve idari tedbirler alırız; bunlar arasında:"
+          ],
+          "items": [
+            "tarayıcınız ile Mediaory arasında şifreli bağlantı (HTTPS);",
+            "parolaların yalnızca tuzlanmış özet (hash) olarak saklanması;",
+            "imzalı, sunucuda denetlenen ve iptal edilebilir oturumlar;",
+            "bağlı hesapların erişim anahtarlarının şifrelenmiş saklanması;",
+            "rol tabanlı erişim ve her istekte verinin organizasyonunuza ait olduğunun denetlenmesi;",
+            "hassas işlemler için denetim kaydı ve kötüye kullanıma karşı istek sınırlaması."
+          ],
+          "after": [
+            "Hiçbir sistem tamamen güvenli değildir. Bir ihlal kişisel verilerinizi etkilerse, kanunun gerektirdiği şekilde Kişisel Verileri Koruma Kurulu'na ve etkilenen kişilere bildiririz."
           ]
         },
         {
-          "title": "Haklarınız (KVKK madde 11)",
+          "title": "Çerezler",
           "body": [
-            "6698 sayılı Kişisel Verilerin Korunması Kanunu (KVKK) uyarınca; verilerinizin işlenip işlenmediğini öğrenme, işlenmişse bilgi talep etme, işlenme amacını ve amacına uygun kullanılıp kullanılmadığını öğrenme, aktarıldığı kişileri bilme, düzeltilmesini, silinmesini veya yok edilmesini isteme, bu işlemlerin aktarıldığı kişilere bildirilmesini isteme, yalnızca otomatik analiz sonucu aleyhinize bir sonuca itiraz etme ve kanuna aykırı işlemeden doğan zararın giderilmesini talep etme haklarına sahipsiniz.",
-            "Müşteriyseniz verilerinizi Ayarlar'dan dışa aktarabilir ve silebilirsiniz. Her talep için bize yazın; 30 gün içinde yanıtlarız. Kişisel Verileri Koruma Kurumu'na (KVKK) şikâyette de bulunabilirsiniz."
+            "Mediaory yalnızca oturumunuzu açmak ve dilinizi ile temanızı hatırlamak için gereken çerezleri kullanır. Analitik, reklam veya takip çerezi kullanmayız. Ayrıntılar çerez politikası sayfasındadır."
+          ]
+        },
+        {
+          "title": "Bu metindeki değişiklikler",
+          "body": [
+            "İşleme faaliyetlerimiz değiştiğinde bu metni güncelleriz. Üstteki tarih son sürümü gösterir; önemli değişiklikleri hesap sahiplerine e-posta veya uygulama içinden bildiririz."
           ]
         },
         {
@@ -623,6 +712,133 @@
         }
       ]
     },
-    "footerPrivacy": "Gizlilik / KVKK"
+    "footerPrivacy": "Gizlilik / KVKK",
+    "cookies": {
+      "updated": "Son güncelleme: 9 Ekim 2026",
+      "eyebrow": "Hukuki",
+      "title": "Çerez",
+      "accent": "Politikası",
+      "lead": "Mediaory'nin hangi çerezleri ve benzeri teknolojileri neden kullandığı ve bunları nasıl yönetebileceğiniz. Kısaca: yalnızca oturumunuzu açık tutmak ve tercihlerinizi hatırlamak için gerekenler — analitik, reklam veya takip yok.",
+      "sections": [
+        {
+          "title": "Çerez nedir",
+          "body": [
+            "Çerezler, bir web sitesinin tarayıcınıza yerleştirdiği küçük metin dosyalarıdır. Tarayıcınızın yerel depolaması gibi benzer teknolojiler de aynı amaçlara hizmet eder. Bu sayfada hepsine çerez diyoruz."
+          ]
+        },
+        {
+          "title": "Kullandığımız çerezler",
+          "body": [],
+          "items": [
+            "cim_session — oturumunuzu açık tutar. Kesinlikle gerekli. Giriş yaptığınızda yerleştirilir; çıkış yaptığınızda veya en geç 30 gün sonra silinir. Verilerinizi değil, imzalı bir tanımlayıcıyı taşır.",
+            "NEXT_LOCALE — seçtiğiniz dili hatırlar. İşlevsel. 1 yıl saklanır.",
+            "mediaory-panel-theme (tarayıcınızın yerel depolaması, çerez değildir) — uygulamada açık veya koyu temayı hatırlar. İşlevsel. Siz temizleyene kadar kalır."
+          ]
+        },
+        {
+          "title": "Kullanmadığımız çerezler",
+          "body": [
+            "Analitik, reklam veya takip çerezi kullanmıyoruz; çerez verilerini reklamverenlerle paylaşmıyoruz."
+          ]
+        },
+        {
+          "title": "Üçüncü taraflar",
+          "body": [
+            "Bot koruması açıksa kayıt, parola sıfırlama ve içerik kaldırma formları Cloudflare Turnstile'ı yükler; Turnstile, insanları botlardan ayırmak için tarayıcınızdan teknik sinyaller işleyebilir. Cloudflare hizmet sağlayıcımız olarak hareket eder; bkz. hizmet sağlayıcılar sayfası."
+          ]
+        },
+        {
+          "title": "Hukuki sebep ve rıza",
+          "body": [
+            "Kesinlikle gerekli ve işlevsel çerezleri, istediğiniz hizmeti sunmak ve meşru menfaatimiz (KVKK m. 5/2-c ve 5/2-f) kapsamında kullanırız; bu nedenle çerez onay bannerına gerek yoktur. İleride analitik veya isteğe bağlı başka çerezler eklersek önce onayınızı alırız."
+          ]
+        },
+        {
+          "title": "Çerezleri yönetme",
+          "body": [
+            "Çerezleri tarayıcı ayarlarınızdan silebilir veya engelleyebilirsiniz. Oturum çerezini engellerseniz giriş yapamazsınız; dil çerezini engellerseniz tarayıcınızın diline döneriz."
+          ]
+        },
+        {
+          "title": "İletişim",
+          "body": [
+            "Sorularınız için: hello@mediaory.io. Kişisel verilerinizi nasıl işlediğimizin tamamı için Gizlilik / KVKK Aydınlatma Metni'ne bakın."
+          ]
+        }
+      ]
+    },
+    "providers": {
+      "updated": "Son güncelleme: 9 Ekim 2026",
+      "eyebrow": "Hukuki",
+      "title": "Hizmet",
+      "accent": "sağlayıcılar",
+      "lead": "Mediaory'yi çalıştırmamıza yardım eden ve adımıza kişisel veri işleyen şirketler: ne yaptıkları, hangi verileri işledikleri ve nerede oldukları.",
+      "sections": [
+        {
+          "title": "Yurt dışına aktarım",
+          "body": [
+            "Aşağıdaki hizmet sağlayıcıların tümü Türkiye dışındadır (ağırlıklı olarak Amerika Birleşik Devletleri ve Avrupa Birliği). Kişisel veriler bunlara KVKK'nın 9. maddesine uygun biçimde aktarılır. Belirli bir sağlayıcı için hangi güvencenin geçerli olduğunu sorabilirsiniz: hello@mediaory.io."
+          ]
+        },
+        {
+          "title": "Railway — barındırma ve veritabanı",
+          "body": [
+            "Amaç: Mediaory web uygulamasını, arka plan işçilerini, PostgreSQL veritabanını ve iş kuyruğunu çalıştırır.",
+            "İşlenen veriler: tüm hesap ve çalışma alanı verileri.",
+            "Konum: Türkiye dışındaki Railway veri merkezleri."
+          ]
+        },
+        {
+          "title": "Cloudflare — nesne depolama ve bot koruması",
+          "body": [
+            "Amaç: R2 nesne depolama, her organizasyonun haftalık arşiv dosyalarını (HTML ve elektronik tablo) tutar. Turnstile, açıksa, herkese açık formlarda ziyaretçinin insan olduğunu doğrular.",
+            "İşlenen veriler: arşiv dosyaları; Turnstile için IP adresi ve tarayıcı sinyalleri.",
+            "Konum: Cloudflare'ın küresel ağı, Türkiye dışı."
+          ]
+        },
+        {
+          "title": "Resend — e-posta gönderimi",
+          "body": [
+            "Amaç: hizmet e-postalarını gönderir — doğrulama, davet, uyarı, özet ve arşiv bağlantıları.",
+            "İşlenen veriler: alıcının adı ve e-posta adresi ile e-postanın içeriği.",
+            "Konum: Türkiye dışı."
+          ]
+        },
+        {
+          "title": "Anthropic — yapay zekâ özetleri (varsayılan olarak kapalı)",
+          "body": [
+            "Amaç: yalnızca bir operatör yapay zekâ özelliklerini açarsa; özet, duygu ve öneri üretmek için başlıklar ve kısa özetler gönderilir.",
+            "İşlenen veriler: başlıklar ve en çok 200 karakterlik özetler. Çalışma alanı içeriğiniz yapay zekâ modellerini eğitmek için kullanılmaz.",
+            "Konum: Türkiye dışı."
+          ]
+        },
+        {
+          "title": "Google (YouTube) ve X — yalnızca bağlı hesaplar",
+          "body": [
+            "Amaç: yalnızca hesabınızı bağlarsanız; platformla yetkilendirme ve salt okunur veri alışverişi.",
+            "İşlenen veriler: erişim anahtarları (şifrelenmiş saklanır), hesap tanımlayıcısı ve yetki verdiğiniz veriler.",
+            "Konum: Türkiye dışı; platformun kendi koşulları da geçerlidir."
+          ]
+        },
+        {
+          "title": "Ödeme ve e-fatura sağlayıcıları",
+          "body": [
+            "Ücretli planlar başladığında, ödeme alınmadan önce ilgili sağlayıcılar burada listelenecektir."
+          ]
+        },
+        {
+          "title": "Bu liste",
+          "body": [
+            "Müşterilerin kişisel verilerini işleyen yeni bir sağlayıcı eklemeden önce bu listeyi güncelleriz."
+          ]
+        }
+      ]
+    },
+    "footerCookies": "Çerezler",
+    "footerProviders": "Hizmet sağlayıcılar",
+    "forms": {
+      "accountNotice": "Hesap oluşturarak <terms>Kullanım Şartları</terms>'nı kabul etmiş ve <privacy>Gizlilik / KVKK Aydınlatma Metni</privacy>'ni okuduğunuzu teyit etmiş olursunuz.",
+      "takedownNotice": "Adınızı ve e-posta adresinizi yalnızca bu talebi yürütmek için kullanırız. <privacy>Aydınlatma Metni</privacy>'ne bakın."
+    }
   }
 }

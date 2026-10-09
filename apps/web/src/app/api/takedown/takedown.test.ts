@@ -35,7 +35,7 @@ const post = (body: unknown) =>
 beforeEach(() => {
   vi.clearAllMocks();
   checkRateLimit.mockResolvedValue({ allowed: true, remaining: 4 });
-    createTakedownRequest.mockResolvedValue("6c39e1da-54e7-41e0-b760-04a5d99e2819");
+  createTakedownRequest.mockResolvedValue("id-1");
   listPlatformAdminEmails.mockResolvedValue(["admin@mediaory.io"]);
 });
 
@@ -43,7 +43,7 @@ describe("POST /api/takedown (public)", () => {
   it("stores the request, normalises the e-mail, and notifies every platform admin", async () => {
     const res = await post(valid);
     expect(res.status).toBe(201);
-    await expect(res.json()).resolves.toMatchObject({ ok: true, requestId: "6c39e1da-54e7-41e0-b760-04a5d99e2819" });
+    await expect(res.json()).resolves.toMatchObject({ ok: true, requestId: "id-1" });
     const stored = createTakedownRequest.mock.calls[0]![1] as Record<string, unknown>;
     expect(stored.requesterEmail).toBe("ayse@pub.example");
     expect(stored).not.toHaveProperty("confirmAuthority");

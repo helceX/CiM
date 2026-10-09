@@ -35,7 +35,10 @@ function rank(entry: ImportCandidate): number {
 }
 
 export const CATALOG_IMPORT_ORDER: readonly ImportCandidate[] = [
-  ...TURKEY_SOURCE_CATALOG.map<ImportCandidate>((e) => ({
+  // Individual columnist feeds multiply fetches for publishers whose main feed
+  // already carries their stories. Keep them available in the admin catalog,
+  // but require an explicit admin add instead of importing them automatically.
+  ...TURKEY_SOURCE_CATALOG.filter((e) => e.group !== "columns").map<ImportCandidate>((e) => ({
     key: e.key,
     name: e.name,
     url: e.url,

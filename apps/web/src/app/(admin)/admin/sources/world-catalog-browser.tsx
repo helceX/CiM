@@ -368,19 +368,24 @@ function WorldAddButton({ entry, onAdded }: { entry: Item; onAdded: () => void }
         onClick={async () => {
           setState("adding");
           setError(null);
-          const { ok, data } = await post("/api/admin/sources", {
-            name: entry.name,
-            url: entry.url,
-            connector: "rss",
-            type: entry.type,
-            language: entry.language || "other",
-            country: entry.country || "ZZ",
-          });
-          if (ok || data.code === "duplicate") {
-            onAdded();
-          } else {
+          try {
+            const { ok, data } = await post("/api/admin/sources", {
+              name: entry.name,
+              url: entry.url,
+              connector: "rss",
+              type: entry.type,
+              language: entry.language || "other",
+              country: entry.country || "ZZ",
+            });
+            if (ok || data.code === "duplicate") {
+              onAdded();
+            } else {
+              setState("error");
+              setError(data.error ?? "Could not add.");
+            }
+          } catch {
             setState("error");
-            setError(data.error ?? "Could not add.");
+            setError("Network error. Please try again.");
           }
         }}
       >

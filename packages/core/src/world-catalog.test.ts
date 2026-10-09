@@ -81,8 +81,13 @@ describe("startup catalog", () => {
 describe("catalog import order", () => {
   it("lists every Türkiye and world feed once, home market and checked feeds first", async () => {
     const { CATALOG_IMPORT_ORDER } = await import("./catalog-import");
-    expect(CATALOG_IMPORT_ORDER.length).toBe(TURKEY_SOURCE_CATALOG.length + WORLD_SOURCE_CATALOG.filter((e) => !e.manualOnly).length + STARTUP_PAGE_CANDIDATES.length);
+    expect(CATALOG_IMPORT_ORDER.length).toBe(
+      TURKEY_SOURCE_CATALOG.filter((e) => e.group !== "columns").length +
+        WORLD_SOURCE_CATALOG.filter((e) => !e.manualOnly).length +
+        STARTUP_PAGE_CANDIDATES.length,
+    );
     expect(new Set(CATALOG_IMPORT_ORDER.map((e) => e.url)).size).toBe(CATALOG_IMPORT_ORDER.length);
+    expect(CATALOG_IMPORT_ORDER.some((candidate) => TURKEY_SOURCE_CATALOG.some((entry) => entry.group === "columns" && entry.url === candidate.url))).toBe(false);
     const ranks = CATALOG_IMPORT_ORDER.map((e) => e.rank);
     expect([...ranks].sort((a, b) => a - b)).toEqual(ranks);
     expect(CATALOG_IMPORT_ORDER[0]!.country).toBe("TR");

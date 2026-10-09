@@ -260,6 +260,50 @@ Postgres CPU is the number to move. Compare **two equal windows** (for example t
 `docs/deployment/postgres-diagnostics.sql` holds the read-only queries for steps 2–3 and for table/index sizes,
 `idx_scan`, dead tuples and last autovacuum.
 
+## Railway configuration review (from the code; nothing here was changed on Railway)
+
+- **Postgres** is the cost (CPU 16.10 $ of 18.30 $). Everything above is aimed at its CPU. It stays on: the worker, the
+  schedulers and the web app need it, and shutting it down or letting it sleep ("serverless") would stop crawling and
+  alerting. Enabling Query Statistics (below) is the one operation the owner should do by hand, because it needs
+  `shared_preload_libraries` and a restart.
+- **Worker**: one replica. Its jobs are idempotent (one job id per source, advisory locks per story and per rule), so a
+  second replica would be safe, but it would only multiply database connections: the pool is node-postgres' default of
+  10 connections while `CRAWL_CONCURRENCY` defaults to 15, so a crawl past the tenth waits for a connection. With the
+  crawl memory most crawls are short, so the setting is no longer the bottleneck; if the CPU graph still shows the
+  worker busy, try `CRAWL_CONCURRENCY=8` (an environment variable, reversible) and compare the "Crawl activity" card
+  and the queue wait on `/admin/jobs`.
+- **Redis** gains the crawl memory (about 0.3–3 KB per source, 3-day TTL, so well under 30 MB for 9 000 sources) and the
+  hourly counters. It was 0.33 $; this does not change its size class. If Redis is lost, crawling continues in full.
+- **Web**: not part of the cost problem (0.92 $). Not a candidate for sleeping: first requests would wait for a cold
+  start.
+- **Serverless** for any of the three services is **not recommended**: BullMQ workers hold a connection to Redis and
+  the repeating jobs (scheduler every 30 s, alert evaluators every minute) would not fire while a service sleeps.
+- **Logs** are bounded: the per-job completion line is gone for the queues that run every few seconds or once per
+  source, the per-crawl line is written only when something new was found, and the catalog import writes one line per
+  batch. Failures are always logged.
+- **Environment variables to check**: `DB_VOLUME_MB` (the catalog import refuses to run without it), `CRAWL_CONCURRENCY`
+  (optional), `AI_PROVIDER` (the AI jobs return at once while it is `disabled`, the default).
+
+## What is not done (open, in order of expected value)
+
+1. **Real numbers.** Everything measured here is a benchmark on one machine. Enable Query Statistics, take the Railway
+   before/after windows described above, and compare. The expectation (not a promise): clustering (#73), the alert
+   evaluators and scheduler (#75) and the crawl memory (this change) all remove Postgres CPU; how much of the 1.66 vCPU
+   average they remove depends on the production mix, which only Query Statistics will show.
+2. **First visits.** A new source's first crawl stores up to 20–40 stories, each with a clustering lookup, mentions and
+   signals: ~15 ms of Postgres CPU per story in the bench. The catalog import adds 50 feeds per batch, i.e. up to ~1 500
+   stories per 5 minutes while it runs. If the CPU graph shows bursts at import time, lower `IMPORT_BATCH` (a constant in
+   `jobs/import-catalog.ts`) or pause the import from `/admin/sources`.
+3. **Adaptive polling interval.** Sources are still due every 2 h; a feed that has been "not modified" for days could be
+   polled every 4–6 h, and a busy one more often. It needs a per-source schedule (a `next_crawl_at` column and an index
+   for the scheduler) — a schema change, left for a decision.
+4. **Per-host politeness across sources.** Different sources on one host (catalog feeds of one publisher) are crawled
+   independently; only the catalog import limits per host.
+5. **`articles_title_trgm_idx`** (the biggest unused-index candidate, F7) and the table maintenance report: need
+   production `idx_scan` / dead-tuple numbers from `docs/deployment/postgres-diagnostics.sql` before any decision.
+6. **Alert delivery tracing.** `alert_events` records why a rule fired (`trigger_summary`) and when; per-channel
+   delivery results (in-app / e-mail outbox / webhook) are not joined in one view yet.
+
 ## Enabling Query Statistics (not done automatically)
 
 1. `SHOW shared_preload_libraries;` — if it already lists `pg_stat_statements`, only step 2 is needed.

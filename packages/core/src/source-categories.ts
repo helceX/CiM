@@ -16,6 +16,7 @@ export const SOURCE_CATEGORY_TO_SOURCE_TYPES: Record<string, readonly string[]> 
   podcast: ["podcast"],
   forums: ["forum"],
   comments: ["comments"],
+  trends: ["trends"],
   all: [
     "news",
     "newspaper",
@@ -33,6 +34,7 @@ export const SOURCE_CATEGORY_TO_SOURCE_TYPES: Record<string, readonly string[]> 
     "rss",
     "api",
     "other",
+    "trends",
   ],
 };
 
@@ -67,7 +69,7 @@ export const SOURCE_KINDS = [
   { key: "forums", label: "Forums & comments", types: ["forum", "comments"] },
   { key: "social", label: "Social", types: ["social"] },
   { key: "media", label: "TV, radio, video & podcasts", types: ["tv", "radio", "youtube", "podcast"] },
-  { key: "feeds", label: "Feeds, APIs & other", types: ["rss", "api", "other"] },
+  { key: "feeds", label: "Feeds, APIs & other", types: ["rss", "api", "other", "trends"] },
 ] as const;
 export type SourceKindKey = (typeof SOURCE_KINDS)[number]["key"];
 
@@ -101,6 +103,7 @@ export const SOURCE_TYPE_BADGES: Record<string, string> = {
   rss: "Feed",
   api: "Feed",
   other: "Other",
+  trends: "Google Trends",
 };
 
 export function sourceTypeBadge(type: string): string {

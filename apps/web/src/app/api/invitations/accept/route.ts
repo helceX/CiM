@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { acceptInvitationSchema } from "@cim/validation";
 import { hashPassword, hashToken } from "@cim/core";
 import { acceptInvitation, db, recordAuditLog } from "@cim/db";
@@ -11,6 +12,7 @@ import { createUserSession } from "@/lib/session";
  * the same trust boundary as clicking a verification link (ADR-005).
  */
 export async function POST(request: Request) {
+  const e = await getTranslations("errors");
   const ip = clientIpFrom(request);
   const rateLimit = await checkRateLimit(`invitation-accept:${ip}`, {
     limit: 20,
@@ -18,7 +20,7 @@ export async function POST(request: Request) {
   });
   if (!rateLimit.allowed) {
     return NextResponse.json(
-      { error: "Too many attempts. Try again later." },
+      { error: e("rateLimited") },
       { status: 429 },
     );
   }
@@ -27,7 +29,7 @@ export async function POST(request: Request) {
   const parsed = acceptInvitationSchema.safeParse(json);
   if (!parsed.success) {
     return NextResponse.json(
-      { error: "Invalid input", issues: parsed.error.issues },
+      { error: e("invalidInput"), issues: parsed.error.issues },
       { status: 400 },
     );
   }
@@ -38,10 +40,11 @@ export async function POST(request: Request) {
     firstName: input.firstName,
     lastName: input.lastName,
     passwordHash,
+    locale: await getLocale(),
   });
   if (!accepted) {
     return NextResponse.json(
-      { error: "This invitation is invalid or has expired." },
+      { error: e("invitationInvalid") },
       { status: 400 },
     );
   }

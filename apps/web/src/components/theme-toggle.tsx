@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Moon, Sun } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@cim/ui";
 
 const STORAGE_KEY = "mediaory-panel-theme";
@@ -13,6 +14,7 @@ function apply(theme: Theme) {
 
 /** Dark ("ink") is the default; light is the paper variant. The choice is remembered per browser. */
 export function ThemeToggle() {
+  const t = useTranslations("shell.theme");
   const [theme, setTheme] = useState<Theme>("dark");
 
   useEffect(() => {
@@ -41,7 +43,7 @@ export function ThemeToggle() {
       variant="ghost"
       size="icon"
       onClick={toggle}
-      aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+      aria-label={theme === "dark" ? t("toLight") : t("toDark")}
     >
       {theme === "dark" ? <Sun className="size-4" aria-hidden="true" /> : <Moon className="size-4" aria-hidden="true" />}
     </Button>

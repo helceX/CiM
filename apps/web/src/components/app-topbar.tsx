@@ -1,8 +1,20 @@
 "use client";
 
+import { useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@cim/ui";
-import { LogOut, User } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
+import {
+  Button,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@cim/ui";
+import { Check, LogOut, User } from "lucide-react";
+import { setLocale } from "@/i18n/actions";
+import { LOCALES, LOCALE_LABELS } from "@/i18n/config";
 import { CommandPalette } from "./command-palette";
 import { NotificationBell } from "./notification-bell";
 import { MobileNav } from "./mobile-nav";
@@ -17,7 +29,10 @@ export function AppTopbar({
   userLabel: string;
   initialUnreadCount: number;
 }) {
+  const t = useTranslations("shell.account");
+  const locale = useLocale();
   const router = useRouter();
+  const [switching, startTransition] = useTransition();
 
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -37,15 +52,33 @@ export function AppTopbar({
         <NotificationBell initialUnreadCount={initialUnreadCount} />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" aria-label="Account menu">
+            <Button variant="ghost" size="sm" aria-label={t("menu")}>
               <User className="size-4" aria-hidden="true" />
               <span className="hidden sm:inline">{userLabel}</span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            <DropdownMenuLabel>{t("language")}</DropdownMenuLabel>
+            {LOCALES.map((code) => (
+              <DropdownMenuItem
+                key={code}
+                disabled={switching}
+                lang={code}
+                aria-current={code === locale ? "true" : undefined}
+                onSelect={() => {
+                  if (code !== locale) startTransition(() => setLocale(code));
+                }}
+              >
+                <span className="flex size-4 items-center justify-center" aria-hidden="true">
+                  {code === locale ? <Check className="size-4" /> : null}
+                </span>
+                {LOCALE_LABELS[code]}
+              </DropdownMenuItem>
+            ))}
+            <DropdownMenuSeparator />
             <DropdownMenuItem onSelect={handleLogout}>
               <LogOut className="size-4" aria-hidden="true" />
-              Sign out
+              {t("signOut")}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

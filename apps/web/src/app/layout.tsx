@@ -14,7 +14,9 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   return (
     <html lang={locale} suppressHydrationWarning>
       <body className="min-h-screen bg-background text-foreground antialiased">
-        <NextIntlClientProvider>{children}</NextIntlClientProvider>
+        {/* Each part of the site (marketing, panel, admin) gives its own client components only the
+            namespaces they use — see src/i18n/groups.ts — so nothing is inherited from here. */}
+        <NextIntlClientProvider messages={{}}>{children}</NextIntlClientProvider>
       </body>
     </html>
   );

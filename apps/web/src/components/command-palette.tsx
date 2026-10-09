@@ -2,35 +2,20 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useLocale, useTranslations } from "next-intl";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Search } from "lucide-react";
 import { NAV_ITEMS } from "./nav-config";
 
-type PaletteAction = {
-  id: string;
-  label: string;
-  run: (router: ReturnType<typeof useRouter>) => void;
-};
-
-const ACTIONS: PaletteAction[] = [
-  {
-    id: "goto-dashboard",
-    label: "Go to Dashboard",
-    run: (router) => router.push("/dashboard"),
-  },
-  {
-    id: "goto-settings",
-    label: "Go to Settings",
-    run: (router) => router.push("/settings"),
-  },
-];
-
 /**
- * Cmd/Ctrl+K — navigation + actions today; object search (mentions,
- * sources, reports, saved views) registers as those modules ship,
+ * Cmd/Ctrl+K — navigation today (every sidebar page); actions and object search (mentions,
+ * sources, reports, saved views) register as those modules ship,
  * per docs/ux/INFORMATION_ARCHITECTURE.md's pluggable-provider design.
  */
 export function CommandPalette() {
+  const t = useTranslations("palette");
+  const nav = useTranslations("shell.nav");
+  const locale = useLocale();
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -47,22 +32,16 @@ export function CommandPalette() {
   }, []);
 
   const results = useMemo(() => {
-    const navResults = NAV_ITEMS.filter((item) =>
-      item.label.toLowerCase().includes(query.toLowerCase()),
-    ).map((item) => ({
-      id: item.href,
-      label: `Go to ${item.label}`,
-      run: () => router.push(item.href),
-    }));
-    const actionResults = ACTIONS.filter((action) =>
-      action.label.toLowerCase().includes(query.toLowerCase()),
-    ).map((action) => ({
-      id: action.id,
-      label: action.label,
-      run: () => action.run(router),
-    }));
-    return [...navResults, ...actionResults];
-  }, [query, router]);
+    // Lower-cased in the person's language: Turkish "İ" and "I" lower-case differently from English.
+    const needle = query.toLocaleLowerCase(locale);
+    return NAV_ITEMS.map((item) => ({ item, page: nav(item.key) }))
+      .filter(({ page }) => page.toLocaleLowerCase(locale).includes(needle))
+      .map(({ item, page }) => ({
+        id: item.href,
+        label: t("goTo", { page }),
+        run: () => router.push(item.href),
+      }));
+  }, [query, router, locale, nav, t]);
 
   // Selecting a result already clears the query (below); closing any other
   // way (Escape, overlay click) must too — otherwise the palette stays
@@ -77,10 +56,10 @@ export function CommandPalette() {
     <DialogPrimitive.Root open={open} onOpenChange={handleOpenChange}>
       <DialogPrimitive.Trigger
         className="flex h-8 items-center gap-2 rounded border border-border bg-surface px-2.5 text-sm text-muted-foreground hover:bg-surface-muted"
-        aria-label="Open command palette"
+        aria-label={t("open")}
       >
         <Search className="size-3.5" aria-hidden="true" />
-        <span className="hidden sm:inline">Search</span>
+        <span className="hidden sm:inline">{t("search")}</span>
         <kbd className="ml-4 hidden sm:inline rounded-sm border border-border-strong px-1 text-[10px]">
           ⌘K
         </kbd>
@@ -91,24 +70,22 @@ export function CommandPalette() {
           className="fixed left-1/2 top-24 z-50 w-full max-w-lg -translate-x-1/2 rounded-lg border border-border bg-surface shadow-lg"
           aria-describedby={undefined}
         >
-          <DialogPrimitive.Title className="sr-only">
-            Command palette
-          </DialogPrimitive.Title>
+          <DialogPrimitive.Title className="sr-only">{t("title")}</DialogPrimitive.Title>
           <div className="flex items-center gap-2 border-b border-border px-4 py-3">
             <Search className="size-4 text-muted-foreground" aria-hidden="true" />
             <input
               autoFocus
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search pages and actions…"
-              aria-label="Search pages and actions"
+              placeholder={t("placeholder")}
+              aria-label={t("label")}
               className="flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
             />
           </div>
           <ul className="max-h-80 overflow-y-auto p-2">
             {results.length === 0 ? (
               <li className="px-3 py-6 text-center text-sm text-muted-foreground">
-                No matches
+                {t("noMatches")}
               </li>
             ) : (
               results.map((result) => (

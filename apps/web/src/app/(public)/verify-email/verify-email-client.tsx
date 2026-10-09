@@ -2,12 +2,15 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Skeleton } from "@cim/ui";
 import { ResendVerificationForm } from "./resend-form";
 
 type Status = "verifying" | "success" | "error" | "no-token";
 
 export function VerifyEmailClient({ turnstileSiteKey = null }: { turnstileSiteKey?: string | null }) {
+  const t = useTranslations("auth.verify");
+  const ui = useTranslations("ui");
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
@@ -48,22 +51,21 @@ export function VerifyEmailClient({ turnstileSiteKey = null }: { turnstileSiteKe
   if (status === "verifying") {
     return (
       <div className="flex flex-col items-center gap-3">
-        <Skeleton className="h-4 w-48" />
-        <p className="text-sm text-muted-foreground">Verifying your email…</p>
+        <Skeleton className="h-4 w-48" label={ui("loading")} />
+        <p className="text-sm text-muted-foreground">{t("verifying")}</p>
       </div>
     );
   }
 
   if (status === "success") {
-    return <p className="text-sm text-foreground">Email verified. Redirecting…</p>;
+    return <p className="text-sm text-foreground">{t("success")}</p>;
   }
 
   if (status === "no-token") {
     return (
       <div className="flex flex-col gap-4">
         <p className="text-sm text-muted-foreground">
-          Open the verification link from your email to activate your account. Didn&apos;t get it? We
-          can send a new one.
+          {t("noToken")}
         </p>
         <ResendVerificationForm turnstileSiteKey={turnstileSiteKey} />
       </div>
@@ -72,7 +74,7 @@ export function VerifyEmailClient({ turnstileSiteKey = null }: { turnstileSiteKe
 
   return (
     <div className="flex flex-col gap-4">
-      <p className="text-sm text-danger">This link is invalid or has expired. Request a new one below.</p>
+      <p className="text-sm text-danger">{t("invalid")}</p>
       <ResendVerificationForm turnstileSiteKey={turnstileSiteKey} />
     </div>
   );

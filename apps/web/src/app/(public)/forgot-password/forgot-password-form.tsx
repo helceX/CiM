@@ -1,10 +1,12 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { useTranslations } from "next-intl";
 import { Button, Field, Input } from "@cim/ui";
 import { TurnstileWidget } from "@/components/turnstile-widget";
 
 export function ForgotPasswordForm({ turnstileSiteKey = null }: { turnstileSiteKey?: string | null }) {
+  const t = useTranslations("auth.forgot");
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [captchaReset, setCaptchaReset] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -44,14 +46,14 @@ export function ForgotPasswordForm({ turnstileSiteKey = null }: { turnstileSiteK
   if (submitted) {
     return (
       <p className="text-center text-sm text-muted-foreground">
-        If an account exists for that email, we sent a password reset link.
+        {t("sent")}
       </p>
     );
   }
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
-      <Field id="email" label="Email" required>
+      <Field id="email" label={t("email")} required>
         <Input name="email" type="email" autoComplete="email" required />
       </Field>
       <TurnstileWidget siteKey={turnstileSiteKey} onToken={setCaptchaToken} resetKey={captchaReset} />
@@ -61,7 +63,7 @@ export function ForgotPasswordForm({ turnstileSiteKey = null }: { turnstileSiteK
         </p>
       ) : null}
       <Button type="submit" disabled={isSubmitting || (turnstileSiteKey !== null && !captchaToken)}>
-        {isSubmitting ? "Sending…" : "Send reset link"}
+        {isSubmitting ? t("submitting") : t("submit")}
       </Button>
     </form>
   );

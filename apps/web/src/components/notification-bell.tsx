@@ -10,6 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@cim/ui";
 import { Bell } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 type NotificationItem = {
   id: string;
@@ -34,6 +35,7 @@ export function NotificationBell({
 }: {
   initialUnreadCount: number;
 }) {
+  const t = useTranslations("notifications");
   const [open, setOpen] = useState(false);
   // Only the server-computed count before the list has ever been
   // fetched — once `items` is non-null, `unreadCount` below derives
@@ -97,7 +99,7 @@ export function NotificationBell({
           current?.map((item) => (item.id === id ? { ...item, readAt: null } : item)) ??
           null,
       );
-      setError("Couldn't mark that as read. Please try again.");
+      setError(t("markReadFailed"));
     }
   }
 
@@ -129,7 +131,7 @@ export function NotificationBell({
             idsBeingMarked.has(item.id) ? { ...item, readAt: null } : item,
           ) ?? null,
       );
-      setError("Couldn't mark all as read. Please try again.");
+      setError(t("markAllFailed"));
     }
   }
 
@@ -139,7 +141,7 @@ export function NotificationBell({
         <Button
           variant="ghost"
           size="icon"
-          aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ""}`}
+          aria-label={unreadCount > 0 ? t("labelUnread", { count: unreadCount }) : t("label")}
         >
           <span className="relative">
             <Bell className="size-4" aria-hidden="true" />
@@ -153,14 +155,14 @@ export function NotificationBell({
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-80">
         <div className="flex items-center justify-between px-2.5 py-1.5">
-          <span className="text-sm font-semibold text-foreground">Notifications</span>
+          <span className="text-sm font-semibold text-foreground">{t("title")}</span>
           {unreadCount > 0 ? (
             <button
               type="button"
               onClick={markAllRead}
               className="text-xs text-primary underline underline-offset-2"
             >
-              Mark all read
+              {t("markAllRead")}
             </button>
           ) : null}
         </div>
@@ -172,11 +174,11 @@ export function NotificationBell({
         <div className="max-h-96 overflow-y-auto">
           {isLoading ? (
             <p className="px-2.5 py-4 text-center text-sm text-muted-foreground">
-              Loading…
+              {t("loading")}
             </p>
           ) : !items || items.length === 0 ? (
             <p className="px-2.5 py-4 text-center text-sm text-muted-foreground">
-              You&apos;re all caught up.
+              {t("empty")}
             </p>
           ) : (
             items.map((item) => {
@@ -185,12 +187,12 @@ export function NotificationBell({
                 <>
                   <div className="flex w-full items-center justify-between gap-2">
                     <span className="text-sm font-medium text-foreground">{item.title}</span>
-                    {!item.readAt ? <Badge tone="info">New</Badge> : null}
+                    {!item.readAt ? <Badge tone="info">{t("new")}</Badge> : null}
                   </div>
                   <span className="text-xs text-muted-foreground">{item.body}</span>
                   {href ? (
                     <span className="text-xs text-primary underline underline-offset-2">
-                      {href.external ? "Open the post ↗" : "Open"}
+                      {href.external ? t("openPost") : t("open")}
                     </span>
                   ) : null}
                 </>

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { Menu } from "lucide-react";
 import { Button, cn, Sheet, SheetContent, SheetTrigger } from "@cim/ui";
@@ -14,17 +15,18 @@ import { NAV_ITEMS } from "./nav-config";
  */
 export function MobileNav() {
   const pathname = usePathname();
+  const t = useTranslations("shell");
   const [open, setOpen] = useState(false);
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button variant="ghost" size="icon" className="md:hidden" aria-label="Open navigation">
+        <Button variant="ghost" size="icon" className="md:hidden" aria-label={t("openNavigation")}>
           <Menu className="size-4" aria-hidden="true" />
         </Button>
       </SheetTrigger>
-      <SheetContent title="Menu" className="left-0 right-auto max-w-xs border-l-0 border-r">
-        <nav className="flex flex-col gap-0.5" aria-label="Primary (mobile)">
+      <SheetContent title={t("menu")} className="left-0 right-auto max-w-xs border-l-0 border-r">
+        <nav className="flex flex-col gap-0.5" aria-label={t("mobileNav")}>
           {NAV_ITEMS.map((item) => {
             const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
             const Icon = item.icon;
@@ -42,7 +44,7 @@ export function MobileNav() {
                 <span className="mp-nav-icon">
                   <Icon className="size-4" aria-hidden="true" />
                 </span>
-                {item.label}
+                {t(`nav.${item.key}`)}
               </Link>
             );
           })}

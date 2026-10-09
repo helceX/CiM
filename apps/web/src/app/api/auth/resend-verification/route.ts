@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { resendVerificationSchema } from "@cim/validation";
 import { generateRawToken, hashToken } from "@cim/core";
 import { db, findUserByEmail, createEmailVerificationToken } from "@cim/db";
@@ -10,10 +11,11 @@ import { rejectIfNotHuman } from "@/lib/turnstile";
 const VERIFICATION_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
 
 export async function POST(request: Request) {
+  const e = await getTranslations("errors");
   const ip = clientIpFrom(request);
   const ipLimit = await checkRateLimit(`resend-verify:${ip}`, { limit: 10, windowSeconds: 60 * 60 });
   if (!ipLimit.allowed) {
-    return NextResponse.json({ error: "Too many attempts. Try again later." }, { status: 429 });
+    return NextResponse.json({ error: e("rateLimited") }, { status: 429 });
   }
 
   const json = await request.json().catch(() => null);
@@ -21,7 +23,7 @@ export async function POST(request: Request) {
   if (notHuman) return notHuman;
   const parsed = resendVerificationSchema.safeParse(json);
   if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid input" }, { status: 400 });
+    return NextResponse.json({ error: e("invalidInput") }, { status: 400 });
   }
 
   // Per-address cap too, so this endpoint can't be used to flood one inbox.
@@ -30,7 +32,7 @@ export async function POST(request: Request) {
     windowSeconds: 60 * 60,
   });
   if (!emailLimit.allowed) {
-    return NextResponse.json({ error: "Too many attempts. Try again later." }, { status: 429 });
+    return NextResponse.json({ error: e("rateLimited") }, { status: 429 });
   }
 
   // Same response whether or not the account exists or is already verified

@@ -1,0 +1,70 @@
+{
+  "ui": {
+    "close": "Kapat",
+    "loading": "Yükleniyor",
+    "search": "Ara",
+    "searchPlaceholder": "Ara…",
+    "filters": "Filtreler",
+    "filterAll": "{label}: Tümü",
+    "clearFilters": "Filtreleri temizle ({count})",
+    "all": "Tümü",
+    "new": "Yeni",
+    "noChange": "Değişiklik yok",
+    "dateRange": "Tarih aralığı",
+    "last7": "Son 7 gün",
+    "last30": "Son 30 gün",
+    "last90": "Son 90 gün"
+  },
+  "shell": {
+    "skip": "İçeriğe geç",
+    "homeLink": "Mediaory panosu",
+    "primaryNav": "Ana gezinme",
+    "mobileNav": "Ana gezinme (mobil)",
+    "openNavigation": "Gezinmeyi aç",
+    "menu": "Menü",
+    "nav": {
+      "dashboard": "Pano",
+      "monitoring": "İzlemeler",
+      "mentions": "Bahsetmeler",
+      "social": "Sosyal",
+      "alerts": "Uyarılar",
+      "analytics": "Analiz",
+      "visuals": "Görseller",
+      "reports": "Raporlar",
+      "archive": "Arşiv",
+      "team": "Ekip",
+      "settings": "Ayarlar"
+    },
+    "account": {
+      "menu": "Hesap menüsü",
+      "signOut": "Çıkış yap",
+      "language": "Dil"
+    },
+    "theme": {
+      "toLight": "Açık temaya geç",
+      "toDark": "Koyu temaya geç"
+    }
+  },
+  "notifications": {
+    "title": "Bildirimler",
+    "label": "Bildirimler",
+    "labelUnread": "Bildirimler ({count} okunmamış)",
+    "markAllRead": "Tümünü okundu işaretle",
+    "loading": "Yükleniyor…",
+    "empty": "Her şey güncel.",
+    "new": "Yeni",
+    "openPost": "Gönderiyi aç ↗",
+    "open": "Aç",
+    "markReadFailed": "Okundu olarak işaretlenemedi. Lütfen tekrar deneyin.",
+    "markAllFailed": "Tümü okundu olarak işaretlenemedi. Lütfen tekrar deneyin."
+  },
+  "palette": {
+    "open": "Komut paletini aç",
+    "search": "Ara",
+    "title": "Komut paleti",
+    "placeholder": "Sayfa ve eylem ara…",
+    "label": "Sayfa ve eylem ara",
+    "noMatches": "Eşleşme yok",
+    "goTo": "{page} sayfasına git"
+  }
+}

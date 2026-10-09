@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { useTranslations } from "next-intl";
 import { Button, Field, Input } from "@cim/ui";
 import { TurnstileWidget } from "@/components/turnstile-widget";
 
@@ -11,6 +12,8 @@ export function ResendVerificationForm({
   defaultEmail?: string;
   turnstileSiteKey?: string | null;
 }) {
+  const t = useTranslations("auth.verify");
+  const common = useTranslations("auth");
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [captchaReset, setCaptchaReset] = useState(0);
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
@@ -32,11 +35,11 @@ export function ResendVerificationForm({
         return;
       }
       const data = await response.json().catch(() => ({}));
-      setMessage(data.error ?? "Something went wrong. Please try again.");
+      setMessage(data.error ?? common("generic"));
       setStatus("error");
       setCaptchaReset((n) => n + 1);
     } catch {
-      setMessage("Something went wrong. Please try again.");
+      setMessage(common("generic"));
       setStatus("error");
     }
   }
@@ -44,15 +47,14 @@ export function ResendVerificationForm({
   if (status === "sent") {
     return (
       <p role="status" className="text-sm text-foreground">
-        If that address has an unverified account, a new verification link is on its way. Check your
-        spam folder too.
+        {t("sent")}
       </p>
     );
   }
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-3" noValidate>
-      <Field id="resend-email" label="Email" required>
+      <Field id="resend-email" label={t("email")} required>
         <Input name="email" type="email" autoComplete="email" defaultValue={defaultEmail} required />
       </Field>
       {status === "error" && message ? (
@@ -66,7 +68,7 @@ export function ResendVerificationForm({
         variant="secondary"
         disabled={status === "sending" || (turnstileSiteKey !== null && !captchaToken)}
       >
-        {status === "sending" ? "Sending…" : "Resend verification email"}
+        {status === "sending" ? t("sending") : t("resend")}
       </Button>
     </form>
   );

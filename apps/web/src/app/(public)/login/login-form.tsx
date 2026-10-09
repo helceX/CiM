@@ -3,9 +3,12 @@
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Button, Field, Input } from "@cim/ui";
 
 export function LoginForm() {
+  const t = useTranslations("auth.signIn");
+  const common = useTranslations("auth");
   const router = useRouter();
   const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
@@ -33,14 +36,14 @@ export function LoginForm() {
       const data = await response.json();
       if (!response.ok) {
         if (data.code === "UNVERIFIED") setNeedsVerification(true);
-        setError(data.error ?? "Something went wrong. Please try again.");
+        setError(data.error ?? common("generic"));
         return;
       }
       const next = searchParams.get("next") ?? "/dashboard";
       router.push(next);
       router.refresh();
     } catch {
-      setError("Something went wrong. Please try again.");
+      setError(common("generic"));
     } finally {
       setIsSubmitting(false);
     }
@@ -48,10 +51,10 @@ export function LoginForm() {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
-      <Field id="email" label="Email" required>
+      <Field id="email" label={t("email")} required>
         <Input name="email" type="email" autoComplete="email" required />
       </Field>
-      <Field id="password" label="Password" required>
+      <Field id="password" label={t("password")} required>
         <Input name="password" type="password" autoComplete="current-password" required />
       </Field>
 
@@ -62,7 +65,7 @@ export function LoginForm() {
             <>
               {" "}
               <Link href="/verify-email" className="underline underline-offset-2">
-                Resend verification email
+                {t("resendVerification")}
               </Link>
             </>
           ) : null}
@@ -71,18 +74,18 @@ export function LoginForm() {
 
       <div className="flex items-center justify-end">
         <Link href="/forgot-password" className="text-sm text-primary underline underline-offset-2">
-          Forgot password?
+          {t("forgot")}
         </Link>
       </div>
 
       <Button type="submit" disabled={isSubmitting}>
-        {isSubmitting ? "Signing in…" : "Sign in"}
+        {isSubmitting ? t("submitting") : t("submit")}
       </Button>
 
       <p className="text-center text-sm text-muted-foreground">
-        Don&apos;t have an account?{" "}
+        {t("noAccount")}{" "}
         <Link href="/register" className="text-primary underline underline-offset-2">
-          Create one
+          {t("create")}
         </Link>
       </p>
     </form>

@@ -1,10 +1,12 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { eq } from "drizzle-orm";
+import { eq, inArray, sql } from "drizzle-orm";
 import { db } from "../client";
 import { articles, sources } from "../schema/content";
 import {
+  assignStoryCluster,
   findExistingArticle,
   findSimilarRecentArticle,
+  findSimilarRecentArticleExact,
   insertArticle,
   listRecentArticlesForPreview,
   listRelatedArticles,
@@ -218,18 +220,22 @@ describe("articles repository (integration)", () => {
       await db.delete(sources).where(eq(sources.id, otherSourceId));
     });
 
+    // A story stored by the crawler (insertArticle) carries the full-text vector the lookup narrows by.
+    const store = (source: string, title: string, tag: string) =>
+      insertArticle(db, {
+        sourceId: source,
+        canonicalUrl: `https://articles-test.example/${tag}-${Date.now()}-${Math.random()}`,
+        contentHash: `articles-${tag}-${Date.now()}-${Math.random()}`,
+        title,
+        storedExcerpt: null,
+        language: null,
+        publishedAt: null,
+        authorName: null,
+      });
+
     it("finds a similar recent article from a different source, but not from the same source", async () => {
       const title = `Northwind Atlas wins regional innovation award ${Date.now()}`;
-      const [ownSourceArticle] = await db
-        .insert(articles)
-        .values({
-          sourceId,
-          canonicalUrl: `https://articles-test.example/cluster-own-${Date.now()}`,
-          contentHash: `articles-cluster-own-hash-${Date.now()}`,
-          title,
-        })
-        .returning();
-      if (!ownSourceArticle) throw new Error("failed to create test article");
+      await store(sourceId, title, "cluster-own");
 
       const sameSourceMatch = await findSimilarRecentArticle(db, {
         title,
@@ -237,16 +243,7 @@ describe("articles repository (integration)", () => {
       });
       expect(sameSourceMatch).toBeUndefined();
 
-      const [otherSourceArticle] = await db
-        .insert(articles)
-        .values({
-          sourceId: otherSourceId,
-          canonicalUrl: `https://articles-test-other.example/cluster-other-${Date.now()}`,
-          contentHash: `articles-cluster-other-hash-${Date.now()}`,
-          title: `${title} — updated`,
-        })
-        .returning();
-      if (!otherSourceArticle) throw new Error("failed to create second test article");
+      const otherSourceArticle = await store(otherSourceId, `${title} — updated`, "cluster-other");
 
       const crossSourceMatch = await findSimilarRecentArticle(db, {
         title,
@@ -254,6 +251,95 @@ describe("articles repository (integration)", () => {
       });
       expect(crossSourceMatch?.id).toBe(otherSourceArticle.id);
       expect(crossSourceMatch?.storyClusterId).toBeNull();
+    });
+
+    it("gives the same answer as the exhaustive scan for the look-alikes it is meant to find", async () => {
+      const stamp = Date.now();
+      const originals = [
+        `Zorlu Holding yeni enerji yatırımını duyurdu ${stamp}`,
+        `Borsa İstanbul güne yükselişle başladı ${stamp}`,
+        `Turkcell ve Vodafone ortak fiber altyapı anlaşması imzaladı ${stamp}`,
+      ];
+      const lookAlikes = [
+        `Zorlu Holding yeni enerji yatırımını açıkladı ${stamp}`, // one word changed
+        `BORSA İSTANBUL GÜNE YÜKSELİŞLE BAŞLADI ${stamp}`, // other case
+        `Turkcell ile Vodafone ortak fiber altyapı anlaşması imzaladı ${stamp}`, // one word swapped
+      ];
+      for (const title of originals) await store(otherSourceId, title, "recall");
+      for (const [index, title] of [...lookAlikes, `Bambaşka bir konuda tamamen alakasız başlık ${stamp}`].entries()) {
+        const fast = await findSimilarRecentArticle(db, { title, excludeSourceId: sourceId });
+        const exact = await findSimilarRecentArticleExact(db, { title, excludeSourceId: sourceId });
+        expect(fast?.id, `look-alike ${index}`).toBe(exact?.id);
+        if (index < lookAlikes.length) expect(fast, `look-alike ${index} is found`).toBeDefined();
+      }
+    });
+
+    it("starts one cluster for two stories that find each other at the same moment", async () => {
+      const stamp = Date.now();
+      const a = await store(sourceId, `Mutual race story headline alpha ${stamp}`, "mutual-a");
+      const b = await store(otherSourceId, `Mutual race story headline alpha ${stamp}`, "mutual-b");
+      const [fromA, fromB] = await Promise.all([
+        assignStoryCluster(db, { articleId: a.id, candidate: { id: b.id, storyClusterId: null } }),
+        assignStoryCluster(db, { articleId: b.id, candidate: { id: a.id, storyClusterId: null } }),
+      ]);
+      expect(fromA).toBe(fromB);
+      const rows = await db.select({ id: articles.id, cluster: articles.storyClusterId }).from(articles).where(inArray(articles.id, [a.id, b.id]));
+      expect(new Set(rows.map((row) => row.cluster))).toEqual(new Set([fromA]));
+    });
+
+    it("gives many stories that find the same look-alike one shared cluster", async () => {
+      const stamp = Date.now();
+      const candidate = await store(otherSourceId, `Shared candidate story headline beta ${stamp}`, "shared-c");
+      const joiners = await Promise.all(Array.from({ length: 8 }, (_, i) => store(sourceId, `Shared candidate story headline beta ${stamp} v${i}`, `shared-j${i}`)));
+      const clusters = await Promise.all(joiners.map((joiner) => assignStoryCluster(db, { articleId: joiner.id, candidate: { id: candidate.id, storyClusterId: null } })));
+      expect(new Set(clusters).size).toBe(1);
+      const [row] = await db.select({ cluster: articles.storyClusterId }).from(articles).where(eq(articles.id, candidate.id));
+      expect(row?.cluster).toBe(clusters[0]);
+    });
+
+    it("joins a cluster that already exists without taking a lock, and keeps its id", async () => {
+      const stamp = Date.now();
+      const existing = crypto.randomUUID();
+      const candidate = await store(otherSourceId, `Existing cluster candidate gamma ${stamp}`, "joined-c");
+      await setArticleStoryCluster(db, candidate.id, existing);
+      const joiner = await store(sourceId, `Existing cluster candidate gamma ${stamp} again`, "joined-j");
+      // Another transaction holds a lock on this very pair: a join must not wait for it.
+      let release!: () => void;
+      const held = new Promise<void>((resolve) => (release = resolve));
+      const holder = db.transaction(async (tx) => {
+        for (const id of [joiner.id, candidate.id].sort()) await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${`story-cluster:${id}`}, 0))`);
+        await held;
+      });
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      const joined = await Promise.race([
+        assignStoryCluster(db, { articleId: joiner.id, candidate: { id: candidate.id, storyClusterId: existing } }),
+        new Promise<string>((_, reject) => setTimeout(() => reject(new Error("waited for a lock it does not need")), 3000)),
+      ]);
+      release();
+      await holder;
+      expect(joined).toBe(existing);
+    });
+
+    it("does not make unrelated clusters wait for each other (the lock is per pair, not global)", async () => {
+      const stamp = Date.now();
+      const a = await store(sourceId, `Pair lock story headline delta ${stamp}`, "pair-a");
+      const b = await store(otherSourceId, `Pair lock story headline delta ${stamp}`, "pair-b");
+      const x = await store(sourceId, `Different pair story headline epsilon ${stamp}`, "pair-x");
+      const y = await store(otherSourceId, `Different pair story headline epsilon ${stamp}`, "pair-y");
+      let release!: () => void;
+      const held = new Promise<void>((resolve) => (release = resolve));
+      const holder = db.transaction(async (tx) => {
+        for (const id of [x.id, y.id].sort()) await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${`story-cluster:${id}`}, 0))`);
+        await held;
+      });
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      const cluster = await Promise.race([
+        assignStoryCluster(db, { articleId: a.id, candidate: { id: b.id, storyClusterId: null } }),
+        new Promise<string>((_, reject) => setTimeout(() => reject(new Error("blocked by an unrelated pair's lock")), 3000)),
+      ]);
+      release();
+      await holder;
+      expect(cluster).toMatch(/^[0-9a-f-]{36}$/);
     });
 
     it("does not match an unrelated headline", async () => {

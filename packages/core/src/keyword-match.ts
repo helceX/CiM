@@ -114,8 +114,24 @@ export function keywordMatches(term: string, texts: { original: string; folded: 
   return regex.test(spec.caseSensitive ? texts.original.normalize("NFC") : texts.folded);
 }
 
+/**
+ * A story is matched against every active monitoring (hundreds of them) one after another, each asking for the
+ * same text to be folded. The last few texts are remembered, so a story is folded once per crawl, not once per
+ * monitoring. Small and bounded; a long text is not worth keeping.
+ */
+const PREPARED_MAX = 32;
+const PREPARED_TEXT_MAX_CHARS = 20_000;
+const prepared = new Map<string, { original: string; folded: string }>();
+
 export function prepareText(text: string): { original: string; folded: string } {
-  return { original: text, folded: turkishFold(text) };
+  const hit = prepared.get(text);
+  if (hit) return hit;
+  const value = { original: text, folded: turkishFold(text) };
+  if (text.length <= PREPARED_TEXT_MAX_CHARS) {
+    if (prepared.size >= PREPARED_MAX) prepared.delete(prepared.keys().next().value as string);
+    prepared.set(text, value);
+  }
+  return value;
 }
 
 /** Plain-language description of how a keyword will be matched, for the UI. */

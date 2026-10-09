@@ -250,7 +250,9 @@ export async function getCrawlCoverage(db: Db): Promise<CrawlCoverage> {
   const [articleRow] = await db
     .select({ n: sql<number>`count(*)::int` })
     .from(articles)
-    .where(sql`${articles.createdAt} >= now() - interval '24 hours'`);
+    // fetched_at is indexed (created_at is not) and holds the same instant: counting by created_at scanned the whole
+    // articles table (~96 ms and parallel workers on 590k rows) on every Monitoring page view.
+    .where(sql`${articles.fetchedAt} >= now() - interval '24 hours'`);
   return {
     activeSources: Number(sourceRow?.active ?? 0),
     scannedSources: Number(sourceRow?.scanned ?? 0),

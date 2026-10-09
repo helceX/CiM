@@ -31,15 +31,29 @@ function takeRecentBody(url: string): string | null {
   return hit && Date.now() - hit.at < RECENT_BODY_MS ? hit.body : null;
 }
 
+/** What the connector reaches the internet with. Production passes nothing; tests and the benchmark pass fakes. */
+export type RSSConnectorDeps = {
+  fetcher?: typeof safeFetch;
+  robotsBlocked?: (url: string) => Promise<boolean>;
+};
+
 export class RSSConnector implements SourceConnector {
+  private readonly fetcher: typeof safeFetch;
+  private readonly robotsBlocked: (url: string) => Promise<boolean>;
+
+  constructor(deps: RSSConnectorDeps = {}) {
+    this.fetcher = deps.fetcher ?? safeFetch;
+    this.robotsBlocked = deps.robotsBlocked ?? isExplicitlyBlockedByRobots;
+  }
+
   async fetch(source: Source): Promise<RawFetchResult[]> {
     if (!source.url) throw new Error(`Source "${source.name}" has no feed URL configured`);
     let body = takeRecentBody(source.url);
     if (body === null) {
-      if (await isExplicitlyBlockedByRobots(source.url)) {
+      if (await this.robotsBlocked(source.url)) {
         throw new Error(`robots.txt asks Mediaory-Bot not to fetch ${source.url}`);
       }
-      body = (await safeFetch(source.url)).body;
+      body = (await this.fetcher(source.url)).body;
     }
     const items = parseFeed(body);
     return items
@@ -58,10 +72,10 @@ export class RSSConnector implements SourceConnector {
   async healthCheck(source: Source): Promise<SourceHealth> {
     if (!source.url) return { status: "unavailable", message: "No feed URL configured" };
     try {
-      if (await isExplicitlyBlockedByRobots(source.url)) {
+      if (await this.robotsBlocked(source.url)) {
         return { status: "blocked", message: "robots.txt asks Mediaory-Bot not to fetch this feed" };
       }
-      const { status, body } = await safeFetch(source.url, { timeoutMs: 8000 });
+      const { status, body } = await this.fetcher(source.url, { timeoutMs: 8000 });
       if (status >= 400) return { status: "error", message: `Feed responded HTTP ${status}` };
       parseFeed(body);
       rememberBody(source.url, body);

@@ -1,9 +1,8 @@
-import { randomUUID } from "node:crypto";
-import { sql } from "drizzle-orm";
 import {
   classifyMatchType,
   describeSignal,
   findMatchedTerm,
+  isWithinStoryWindow,
   matchableText,
   matchesText,
   sourceInRegionScopes,
@@ -12,6 +11,7 @@ import {
 import {
   applyCoverageToCluster,
   asOrganizationId,
+  assignStoryCluster,
   countClusterOutlets,
   createMentionIfNotExists,
   findExistingArticle,
@@ -19,7 +19,6 @@ import {
   findSimilarRecentArticle,
   insertArticle,
   listActiveMonitoringQueriesForSourceType,
-  setArticleStoryCluster,
   signalFor,
   touchSocialProfile,
   type Db,
@@ -169,6 +168,11 @@ export async function ingestSource(
  * article's existing cluster, or starts a new one if neither article
  * had one yet. A single-source story is never clustered with itself —
  * clustering exists to answer "who else is covering this."
+ *
+ * Only stories published within the clustering window are looked up: a new source's back catalogue (the
+ * first crawl of a feed returns its last 20-40 stories, mostly days old) cannot have a look-alike worth
+ * linking, and each lookup is a database search. The race between two stories that find each other is
+ * handled in assignStoryCluster (articles.ts), with a lock held for milliseconds.
  */
 async function maybeAssignStoryCluster(
   db: Db,
@@ -176,41 +180,18 @@ async function maybeAssignStoryCluster(
     id: string;
     sourceId: string;
     title: string;
+    publishedAt: Date | null;
     storyClusterId: string | null;
   },
 ): Promise<string | null> {
   if (article.storyClusterId) return article.storyClusterId;
-  // Most stories have no look-alike from another source, so look first WITHOUT the lock and stop
-  // there: a lock held around every lookup made all concurrent crawls queue behind one another.
+  if (!isWithinStoryWindow(article.publishedAt)) return null;
   const candidate = await findSimilarRecentArticle(db, {
     title: article.title,
     excludeSourceId: article.sourceId,
   });
   if (!candidate) return null;
-  // Race: crawlSourceWorker runs several jobs at once and crawl-scheduler.ts fans out every
-  // active source's job in the same tick — so two different sources can both insert a new
-  // article for the same breaking story around the same time, exactly the case this clustering
-  // exists for. setArticleStoryCluster is a plain unconditional UPDATE, so without serializing,
-  // both jobs can see the *other* article's storyClusterId as still null and each generate its
-  // own new cluster id, cross-writing each other's row. A single fixed-key advisory lock
-  // serializes the assignment (the lookup is repeated inside it, so it sees the other job's
-  // result); it is only taken when a look-alike exists, which is rare — the same pattern
-  // billing.ts's createMonitoringQueryWithPlanLimit already uses for its own race.
-  return db.transaction(async (tx) => {
-    await tx.execute(sql`select pg_advisory_xact_lock(hashtext('story-cluster-assign'))`);
-    const txDb = tx as unknown as Db;
-    const similar = await findSimilarRecentArticle(txDb, {
-      title: article.title,
-      excludeSourceId: article.sourceId,
-    });
-    if (!similar) return null;
-    const storyClusterId = similar.storyClusterId ?? randomUUID();
-    await setArticleStoryCluster(txDb, article.id, storyClusterId);
-    if (!similar.storyClusterId) {
-      await setArticleStoryCluster(txDb, similar.id, storyClusterId);
-    }
-    return storyClusterId;
-  });
+  return assignStoryCluster(db, { articleId: article.id, candidate });
 }
 
 /**

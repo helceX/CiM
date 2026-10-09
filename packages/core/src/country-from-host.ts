@@ -22,3 +22,36 @@ export function inferCountryFromHost(host: string | null | undefined): string | 
   const code = tld === "uk" ? "GB" : tld.toUpperCase();
   return countryByCode(code) ? code : null;
 }
+
+const TURKISH_SOURCE_CUE = /\b(türkiye|turkiye|türk|turk|haber|gazete|gündem|gundem|ekonomi|teknoloji|girişim|girisim|son dakika|sağlık|saglik|yerel haber|ulusal haber|milliyet|cumhuriyet|sözcü|sozcu|köşe yazarı|kose yazari)\b/i;
+
+export type SourceCountryHints = {
+  name?: string | null;
+  domain?: string | null;
+  url?: string | null;
+  language?: string | null;
+};
+
+/** Classify by explicit Turkish language/name/feed signals before falling back to the host's country-code ending. */
+export function inferCountryFromSource(source: SourceCountryHints): string | null {
+  const language = source.language?.trim().toLowerCase() ?? "";
+  if (/^tr(?:$|[-_\s])/.test(language)) return "TR";
+
+  let decodedUrl = source.url ?? "";
+  try {
+    decodedUrl = decodeURIComponent(decodedUrl.replace(/\+/g, " "));
+  } catch {
+    // Keep the original address if it contains malformed escapes.
+  }
+  const cues = `${source.name ?? ""} ${decodedUrl}`;
+  if (/[ğşıİ]/.test(cues) || TURKISH_SOURCE_CUE.test(cues)) return "TR";
+
+  const host = source.domain || (() => {
+    try {
+      return new URL(source.url ?? "").hostname;
+    } catch {
+      return "";
+    }
+  })();
+  return inferCountryFromHost(host);
+}

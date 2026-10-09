@@ -45,7 +45,7 @@ export const CATALOG_IMPORT_ORDER: readonly ImportCandidate[] = [
     verified: false,
     rank: e.group === "columns" || e.group === "forums" ? 2 : 0,
   })),
-  ...WORLD_SOURCE_CATALOG.map<ImportCandidate>((e) => ({
+  ...WORLD_SOURCE_CATALOG.filter((e) => !e.manualOnly).map<ImportCandidate>((e) => ({
     key: e.key,
     name: e.name,
     url: e.url,

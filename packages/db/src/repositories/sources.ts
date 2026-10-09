@@ -1,5 +1,5 @@
 import { and, eq, inArray, isNull, ne, notInArray, or, sql } from "drizzle-orm";
-import { crawlIntervalTable, hostMatchesDomain, hostOfUrl, inferCountryFromHost, isLicenseRequiredHost } from "@cim/core";
+import { crawlIntervalTable, hostMatchesDomain, hostOfUrl, inferCountryFromSource, isLicenseRequiredHost } from "@cim/core";
 import type { Db } from "../client";
 import { articles, sources } from "../schema/content";
 import { isHostBlocked, listBlockedDomains } from "./compliance";
@@ -230,10 +230,10 @@ export async function bulkSetSourcesCrawlEnabled(
  * own ending is used; .com/.org sites stay unknown. Never overwrites a country that is already set.
  */
 export async function fillMissingSourceCountries(db: Db): Promise<{ checked: number; updated: number; byCountry: Record<string, number> }> {
-  const rows = await db.select({ id: sources.id, domain: sources.domain }).from(sources).where(isNull(sources.country));
+  const rows = await db.select({ id: sources.id, domain: sources.domain, name: sources.name, url: sources.url, language: sources.language }).from(sources).where(isNull(sources.country));
   const idsByCountry = new Map<string, string[]>();
   for (const row of rows) {
-    const code = inferCountryFromHost(row.domain);
+    const code = inferCountryFromSource(row);
     if (code) idsByCountry.set(code, [...(idsByCountry.get(code) ?? []), row.id]);
   }
   const byCountry: Record<string, number> = {};

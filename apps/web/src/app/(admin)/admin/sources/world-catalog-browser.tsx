@@ -22,6 +22,7 @@ type Item = {
   country: string;
   group: string;
   verified: boolean;
+  manualOnly?: boolean;
   added: boolean;
 };
 
@@ -335,6 +336,7 @@ export function WorldCatalogBrowser({
               <div className="truncate text-sm font-medium text-foreground">
                 {entry.name}
                 {entry.verified ? <span className="ml-2 rounded-sm bg-success/15 px-1.5 py-0.5 text-[10px] font-semibold text-success">XML ✓</span> : null}
+                {entry.manualOnly ? <span className="ml-2 rounded-sm bg-surface-muted px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">Manual candidate</span> : null}
               </div>
               <div className="truncate text-xs text-muted-foreground">
                 {entry.country ? countryName(entry.country) : "Global"} · {entry.url}

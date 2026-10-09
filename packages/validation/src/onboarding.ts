@@ -20,6 +20,7 @@ export const sourceTypeSelectionSchema = z.enum([
   "podcast",
   "forums",
   "comments",
+  "trends",
   "all",
 ]);
 export type SourceTypeSelection = z.infer<typeof sourceTypeSelectionSchema>;

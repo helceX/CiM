@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { eq } from "drizzle-orm";
 import { completeOnboardingSchema } from "@cim/validation";
 import { astToBooleanQuery, emptyQueryAst, expandSourceCategoriesToTypes } from "@cim/core";
@@ -6,18 +7,19 @@ import { backfillMentionsForQuery, createNotifyRuleForQuery, createProjectWithMo
 import { requireOrgContext } from "@/lib/tenant";
 
 export async function POST(request: Request) {
+  const e = await getTranslations("errors");
   let context;
   try {
     context = await requireOrgContext();
   } catch {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    return NextResponse.json({ error: e("notAuthenticated") }, { status: 401 });
   }
 
   const json = await request.json().catch(() => null);
   const parsed = completeOnboardingSchema.safeParse(json);
   if (!parsed.success) {
     return NextResponse.json(
-      { error: "Invalid input", issues: parsed.error.issues },
+      { error: e("invalidInput"), issues: parsed.error.issues },
       { status: 400 },
     );
   }
@@ -29,7 +31,7 @@ export async function POST(request: Request) {
     .where(eq(schema.workspaces.organizationId, context.organizationId))
     .limit(1);
   if (!workspace) {
-    return NextResponse.json({ error: "No workspace found for organization" }, { status: 500 });
+    return NextResponse.json({ error: e("noWorkspace") }, { status: 500 });
   }
 
   const ast = { ...emptyQueryAst(), include: input.keywords };
@@ -49,7 +51,7 @@ export async function POST(request: Request) {
   if (!result.ok) {
     return NextResponse.json(
       {
-        error: `Your plan allows up to ${result.limit} monitoring quer${result.limit === 1 ? "y" : "ies"}. Upgrade to add more.`,
+        error: e("planLimit", { limit: result.limit }),
       },
       { status: 409 },
     );

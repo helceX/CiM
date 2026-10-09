@@ -14,6 +14,8 @@ export function AcceptInvitationForm({
   email: string;
 }) {
   const router = useRouter();
+  const t = useTranslations("auth.invitation");
+  const common = useTranslations("auth");
   const legal = useTranslations("legal.forms");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -37,13 +39,13 @@ export function AcceptInvitationForm({
       });
       const data = await response.json();
       if (!response.ok) {
-        setError(data.error ?? "Something went wrong. Please try again.");
+        setError(data.error ?? common("generic"));
         return;
       }
       router.push("/dashboard");
       router.refresh();
     } catch {
-      setError("Something went wrong. Please try again.");
+      setError(common("generic"));
     } finally {
       setIsSubmitting(false);
     }
@@ -51,21 +53,21 @@ export function AcceptInvitationForm({
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
-      <Field id="email" label="Email">
+      <Field id="email" label={t("email")}>
         <Input value={email} disabled readOnly />
       </Field>
       <div className="grid grid-cols-2 gap-3">
-        <Field id="firstName" label="First name" required>
+        <Field id="firstName" label={t("firstName")} required>
           <Input name="firstName" autoComplete="given-name" required />
         </Field>
-        <Field id="lastName" label="Last name" required>
+        <Field id="lastName" label={t("lastName")} required>
           <Input name="lastName" autoComplete="family-name" required />
         </Field>
       </div>
       <Field
         id="password"
-        label="Password"
-        hint="At least 10 characters, with upper and lower case letters and a number."
+        label={t("password")}
+        hint={t("passwordHint")}
         required
       >
         <Input name="password" type="password" autoComplete="new-password" required />
@@ -90,7 +92,7 @@ export function AcceptInvitationForm({
         })}
       </p>
       <Button type="submit" disabled={isSubmitting}>
-        {isSubmitting ? "Setting up…" : "Accept invitation"}
+        {isSubmitting ? t("submitting") : t("submit")}
       </Button>
     </form>
   );

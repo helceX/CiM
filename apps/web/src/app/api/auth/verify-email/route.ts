@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { verifyEmailSchema } from "@cim/validation";
 import { hashToken } from "@cim/core";
 import {
@@ -10,10 +11,11 @@ import {
 import { createUserSession } from "@/lib/session";
 
 export async function POST(request: Request) {
+  const e = await getTranslations("errors");
   const json = await request.json().catch(() => null);
   const parsed = verifyEmailSchema.safeParse(json);
   if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid or missing token" }, { status: 400 });
+    return NextResponse.json({ error: e("missingToken") }, { status: 400 });
   }
 
   const tokenHash = hashToken(parsed.data.token);
@@ -21,7 +23,7 @@ export async function POST(request: Request) {
   // one gets the token, so only one session is ever minted from it.
   const tokenRow = await claimVerificationToken(db, tokenHash);
   if (!tokenRow) {
-    return NextResponse.json({ error: "This link is invalid or has expired." }, { status: 400 });
+    return NextResponse.json({ error: e("invalidLink") }, { status: 400 });
   }
 
   // A verification token issued before the account was deleted must not
@@ -33,7 +35,7 @@ export async function POST(request: Request) {
   // anonymized row.
   const targetUser = await findUserById(db, tokenRow.userId);
   if (!targetUser || targetUser.deletedAt) {
-    return NextResponse.json({ error: "This link is invalid or has expired." }, { status: 400 });
+    return NextResponse.json({ error: e("invalidLink") }, { status: 400 });
   }
 
   await markUserVerified(db, tokenRow.userId);

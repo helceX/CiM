@@ -2,6 +2,7 @@
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useState, type FormEvent } from "react";
+import { useTranslations } from "next-intl";
 import { Button, Input, Select } from "@cim/ui";
 
 export type FilterBarSelectDef = {
@@ -18,7 +19,7 @@ export type FilterBarSelectDef = {
  * duplicate state to keep in sync.
  */
 export function FilterBar({
-  searchPlaceholder = "Search…",
+  searchPlaceholder,
   selects,
   extraKeys = [],
 }: {
@@ -27,6 +28,7 @@ export function FilterBar({
   /** Other URL params that count as an active filter (e.g. a deep-linked ?query=). */
   extraKeys?: string[];
 }) {
+  const t = useTranslations("ui");
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -60,13 +62,13 @@ export function FilterBar({
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-3" role="search" aria-label="Filters">
+    <div className="flex flex-wrap items-center gap-3" role="search" aria-label={t("filters")}>
       <form onSubmit={handleSearchSubmit} className="flex-1 min-w-[200px]">
         <Input
           value={searchDraft}
           onChange={(e) => setSearchDraft(e.target.value)}
-          placeholder={searchPlaceholder}
-          aria-label="Search"
+          placeholder={searchPlaceholder ?? t("searchPlaceholder")}
+          aria-label={t("search")}
         />
       </form>
       {selects.map((select) => (
@@ -76,7 +78,7 @@ export function FilterBar({
           value={searchParams.get(select.key) ?? ""}
           onChange={(e) => updateParam(select.key, e.target.value)}
         >
-          <option value="">{select.label}: All</option>
+          <option value="">{t("filterAll", { label: select.label })}</option>
           {select.options.map((option) => (
             <option key={option.value} value={option.value}>
               {option.label}
@@ -86,7 +88,7 @@ export function FilterBar({
       ))}
       {activeKeys.length > 0 ? (
         <Button type="button" size="sm" variant="ghost" onClick={clearAll}>
-          Clear filters ({activeKeys.length})
+          {t("clearFilters", { count: activeKeys.length })}
         </Button>
       ) : null}
     </div>

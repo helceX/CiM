@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
 
 // Integration tests (packages/db, packages/ingestion) need DATABASE_URL /
@@ -24,6 +25,9 @@ export default defineConfig({
     // (client-bundle) ones — both are set so this holds regardless of
     // which path a given test file's imports take.
     conditions: ["react-server"],
+    // next-intl's server API needs a running Next.js request, so unit tests get an English stand-in
+    // (see vitest.next-intl-server.ts for why this is an alias and not a mock).
+    alias: { "next-intl/server": fileURLToPath(new URL("./vitest.next-intl-server.ts", import.meta.url)) },
   },
   ssr: {
     resolve: {

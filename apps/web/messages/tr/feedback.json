@@ -1,0 +1,31 @@
+{
+  "errors": {
+    "generic": "Bir şeyler ters gitti. Lütfen tekrar deneyin.",
+    "rateLimited": "Çok fazla deneme yapıldı. Lütfen daha sonra tekrar deneyin.",
+    "invalidInput": "Geçersiz giriş",
+    "invalidLink": "Bu bağlantı geçersiz veya süresi dolmuş.",
+    "missingToken": "Anahtar geçersiz ya da eksik",
+    "notAuthenticated": "Oturum açılmamış",
+    "forbidden": "Yetkiniz yok",
+    "captchaFailed": "İnsan olduğunuzu doğrulayamadık. Lütfen tekrar deneyin.",
+    "invalidCredentials": "E-posta veya parola hatalı.",
+    "unverified": "Giriş yapmadan önce lütfen e-postanızı doğrulayın.",
+    "invitationInvalid": "Bu davet geçersiz veya süresi dolmuş.",
+    "noWorkspace": "Organizasyon için çalışma alanı bulunamadı",
+    "planLimit": "Planınız en fazla {limit} izlemeye izin veriyor. Daha fazlasını eklemek için yükseltin."
+  },
+  "validation": {
+    "password_must_be_at_least_10_characters": "Parola en az 10 karakter olmalı",
+    "password_is_too_long": "Parola çok uzun",
+    "add_a_lowercase_letter": "Bir küçük harf ekleyin",
+    "add_an_uppercase_letter": "Bir büyük harf ekleyin",
+    "add_a_number": "Bir rakam ekleyin",
+    "first_name_is_required": "Ad gerekli",
+    "last_name_is_required": "Soyad gerekli",
+    "enter_a_valid_work_email": "Geçerli bir iş e-postası girin",
+    "company_name_is_required": "Şirket adı gerekli",
+    "position_is_required": "Pozisyon gerekli",
+    "enter_a_valid_email": "Geçerli bir e-posta girin",
+    "password_is_required": "Parola gerekli"
+  }
+}

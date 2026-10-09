@@ -1,0 +1,70 @@
+{
+  "ui": {
+    "close": "Close",
+    "loading": "Loading",
+    "search": "Search",
+    "searchPlaceholder": "Search…",
+    "filters": "Filters",
+    "filterAll": "{label}: All",
+    "clearFilters": "Clear filters ({count})",
+    "all": "All",
+    "new": "New",
+    "noChange": "No change",
+    "dateRange": "Date range",
+    "last7": "Last 7 days",
+    "last30": "Last 30 days",
+    "last90": "Last 90 days"
+  },
+  "shell": {
+    "skip": "Skip to content",
+    "homeLink": "Mediaory dashboard",
+    "primaryNav": "Primary",
+    "mobileNav": "Primary (mobile)",
+    "openNavigation": "Open navigation",
+    "menu": "Menu",
+    "nav": {
+      "dashboard": "Dashboard",
+      "monitoring": "Monitoring",
+      "mentions": "Mentions",
+      "social": "Social",
+      "alerts": "Alerts",
+      "analytics": "Analytics",
+      "visuals": "Visuals",
+      "reports": "Reports",
+      "archive": "Archive",
+      "team": "Team",
+      "settings": "Settings"
+    },
+    "account": {
+      "menu": "Account menu",
+      "signOut": "Sign out",
+      "language": "Language"
+    },
+    "theme": {
+      "toLight": "Switch to light theme",
+      "toDark": "Switch to dark theme"
+    }
+  },
+  "notifications": {
+    "title": "Notifications",
+    "label": "Notifications",
+    "labelUnread": "Notifications ({count} unread)",
+    "markAllRead": "Mark all read",
+    "loading": "Loading…",
+    "empty": "You're all caught up.",
+    "new": "New",
+    "openPost": "Open the post ↗",
+    "open": "Open",
+    "markReadFailed": "Couldn't mark that as read. Please try again.",
+    "markAllFailed": "Couldn't mark all as read. Please try again."
+  },
+  "palette": {
+    "open": "Open command palette",
+    "search": "Search",
+    "title": "Command palette",
+    "placeholder": "Search pages and actions…",
+    "label": "Search pages and actions",
+    "noMatches": "No matches",
+    "goTo": "Go to {page}"
+  }
+}

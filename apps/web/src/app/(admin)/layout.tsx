@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 import { notFound, redirect } from "next/navigation";
+import { NextIntlClientProvider } from "next-intl";
+import { pickMessages } from "@/i18n/pick";
 import { getCurrentUser } from "@/lib/session";
 import { AdminNav } from "./admin-nav";
 
@@ -20,17 +22,24 @@ export default async function AdminLayout({ children }: { children: ReactNode })
     notFound();
   }
 
+  const messages = await pickMessages(["ui"]);
   return (
-    <div lang="en" className="flex min-h-screen flex-col">
-      <header className="flex items-center justify-between border-b border-border px-6 py-4">
-        <div>
-          <span className="text-sm font-semibold text-foreground">Mediaory Admin</span>
-          <span className="ml-2 text-xs text-muted-foreground">Platform Super Admin</span>
-        </div>
-        <span className="text-sm text-muted-foreground">{user.email}</span>
-      </header>
-      <AdminNav />
-      <main className="flex-1 px-6 py-8">{children}</main>
-    </div>
+    <NextIntlClientProvider messages={messages}>
+      <div lang="en" className="flex min-h-screen flex-col">
+        <header className="flex items-center justify-between border-b border-border px-6 py-4">
+          <div>
+            <span className="text-sm font-semibold text-foreground">
+              Mediaory Admin
+            </span>
+            <span className="ml-2 text-xs text-muted-foreground">
+              Platform Super Admin
+            </span>
+          </div>
+          <span className="text-sm text-muted-foreground">{user.email}</span>
+        </header>
+        <AdminNav />
+        <main className="flex-1 px-6 py-8">{children}</main>
+      </div>
+    </NextIntlClientProvider>
   );
 }

@@ -18,6 +18,8 @@ export async function registerOrganizationOwner(
     lastName: string;
     companyName: string;
     jobTitle: string;
+    /** The language they signed up in (the screen's language); kept for the e-mails we send them. */
+    locale?: string;
   },
 ) {
   return db.transaction(async (tx) => {
@@ -29,6 +31,7 @@ export async function registerOrganizationOwner(
         firstName: input.firstName,
         lastName: input.lastName,
         jobTitle: input.jobTitle,
+        ...(input.locale ? { locale: input.locale } : {}),
       })
       .returning();
     if (!user) throw new Error("Failed to create user");

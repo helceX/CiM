@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import { Badge } from "@cim/ui";
 
 /**
@@ -13,11 +14,12 @@ export function ChangeBadge({
   current: number;
   previous: number;
 }) {
+  const t = useTranslations("ui");
   if (previous === 0) {
-    return current > 0 ? <Badge tone="info">New</Badge> : null;
+    return current > 0 ? <Badge tone="info">{t("new")}</Badge> : null;
   }
   const change = Math.round(((current - previous) / previous) * 100);
-  if (change === 0) return <Badge tone="neutral">No change</Badge>;
+  if (change === 0) return <Badge tone="neutral">{t("noChange")}</Badge>;
   return (
     <Badge tone={change > 0 ? "success" : "danger"}>
       {change > 0 ? "+" : ""}

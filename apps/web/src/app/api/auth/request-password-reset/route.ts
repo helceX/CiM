@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { requestPasswordResetSchema } from "@cim/validation";
 import { generateRawToken, hashToken } from "@cim/core";
 import { db, findUserByEmail, createPasswordResetToken } from "@cim/db";
@@ -10,10 +11,11 @@ import { rejectIfNotHuman } from "@/lib/turnstile";
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
 
 export async function POST(request: Request) {
+  const e = await getTranslations("errors");
   const ip = clientIpFrom(request);
   const rateLimit = await checkRateLimit(`reset:${ip}`, { limit: 10, windowSeconds: 60 * 60 });
   if (!rateLimit.allowed) {
-    return NextResponse.json({ error: "Too many attempts. Try again later." }, { status: 429 });
+    return NextResponse.json({ error: e("rateLimited") }, { status: 429 });
   }
 
   const json = await request.json().catch(() => null);
@@ -21,7 +23,7 @@ export async function POST(request: Request) {
   if (notHuman) return notHuman;
   const parsed = requestPasswordResetSchema.safeParse(json);
   if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid input" }, { status: 400 });
+    return NextResponse.json({ error: e("invalidInput") }, { status: 400 });
   }
 
   const user = await findUserByEmail(db, parsed.data.email);

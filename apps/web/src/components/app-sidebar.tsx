@@ -2,19 +2,21 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { NAV_ITEMS } from "./nav-config";
 import { cn, Wordmark } from "@cim/ui";
 
 export function AppSidebar() {
   const pathname = usePathname();
+  const t = useTranslations("shell");
   return (
     <aside className="mp-sidebar sticky top-0 hidden h-screen w-60 shrink-0 md:flex md:flex-col">
       <div className="flex h-20 items-center px-5">
-        <Link href="/dashboard" aria-label="Mediaory dashboard" className="text-base text-foreground">
+        <Link href="/dashboard" aria-label={t("homeLink")} className="text-base text-foreground">
           <Wordmark surface="panel" className="h-12" />
         </Link>
       </div>
-      <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 pb-4" aria-label="Primary">
+      <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 pb-4" aria-label={t("primaryNav")}>
         {NAV_ITEMS.map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
           const Icon = item.icon;
@@ -31,7 +33,7 @@ export function AppSidebar() {
               <span className="mp-nav-icon">
                 <Icon className="size-4" aria-hidden="true" />
               </span>
-              {item.label}
+              {t(`nav.${item.key}`)}
             </Link>
           );
         })}

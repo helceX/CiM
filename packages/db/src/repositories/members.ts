@@ -273,7 +273,7 @@ export async function findPendingInvitationByTokenHash(
 export async function acceptInvitation(
   db: Db,
   tokenHash: string,
-  input: { firstName: string; lastName: string; passwordHash: string },
+  input: { firstName: string; lastName: string; passwordHash: string; locale?: string },
 ): Promise<{ userId: string; organizationId: OrganizationId } | undefined> {
   const pending = await findPendingInvitationByTokenHash(db, tokenHash);
   if (!pending) return undefined;
@@ -294,6 +294,7 @@ export async function acceptInvitation(
         passwordHash: input.passwordHash,
         emailVerifiedAt: new Date(),
         updatedAt: new Date(),
+        ...(input.locale ? { locale: input.locale } : {}),
       })
       .where(eq(users.id, membership.userId));
 

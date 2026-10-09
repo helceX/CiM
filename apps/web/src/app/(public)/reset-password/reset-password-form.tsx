@@ -2,9 +2,12 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Button, Field, Input } from "@cim/ui";
 
 export function ResetPasswordForm() {
+  const t = useTranslations("auth.reset");
+  const common = useTranslations("auth");
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
@@ -14,7 +17,7 @@ export function ResetPasswordForm() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!token) {
-      setError("This link is missing its token. Request a new reset link.");
+      setError(t("missingToken"));
       return;
     }
     setError(null);
@@ -29,12 +32,12 @@ export function ResetPasswordForm() {
       });
       const data = await response.json();
       if (!response.ok) {
-        setError(data.error ?? "Something went wrong. Please try again.");
+        setError(data.error ?? common("generic"));
         return;
       }
       router.push("/login");
     } catch {
-      setError("Something went wrong. Please try again.");
+      setError(common("generic"));
     } finally {
       setIsSubmitting(false);
     }
@@ -44,8 +47,8 @@ export function ResetPasswordForm() {
     <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
       <Field
         id="password"
-        label="New password"
-        hint="At least 10 characters, with upper and lower case letters and a number."
+        label={t("password")}
+        hint={t("passwordHint")}
         required
       >
         <Input name="password" type="password" autoComplete="new-password" required />
@@ -56,7 +59,7 @@ export function ResetPasswordForm() {
         </p>
       ) : null}
       <Button type="submit" disabled={isSubmitting}>
-        {isSubmitting ? "Resetting…" : "Reset password"}
+        {isSubmitting ? t("submitting") : t("submit")}
       </Button>
     </form>
   );

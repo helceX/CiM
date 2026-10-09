@@ -1,0 +1,31 @@
+{
+  "errors": {
+    "generic": "Something went wrong. Please try again.",
+    "rateLimited": "Too many attempts. Try again later.",
+    "invalidInput": "Invalid input",
+    "invalidLink": "This link is invalid or has expired.",
+    "missingToken": "Invalid or missing token",
+    "notAuthenticated": "Not authenticated",
+    "forbidden": "Forbidden",
+    "captchaFailed": "We couldn't confirm you're human. Please try again.",
+    "invalidCredentials": "Incorrect email or password.",
+    "unverified": "Please verify your email before signing in.",
+    "invitationInvalid": "This invitation is invalid or has expired.",
+    "noWorkspace": "No workspace found for organization",
+    "planLimit": "Your plan allows up to {limit, plural, one {# monitoring query} other {# monitoring queries}}. Upgrade to add more."
+  },
+  "validation": {
+    "password_must_be_at_least_10_characters": "Password must be at least 10 characters",
+    "password_is_too_long": "Password is too long",
+    "add_a_lowercase_letter": "Add a lowercase letter",
+    "add_an_uppercase_letter": "Add an uppercase letter",
+    "add_a_number": "Add a number",
+    "first_name_is_required": "First name is required",
+    "last_name_is_required": "Last name is required",
+    "enter_a_valid_work_email": "Enter a valid work email",
+    "company_name_is_required": "Company name is required",
+    "position_is_required": "Position is required",
+    "enter_a_valid_email": "Enter a valid email",
+    "password_is_required": "Password is required"
+  }
+}

@@ -13,22 +13,36 @@ import {
   Users,
 } from "lucide-react";
 
+/** The key of a sidebar entry in the `shell.nav` catalog namespace (its label is translated where it is shown). */
+export type NavKey =
+  | "dashboard"
+  | "monitoring"
+  | "mentions"
+  | "social"
+  | "alerts"
+  | "analytics"
+  | "visuals"
+  | "reports"
+  | "archive"
+  | "team"
+  | "settings";
+
 /**
  * Sidebar entries for sections that actually exist. Per brief §154, we
  * don't ship disabled/"coming soon" nav items that look like dead
  * features — Reports, Sources, and Projects are added here as each one
  * ships (see docs/product/FEATURE_MATRIX.md for what's next).
  */
-export const NAV_ITEMS: { href: string; label: string; icon: LucideIcon }[] = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/monitoring", label: "Monitoring", icon: Radar },
-  { href: "/mentions", label: "Mentions", icon: Inbox },
-  { href: "/social", label: "Social", icon: Share2 },
-  { href: "/alerts", label: "Alerts", icon: BellRing },
-  { href: "/analytics", label: "Analytics", icon: BarChart3 },
-  { href: "/visuals", label: "Visuals", icon: ChartColumn },
-  { href: "/reports", label: "Reports", icon: FileText },
-  { href: "/archive", label: "Archive", icon: Archive },
-  { href: "/team", label: "Team", icon: Users },
-  { href: "/settings", label: "Settings", icon: Settings },
+export const NAV_ITEMS: { href: string; key: NavKey; icon: LucideIcon }[] = [
+  { href: "/dashboard", key: "dashboard", icon: LayoutDashboard },
+  { href: "/monitoring", key: "monitoring", icon: Radar },
+  { href: "/mentions", key: "mentions", icon: Inbox },
+  { href: "/social", key: "social", icon: Share2 },
+  { href: "/alerts", key: "alerts", icon: BellRing },
+  { href: "/analytics", key: "analytics", icon: BarChart3 },
+  { href: "/visuals", key: "visuals", icon: ChartColumn },
+  { href: "/reports", key: "reports", icon: FileText },
+  { href: "/archive", key: "archive", icon: Archive },
+  { href: "/team", key: "team", icon: Users },
+  { href: "/settings", key: "settings", icon: Settings },
 ];

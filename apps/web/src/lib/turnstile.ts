@@ -1,5 +1,6 @@
 import "server-only";
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 
 /**
  * Cloudflare Turnstile (a privacy-friendly CAPTCHA) on the forms that create
@@ -50,8 +51,6 @@ export async function rejectIfNotHuman(body: unknown, ip: string): Promise<NextR
   const token =
     body && typeof body === "object" ? (body as { turnstileToken?: unknown }).turnstileToken : undefined;
   if (await verifyTurnstileToken(token, ip)) return null;
-  return NextResponse.json(
-    { error: "We couldn't confirm you're human. Please try again.", code: "captcha_failed" },
-    { status: 400 },
-  );
+  const e = await getTranslations("errors");
+  return NextResponse.json({ error: e("captchaFailed"), code: "captcha_failed" }, { status: 400 });
 }

@@ -2,6 +2,7 @@
 
 import { useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Button, Checkbox, Field, Input } from "@cim/ui";
 import { mergeKeywords, parseKeywordList } from "@cim/core";
 import type {
@@ -12,29 +13,18 @@ import type {
 } from "@cim/validation";
 import { TRACKING_TARGET_OPTIONS } from "@/lib/tracking-targets";
 
-const SOURCE_TYPES: { value: SourceTypeSelection; label: string }[] = [
-  { value: "news", label: "News" },
-  { value: "web", label: "Web" },
-  { value: "social", label: "Social" },
-  { value: "video", label: "Video" },
-  { value: "podcast", label: "Podcast" },
-  { value: "forums", label: "Forums" },
-  { value: "comments", label: "Comments" },
-  { value: "all", label: "All available sources" },
-];
+const SOURCE_TYPES: SourceTypeSelection[] = ["news", "web", "social", "video", "podcast", "forums", "comments", "all"];
 
 // Each answer does something real (api/onboarding/complete): the first two create an alert rule for your first
 // monitoring; the digest and the weekly archive e-mails reach everyone in the organization without one.
-const NOTIFICATION_PREFERENCES: { value: NotificationPreference; label: string; desc: string }[] = [
-  { value: "instant", label: "Every new story", desc: "An alert in the app whenever new stories match. Expect a lot." },
-  { value: "high_priority_only", label: "Important stories only", desc: "An alert only when a story that matters appears — not for every mention." },
-  { value: "daily_digest", label: "Daily digest", desc: "No alerts. One summary e-mail a day, with the most important stories first." },
-  { value: "weekly_summary", label: "Weekly archive", desc: "No alerts. The weekly archive e-mail, with everything found that week." },
-];
+const NOTIFICATION_PREFERENCES: NotificationPreference[] = ["instant", "high_priority_only", "daily_digest", "weekly_summary"];
 
 const TOTAL_STEPS = 5;
 
 export function OnboardingWizard() {
+  const t = useTranslations("onboarding");
+  const targets = useTranslations("trackingTargets");
+  const common = useTranslations("errors");
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [trackingTarget, setTrackingTarget] = useState<TrackingTarget>("company");
@@ -74,7 +64,7 @@ export function OnboardingWizard() {
       keywords,
       sourceTypes,
       notificationPreference,
-      projectName: projectName || keywords[0] || "My monitoring",
+      projectName: projectName || keywords[0] || t("defaultProject"),
     };
     try {
       const response = await fetch("/api/onboarding/complete", {
@@ -84,13 +74,13 @@ export function OnboardingWizard() {
       });
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));
-        setError(data.error ?? "Something went wrong. Please try again.");
+        setError(data.error ?? common("generic"));
         return;
       }
       router.push("/dashboard");
       router.refresh();
     } catch {
-      setError("Something went wrong. Please try again.");
+      setError(common("generic"));
     } finally {
       setIsSubmitting(false);
     }
@@ -106,11 +96,11 @@ export function OnboardingWizard() {
   return (
     <div className="mx-auto flex min-h-screen max-w-xl flex-col justify-center px-4 py-16">
       <p className="text-center text-xs font-medium uppercase tracking-wide text-muted-foreground">
-        Step {step} of {TOTAL_STEPS}
+        {t("step", { step, total: TOTAL_STEPS })}
       </p>
 
       {step === 1 ? (
-        <StepShell title="What do you want to track?">
+        <StepShell title={t("track.title")}>
           <div className="grid grid-cols-2 gap-2">
             {TRACKING_TARGET_OPTIONS.map((target) => (
               <button
@@ -123,7 +113,7 @@ export function OnboardingWizard() {
                     : "border-border text-muted-foreground hover:bg-surface-muted"
                 }`}
               >
-                {target.label}
+                {targets(target.value)}
               </button>
             ))}
           </div>
@@ -131,7 +121,7 @@ export function OnboardingWizard() {
       ) : null}
 
       {step === 2 ? (
-        <StepShell title="Add keywords to track">
+        <StepShell title={t("keywords.title")}>
           <div className="flex gap-2">
             <Input
               value={keywordInput}
@@ -142,16 +132,15 @@ export function OnboardingWizard() {
                   addKeyword();
                 }
               }}
-              placeholder="e.g. your company name, new product launch"
-              aria-label="Keyword"
+              placeholder={t("keywords.placeholder")}
+              aria-label={t("keywords.label")}
             />
             <Button type="button" variant="secondary" onClick={addKeyword}>
-              Add
+              {t("keywords.add")}
             </Button>
           </div>
           <p className="mt-2 text-xs text-muted-foreground">
-            Separate keywords with commas. A keyword can be a single word or a whole phrase, and is
-            searched exactly as you write it.
+            {t("keywords.help")}
           </p>
           {keywords.length > 0 ? (
             <ul className="mt-3 flex flex-wrap gap-2">
@@ -164,7 +153,7 @@ export function OnboardingWizard() {
                   <button
                     type="button"
                     onClick={() => removeKeyword(keyword)}
-                    aria-label={`Remove ${keyword}`}
+                    aria-label={t("keywords.remove", { keyword })}
                     className="text-muted-foreground hover:text-foreground"
                   >
                     &times;
@@ -174,22 +163,22 @@ export function OnboardingWizard() {
             </ul>
           ) : (
             <p className="mt-3 text-sm text-muted-foreground">
-              Try your company name, a product, or an executive&apos;s name.
+              {t("keywords.empty")}
             </p>
           )}
         </StepShell>
       ) : null}
 
       {step === 3 ? (
-        <StepShell title="Choose sources">
+        <StepShell title={t("sources.title")}>
           <div className="grid grid-cols-2 gap-3">
             {SOURCE_TYPES.map((source) => (
-              <label key={source.value} className="flex items-center gap-2 text-sm text-foreground">
+              <label key={source} className="flex items-center gap-2 text-sm text-foreground">
                 <Checkbox
-                  checked={sourceTypes.includes(source.value)}
-                  onCheckedChange={() => toggleSourceType(source.value)}
+                  checked={sourceTypes.includes(source)}
+                  onCheckedChange={() => toggleSourceType(source)}
                 />
-                {source.label}
+                {t(`sources.types.${source}`)}
               </label>
             ))}
           </div>
@@ -197,25 +186,25 @@ export function OnboardingWizard() {
       ) : null}
 
       {step === 4 ? (
-        <StepShell title="How should we notify you?">
+        <StepShell title={t("notify.title")}>
           <div className="flex flex-col gap-2">
             {NOTIFICATION_PREFERENCES.map((pref) => (
               <label
-                key={pref.value}
+                key={pref}
                 className={`flex cursor-pointer items-start gap-3 rounded border px-3 py-2.5 ${
-                  notificationPreference === pref.value ? "border-primary bg-primary/5" : "border-border"
+                  notificationPreference === pref ? "border-primary bg-primary/5" : "border-border"
                 }`}
               >
                 <input
                   type="radio"
                   name="notificationPreference"
                   className="mt-1"
-                  checked={notificationPreference === pref.value}
-                  onChange={() => setNotificationPreference(pref.value)}
+                  checked={notificationPreference === pref}
+                  onChange={() => setNotificationPreference(pref)}
                 />
                 <span>
-                  <span className="block text-sm font-medium text-foreground">{pref.label}</span>
-                  <span className="block text-sm text-muted-foreground">{pref.desc}</span>
+                  <span className="block text-sm font-medium text-foreground">{t(`notify.${pref}.label`)}</span>
+                  <span className="block text-sm text-muted-foreground">{t(`notify.${pref}.desc`)}</span>
                 </span>
               </label>
             ))}
@@ -224,13 +213,12 @@ export function OnboardingWizard() {
       ) : null}
 
       {step === 5 ? (
-        <StepShell title="Name this project">
-          <Field id="projectName" label="Project name" required>
+        <StepShell title={t("project.title")}>
+          <Field id="projectName" label={t("project.label")} required>
             <Input value={projectName} onChange={(e) => setProjectName(e.target.value)} />
           </Field>
           <p className="mt-3 text-sm text-muted-foreground">
-            Tracking {keywords.length} keyword{keywords.length === 1 ? "" : "s"} across{" "}
-            {sourceTypes.length} source type{sourceTypes.length === 1 ? "" : "s"}.
+            {t("project.summary", { keywords: keywords.length, sources: sourceTypes.length })}
           </p>
         </StepShell>
       ) : null}
@@ -248,15 +236,15 @@ export function OnboardingWizard() {
           onClick={() => setStep((s) => Math.max(1, s - 1))}
           disabled={step === 1}
         >
-          Back
+          {t("back")}
         </Button>
         {step < TOTAL_STEPS ? (
           <Button type="button" onClick={() => setStep((s) => s + 1)} disabled={!canAdvance}>
-            Continue
+            {t("continue")}
           </Button>
         ) : (
           <Button type="button" onClick={finish} disabled={isSubmitting}>
-            {isSubmitting ? "Setting up…" : "Go to dashboard"}
+            {isSubmitting ? t("finishing") : t("finish")}
           </Button>
         )}
       </div>

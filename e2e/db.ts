@@ -84,3 +84,8 @@ export function markArticlesAsPrint(titleFragment: string): void {
   }).replace(/'/g, "''");
   sql(`update articles set print = '${print}'::jsonb where title ilike '%${titleFragment.replace(/'/g, "''")}%';`);
 }
+
+/** Test-only: the language stored on a person's account. */
+export function userLocale(email: string): string {
+  return sql(`select locale from users where email = '${email}';`);
+}

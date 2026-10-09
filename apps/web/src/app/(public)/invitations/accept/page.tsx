@@ -1,15 +1,8 @@
+import { getTranslations } from "next-intl/server";
 import { hashToken } from "@cim/core";
 import { db, findPendingInvitationByTokenHash } from "@cim/db";
 import { AuthCard } from "@/components/auth-card";
 import { AcceptInvitationForm } from "./accept-invitation-form";
-
-const ROLE_LABEL: Record<string, string> = {
-  organization_admin: "Organization Admin",
-  communications_manager: "Communications Manager",
-  analyst: "Analyst",
-  viewer: "Viewer",
-  report_recipient: "Report Recipient",
-};
 
 export default async function AcceptInvitationPage({
   searchParams,
@@ -17,31 +10,30 @@ export default async function AcceptInvitationPage({
   searchParams: Promise<{ token?: string }>;
 }) {
   const { token } = await searchParams;
+  const t = await getTranslations("auth.invitation");
   const invitation = token
     ? await findPendingInvitationByTokenHash(db, hashToken(token))
     : undefined;
 
   if (!invitation) {
     return (
-      <AuthCard title="Invitation not found">
-        <p className="text-sm text-muted-foreground">
-          This invitation link is invalid, expired, or has already been used. Ask
-          whoever invited you to send a new one.
-        </p>
+      <AuthCard title={t("notFoundTitle")}>
+        <p className="text-sm text-muted-foreground">{t("notFound")}</p>
       </AuthCard>
     );
   }
 
+  const roleKey = `roles.${invitation.role}` as Parameters<typeof t.has>[0];
+  const role = t.has(roleKey) ? t(roleKey) : invitation.role;
+
   return (
-    <AuthCard title={`Join ${invitation.organizationName}`}>
+    <AuthCard title={t("joinTitle", { organization: invitation.organizationName })}>
       <p className="mb-4 text-sm text-muted-foreground">
-        You&apos;ve been invited to join{" "}
-        <strong className="text-foreground">{invitation.organizationName}</strong> on
-        Mediaory as a{" "}
-        <strong className="text-foreground">
-          {ROLE_LABEL[invitation.role] ?? invitation.role}
-        </strong>
-        . Set up your account to accept.
+        {t.rich("intro", {
+          organization: invitation.organizationName,
+          role,
+          strong: (chunks) => <strong className="text-foreground">{chunks}</strong>,
+        })}
       </p>
       <AcceptInvitationForm token={token!} email={invitation.email} />
     </AuthCard>

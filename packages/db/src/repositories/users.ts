@@ -24,3 +24,8 @@ export async function markUserVerified(db: Db, userId: string) {
     .set({ emailVerifiedAt: new Date(), updatedAt: new Date() })
     .where(eq(users.id, userId));
 }
+
+/** The language the person chose (also used for the e-mails and reports we send them). */
+export async function updateUserLocale(db: Db, userId: string, locale: string) {
+  await db.update(users).set({ locale, updatedAt: new Date() }).where(eq(users.id, userId));
+}

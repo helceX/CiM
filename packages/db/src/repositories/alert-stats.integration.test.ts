@@ -8,10 +8,15 @@ import { users } from "../schema/users";
 import { createAlertRule, listRuleIdsInCooldown } from "./alerts";
 import {
   getQueryIdsWithClassifiedMentions,
+  getQueryIdsWithCreatorPosts,
   getQueryIdsWithCurrentHourMentions,
+  getQueryIdsWithRecentMentions,
+  getQueryIdsWithTopicVolume,
   getQuerySentimentShiftStats,
   getQuerySpikeStats,
 } from "./analytics";
+import { mentionTopics, topics } from "../schema/ai";
+import { socialProfiles } from "../schema/social";
 import { createMonitoringQuery } from "./monitoring-queries";
 import { createProject } from "./projects";
 import { asOrganizationId } from "./tenant-scope";
@@ -71,6 +76,8 @@ describe("alert statistics and pre-filters (integration)", () => {
   let sourceId: string;
   let userId: string;
   const ruleIds: string[] = [];
+  let topicId: string | null = null;
+  let profileId: string | null = null;
   let counter = 0;
 
   async function addMentions(queryId: string, count: number, at: Date, sentiment: "positive" | "negative" | null) {
@@ -143,7 +150,9 @@ describe("alert statistics and pre-filters (integration)", () => {
 
   afterAll(async () => {
     await db.delete(organizations).where(eq(organizations.id, organizationId));
+    if (topicId) await db.delete(topics).where(eq(topics.id, topicId));
     await db.delete(sources).where(eq(sources.id, sourceId));
+    if (profileId) await db.delete(socialProfiles).where(eq(socialProfiles.id, profileId));
     await db.delete(users).where(eq(users.id, userId));
   });
 
@@ -179,6 +188,48 @@ describe("alert statistics and pre-filters (integration)", () => {
   it("names only the queries with at least three scored mentions in the last 24 hours", async () => {
     const ids = [busyQueryId, quietQueryId, emptyQueryId];
     expect([...(await getQueryIdsWithClassifiedMentions(db, ids, 3))]).toEqual([busyQueryId]);
+  });
+
+  it("names the queries with three mentions in the last 24 hours (competitor and creator-spike floor), not those with two", async () => {
+    const ids = [busyQueryId, quietQueryId, emptyQueryId];
+    // busy: 4 now + 5 + 1 inside 24 h (the 7 from 30 h ago do not count)
+    expect([...(await getQueryIdsWithRecentMentions(db, ids, 3))]).toEqual([busyQueryId]);
+    expect([...(await getQueryIdsWithRecentMentions(db, ids, 11))]).toEqual([]);
+  });
+
+  it("names the queries where one AI topic reaches three mentions in 24 hours — none while no topics exist", async () => {
+    const ids = [busyQueryId, quietQueryId];
+    expect((await getQueryIdsWithTopicVolume(db, ids, 3)).size).toBe(0);
+
+    const [topic] = await db.insert(topics).values({ name: `alert-stats-topic-${Date.now()}` }).returning();
+    topicId = topic?.id ?? null;
+    if (!topic) throw new Error("failed to create test topic");
+    const recent = await db.select({ id: mentions.id }).from(mentions).where(eq(mentions.queryId, busyQueryId)).orderBy(sql`created_at desc`).limit(3);
+    await db.insert(mentionTopics).values(recent.slice(0, 2).map((row) => ({ mentionId: row.id, topicId: topic.id, confidence: "0.900" })));
+    expect((await getQueryIdsWithTopicVolume(db, ids, 3)).size).toBe(0); // two mentions carry it: below the floor
+    await db.insert(mentionTopics).values({ mentionId: recent[2]!.id, topicId: topic.id, confidence: "0.900" });
+    expect([...(await getQueryIdsWithTopicVolume(db, ids, 3))]).toEqual([busyQueryId]);
+  });
+
+  it("names the queries with three recent mentions whose story has a social author — none for ordinary news", async () => {
+    const ids = [busyQueryId, quietQueryId];
+    expect((await getQueryIdsWithCreatorPosts(db, ids, 3)).size).toBe(0);
+    const [profile] = await db
+      .insert(socialProfiles)
+      .values({ platform: "mock", externalId: `alert-stats-${Date.now()}`, handle: "alertstats" })
+      .returning();
+    if (!profile) throw new Error("failed to create test social profile");
+    profileId = profile.id;
+    const ours = await db
+      .select({ articleId: mentions.articleId })
+      .from(mentions)
+      .where(eq(mentions.queryId, busyQueryId))
+      .orderBy(sql`created_at desc`)
+      .limit(3);
+    for (const row of ours.slice(0, 2)) await db.update(articles).set({ authorProfileId: profile.id }).where(eq(articles.id, row.articleId));
+    expect((await getQueryIdsWithCreatorPosts(db, ids, 3)).size).toBe(0); // two creator posts: below the floor
+    await db.update(articles).set({ authorProfileId: profile.id }).where(eq(articles.id, ours[2]!.articleId));
+    expect([...(await getQueryIdsWithCreatorPosts(db, ids, 3))]).toEqual([busyQueryId]);
   });
 
   it("reports which rules are inside their own cooldown, and only those", async () => {

@@ -87,15 +87,50 @@ match (an `INSERT … ON CONFLICT DO NOTHING`). It parses the feed twice (the he
 source is fetched every two hours with no `ETag`/`Last-Modified`, and a failing job is attempted three times.
 bench: small in Postgres terms (20 ms per source), but it is where the worker's CPU and the pool's round trips go.
 
-### F6 — the scheduler tick and the alert pollers (open — next change)
+### F6 — the scheduler tick and the alert pollers (changed in this round)
 
-- Every 30 s `listActiveSources` reads all source rows (9 000 in bench): 149 ms of Node CPU and 17 ms of Postgres
-  per tick, 2 880 ticks a day.
-- Every 60 s five evaluators read every rule and run an aggregate per rule. bench, 837 rules over 588k mentions:
-  **5.3 s of Postgres CPU per minute** (spike 2.7 s, sentiment shift 1.4 s, competitor 0.5 s, creator 0.55 s,
-  topic 0.2 s) ≈ 0.09 vCPU continuously; it grows with rules × mentions per monitoring. `getQuerySpikeStats`
-  joins 24 hourly buckets to `mentions` on `date_trunc('hour', created_at)`, which cannot use an index, and there
-  is no `(query_id, created_at)` index. The cooldown is checked only after the statistics were computed.
+**Scheduler tick.** Every 30 s `listActiveSources` read all source rows (9 000 in bench, all columns) and filtered them
+in Node: 160 ms of Node CPU and 20 ms of Postgres per tick, 2 880 ticks a day. Now `listDueSources` selects only the due
+ones in SQL (`isSourceDue` is still applied to what comes back, and a test pins the two to each other). Bench, nothing
+due: 160 ms → 1.8 ms Node CPU and 20 ms → 5 ms Postgres CPU per tick. EXPLAIN: one sequential scan of 9 000 rows, 7 ms,
+so **no index was added** (it would not pay for itself at this table size).
+
+**Alert pollers.** Every 60 s five evaluators read every rule and ran an aggregate per rule, whether or not the rule
+could fire. Findings in the plans (588k articles, 840k mentions, 837 monitorings, 3 503 rules):
+
+- `getQuerySpikeStats` joined 24 generated hours to the query's mentions on `date_trunc('hour', created_at)` (cannot
+  use an index) and read the query's whole history twice: 101 ms and 24 k buffers for a query with 15 000 mentions.
+  Rewritten as one bucketed pass over the last 25 hours — 26 ms without an index, **1.4 ms and 550 buffers with
+  `(query_id, created_at)`**. The numbers are the same (the integration test compares with the old query).
+- `getQuerySentimentShiftStats` filtered `created_at` only inside `count(...) filter`, so it also read the whole history;
+  its `where` now bounds it to the eight days it uses.
+- A rule in the middle of a spike was re-evaluated every minute for the whole cooldown (statistics, then a transaction
+  that took the advisory lock and was refused). Rules inside their cooldown are now dropped first (one read,
+  `alert_events_rule_created_idx`); the locked check in `createAlertEventIfNotInCooldown` is unchanged.
+- Each evaluator has a floor it applies itself (three mentions in the hour / three scored mentions / one topic with
+  three mentions / three mentions in 24 h / three creator posts). One grouped read now finds the queries that reach it and
+  the rest are not evaluated — the same outcome (the evaluator would `continue`), with 3 statements instead of 838.
+  With AI off no topic exists, so the emerging-topic evaluator does nothing. If a pre-filter read fails every rule is
+  evaluated as before.
+- New index `mentions_query_created_idx (query_id, created_at)` — migration 0045, additive. 25 MB on 838 800 mentions
+  (148 MB table). Undo: `DROP INDEX mentions_query_created_idx;`. It is the one change in this round that adds to the schema;
+  the plans above are the evidence, and its effect depends on how many mentions a monitoring accumulates.
+
+Bench, Postgres CPU per minute for the five evaluators, same data, before → after (the seeded history has few mentions
+in the current hour, so most rules are filtered out; read it as the typical quiet minute, not the worst case):
+
+| evaluator | before | after |
+|---|---|---|
+| spike | 1 490 ms (838 statements) | 20 ms (3) |
+| sentiment shift | 840 ms (838) | 120 ms (3) |
+| emerging topic | 760 ms (838) | 10 ms (3) |
+| competitor | 280 ms (253) | 100 ms (255) |
+| creator spike | 570 ms (280) | 0 ms (3) |
+| **total** | **3.9 s** | **0.25 s** |
+
+Worst case — every rule has real volume, so every statistic is computed (`bench/alert-stats-bench.ts --recent=300`):
+spike statistics 1.4 s → 0.58 s and sentiment 1.0 s → 0.60 s per tick with the index; without the index 2.16 s → 1.83 s
+and 1.27 s → 0.58 s. The larger a monitoring's history, the larger the gain (70× in the 15 000-mention plan above).
 
 ### F7 — indexes (verified in the plans, nothing dropped)
 

@@ -8,18 +8,18 @@ import type { CrawlSourceJobData } from "@cim/core";
  * failure doesn't stop every source ordered after it from being enqueued
  * for this tick (previously a plain Promise.all aborted the whole tick).
  */
-const listActiveSources = vi.fn();
+const listDueSources = vi.fn();
 
 vi.mock("@cim/db", () => ({
   db: {},
-  listActiveSources: (...args: unknown[]) => listActiveSources(...args),
+  listDueSources: (...args: unknown[]) => listDueSources(...args),
 }));
 
 const { processCrawlSchedulerJob } = await import("./crawl-scheduler");
 
 describe("processCrawlSchedulerJob — per-source failure isolation", () => {
   it("still enqueues source 2 when source 1's queue.add rejects", async () => {
-    listActiveSources.mockResolvedValueOnce([
+    listDueSources.mockResolvedValueOnce([
       { id: "source-1", connector: "rss", lastCheckedAt: null },
       { id: "source-2", connector: "rss", lastCheckedAt: null },
     ]);
@@ -39,7 +39,7 @@ describe("processCrawlSchedulerJob — per-source failure isolation", () => {
 describe("processCrawlSchedulerJob — crawl interval", () => {
   it("only enqueues sources that are due, so a real site is not polled every tick", async () => {
     const minutesAgo = (m: number) => new Date(Date.now() - m * 60_000);
-    listActiveSources.mockResolvedValueOnce([
+    listDueSources.mockResolvedValueOnce([
       { id: "never-checked", connector: "rss", lastCheckedAt: null },
       { id: "fresh-rss", connector: "rss", lastCheckedAt: minutesAgo(2) },
       { id: "stale-rss", connector: "rss", lastCheckedAt: minutesAgo(121) },
@@ -59,7 +59,7 @@ describe("processCrawlSchedulerJob — no duplicate jobs for a busy queue", () =
   const job = (state: string) => ({ getState: vi.fn().mockResolvedValue(state), remove: vi.fn().mockResolvedValue(undefined) });
 
   it("does not queue a source again while its job is waiting, running or delayed", async () => {
-    listActiveSources.mockResolvedValueOnce([
+    listDueSources.mockResolvedValueOnce([
       { id: "waiting", connector: "rss", lastCheckedAt: null },
       { id: "active", connector: "rss", lastCheckedAt: null },
       { id: "delayed", connector: "rss", lastCheckedAt: null },
@@ -79,7 +79,7 @@ describe("processCrawlSchedulerJob — no duplicate jobs for a busy queue", () =
   });
 
   it("reuses the id once the previous job has finished, clearing its record first", async () => {
-    listActiveSources.mockResolvedValueOnce([
+    listDueSources.mockResolvedValueOnce([
       { id: "done", connector: "rss", lastCheckedAt: null },
       { id: "failed", connector: "rss", lastCheckedAt: null },
     ]);
@@ -94,7 +94,7 @@ describe("processCrawlSchedulerJob — no duplicate jobs for a busy queue", () =
   });
 
   it("uses one stable job id per source, not one per tick", async () => {
-    listActiveSources.mockResolvedValue([{ id: "s1", connector: "rss", lastCheckedAt: null }]);
+    listDueSources.mockResolvedValue([{ id: "s1", connector: "rss", lastCheckedAt: null }]);
     const add = vi.fn().mockResolvedValue(undefined);
     const queue = { add, getJob: vi.fn().mockResolvedValue(undefined) } as unknown as Queue<CrawlSourceJobData>;
     await processCrawlSchedulerJob(queue);

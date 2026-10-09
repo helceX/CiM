@@ -1,7 +1,8 @@
 import type { Queue } from "bullmq";
 import type { SendEmailJobData } from "@cim/core";
-import { db, getActiveEmergingTopicAlertRules, getEmergingTopicStats } from "@cim/db";
+import { db, getActiveEmergingTopicAlertRules, getEmergingTopicStats, getQueryIdsWithTopicVolume } from "@cim/db";
 import { fireAlert } from "./notify";
+import { rulesWorthEvaluating } from "./rules-worth-evaluating";
 
 const MIN_ABSOLUTE_COUNT = 3; // never alert off 1-2 mentions, same floor as spike/sentiment-shift
 const BASELINE_MULTIPLIER = 3; // "3x baseline" floor, same explainable formula as evaluateSpikeAlerts
@@ -21,7 +22,11 @@ const BASELINE_MULTIPLIER = 3; // "3x baseline" floor, same explainable formula 
 export async function evaluateEmergingTopicAlerts(
   emailQueue: Queue<SendEmailJobData>,
 ): Promise<void> {
-  const rules = await getActiveEmergingTopicAlertRules(db);
+  const rules = await rulesWorthEvaluating(
+    await getActiveEmergingTopicAlertRules(db),
+    (queryIds) => getQueryIdsWithTopicVolume(db, queryIds, MIN_ABSOLUTE_COUNT),
+    "evaluateEmergingTopicAlerts",
+  );
 
   for (const rule of rules) {
     // Same per-rule isolation as generate-insight.ts's cross-tenant

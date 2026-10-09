@@ -267,6 +267,66 @@ export async function getQueryIdsWithClassifiedMentions(db: Db, queryIds: string
   return found;
 }
 
+/** At least `minCount` mentions in the last 24 hours — the floor of the competitor and creator-spike evaluators (a creator's count can only be as high as the query's). */
+export async function getQueryIdsWithRecentMentions(db: Db, queryIds: string[], minCount: number): Promise<Set<string>> {
+  const found = new Set<string>();
+  for (let i = 0; i < queryIds.length; i += ID_CHUNK) {
+    const rows = await db
+      .select({ queryId: mentions.queryId })
+      .from(mentions)
+      .where(and(inArray(mentions.queryId, queryIds.slice(i, i + ID_CHUNK)), gte(mentions.createdAt, sql`now() - interval '24 hours'`)))
+      .groupBy(mentions.queryId)
+      .having(sql`count(*) >= ${minCount}`);
+    for (const row of rows) found.add(row.queryId);
+  }
+  return found;
+}
+
+/**
+ * Queries on which some AI topic has at least `minCount` mentions in the last 24 hours — the emerging-topic evaluator's
+ * floor, stated exactly (it needs one topic with `currentCount >= 3`). With AI enrichment off no topics exist, so no
+ * rule is evaluated.
+ */
+export async function getQueryIdsWithTopicVolume(db: Db, queryIds: string[], minCount: number): Promise<Set<string>> {
+  const found = new Set<string>();
+  for (let i = 0; i < queryIds.length; i += ID_CHUNK) {
+    const rows = await db
+      .select({ queryId: mentions.queryId })
+      .from(mentions)
+      .innerJoin(mentionTopics, eq(mentionTopics.mentionId, mentions.id))
+      .where(and(inArray(mentions.queryId, queryIds.slice(i, i + ID_CHUNK)), gte(mentions.createdAt, sql`now() - interval '24 hours'`)))
+      .groupBy(mentions.queryId, mentionTopics.topicId)
+      .having(sql`count(distinct ${mentions.id}) >= ${minCount}`);
+    for (const row of rows) found.add(row.queryId);
+  }
+  return found;
+}
+
+/**
+ * Queries with at least `minCount` mentions in the last 24 hours whose story has a known social author — the
+ * creator-spike evaluator's floor, stated exactly (a creator's count is a subset of these).
+ */
+export async function getQueryIdsWithCreatorPosts(db: Db, queryIds: string[], minCount: number): Promise<Set<string>> {
+  const found = new Set<string>();
+  for (let i = 0; i < queryIds.length; i += ID_CHUNK) {
+    const rows = await db
+      .select({ queryId: mentions.queryId })
+      .from(mentions)
+      .innerJoin(articles, eq(articles.id, mentions.articleId))
+      .where(
+        and(
+          inArray(mentions.queryId, queryIds.slice(i, i + ID_CHUNK)),
+          gte(mentions.createdAt, sql`now() - interval '24 hours'`),
+          sql`${articles.authorProfileId} is not null`,
+        ),
+      )
+      .groupBy(mentions.queryId)
+      .having(sql`count(*) >= ${minCount}`);
+    for (const row of rows) found.add(row.queryId);
+  }
+  return found;
+}
+
 export type EmergingTopicStat = {
   topicId: string;
   topicName: string;

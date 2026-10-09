@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Queue } from "bullmq";
 import type { SendEmailJobData } from "@cim/core";
 
@@ -14,10 +14,15 @@ import type { SendEmailJobData } from "@cim/core";
 const getActiveCompetitorAlertRules = vi.fn();
 const getCompetitorAlertStats = vi.fn();
 
+const getQueryIdsWithRecentMentions = vi.fn();
+const listRuleIdsInCooldown = vi.fn();
+
 vi.mock("@cim/db", () => ({
   db: {},
   getActiveCompetitorAlertRules: (...args: unknown[]) => getActiveCompetitorAlertRules(...args),
   getCompetitorAlertStats: (...args: unknown[]) => getCompetitorAlertStats(...args),
+  getQueryIdsWithRecentMentions: (...args: unknown[]) => getQueryIdsWithRecentMentions(...args),
+  listRuleIdsInCooldown: (...args: unknown[]) => listRuleIdsInCooldown(...args),
 }));
 
 const fireAlert = vi.fn();
@@ -30,6 +35,12 @@ const { evaluateCompetitorAlerts } = await import("./evaluate-competitor");
 function fakeRule(id: string) {
   return { id, name: `Rule ${id}`, projectId: "project-1", queryId: `query-${id}` };
 }
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  listRuleIdsInCooldown.mockResolvedValue(new Set());
+  getQueryIdsWithRecentMentions.mockImplementation(async (_db: unknown, ids: string[]) => new Set(ids));
+});
 
 describe("evaluateCompetitorAlerts — per-rule failure isolation", () => {
   it("still evaluates rule 2 when rule 1's stats lookup throws", async () => {

@@ -1,6 +1,6 @@
 import type { Queue } from "bullmq";
 import { QUEUE_NAMES, isSourceDue, type CrawlSourceJobData } from "@cim/core";
-import { db, listActiveSources } from "@cim/db";
+import { db, listDueSources } from "@cim/db";
 
 /** States in which a crawl job for a source is still on its way (or running) — don't queue another. */
 const PENDING_STATES = new Set(["waiting", "active", "delayed", "prioritized", "waiting-children"]);
@@ -21,7 +21,8 @@ const PENDING_STATES = new Set(["waiting", "active", "delayed", "prioritized", "
  */
 export async function processCrawlSchedulerJob(crawlSourceQueue: Queue<CrawlSourceJobData>): Promise<void> {
   const now = new Date();
-  const sources = (await listActiveSources(db)).filter((source) => isSourceDue(source, now));
+  // Selected in the database; isSourceDue stays as the rule of record for what is due and is applied to the (few) rows returned.
+  const sources = (await listDueSources(db, now)).filter((source) => isSourceDue(source, now));
 
   // Isolated per source (the established fan-out pattern, generate-insight.ts)
   // — Promise.all would abort the whole tick on the first queue.add()

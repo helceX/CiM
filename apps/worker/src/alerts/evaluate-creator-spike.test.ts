@@ -11,11 +11,16 @@ import type { SendEmailJobData } from "@cim/core";
 const getActiveCreatorSpikeAlertRules = vi.fn();
 const getCreatorSpikeStats = vi.fn();
 
+const getQueryIdsWithCreatorPosts = vi.fn();
+const listRuleIdsInCooldown = vi.fn();
+
 vi.mock("@cim/db", () => ({
   db: {},
   getActiveCreatorSpikeAlertRules: (...args: unknown[]) =>
     getActiveCreatorSpikeAlertRules(...args),
   getCreatorSpikeStats: (...args: unknown[]) => getCreatorSpikeStats(...args),
+  getQueryIdsWithCreatorPosts: (...args: unknown[]) => getQueryIdsWithCreatorPosts(...args),
+  listRuleIdsInCooldown: (...args: unknown[]) => listRuleIdsInCooldown(...args),
 }));
 
 const fireAlert = vi.fn();
@@ -28,6 +33,12 @@ const { evaluateCreatorSpikeAlerts } = await import("./evaluate-creator-spike");
 function fakeRule(id: string) {
   return { id, name: `Rule ${id}`, queryId: `query-${id}` };
 }
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  listRuleIdsInCooldown.mockResolvedValue(new Set());
+  getQueryIdsWithCreatorPosts.mockImplementation(async (_db: unknown, ids: string[]) => new Set(ids));
+});
 
 describe("evaluateCreatorSpikeAlerts — per-rule failure isolation", () => {
   beforeEach(() => {

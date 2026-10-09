@@ -309,6 +309,13 @@
       "when": 1791260000000,
       "tag": "0043_mention_signal",
       "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1791270000000,
+      "tag": "0044_erasure_log",
+      "breakpoints": true
     }
   ]
 }

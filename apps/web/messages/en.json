@@ -554,65 +554,154 @@
     "footerTerms": "Terms of Service",
     "footerBot": "For publishers",
     "privacy": {
+      "updated": "Last updated: 9 October 2026",
       "eyebrow": "Legal",
       "title": "Privacy",
       "accent": "Notice",
-      "lead": "What personal data Mediaory processes, why, for how long, and the rights you have under Turkey's data protection law (KVKK). Written in plain language.",
+      "lead": "What personal data Mediaory processes, why and on what basis, who receives it, how long we keep it, and the rights you have under Turkey's data protection law (KVKK). Written in plain language.",
+      "controller": {
+        "title": "Data controller",
+        "intro": "This notice is given under Article 10 of Law No. 6698 on the Protection of Personal Data (KVKK). For the account, billing-contact, usage and form data described below, the data controller is:",
+        "address": "Address: {address}",
+        "mersis": "MERSIS no.: {mersis}",
+        "taxId": "Tax no.: {taxId}",
+        "kep": "Registered e-mail (KEP): {kep}",
+        "contact": "Contact: {email}",
+        "customers": "When a customer puts personal data into its workspace (for example colleagues' names in comments), the customer decides why and how it is used and Mediaory processes it on the customer's behalf; a data processing addendum is available on request. For public sources, see section 5."
+      },
       "sections": [
         {
-          "title": "Who we are",
+          "title": "What personal data we process",
           "body": [
-            "Mediaory is a media and web monitoring service. For the account, billing-contact and usage data described below, Mediaory is the data controller. Contact: hello@mediaory.io.",
-            "For the headlines, short excerpts and public author names we index from public sources on behalf of our customers, we act as a search and indexing service; see section 4."
+            "The data depends on how you use Mediaory:"
+          ],
+          "items": [
+            "Account data: your name, e-mail address, job title, language and time-zone preferences, and a hashed password.",
+            "Organization and billing contact data: the organization you belong to and your role. If you add a billing profile, the company name, tax office, tax number, address and invoice e-mail you enter.",
+            "Workspace content you create: monitoring keywords and queries, alert rules, tags, comments, assignments, reports and exports, and your organization's settings.",
+            "Security and usage data: sign-in sessions, IP address and browser type, security and audit events, usage counters (for example how many keywords or reports you use) and error logs.",
+            "Connected accounts: if you connect a YouTube or X account we keep its access tokens (stored encrypted) and the account's public identifier, and read only what the connection allows.",
+            "Forms: what you type into the contact, takedown and data-request forms, including your name and e-mail address.",
+            "People named in public sources: see section 5."
           ]
         },
         {
-          "title": "Data we process about customers",
+          "title": "Why we process it, and on what legal basis",
           "body": [
-            "Account data: name, email address, a hashed password, the organization you belong to, your role and the invitations you send or receive.",
-            "Workspace data you create: monitoring keywords and queries, alert rules, reports and exports, tags, comments, assignments and the settings of your organization.",
-            "Service data: sign-in sessions, security and audit events, usage counters (for example how many keywords or reports you use) and technical data such as IP address and browser type used to protect the service from abuse.",
-            "If you connect a social account, we keep the connection details needed to read that account's public data and nothing else from the account."
+            "We do not sell personal data, we do not use it for advertising, and we do not use your workspace data to train AI models.",
+            "Under Article 5 of the KVKK we rely on these bases:"
+          ],
+          "items": [
+            "Creating and running your account and providing the service: performance of a contract (Art. 5/2-c).",
+            "Service e-mails such as verification, invitations, alerts, digests and weekly archive links: performance of a contract (Art. 5/2-c). We do not send marketing e-mail.",
+            "Keeping the service secure, preventing abuse and fixing errors: our legitimate interest, which does not override your rights (Art. 5/2-f).",
+            "Indexing public sources so customers can monitor media coverage: our and our customers' legitimate interest, with the data kept to the minimum described in section 5 (Art. 5/2-f).",
+            "Invoicing and accounting records: legal obligation (Art. 5/2-ç).",
+            "Answering your requests and complaints, and establishing, exercising or defending legal claims: Art. 5/2-e and 5/2-f.",
+            "Connecting a social account: your consent, which you can withdraw at any time by disconnecting it (Art. 5/1)."
           ]
         },
         {
-          "title": "Why we process it, and on what basis",
-          "body": [
-            "To provide the service you asked for and to keep it secure (performance of a contract; our legitimate interest in security and abuse prevention). To send service emails such as verification, alerts, digests and weekly archive links. To meet legal obligations. We do not sell personal data and we do not use your workspace data to train AI models."
+          "title": "How we collect it",
+          "body": [],
+          "items": [
+            "Directly from you: when you register, use the service or write to us.",
+            "Automatically: cookies and similar technologies (section 12) and server and security logs when you use Mediaory.",
+            "From the platforms you connect, with your authorization.",
+            "From public sources — RSS and Atom feeds, sitemaps and public web pages — for the content described in section 5."
           ]
         },
         {
           "title": "Content from public sources",
           "body": [
-            "We index publicly available sources. For each story we keep the headline, the link, the publication time, a public author name where the source gives one, and an excerpt of at most 200 characters. For matching we also keep a word fingerprint: hashes of the words of the headline and summary, which cannot be turned back into text.",
-            "Stories that no customer's monitoring matched are deleted after 14 days. Stories that were matched stay as mentions in the customer's workspace until the customer's own retention setting removes them, and are listed in the customer's weekly archive.",
-            "People named in public news are not our customers. If you want content about you removed or have a question about it, contact us (see section 9) — publishers can use the takedown form."
+            "We index publicly available sources. For each story we keep the headline, the link, the publication time, a public author name where the source gives one, and an excerpt of at most 200 characters; we do not keep the full text or images. For matching we also keep a word fingerprint: hashes of the words of the headline and summary, which cannot be turned back into text.",
+            "Press reports can contain sensitive information about the people they name. We do not build profiles of those people. Stories that no customer's monitoring matched are deleted after 14 days. Stories that were matched stay as mentions in the customer's workspace until the customer's own retention setting removes them or the organization is deleted, and are listed in the customer's weekly archive.",
+            "People named in public news are not our customers. If you want a story about you removed from our index, or have a question about it, send us its link (section 10); publishers can use the takedown form."
           ]
         },
         {
-          "title": "Who receives data",
+          "title": "Who receives it",
           "body": [
-            "We use service providers to run Mediaory: cloud hosting and databases, object storage for weekly archives, an email delivery service and, where AI features are enabled, an AI provider that receives headlines and short excerpts to produce summaries. They process data on our instructions. Some of them are located outside Türkiye, so data may be transferred abroad; where required we rely on the safeguards the law allows.",
-            "We disclose data to authorities only when the law requires it."
+            "We share personal data only with these groups:"
+          ],
+          "items": [
+            "Our service providers, who process it on our instructions: cloud hosting and database, object storage for archives, e-mail delivery, bot protection on public forms and — only if AI features are switched on — an AI provider. Each one, with its purpose and data, is listed on the service providers page.",
+            "The platforms you connect (Google/YouTube, X): data is exchanged only for that connection.",
+            "Other members of your organization, who see your name, e-mail address, role and the content you create in the workspace.",
+            "Authorities, courts and professional advisers, when the law requires or to establish, exercise or defend legal claims."
+          ]
+        },
+        {
+          "title": "Transfers abroad",
+          "body": [
+            "The service providers that help us run Mediaory are located outside Türkiye, mainly in the United States and the European Union, so personal data is transferred abroad when you use the service. Since the 2024 amendment of Article 9 of the KVKK, routine transfers abroad rest on the safeguards the law lists — an adequacy decision, the Board's standard contract, binding corporate rules or an approved undertaking — and no longer on explicit consent alone. Our transfers are made in line with Article 9.",
+            "You can ask us which safeguard applies to a given provider (section 10)."
           ]
         },
         {
           "title": "How long we keep it",
+          "body": [],
+          "items": [
+            "Account data: while your account exists. When you delete your account, your name, e-mail address and other personal details are irreversibly anonymized and your sessions are closed.",
+            "Organization data: when an organization is deleted its members lose access at once, and everything linked to it — mentions, reports, comments, archive files — is permanently erased after 30 days.",
+            "Stories that no monitoring matched: deleted after 14 days. Matched stories stay as mentions until the organization's retention setting removes them or the organization is deleted.",
+            "Sign-in sessions and one-time tokens (verification, password reset, invitations): removed 30 days after they expire or are used.",
+            "Billing and accounting records: for the period the law requires.",
+            "Contact, takedown and data-request forms: as long as needed to handle the request and to show how we answered it."
+          ]
+        },
+        {
+          "title": "Your rights",
           "body": [
-            "Account and workspace data: while the account exists, and until deletion is complete after you delete it. Deleting the organization or your account removes the data linked to it. Weekly archives stay available to the organization until it deletes them or closes. Security and audit logs are kept for a limited period needed for protection and legal purposes."
+            "Under Article 11 of the KVKK you have the right to:"
+          ],
+          "items": [
+            "learn whether your personal data is processed;",
+            "request information if it has been processed;",
+            "learn the purpose of processing and whether it is used accordingly;",
+            "know the third parties it is transferred to, in Türkiye or abroad;",
+            "ask for correction if it is incomplete or inaccurate, and for the correction to be notified to those it was transferred to;",
+            "ask for deletion, destruction or anonymization when the reasons for processing no longer exist (Art. 7), and for that to be notified to those it was transferred to;",
+            "object to a result against you that arises solely from automated analysis; and",
+            "claim compensation for loss caused by unlawful processing."
+          ]
+        },
+        {
+          "title": "How to use your rights",
+          "body": [
+            "Write to hello@mediaory.io, or to the address or KEP address in section 1. Tell us who you are and what you ask; we may ask for information to confirm your identity so that your data is not given to someone else.",
+            "We answer as soon as possible and within 30 days at the latest, free of charge. If answering needs extra cost, the fee set by the Personal Data Protection Board may be charged.",
+            "If you are a customer, you can export your account data and delete your account or organization yourself in Settings.",
+            "If you are not satisfied with our answer, or do not receive one in time, you can complain to the Personal Data Protection Board (kvkk.gov.tr)."
           ]
         },
         {
           "title": "Security",
           "body": [
-            "Passwords are stored hashed, sessions are protected, access is limited by roles and every request is checked against the organization it belongs to. No system is perfectly secure; if a breach affects you we will notify you and the authorities as the law requires."
+            "We take technical and organizational measures proportionate to the risk, including:"
+          ],
+          "items": [
+            "encrypted connections (HTTPS) between your browser and Mediaory;",
+            "passwords stored only as salted hashes;",
+            "sign-in sessions that are signed, checked on the server and revocable;",
+            "access tokens of connected accounts stored encrypted;",
+            "role-based access, and a check on every request that the data belongs to your organization; and",
+            "an audit trail of sensitive actions, and rate limiting against abuse."
+          ],
+          "after": [
+            "No system is perfectly secure. If a breach affects your personal data, we will notify the Personal Data Protection Board and the people affected as the law requires."
           ]
         },
         {
-          "title": "Your rights (KVKK Article 11)",
+          "title": "Cookies",
           "body": [
-            "Under Turkey's Personal Data Protection Law (KVKK) you can ask whether your data is processed, request information about it, learn the purpose and whether it is used accordingly, know who it is transferred to, ask for correction, deletion or destruction, ask that these actions be notified to recipients, object to a result that arises solely from automated analysis, and claim compensation for unlawful processing.",
-            "If you are a customer, you can export and delete your data from Settings. For any request, write to us; we reply within 30 days. You can also complain to the Personal Data Protection Authority (KVKK)."
+            "Mediaory uses only the cookies it needs to sign you in and to remember your language and theme. We use no analytics, advertising or tracking cookies. Details are on the cookie policy page."
+          ]
+        },
+        {
+          "title": "Changes to this notice",
+          "body": [
+            "We update this notice when our processing changes. The date at the top shows the latest version, and we will tell account holders about material changes by e-mail or in the app."
           ]
         },
         {
@@ -623,6 +712,133 @@
         }
       ]
     },
-    "footerPrivacy": "Privacy"
+    "footerPrivacy": "Privacy",
+    "cookies": {
+      "updated": "Last updated: 9 October 2026",
+      "eyebrow": "Legal",
+      "title": "Cookie",
+      "accent": "Policy",
+      "lead": "Which cookies and similar technologies Mediaory uses, why, and how to control them. In short: only what is needed to keep you signed in and to remember your choices — no analytics, no advertising, no tracking.",
+      "sections": [
+        {
+          "title": "What cookies are",
+          "body": [
+            "Cookies are small text files a website stores in your browser. Similar technologies, such as your browser's local storage, serve the same purposes. On this page we call all of them cookies."
+          ]
+        },
+        {
+          "title": "Cookies we use",
+          "body": [],
+          "items": [
+            "cim_session — keeps you signed in. Strictly necessary. Set when you sign in; removed when you sign out or after at most 30 days. It holds a signed identifier, not your data.",
+            "NEXT_LOCALE — remembers the language you chose. Functional. Kept for 1 year.",
+            "mediaory-panel-theme (your browser's local storage, not a cookie) — remembers light or dark mode in the app. Functional. Stays until you clear it."
+          ]
+        },
+        {
+          "title": "Cookies we do not use",
+          "body": [
+            "We do not use analytics, advertising or tracking cookies, and we do not share cookie data with advertisers."
+          ]
+        },
+        {
+          "title": "Third parties",
+          "body": [
+            "Where bot protection is switched on, the sign-up, password-reset and takedown forms load Cloudflare Turnstile, which may process technical signals from your browser to tell people from bots. Cloudflare acts as our service provider; see the service providers page."
+          ]
+        },
+        {
+          "title": "Legal basis and consent",
+          "body": [
+            "Strictly necessary and functional cookies are used to provide the service you asked for and on the basis of our legitimate interest (KVKK Art. 5/2-c and 5/2-f), so no consent banner is needed. If we ever add analytics or other optional cookies, we will ask for your consent first."
+          ]
+        },
+        {
+          "title": "Managing cookies",
+          "body": [
+            "You can delete or block cookies in your browser settings. If you block the session cookie you cannot sign in; if you block the language cookie we fall back to your browser's language."
+          ]
+        },
+        {
+          "title": "Contact",
+          "body": [
+            "Questions: hello@mediaory.io. For everything about how we handle personal data, see the Privacy Notice."
+          ]
+        }
+      ]
+    },
+    "providers": {
+      "updated": "Last updated: 9 October 2026",
+      "eyebrow": "Legal",
+      "title": "Service",
+      "accent": "providers",
+      "lead": "The companies that help us run Mediaory and process personal data on our behalf: what they do, what data they handle and where they are.",
+      "sections": [
+        {
+          "title": "Transfers abroad",
+          "body": [
+            "Every provider below is located outside Türkiye (mainly in the United States and the European Union). Personal data is transferred to them in line with Article 9 of the KVKK. You can ask which safeguard applies to a given provider: hello@mediaory.io."
+          ]
+        },
+        {
+          "title": "Railway — hosting and databases",
+          "body": [
+            "Purpose: runs the Mediaory web application, the background workers, the PostgreSQL database and the job queue.",
+            "Data: all account and workspace data.",
+            "Location: Railway data centres outside Türkiye."
+          ]
+        },
+        {
+          "title": "Cloudflare — object storage and bot protection",
+          "body": [
+            "Purpose: R2 object storage holds each organization's weekly archive files (HTML and spreadsheet). Turnstile, when switched on, checks that a visitor is human on public forms.",
+            "Data: the archive files; for Turnstile, IP address and browser signals.",
+            "Location: Cloudflare's global network, outside Türkiye."
+          ]
+        },
+        {
+          "title": "Resend — e-mail delivery",
+          "body": [
+            "Purpose: sends service e-mails — verification, invitations, alerts, digests and archive links.",
+            "Data: the recipient's name and e-mail address and the content of the e-mail.",
+            "Location: outside Türkiye."
+          ]
+        },
+        {
+          "title": "Anthropic — AI summaries (off by default)",
+          "body": [
+            "Purpose: only when an operator switches AI features on; headlines and short excerpts are sent to produce summaries, sentiment and suggestions.",
+            "Data: headlines and excerpts of at most 200 characters. Your workspace content is not used to train AI models.",
+            "Location: outside Türkiye."
+          ]
+        },
+        {
+          "title": "Google (YouTube) and X — connected accounts only",
+          "body": [
+            "Purpose: only if you connect your account; authorization and read-only data exchange with the platform.",
+            "Data: access tokens (stored encrypted), the account identifier and the data you authorize.",
+            "Location: outside Türkiye; the platform's own terms also apply."
+          ]
+        },
+        {
+          "title": "Payment and e-invoice providers",
+          "body": [
+            "When paid plans start, the providers involved will be listed here before any payment is taken."
+          ]
+        },
+        {
+          "title": "This list",
+          "body": [
+            "We update this list before adding a provider that processes customers' personal data."
+          ]
+        }
+      ]
+    },
+    "footerCookies": "Cookies",
+    "footerProviders": "Service providers",
+    "forms": {
+      "accountNotice": "By creating an account you agree to the <terms>Terms of Service</terms> and acknowledge the <privacy>Privacy Notice</privacy>.",
+      "takedownNotice": "We use your name and e-mail address only to handle this request. See the <privacy>Privacy Notice</privacy>."
+    }
   }
 }

@@ -27,6 +27,7 @@ export const QUEUE_NAMES = {
   pruneArticles: "prune_articles",
   weeklyArchive: "weekly_archive",
   scoreSignals: "score_signals",
+  purgePrivacy: "purge_privacy",
 } as const;
 
 export type SendEmailJobData = {
@@ -76,3 +77,4 @@ export type PruneArticlesJobData = Record<string, never>;
 export type WeeklyArchiveJobData = Record<string, never>;
 
 export type ScoreSignalsJobData = Record<string, never>;
+export type PurgePrivacyJobData = Record<string, never>;

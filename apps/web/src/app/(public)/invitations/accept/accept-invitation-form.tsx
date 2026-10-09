@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Button, Field, Input } from "@cim/ui";
 
 export function AcceptInvitationForm({
@@ -12,6 +14,7 @@ export function AcceptInvitationForm({
   email: string;
 }) {
   const router = useRouter();
+  const legal = useTranslations("legal.forms");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -72,6 +75,20 @@ export function AcceptInvitationForm({
           {error}
         </p>
       ) : null}
+      <p className="text-xs text-muted-foreground">
+        {legal.rich("accountNotice", {
+          terms: (chunks) => (
+            <Link href="/terms" className="text-primary underline underline-offset-2">
+              {chunks}
+            </Link>
+          ),
+          privacy: (chunks) => (
+            <Link href="/privacy" className="text-primary underline underline-offset-2">
+              {chunks}
+            </Link>
+          ),
+        })}
+      </p>
       <Button type="submit" disabled={isSubmitting}>
         {isSubmitting ? "Setting up…" : "Accept invitation"}
       </Button>

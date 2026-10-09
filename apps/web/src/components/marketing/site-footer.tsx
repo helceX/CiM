@@ -23,6 +23,8 @@ export async function MarketingFooter() {
         { href: "/contact", label: t("contact") },
         { href: "/terms", label: legal("footerTerms") },
         { href: "/privacy", label: legal("footerPrivacy") },
+        { href: "/cookies", label: legal("footerCookies") },
+        { href: "/subprocessors", label: legal("footerProviders") },
         { href: "/bot", label: legal("footerBot") },
       ],
     },

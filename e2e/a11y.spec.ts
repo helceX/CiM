@@ -43,6 +43,9 @@ const PUBLIC_PATHS = [
   "/solutions",
   "/resources",
   "/contact",
+  "/privacy",
+  "/cookies",
+  "/subprocessors",
 ];
 
 for (const pagePath of PUBLIC_PATHS) {

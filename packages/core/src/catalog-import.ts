@@ -8,10 +8,10 @@ import { STARTUP_PAGE_CANDIDATES, WORLD_SOURCE_CATALOG } from "./world-catalog";
  * `@cim/core/catalog-import` (it pulls in the world catalog's data, which the main
  * entry deliberately does not).
  *
- * Order matters because the crawler's capacity is finite: the T�rkiye news feeds
+ * Order matters because the crawler's capacity is finite: the Türkiye news feeds
  * first (the home market), then the world feeds the research pack's own XML check
- * passed, then T�rkiye's one-per-writer columns and forums, then the rest of the
- * world - blogs, forums, podcasts and video last.
+ * passed, then Türkiye's one-per-writer columns and forums, then the rest of the
+ * world — blogs, forums, podcasts and video last.
  */
 export type ImportCandidate = {
   key: string;
@@ -58,7 +58,7 @@ export const CATALOG_IMPORT_ORDER: readonly ImportCandidate[] = [
     verified: e.verified,
     rank: e.group === "startup" || e.verified ? 1 : LATE_WORLD_GROUPS.has(e.group) ? 4 : 3,
   })),
-  // Startup / funding organisations with no RSS in the directory: T�rkiye's first, the rest with the world feeds.
+  // Startup / funding organisations with no RSS in the directory: Türkiye's first, the rest with the world feeds.
   ...STARTUP_PAGE_CANDIDATES.map<ImportCandidate>((e) => ({
     key: e.key,
     name: e.name,
@@ -71,4 +71,3 @@ export const CATALOG_IMPORT_ORDER: readonly ImportCandidate[] = [
     discover: true,
   })),
 ].sort((a, b) => rank(a) - rank(b));
-

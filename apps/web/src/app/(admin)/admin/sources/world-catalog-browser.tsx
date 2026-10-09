@@ -7,7 +7,7 @@ import { Button, Input, Label } from "@cim/ui";
 import { CONTINENTS, continentName, countryInScope, countryName, isContinentCode } from "@cim/core";
 import { post, type BulkOutcome } from "./source-controls";
 
-// The outlines are ~125 KB of path data - only this admin screen needs them, and only on the client.
+// The outlines are ~125 KB of path data — only this admin screen needs them, and only on the client.
 const WorldMap = dynamic(() => import("@/components/world-map").then((m) => m.WorldMap), {
   ssr: false,
   loading: () => <div className="h-64 animate-pulse rounded-xl border border-border bg-surface-muted/40" aria-hidden="true" />,
@@ -51,7 +51,7 @@ function Row({ label, count, depth, active, onClick }: { label: string; count: n
 
 /**
  * The world feed catalog, browsed by place: a map (hover / click a country) next to
- * a World  continent  country table, then category, search and "XML-checked only".
+ * a World → continent → country table, then category, search and "XML-checked only".
  * The list itself is fetched page by page from the server, so thousands of feeds
  * never travel to the browser at once. Every add is fetch-tested first.
  */
@@ -227,7 +227,7 @@ export function WorldCatalogBrowser({
             <caption className="sr-only">Catalog feeds by region. Select a row to list that region&apos;s feeds.</caption>
             <thead className="sticky top-0 border-b border-border bg-surface-muted text-left text-xs text-muted-foreground">
               <tr>
-                <th scope="col" className="px-3 py-2 font-medium">Region � {regionLabel}</th>
+                <th scope="col" className="px-3 py-2 font-medium">Region · {regionLabel}</th>
                 <th scope="col" className="px-3 py-2 text-right font-medium">Feeds</th>
               </tr>
             </thead>
@@ -277,7 +277,7 @@ export function WorldCatalogBrowser({
           XML-checked only
         </label>
         <Button type="button" variant="secondary" onClick={addAll} disabled={running || total === 0}>
-          {running ? "Adding" : `Test & add all matching (${total})`}
+          {running ? "Adding…" : `Test & add all matching (${total})`}
         </Button>
         {running ? (
           <Button
@@ -289,14 +289,14 @@ export function WorldCatalogBrowser({
             }}
             disabled={cancelRequested}
           >
-            {cancelRequested ? "Stopping" : "Stop"}
+            {cancelRequested ? "Stopping…" : "Stop"}
           </Button>
         ) : null}
       </div>
 
       {progress ? (
         <p role="status" className="text-sm text-muted-foreground">
-          Testing feeds {progress.done} of {progress.total}
+          Testing feeds… {progress.done} of {progress.total}
         </p>
       ) : null}
       {outcome ? (
@@ -326,8 +326,8 @@ export function WorldCatalogBrowser({
 
       <p className="text-xs text-muted-foreground">
         {total} feeds in {regionLabel}
-        {group ? ` � ${groupLabels[group] ?? group}` : ""}
-        {loading ? " � loading" : ""}
+        {group ? ` · ${groupLabels[group] ?? group}` : ""}
+        {loading ? " · loading…" : ""}
       </p>
       <ul className="grid gap-2 sm:grid-cols-2">
         {items.map((entry) => (
@@ -335,11 +335,11 @@ export function WorldCatalogBrowser({
             <div className="min-w-0">
               <div className="truncate text-sm font-medium text-foreground">
                 {entry.name}
-                {entry.verified ? <span className="ml-2 rounded-sm bg-success/15 px-1.5 py-0.5 text-[10px] font-semibold text-success">XML ?</span> : null}
+                {entry.verified ? <span className="ml-2 rounded-sm bg-success/15 px-1.5 py-0.5 text-[10px] font-semibold text-success">XML ✓</span> : null}
                 {entry.manualOnly ? <span className="ml-2 rounded-sm bg-surface-muted px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">Manual candidate</span> : null}
               </div>
               <div className="truncate text-xs text-muted-foreground">
-                {entry.country ? countryName(entry.country) : "Global"} � {entry.url}
+                {entry.country ? countryName(entry.country) : "Global"} · {entry.url}
               </div>
             </div>
             {entry.added ? <span className="shrink-0 text-xs font-medium text-success">Added</span> : <WorldAddButton entry={entry} onAdded={() => setItems((cur) => cur.map((i) => (i.key === entry.key ? { ...i, added: true } : i)))} />}
@@ -389,7 +389,7 @@ function WorldAddButton({ entry, onAdded }: { entry: Item; onAdded: () => void }
           }
         }}
       >
-        {state === "adding" ? "Testing" : "Add feed"}
+        {state === "adding" ? "Testing…" : "Add feed"}
       </Button>
       {error ? (
         <span role="alert" className="max-w-48 text-right text-xs text-danger">
@@ -399,4 +399,3 @@ function WorldAddButton({ entry, onAdded }: { entry: Item; onAdded: () => void }
     </div>
   );
 }
-

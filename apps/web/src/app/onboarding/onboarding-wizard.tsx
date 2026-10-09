@@ -13,7 +13,7 @@ import type {
 } from "@cim/validation";
 import { TRACKING_TARGET_OPTIONS } from "@/lib/tracking-targets";
 
-const SOURCE_TYPES: SourceTypeSelection[] = ["news", "web", "social", "video", "podcast", "forums", "comments", "all"];
+const SOURCE_TYPES: SourceTypeSelection[] = ["news", "web", "social", "video", "podcast", "forums", "comments", "trends", "all"];
 
 // Each answer does something real (api/onboarding/complete): the first two create an alert rule for your first
 // monitoring; the digest and the weekly archive e-mails reach everyone in the organization without one.

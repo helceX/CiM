@@ -79,13 +79,52 @@ a parallel sequential scan of the table, 96 ms (with parallel workers) on 590k r
 instant as the indexed `fetched_at` (equal in all 590 442 bench rows; both default to `now()` and nothing updates
 them): 5.9 ms, an index-only scan.
 
-### F5 — what a re-visit of an unchanged feed costs (open — next change)
+### F5 — what a re-visit of an unchanged feed cost (changed in this round)
 
-For each story of a feed that is already stored, every crawl still runs `findExistingArticle` (`select *`, with the
-tsvector and bytea columns), the matching loop against every monitoring, and `createMentionIfNotExists` for each
-match (an `INSERT … ON CONFLICT DO NOTHING`). It parses the feed twice (the health check, then `fetch`). Every
-source is fetched every two hours with no `ETag`/`Last-Modified`, and a failing job is attempted three times.
-bench: small in Postgres terms (20 ms per source), but it is where the worker's CPU and the pool's round trips go.
+For each story of a feed that was already stored, every crawl ran `findExistingArticle` (`select *`, with the tsvector
+and bytea columns), the matching loop against every monitoring, and `createMentionIfNotExists` for each match (an
+`INSERT … ON CONFLICT DO NOTHING`); it read the active monitorings from Postgres for every crawl, parsed the feed twice
+(health check, then `fetch`), fetched every source every two hours with no `ETag`/`Last-Modified`, and asked a dead
+source again at every one of those cycles. Steady state is overwhelmingly "nothing new": in the bench 400 feeds × 30
+stories, 20 % of publishers adding two stories a cycle, 60 % answering `ETag`, 80 % sending `Last-Modified`.
+
+What changed (`apps/worker/src/jobs/crawl-source.ts`, `crawl-state.ts`, `active-queries-cache.ts`; ingestion
+`crawl-memory.ts`, `rss-connector.ts`, `pipeline.ts`; core `crawl-backoff.ts`, `crawl-stats.ts`). A crawl now remembers, per
+source, in **Redis** (a few hundred bytes, 3-day TTL — no schema change, nothing added to Postgres):
+
+- the publisher's validators: the feed is requested with `If-None-Match` / `If-Modified-Since`; a 304 ends the crawl
+  (`safeFetch` used to treat any 3xx as a redirect, so it now returns 304 as a result);
+- the keys of the stories it already ingested, with a signature of the active monitorings and the source's type/country/
+  language: stories already handled under the same signature are not looked up, matched or counted again. A new or
+  edited monitoring changes the signature, so it sees the whole feed again (it is also back-filled over stored stories,
+  `monitoring-backfill.ts`); a full pass is made at least daily;
+- the number of failures in a row: the first failure keeps the normal cadence, then the wait doubles (4 h, 8 h, 16 h)
+  up to 24 h, and a `Retry-After` is honoured (capped at 24 h). While waiting, the check is recorded so the scheduler
+  does not requeue the source, and the publisher is not contacted;
+- nothing is remembered from a crawl that did not finish (the state is written after the whole feed is ingested), so a
+  failure can never make the next crawl skip stories it never handled. If Redis is unavailable, the crawl runs in full.
+
+The active monitorings are kept for one minute per source type instead of being read for every crawl (a new monitoring
+is matched from the next minute on). The per-crawl log line is written only when a crawl found something new.
+
+Bench (`bench:crawl --scenario=crawl --sources=400 --items=30 --monitorings=200 --cycles=6`, identical empty start,
+`--impl=baseline` is the same job with its memory switched off, `--impl=v2` the shipped one; both stored **12 800
+articles and 19 696 mentions** — the same result). Steady-state cycle (cycles 1–5 averaged), 400 sources:
+
+| | baseline | with crawl memory |
+|---|---|---|
+| Node CPU | 43.3 s | 2.8 s |
+| Postgres CPU | 16.5 s | 3.4 s |
+| statements | 32 497 | 2 054 |
+| rows returned | 93 738 | 1 890 |
+| requests to publishers | 400 (400 full bodies, 10.4 MB) | 400 (144 full bodies, 256 × 304, 3.8 MB) |
+| wall time | 41.7 s | 2.8 s |
+
+The first visit of a source is unchanged (nothing is remembered yet). The remaining Postgres CPU in the second column is
+the stories that are actually new (insert, clustering, mentions). The share of unchanged feeds and of publishers that
+support validators decides the real saving: the new "Crawl activity" card on `/admin/sources` shows, from live
+counters (`crawl:stats:<hour>` in Redis, 4-day TTL), how many checks ended as 304, as "nothing new", with new stories,
+failed or waiting out a backoff.
 
 ### F6 — the scheduler tick and the alert pollers (changed in this round)
 
@@ -214,10 +253,56 @@ Postgres CPU is the number to move. Compare **two equal windows** (for example t
    the cluster lock should be gone.
 4. Worker service → Metrics: vCPU and memory (expected to move less: it is 1.76 $).
 5. The invoice's Postgres CPU line, a week later. Do not expect it to fall by the vCPU ratio of the bench: the
-   average includes the work this change does not touch (alert pollers, re-visit processing, web queries).
+   average includes the work this change does not touch (web queries, first visits of new sources, catalog imports).
+6. `/admin/sources` → "Crawl activity, last 24 hours": the share of checks answered 304 / "nothing new" is the direct
+   measure of how much work the crawl memory removes; "Left alone after failures" lists sources being waited on.
 
 `docs/deployment/postgres-diagnostics.sql` holds the read-only queries for steps 2–3 and for table/index sizes,
 `idx_scan`, dead tuples and last autovacuum.
+
+## Railway configuration review (from the code; nothing here was changed on Railway)
+
+- **Postgres** is the cost (CPU 16.10 $ of 18.30 $). Everything above is aimed at its CPU. It stays on: the worker, the
+  schedulers and the web app need it, and shutting it down or letting it sleep ("serverless") would stop crawling and
+  alerting. Enabling Query Statistics (below) is the one operation the owner should do by hand, because it needs
+  `shared_preload_libraries` and a restart.
+- **Worker**: one replica. Its jobs are idempotent (one job id per source, advisory locks per story and per rule), so a
+  second replica would be safe, but it would only multiply database connections: the pool is node-postgres' default of
+  10 connections while `CRAWL_CONCURRENCY` defaults to 15, so a crawl past the tenth waits for a connection. With the
+  crawl memory most crawls are short, so the setting is no longer the bottleneck; if the CPU graph still shows the
+  worker busy, try `CRAWL_CONCURRENCY=8` (an environment variable, reversible) and compare the "Crawl activity" card
+  and the queue wait on `/admin/jobs`.
+- **Redis** gains the crawl memory (about 0.3–3 KB per source, 3-day TTL, so well under 30 MB for 9 000 sources) and the
+  hourly counters. It was 0.33 $; this does not change its size class. If Redis is lost, crawling continues in full.
+- **Web**: not part of the cost problem (0.92 $). Not a candidate for sleeping: first requests would wait for a cold
+  start.
+- **Serverless** for any of the three services is **not recommended**: BullMQ workers hold a connection to Redis and
+  the repeating jobs (scheduler every 30 s, alert evaluators every minute) would not fire while a service sleeps.
+- **Logs** are bounded: the per-job completion line is gone for the queues that run every few seconds or once per
+  source, the per-crawl line is written only when something new was found, and the catalog import writes one line per
+  batch. Failures are always logged.
+- **Environment variables to check**: `DB_VOLUME_MB` (the catalog import refuses to run without it), `CRAWL_CONCURRENCY`
+  (optional), `AI_PROVIDER` (the AI jobs return at once while it is `disabled`, the default).
+
+## What is not done (open, in order of expected value)
+
+1. **Real numbers.** Everything measured here is a benchmark on one machine. Enable Query Statistics, take the Railway
+   before/after windows described above, and compare. The expectation (not a promise): clustering (#73), the alert
+   evaluators and scheduler (#75) and the crawl memory (this change) all remove Postgres CPU; how much of the 1.66 vCPU
+   average they remove depends on the production mix, which only Query Statistics will show.
+2. **First visits.** A new source's first crawl stores up to 20–40 stories, each with a clustering lookup, mentions and
+   signals: ~15 ms of Postgres CPU per story in the bench. The catalog import adds 50 feeds per batch, i.e. up to ~1 500
+   stories per 5 minutes while it runs. If the CPU graph shows bursts at import time, lower `IMPORT_BATCH` (a constant in
+   `jobs/import-catalog.ts`) or pause the import from `/admin/sources`.
+3. **Adaptive polling interval.** Sources are still due every 2 h; a feed that has been "not modified" for days could be
+   polled every 4–6 h, and a busy one more often. It needs a per-source schedule (a `next_crawl_at` column and an index
+   for the scheduler) — a schema change, left for a decision.
+4. **Per-host politeness across sources.** Different sources on one host (catalog feeds of one publisher) are crawled
+   independently; only the catalog import limits per host.
+5. **`articles_title_trgm_idx`** (the biggest unused-index candidate, F7) and the table maintenance report: need
+   production `idx_scan` / dead-tuple numbers from `docs/deployment/postgres-diagnostics.sql` before any decision.
+6. **Alert delivery tracing.** `alert_events` records why a rule fired (`trigger_summary`) and when; per-channel
+   delivery results (in-app / e-mail outbox / webhook) are not joined in one view yet.
 
 ## Enabling Query Statistics (not done automatically)
 

@@ -171,6 +171,12 @@ export async function safeFetch(
         signal: AbortSignal.timeout(timeoutMs),
       });
 
+      // 304 Not Modified answers a conditional request (If-None-Match / If-Modified-Since): it is a result, not a redirect.
+      if (response.status === 304) {
+        await response.body?.cancel().catch(() => {});
+        return { status: 304, headers: response.headers, body: "", finalUrl: currentUrl.toString() };
+      }
+
       if (response.status >= 300 && response.status < 400) {
         const location = response.headers.get("location");
         await response.body?.cancel().catch(() => {});

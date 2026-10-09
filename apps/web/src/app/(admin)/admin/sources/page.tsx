@@ -7,6 +7,8 @@ import { countCatalogImportAttempts, db, getCatalogImportState, listCatalogImpor
 import { requireSuperAdmin } from "@/lib/admin";
 import { AddSocialFeedForm, CatalogBrowser } from "./source-controls";
 import { CatalogImportPanel } from "./catalog-import-panel";
+import { CrawlActivity } from "./crawl-activity";
+import { getCrawlStats } from "@/lib/crawl-stats";
 import { SourceExplorer } from "./source-explorer";
 import { WorldCatalogBrowser } from "./world-catalog-browser";
 
@@ -34,11 +36,12 @@ const GROUP_LABEL: Record<string, string> = {
  */
 export default async function AdminSourcesPage() {
   await requireSuperAdmin();
-  const [sources, importState, importCounts, importFailures] = await Promise.all([
+  const [sources, importState, importCounts, importFailures, crawlStats] = await Promise.all([
     listSourcesForAdmin(db),
     getCatalogImportState(db),
     countCatalogImportAttempts(db),
     listCatalogImportFailures(db),
+    getCrawlStats(24),
   ]);
   // Why the unreadable catalog feeds could not be added, most common first.
   const failureTally = tallyFailures(importFailures.map((row) => ({ url: row.url, message: row.error ?? "" })));
@@ -86,6 +89,14 @@ export default async function AdminSourcesPage() {
           catalogTotal={CATALOG_IMPORT_ORDER.length}
           sourceCount={sources.length}
         />
+      </section>
+      <section aria-labelledby="activity-heading">
+        <h2 id="activity-heading" className="text-sm font-semibold text-foreground">
+          Crawl activity, last 24 hours
+        </h2>
+        <div className="mt-3 rounded-xl border border-border p-4">
+          <CrawlActivity stats={crawlStats} />
+        </div>
       </section>
       <section aria-labelledby="current-heading">
         <h2 id="current-heading" className="text-sm font-semibold text-foreground">

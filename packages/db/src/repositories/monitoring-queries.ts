@@ -173,3 +173,6 @@ export async function listActiveMonitoringQueriesForSourceType(db: Db, sourceTyp
       ),
     );
 }
+
+/** One active monitoring as the ingestion pipeline sees it. */
+export type ActiveMonitoringQuery = Awaited<ReturnType<typeof listActiveMonitoringQueriesForSourceType>>[number];

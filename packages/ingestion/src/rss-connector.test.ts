@@ -153,4 +153,30 @@ describe("RSSConnector", () => {
     const health = await new RSSConnector().healthCheck(fakeSource());
     expect(health.status).toBe("healthy");
   });
+  it("sends the publisher's own validators back, and treats a 304 as healthy and unchanged", async () => {
+    safeFetchMock.mockResolvedValueOnce(fetchResult({ status: 304 }));
+    const health = await new RSSConnector().healthCheck(fakeSource(), {
+      validators: { etag: '"abc"', lastModified: "Fri, 09 Oct 2026 10:00:00 GMT" },
+    });
+    expect(health).toEqual({ status: "healthy", notModified: true });
+    expect(safeFetchMock).toHaveBeenLastCalledWith(
+      "https://cim-test.invalid/feed.xml",
+      expect.objectContaining({ headers: { "if-none-match": '"abc"', "if-modified-since": "Fri, 09 Oct 2026 10:00:00 GMT" } }),
+    );
+  });
+
+  it("asks unconditionally when it has no validators, and reports the ones a full answer carries", async () => {
+    safeFetchMock.mockResolvedValueOnce(
+      fetchResult({ status: 200, body: FEED_XML, headers: new Headers({ etag: '"v2"', "last-modified": "Fri, 09 Oct 2026 11:00:00 GMT" }) as never }),
+    );
+    const health = await new RSSConnector().healthCheck(fakeSource());
+    expect(safeFetchMock).toHaveBeenLastCalledWith("https://cim-test.invalid/feed.xml", expect.objectContaining({ headers: {} }));
+    expect(health).toEqual({ status: "healthy", validators: { etag: '"v2"', lastModified: "Fri, 09 Oct 2026 11:00:00 GMT" } });
+  });
+
+  it("passes a Retry-After on to the caller when the publisher refuses", async () => {
+    safeFetchMock.mockResolvedValueOnce(fetchResult({ status: 429, headers: new Headers({ "retry-after": "1800" }) as never }));
+    const health = await new RSSConnector().healthCheck(fakeSource());
+    expect(health).toMatchObject({ status: "error", retryAfterMs: 1_800_000 });
+  });
 });

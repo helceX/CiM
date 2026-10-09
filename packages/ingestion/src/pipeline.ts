@@ -17,15 +17,17 @@ import {
   findExistingArticle,
   findOrCreateSocialProfile,
   findSimilarRecentArticle,
-  insertArticle,
+  insertArticleWithOutcome,
   listActiveMonitoringQueriesForSourceType,
   signalFor,
+  type ActiveMonitoringQuery,
   touchSocialProfile,
   type Db,
   type OrganizationId,
 } from "@cim/db";
 import type { Source } from "@cim/db/schema";
 import type { RawFetchResult, SourceConnector } from "./connector";
+import { itemKey } from "./crawl-memory";
 import { normalizeToArticleInput } from "./normalize";
 
 export type NewMentionRecord = {
@@ -42,9 +44,20 @@ export type NewMentionRecord = {
   why?: string | null;
 };
 
+export type IngestOptions = {
+  /** The active monitorings for the source's type. Defaults to reading them; the worker passes a copy it keeps for a minute. */
+  activeQueries?: readonly ActiveMonitoringQuery[];
+  /** Items (by `itemKey`) a previous crawl already ingested under the same monitorings: they are not looked at again. */
+  skipKeys?: ReadonlySet<string>;
+};
+
 export type IngestSourceResult = {
   sourceId: string;
   itemsFetched: number;
+  /** Items left alone because `skipKeys` said an earlier crawl had already handled them. */
+  itemsSkipped: number;
+  /** The key of every item in this fetch — what the caller remembers for the next crawl once this one has succeeded. */
+  itemKeys: string[];
   articlesCreated: number;
   mentionsCreated: number;
   newMentions: NewMentionRecord[];
@@ -65,27 +78,38 @@ export async function ingestSource(
   db: Db,
   source: Source,
   connector: SourceConnector,
+  options: IngestOptions = {},
 ): Promise<IngestSourceResult> {
   const rawItems = await connector.fetch(source);
-  const activeQueries = await listActiveMonitoringQueriesForSourceType(db, source.type);
+  const activeQueries = options.activeQueries ?? (await listActiveMonitoringQueriesForSourceType(db, source.type));
 
   let articlesCreated = 0;
+  let itemsSkipped = 0;
+  const itemKeys: string[] = [];
   const newMentions: NewMentionRecord[] = [];
 
   for (const raw of rawItems) {
+    const key = itemKey(raw.canonicalUrl);
+    itemKeys.push(key);
+    if (options.skipKeys?.has(key)) {
+      itemsSkipped += 1;
+      continue;
+    }
     const normalized = normalizeToArticleInput(source, raw);
     const existing = await findExistingArticle(db, {
       canonicalUrl: normalized.canonicalUrl,
       contentHash: normalized.contentHash,
     });
-    const article =
-      existing ??
-      (await insertArticle(db, {
-        ...normalized,
-        authorProfileId: await resolveAuthorProfileId(db, raw),
-      }));
-    let clusterId = existing?.storyClusterId ?? null;
-    if (!existing) {
+    const { article, created } = existing
+      ? { article: existing, created: false }
+      : await insertArticleWithOutcome(db, {
+          ...normalized,
+          authorProfileId: await resolveAuthorProfileId(db, raw),
+        });
+    let clusterId = article.storyClusterId ?? null;
+    // Only the insert winner clusters and reports a new article. A concurrent
+    // crawl may have inserted the row after our initial lookup.
+    if (created) {
       articlesCreated += 1;
       clusterId = await maybeAssignStoryCluster(db, article);
     }
@@ -148,12 +172,14 @@ export async function ingestSource(
       }
     }
     // The story just gained an outlet: the mentions of the same story elsewhere pick up its wider reach.
-    if (!existing && clusterId && outlets >= 3) await applyCoverageToCluster(db, clusterId);
+    if (created && clusterId && outlets >= 3) await applyCoverageToCluster(db, clusterId);
   }
 
   return {
     sourceId: source.id,
     itemsFetched: rawItems.length,
+    itemsSkipped,
+    itemKeys,
     articlesCreated,
     mentionsCreated: newMentions.length,
     newMentions,

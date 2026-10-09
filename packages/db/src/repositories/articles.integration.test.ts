@@ -8,6 +8,7 @@ import {
   findSimilarRecentArticle,
   findSimilarRecentArticleExact,
   insertArticle,
+  insertArticleWithOutcome,
   listRecentArticlesForPreview,
   listRelatedArticles,
   listStoriesForPreview,
@@ -91,6 +92,25 @@ describe("articles repository (integration)", () => {
       .from(articles)
       .where(eq(articles.canonicalUrl, canonicalUrl));
     expect(rows).toHaveLength(1);
+  });
+
+  it("reports exactly one creator when two inserts race for the same article", async () => {
+    const input = {
+      sourceId,
+      canonicalUrl: `https://articles-test.example/concurrent-${Date.now()}`,
+      contentHash: `articles-concurrent-${Date.now()}`,
+      title: "Concurrent article",
+      storedExcerpt: null,
+      language: null,
+      publishedAt: null,
+      authorName: null,
+    };
+    const results = await Promise.all([
+      insertArticleWithOutcome(db, input),
+      insertArticleWithOutcome(db, input),
+    ]);
+    expect(results.filter((result) => result.created)).toHaveLength(1);
+    expect(results[0]!.article.id).toBe(results[1]!.article.id);
   });
 
   it("findExistingArticle and insertArticle still work normally for a genuinely new article", async () => {

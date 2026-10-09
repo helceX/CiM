@@ -7,6 +7,7 @@ export * from "./web-connector";
 export * from "./api-connector";
 export * from "./normalize";
 export * from "./pipeline";
+export * from "./crawl-memory";
 export * from "./safe-fetch";
 export * from "./ssrf-guard";
 export * from "./html-text";

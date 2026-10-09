@@ -4,9 +4,8 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { authorizeAdmin } from "../../auth";
 
 /**
- * Gives every source with no country the one its web address points to (a .tr site → Türkiye, a .de site →
- * Germany), so it sits in the right country cluster and counts for a country-limited monitoring. Never overwrites
- * a country that is set; general endings (.com, .org, .io …) stay unknown.
+ * Classifies uncategorized sources by explicit Turkish language and name/feed signals first, then a country-specific
+ * top-level domain. Never overwrites a country that is already set; weak endings such as .com and .org stay unknown.
  */
 export async function POST() {
   const auth = await authorizeAdmin();

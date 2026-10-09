@@ -1,8 +1,9 @@
 import { inferCountryFromHost } from "./country-from-host";
-import { hostOfUrl } from "./restricted-publishers";
+import { hostOfUrl, isLicenseRequiredHost } from "./restricted-publishers";
 import { feedIdentity, TURKEY_SOURCE_CATALOG } from "./source-catalog";
 import { WORLD_CATALOG_ROWS } from "./world-catalog.generated";
 import { STARTUP_FEED_ROWS, STARTUP_PAGE_ROWS } from "./startup-catalog.generated";
+import { RSS_SUPPLEMENT_ROWS } from "./rss-supplement.generated";
 
 /**
  * The world RSS pack (7,700 candidates researched by the operator, 5 Oct 2026),
@@ -32,7 +33,8 @@ export type WorldCatalogGroup =
   | "video"
   | "social"
   | "reference"
-  | "startup";
+  | "startup"
+  | "search";
 
 export const WORLD_CATALOG_GROUP_LABELS: Record<WorldCatalogGroup, string> = {
   general: "General news",
@@ -52,6 +54,7 @@ export const WORLD_CATALOG_GROUP_LABELS: Record<WorldCatalogGroup, string> = {
   social: "Social & microblogs",
   reference: "Reference, wikis & dictionaries",
   startup: "Startups, incubators & funding",
+  search: "Google News search feeds (manual candidates)",
 };
 
 export type WorldCatalogSource = {
@@ -68,20 +71,27 @@ export type WorldCatalogSource = {
   group: WorldCatalogGroup;
   /** The pack's own XML check passed (not a guarantee of freshness). */
   verified: boolean;
+  /** New user-provided candidates stay out of background import until an admin adds them. */
+  manualOnly?: boolean;
 };
 
+const SUPPLEMENT_BY_IDENTITY = new Map(RSS_SUPPLEMENT_ROWS.map((row) => [feedIdentity(row.url), row]));
+
 const PACK_SOURCES: readonly WorldCatalogSource[] = WORLD_CATALOG_ROWS.map(
-  ([id, name, url, country, language, type, group, verified]) => ({
-    key: `world-${id}`,
-    name,
-    url,
-    type,
-    language,
-    // The pack leaves the country blank when it could not confirm one; a country's own web ending still places it.
-    country: country || inferCountryFromHost(hostOfUrl(url)) || "",
-    group: group as WorldCatalogGroup,
-    verified: verified === 1,
-  }),
+  ([id, name, url, country, language, type, group, verified]) => {
+    const supplement = SUPPLEMENT_BY_IDENTITY.get(feedIdentity(url));
+    return {
+      key: `world-${id}`,
+      name,
+      url,
+      type,
+      language: language || supplement?.language || "",
+      // The pack leaves the country blank when it could not confirm one; use stronger feed metadata before its host ending.
+      country: supplement?.country === "TR" ? "TR" : country || supplement?.country || inferCountryFromHost(hostOfUrl(url)) || "",
+      group: group as WorldCatalogGroup,
+      verified: verified === 1 || supplement?.verified === true,
+    };
+  },
 );
 
 /**
@@ -101,7 +111,32 @@ const startupFeeds: WorldCatalogSource[] = (() => {
   return out;
 })();
 
-export const WORLD_SOURCE_CATALOG: readonly WorldCatalogSource[] = [...PACK_SOURCES, ...startupFeeds];
+const supplementFeeds: WorldCatalogSource[] = (() => {
+  const known = new Set([...TURKEY_SOURCE_CATALOG, ...PACK_SOURCES, ...startupFeeds].map((entry) => feedIdentity(entry.url)));
+  const out: WorldCatalogSource[] = [];
+  for (const row of RSS_SUPPLEMENT_ROWS) {
+    if (!row.url.startsWith("https://")) continue;
+    const host = hostOfUrl(row.url);
+    if (!host || isLicenseRequiredHost(host) || /(^|\.)reddit\.com$/i.test(host)) continue;
+    const identity = feedIdentity(row.url);
+    if (known.has(identity)) continue;
+    known.add(identity);
+    out.push({
+      key: `supplement-${out.length + 1}`,
+      name: row.name,
+      url: row.url,
+      type: row.type,
+      language: row.language,
+      country: row.country || inferCountryFromHost(host) || "",
+      group: row.group as WorldCatalogGroup,
+      verified: row.verified,
+      manualOnly: true,
+    });
+  }
+  return out;
+})();
+
+export const WORLD_SOURCE_CATALOG: readonly WorldCatalogSource[] = [...PACK_SOURCES, ...startupFeeds, ...supplementFeeds];
 
 export type StartupPageCandidate = {
   key: string;

@@ -142,19 +142,20 @@ describe("fillMissingSourceCountries (integration)", () => {
   });
 
   it("places sources by their country's own ending and leaves general ones and set ones alone", async () => {
-    const make = async (suffix: string, country: string | null) => {
+    const make = async (suffix: string, country: string | null, extra: { name?: string; language?: string } = {}) => {
       const domain = `${tag}-${suffix}`;
-      const [row] = await db.insert(sources).values({ name: domain, domain, type: "news", connector: "rss", country }).returning();
+      const [row] = await db.insert(sources).values({ name: extra.name ?? domain, domain, type: "news", connector: "rss", country, language: extra.language ?? null }).returning();
       return row!.id;
     };
-    const ids = [await make("a.org.tr", null), await make("b.co.uk", null), await make("c.com", null), await make("d.de", "AT")];
+    const ids = [await make("a.org.tr", null), await make("b.co.uk", null), await make("c.com", null), await make("d.de", "AT"), await make("e.com", null, { name: "Yerel Haber", language: "tr-TR" })];
     const result = await fillMissingSourceCountries(db);
-    expect(result.updated).toBeGreaterThanOrEqual(2);
+    expect(result.updated).toBeGreaterThanOrEqual(3);
     const country = async (id: string) => (await db.select().from(sources).where(eq(sources.id, id)))[0]!.country;
     expect(await country(ids[0]!)).toBe("TR");
     expect(await country(ids[1]!)).toBe("GB");
     expect(await country(ids[2]!)).toBeNull();
     expect(await country(ids[3]!)).toBe("AT"); // already set: never overwritten
+    expect(await country(ids[4]!)).toBe("TR"); // Turkish source metadata takes priority over a .com host
     expect((await fillMissingSourceCountries(db)).updated).toBe(0); // nothing left to place
   });
 });

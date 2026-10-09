@@ -346,12 +346,12 @@ export function SourceExplorer({ sources }: { sources: ExplorerSource[] }) {
           <div className="mt-3 flex flex-col gap-2 rounded-lg border border-border p-3 text-sm">
             <p className="text-muted-foreground">
               <strong className="text-foreground">{unknownCount.toLocaleString()}</strong> sources have no country yet, so they sit under
-              &ldquo;Unknown&rdquo; and only count for worldwide monitorings. Sources are placed by their web address — a .tr site
-              goes to Türkiye, a .de site to Germany; .com/.org sites stay unknown.
+              &ldquo;Unknown&rdquo; and only count for worldwide monitorings. Classification checks the feed language and Turkish source/feed
+              names first, then country-specific domain endings such as .tr or .de; .com and .org stay unknown without stronger signals.
             </p>
             <div>
               <Button type="button" size="sm" variant="secondary" disabled={busy} onClick={() => void fillCountries()}>
-                Fill in countries from site addresses
+                Classify sources with unknown countries
               </Button>
             </div>
           </div>

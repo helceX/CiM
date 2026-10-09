@@ -18,7 +18,7 @@ describe("world catalog", () => {
     }
   });
 
-  it("has unique keys and feeds, and repeats nothing the T�rkiye catalog already lists", () => {
+  it("has unique keys and feeds, and repeats nothing the Türkiye catalog already lists", () => {
     expect(new Set(WORLD_SOURCE_CATALOG.map((e) => e.key)).size).toBe(WORLD_SOURCE_CATALOG.length);
     const identities = WORLD_SOURCE_CATALOG.map((e) => feedIdentity(e.url));
     expect(new Set(identities).size).toBe(identities.length);
@@ -52,7 +52,7 @@ describe("startup catalog", () => {
     expect(startupFeeds.length).toBeGreaterThan(25);
     expect(startupFeeds.some((e) => e.country === "TR")).toBe(true);
     expect(startupFeeds.some((e) => e.country === "GB" || e.country === "US" || e.country === "")).toBe(true);
-    // Webrazzi is already in the T�rkiye catalog and must not appear a second time.
+    // Webrazzi is already in the Türkiye catalog and must not appear a second time.
     expect(startupFeeds.some((e) => /webrazzi\.com\/feed\/?$/.test(e.url))).toBe(false);
   });
 
@@ -69,7 +69,7 @@ describe("startup catalog", () => {
     }
   });
 
-  it("imports page candidates marked for discovery, T�rkiye's early", async () => {
+  it("imports page candidates marked for discovery, Türkiye's early", async () => {
     const { CATALOG_IMPORT_ORDER } = await import("./catalog-import");
     const pages = CATALOG_IMPORT_ORDER.filter((e) => e.discover);
     expect(pages).toHaveLength(STARTUP_PAGE_CANDIDATES.length);
@@ -79,7 +79,7 @@ describe("startup catalog", () => {
 });
 
 describe("catalog import order", () => {
-  it("lists every T�rkiye and world feed once, home market and checked feeds first", async () => {
+  it("lists every Türkiye and world feed once, home market and checked feeds first", async () => {
     const { CATALOG_IMPORT_ORDER } = await import("./catalog-import");
     expect(CATALOG_IMPORT_ORDER.length).toBe(
       TURKEY_SOURCE_CATALOG.filter((e) => e.group !== "columns").length +
@@ -106,4 +106,3 @@ describe("catalog import order", () => {
     expect(supplements.some((entry) => entry.name.includes("Scotland") && entry.country === "GB")).toBe(true);
   });
 });
-

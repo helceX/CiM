@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { hostMatchesDomain, normalizeHost } from "@cim/core";
 import type { Db } from "../client";
@@ -30,8 +31,31 @@ export async function createTakedownRequest(db: Db, input: NewTakedownRequest) {
     // Non-URL or multi-target requests require admin triage.
   }
 
+  const normalizedInput = {
+    ...input,
+    requesterEmail: input.requesterEmail.toLowerCase(),
+    targets: input.targets.trim(),
+  };
+  const fingerprint = createHash("sha256")
+    .update(`${normalizedInput.requesterEmail}\0${normalizedInput.targets}`)
+    .digest("hex");
+
   return db.transaction(async (tx) => {
-    const [row] = await tx.insert(takedownRequests).values(input).returning({ id: takedownRequests.id });
+    // Serialize the rare duplicate public submission without storing the
+    // contact/target digest or adding any workload to crawl transactions.
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${`publisher-request:${fingerprint}`}, 0))`);
+    const [existing] = await tx
+      .select({ id: takedownRequests.id })
+      .from(takedownRequests)
+      .where(and(
+        eq(takedownRequests.status, "open"),
+        eq(takedownRequests.requesterEmail, normalizedInput.requesterEmail),
+        eq(takedownRequests.targets, normalizedInput.targets),
+      ))
+      .limit(1);
+    if (existing) return existing.id;
+
+    const [row] = await tx.insert(takedownRequests).values(normalizedInput).returning({ id: takedownRequests.id });
     if (!row) throw new Error("failed to create takedown request");
     if (exactFeedUrl) {
       const [source] = await tx.select({ id: sources.id }).from(sources).where(eq(sources.url, exactFeedUrl)).limit(1);

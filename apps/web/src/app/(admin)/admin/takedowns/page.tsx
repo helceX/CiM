@@ -5,14 +5,14 @@ import { requireSuperAdmin } from "@/lib/admin";
 import { BlockDomainForm, ResolveTakedownForm, UnblockButton } from "./takedown-controls";
 
 function maskTargetQueries(targets: string): string {
-  return targets.split(/\\r?\\n/).map((line) => {
+  return targets.split(/\r?\n/).map((line) => {
     try {
       const url = new URL(line.trim());
       return `${url.protocol}//${url.host}${url.pathname}${url.search ? "?[query hidden]" : ""}`;
     } catch {
       return line;
     }
-  }).join("\\n");
+  }).join("\n");
 }
 
 /**

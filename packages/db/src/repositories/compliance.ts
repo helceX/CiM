@@ -16,19 +16,31 @@ export type NewTakedownRequest = {
 };
 
 export async function createTakedownRequest(db: Db, input: NewTakedownRequest) {
-  const [row] = await db.insert(takedownRequests).values(input).returning({ id: takedownRequests.id });
-  if (!row) throw new Error("failed to create takedown request");
-  return row.id;
-}
+  // Only pause on an unambiguous, exact feed URL. A domain or page request
+  // stays in admin review so a narrow request cannot accidentally stop every
+  // feed belonging to that publisher.
+  let exactFeedUrl: string | null = null;
+  try {
+    const parsed = new URL(input.targets.trim());
+    if ((parsed.protocol === "http:" || parsed.protocol === "https:") && !parsed.username && !parsed.password) {
+      parsed.hash = "";
+      exactFeedUrl = parsed.toString();
+    }
+  } catch {
+    // Non-URL or multi-target requests require admin triage.
+  }
 
-/** A request UUID is an unguessable public reference; return status only, never requester data. */
-export async function getPublicTakedownStatus(db: Db, id: string) {
-  const [row] = await db
-    .select({ id: takedownRequests.id, status: takedownRequests.status, createdAt: takedownRequests.createdAt, resolvedAt: takedownRequests.resolvedAt })
-    .from(takedownRequests)
-    .where(eq(takedownRequests.id, id))
-    .limit(1);
-  return row ?? null;
+  return db.transaction(async (tx) => {
+    const [row] = await tx.insert(takedownRequests).values(input).returning({ id: takedownRequests.id });
+    if (!row) throw new Error("failed to create takedown request");
+    if (exactFeedUrl) {
+      const [source] = await tx.select({ id: sources.id }).from(sources).where(eq(sources.url, exactFeedUrl)).limit(1);
+      if (source) {
+        await tx.update(sources).set({ status: "unavailable", updatedAt: new Date() }).where(eq(sources.id, source.id));
+      }
+    }
+    return row.id;
+  });
 }
 
 export async function listTakedownRequests(db: Db, status?: "open" | "resolved" | "rejected") {
@@ -130,3 +142,5 @@ export async function listPlatformAdminEmails(db: Db): Promise<string[]> {
     .where(and(eq(users.isPlatformSuperAdmin, true), sql`${users.deletedAt} is null`));
   return rows.map((r) => r.email);
 }
+
+undefined

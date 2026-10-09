@@ -1,5 +1,6 @@
 import {
   APIConnector,
+  GoogleTrendsConnector,
   MockNewsConnector,
   MockSocialConnector,
   RSSConnector,
@@ -25,6 +26,7 @@ const registry: Record<string, SourceConnector> = {
   sitemap: new SitemapConnector(),
   web: new WebConnector(),
   api: new APIConnector(),
+  "google-trends": new GoogleTrendsConnector(),
 };
 
 export function getConnectorFor(connectorName: string): SourceConnector | undefined {

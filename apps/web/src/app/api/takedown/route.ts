@@ -32,7 +32,7 @@ export async function POST(request: Request) {
   }
   const { confirmAuthority: _confirmed, ...input } = parsed.data;
   void _confirmed;
-  await createTakedownRequest(db, input);
+  const requestId = await createTakedownRequest(db, input);
 
   // Best effort: the request is already stored, so a mail failure must not fail it.
   try {
@@ -52,5 +52,5 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("[takedown] could not notify admins:", error);
   }
-  return NextResponse.json({ ok: true }, { status: 201 });
+  return NextResponse.json({ ok: true, requestId }, { status: 201 });
 }

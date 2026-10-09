@@ -47,11 +47,31 @@ describe("processScoreSignalsJob (integration)", () => {
     await db.delete(schema.sources).where(eq(schema.sources.id, sourceId));
   });
 
+  const gigabyte = 1_073_741_824;
+  const signalOfMention = async () => (await db.select().from(schema.mentions).where(eq(schema.mentions.id, mentionId)))[0]!;
+
+  it("waits while the database is nearly filling its volume, and says why", async () => {
+    // 900 MB used of a 1,000 MB volume: rewriting rows now would only make it worse.
+    const full = await processScoreSignalsJob({ env: { DB_VOLUME_MB: "1000" }, sizeBytes: async () => 900 * 1_048_576 });
+    expect(full.scored).toBe(0);
+    expect(full.note).toMatch(/1000 MB volume/);
+    expect((await signalOfMention()).signalReasons).toBeNull();
+
+    // Room to spare, or a volume size that is not known: the job runs.
+    const roomy = await processScoreSignalsJob({ env: { DB_VOLUME_MB: "1000" }, sizeBytes: async () => 100 * 1_048_576 });
+    expect(roomy.note).toBeNull();
+    expect((await signalOfMention()).signalReasons).not.toBeNull();
+    const unknown = await processScoreSignalsJob({ env: {}, sizeBytes: async () => gigabyte * 1000 });
+    expect(unknown.note).toBeNull();
+  });
+
   it("gives a mention saved without a signal its level and its reasons", async () => {
-    const before = (await db.select().from(schema.mentions).where(eq(schema.mentions.id, mentionId)))[0]!;
+    // The previous test already scored it; start from a mention that has none.
+    await db.update(schema.mentions).set({ signalReasons: null, signalScore: null, priority: "normal" }).where(eq(schema.mentions.id, mentionId));
+    const before = await signalOfMention();
     expect(before.signalReasons).toBeNull();
 
-    const result = await processScoreSignalsJob();
+    const result = await processScoreSignalsJob({ env: {} });
     expect(result.scored).toBeGreaterThanOrEqual(1);
 
     const after = (await db.select().from(schema.mentions).where(eq(schema.mentions.id, mentionId)))[0]!;

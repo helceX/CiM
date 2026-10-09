@@ -97,6 +97,9 @@ what is shown first. That keeps the evidence archive complete.
 - **Editing a monitoring** clears its old signals and rescoring starts immediately for the newest 1,500; the
   `score_signals` job (every 2 minutes, 500 × up to 10 per run) does the rest and also the mentions that predate
   signals. When nothing is unscored it is one indexed look at an empty list (`mentions_unscored_idx`).
+  Rescoring rewrites rows, so on a database that is nearly full it waits: with `DB_VOLUME_MB` set (the same
+  variable the catalog import and the pruning use) the job pauses past 85% of the volume and logs why; stories
+  arriving meanwhile are still scored at ingest. Without the variable it runs.
 - **Reach**: see above.
 
 ## Calibration

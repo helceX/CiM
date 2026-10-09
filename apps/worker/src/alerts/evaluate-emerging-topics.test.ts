@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Queue } from "bullmq";
 import type { SendEmailJobData } from "@cim/core";
 
@@ -14,10 +14,15 @@ import type { SendEmailJobData } from "@cim/core";
 const getActiveEmergingTopicAlertRules = vi.fn();
 const getEmergingTopicStats = vi.fn();
 
+const getQueryIdsWithTopicVolume = vi.fn();
+const listRuleIdsInCooldown = vi.fn();
+
 vi.mock("@cim/db", () => ({
   db: {},
   getActiveEmergingTopicAlertRules: (...args: unknown[]) => getActiveEmergingTopicAlertRules(...args),
   getEmergingTopicStats: (...args: unknown[]) => getEmergingTopicStats(...args),
+  getQueryIdsWithTopicVolume: (...args: unknown[]) => getQueryIdsWithTopicVolume(...args),
+  listRuleIdsInCooldown: (...args: unknown[]) => listRuleIdsInCooldown(...args),
 }));
 
 const fireAlert = vi.fn();
@@ -30,6 +35,12 @@ const { evaluateEmergingTopicAlerts } = await import("./evaluate-emerging-topics
 function fakeRule(id: string) {
   return { id, name: `Rule ${id}`, queryId: `query-${id}` };
 }
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  listRuleIdsInCooldown.mockResolvedValue(new Set());
+  getQueryIdsWithTopicVolume.mockImplementation(async (_db: unknown, ids: string[]) => new Set(ids));
+});
 
 describe("evaluateEmergingTopicAlerts — per-rule failure isolation", () => {
   it("still evaluates rule 2 when rule 1's stats lookup throws", async () => {

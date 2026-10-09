@@ -1,5 +1,5 @@
-import { and, eq, inArray, isNull, ne, notInArray, sql } from "drizzle-orm";
-import { hostMatchesDomain, hostOfUrl, inferCountryFromHost, isLicenseRequiredHost } from "@cim/core";
+import { and, eq, inArray, isNull, ne, notInArray, or, sql } from "drizzle-orm";
+import { crawlIntervalTable, hostMatchesDomain, hostOfUrl, inferCountryFromHost, isLicenseRequiredHost } from "@cim/core";
 import type { Db } from "../client";
 import { articles, sources } from "../schema/content";
 import { isHostBlocked, listBlockedDomains } from "./compliance";
@@ -19,6 +19,32 @@ import { isHostBlocked, listBlockedDomains } from "./compliance";
  */
 export async function listActiveSources(db: Db) {
   return db.select().from(sources).where(ne(sources.status, "unavailable"));
+}
+
+/**
+ * The sources whose crawl interval has run out (never checked, or last checked longer ago than their connector's
+ * interval — core/crawl-interval.ts), selected in the database. The scheduler ticks every 30 seconds; reading every
+ * source row (up to 9,000, all columns) to find the few dozen that are due cost about 160 ms of Node CPU per tick.
+ * Same rule as isSourceDue, which the caller still applies to what comes back.
+ */
+export async function listDueSources(db: Db, now: Date) {
+  const { byConnector, fallbackMs } = crawlIntervalTable();
+  const intervalMs = sql`case ${sources.connector} ${sql.join(
+    Object.entries(byConnector).map(([connector, ms]) => sql`when ${connector} then ${ms}::double precision`),
+    sql` `,
+  )} else ${fallbackMs}::double precision end`;
+  return db
+    .select({ id: sources.id, connector: sources.connector, lastCheckedAt: sources.lastCheckedAt })
+    .from(sources)
+    .where(
+      and(
+        ne(sources.status, "unavailable"),
+        or(
+          isNull(sources.lastCheckedAt),
+          sql`${sources.lastCheckedAt} <= ${now.toISOString()}::timestamptz - (${intervalMs}) * interval '1 millisecond'`,
+        ),
+      ),
+    );
 }
 
 /** How many sources are not "unavailable" — for callers that only need the number, not up to 9,000 full rows. */

@@ -27,6 +27,11 @@ export function crawlIntervalMs(connector: string): number {
   return CRAWL_INTERVAL_MS[connector] ?? DEFAULT_CRAWL_INTERVAL_MS;
 }
 
+/** The same table for a database query that selects the due sources instead of reading them all (db/sources.ts listDueSources). */
+export function crawlIntervalTable(): { byConnector: Readonly<Record<string, number>>; fallbackMs: number } {
+  return { byConnector: CRAWL_INTERVAL_MS, fallbackMs: DEFAULT_CRAWL_INTERVAL_MS };
+}
+
 /** A never-checked source is always due; otherwise due once its interval has passed. */
 export function isSourceDue(
   source: { connector: string; lastCheckedAt: Date | null },

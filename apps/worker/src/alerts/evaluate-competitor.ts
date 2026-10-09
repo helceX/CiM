@@ -1,7 +1,8 @@
 import type { Queue } from "bullmq";
 import type { SendEmailJobData } from "@cim/core";
-import { db, getActiveCompetitorAlertRules, getCompetitorAlertStats } from "@cim/db";
+import { db, getActiveCompetitorAlertRules, getCompetitorAlertStats, getQueryIdsWithRecentMentions } from "@cim/db";
 import { fireAlert } from "./notify";
+import { rulesWorthEvaluating } from "./rules-worth-evaluating";
 
 const MIN_ABSOLUTE_COUNT = 3; // never alert off 1-2 mentions, same floor as spike/sentiment-shift/emerging-topic
 
@@ -15,7 +16,11 @@ const MIN_ABSOLUTE_COUNT = 3; // never alert off 1-2 mentions, same floor as spi
 export async function evaluateCompetitorAlerts(
   emailQueue: Queue<SendEmailJobData>,
 ): Promise<void> {
-  const rules = await getActiveCompetitorAlertRules(db);
+  const rules = await rulesWorthEvaluating(
+    await getActiveCompetitorAlertRules(db),
+    (queryIds) => getQueryIdsWithRecentMentions(db, queryIds, MIN_ABSOLUTE_COUNT),
+    "evaluateCompetitorAlerts",
+  );
 
   for (const rule of rules) {
     // Same per-rule isolation as generate-insight.ts's cross-tenant

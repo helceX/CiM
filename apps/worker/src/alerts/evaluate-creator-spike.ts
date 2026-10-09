@@ -1,7 +1,8 @@
 import type { Queue } from "bullmq";
 import type { SendEmailJobData } from "@cim/core";
-import { db, getActiveCreatorSpikeAlertRules, getCreatorSpikeStats } from "@cim/db";
+import { db, getActiveCreatorSpikeAlertRules, getCreatorSpikeStats, getQueryIdsWithCreatorPosts } from "@cim/db";
 import { fireAlert } from "./notify";
+import { rulesWorthEvaluating } from "./rules-worth-evaluating";
 
 const MIN_ABSOLUTE_COUNT = 3; // never alert off 1-2 mentions, same floor as spike/emerging-topic
 const BASELINE_MULTIPLIER = 3; // "3x baseline" floor, same explainable formula as evaluateSpikeAlerts
@@ -20,7 +21,11 @@ const BASELINE_MULTIPLIER = 3; // "3x baseline" floor, same explainable formula 
 export async function evaluateCreatorSpikeAlerts(
   emailQueue: Queue<SendEmailJobData>,
 ): Promise<void> {
-  const rules = await getActiveCreatorSpikeAlertRules(db);
+  const rules = await rulesWorthEvaluating(
+    await getActiveCreatorSpikeAlertRules(db),
+    (queryIds) => getQueryIdsWithCreatorPosts(db, queryIds, MIN_ABSOLUTE_COUNT),
+    "evaluateCreatorSpikeAlerts",
+  );
 
   for (const rule of rules) {
     // Same per-rule isolation as evaluateEmergingTopicAlerts — this loop

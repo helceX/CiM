@@ -43,6 +43,16 @@ export async function createTakedownRequest(db: Db, input: NewTakedownRequest) {
   });
 }
 
+/** A request UUID is an unguessable public reference; return status only, never requester data. */
+export async function getPublicTakedownStatus(db: Db, id: string) {
+  const [row] = await db
+    .select({ id: takedownRequests.id, status: takedownRequests.status, createdAt: takedownRequests.createdAt, resolvedAt: takedownRequests.resolvedAt })
+    .from(takedownRequests)
+    .where(eq(takedownRequests.id, id))
+    .limit(1);
+  return row ?? null;
+}
+
 export async function listTakedownRequests(db: Db, status?: "open" | "resolved" | "rejected") {
   return db
     .select()
@@ -142,5 +152,3 @@ export async function listPlatformAdminEmails(db: Db): Promise<string[]> {
     .where(and(eq(users.isPlatformSuperAdmin, true), sql`${users.deletedAt} is null`));
   return rows.map((r) => r.email);
 }
-
-undefined

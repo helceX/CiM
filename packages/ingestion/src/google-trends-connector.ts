@@ -59,7 +59,7 @@ export class GoogleTrendsConnector implements SourceConnector {
         canonicalUrl,
         // Google may include approximate search-volume buckets in the RSS body;
         // retain only the trend label and publisher link, never those estimates.
-        bodyText: "",
+        bodyText: `Google Trends listing for ${geo} on ${day}.`,
         publishedAt: entry.publishedAt ?? new Date(`${day}T00:00:00.000Z`),
         authorName: null,
       };

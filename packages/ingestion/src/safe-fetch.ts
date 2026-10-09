@@ -116,6 +116,8 @@ export type SafeFetchOptions = {
   maxRedirects?: number;
   maxResponseBytes?: number;
   headers?: Record<string, string>;
+  /** Optional real operator contact; omitted unless explicitly configured. */
+  contactEmail?: string;
   /** Defaults to GET. A redirect hop always re-sends the same method/body — never silently downgraded. */
   method?: string;
   body?: string;
@@ -145,6 +147,16 @@ export async function safeFetch(
   const maxRedirects = options.maxRedirects ?? DEFAULT_MAX_REDIRECTS;
   const maxResponseBytes = options.maxResponseBytes ?? DEFAULT_MAX_RESPONSE_BYTES;
   const resolveHostname = options.resolveHostname ?? resolveValidatedIp;
+  const contactEmail = (options.contactEmail ?? process.env.CIM_BOT_CONTACT_EMAIL)?.trim();
+  const identityHeaders: Record<string, string> = {
+    "user-agent": "Mediaory-Bot/1.0 (+https://mediaory.io/bot)",
+  };
+  if (contactEmail && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail)) {
+    identityHeaders.from = contactEmail;
+  }
+  const forwardedHeaders = Object.fromEntries(
+    Object.entries(options.headers ?? {}).filter(([name]) => name.toLowerCase() !== "from"),
+  );
 
   let currentUrl = new URL(url);
   for (let hop = 0; ; hop += 1) {
@@ -166,7 +178,7 @@ export async function safeFetch(
         method: options.method ?? "GET",
         body: options.body,
         redirect: "manual",
-        headers: { "user-agent": "Mediaory-Bot/1.0 (+https://mediaory.io/bot)", ...options.headers },
+        headers: { ...forwardedHeaders, ...identityHeaders },
         dispatcher: agent,
         signal: AbortSignal.timeout(timeoutMs),
       });

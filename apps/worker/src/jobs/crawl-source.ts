@@ -53,6 +53,11 @@ export async function processCrawlSourceJob(
     throw new Error(`Source not found: ${job.data.sourceId}`);
   }
 
+  // Jobs may already be waiting in Redis when an administrator pauses a
+  // source (for example after a publisher opt-out). Re-check the current
+  // state in the worker so a queued or retried job cannot contact it again.
+  if (source.status === "unavailable") return;
+
   // A job that waited in the queue while the source was crawled by another one
   // (or an older backlog) must not fetch the publisher again. Only a first attempt
   // is skipped: a retry runs because the previous attempt failed and recorded its

@@ -15,6 +15,7 @@ export function TakedownForm({ turnstileSiteKey }: { turnstileSiteKey: string | 
   const [error, setError] = useState<string | null>(null);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [captchaReset, setCaptchaReset] = useState(0);
+  const [requestId, setRequestId] = useState<string | null>(null);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -36,6 +37,8 @@ export function TakedownForm({ turnstileSiteKey }: { turnstileSiteKey: string | 
         }),
       });
       if (response.ok) {
+        const body = (await response.json().catch(() => ({}))) as { requestId?: string };
+        setRequestId(body.requestId ?? null);
         setStatus("done");
         return;
       }
@@ -54,6 +57,14 @@ export function TakedownForm({ turnstileSiteKey }: { turnstileSiteKey: string | 
       <div role="status" className="rounded-2xl border border-[var(--mk-line)] bg-white/5 p-8">
         <h2 className="text-2xl font-extrabold">{t("doneTitle")}</h2>
         <p className="mt-3 text-[var(--mk-muted)]">{t("doneBody")}</p>
+        {requestId ? (
+          <p className="mt-3 text-sm text-[var(--mk-muted)]">
+            {t("requestId", { id: requestId })}{" "}
+            <Link href={`/takedown/status/${requestId}`} className="underline underline-offset-2 hover:text-white">
+              {t("checkStatus")}
+            </Link>
+          </p>
+        ) : null}
       </div>
     );
   }

@@ -2,7 +2,8 @@ import Link from "next/link";
 import { CATALOG_GROUPS, TURKEY_SOURCE_CATALOG } from "@cim/core";
 import { WORLD_CATALOG_GROUP_LABELS, WORLD_SOURCE_CATALOG } from "@cim/core/world-catalog";
 import { CATALOG_IMPORT_ORDER } from "@cim/core/catalog-import";
-import { countCatalogImportAttempts, db, getCatalogImportState, listSourcesForAdmin } from "@cim/db";
+import { FEED_FAILURE_LABELS, isTransientFeedFailure, tallyFailures, type FeedFailureClass } from "@cim/core";
+import { countCatalogImportAttempts, db, getCatalogImportState, listCatalogImportFailures, listSourcesForAdmin } from "@cim/db";
 import { requireSuperAdmin } from "@/lib/admin";
 import { AddSocialFeedForm, CatalogBrowser } from "./source-controls";
 import { CatalogImportPanel } from "./catalog-import-panel";
@@ -33,11 +34,17 @@ const GROUP_LABEL: Record<string, string> = {
  */
 export default async function AdminSourcesPage() {
   await requireSuperAdmin();
-  const [sources, importState, importCounts] = await Promise.all([
+  const [sources, importState, importCounts, importFailures] = await Promise.all([
     listSourcesForAdmin(db),
     getCatalogImportState(db),
     countCatalogImportAttempts(db),
+    listCatalogImportFailures(db),
   ]);
+  // Why the unreadable catalog feeds could not be added, most common first.
+  const failureTally = tallyFailures(importFailures.map((row) => ({ url: row.url, message: row.error ?? "" })));
+  const failureBreakdown = (Object.entries(failureTally.byClass) as [FeedFailureClass, number][])
+    .sort((a, b) => b[1] - a[1])
+    .map(([failureClass, count]) => ({ label: FEED_FAILURE_LABELS[failureClass], count, transient: isTransientFeedFailure(failureClass) }));
   const worldCountryCounts: Record<string, number> = {};
   let worldGlobalCount = 0;
   for (const entry of WORLD_SOURCE_CATALOG) {
@@ -75,6 +82,7 @@ export default async function AdminSourcesPage() {
           added={importCounts.added}
           failed={importCounts.failed}
           skipped={importCounts.skipped}
+          failureBreakdown={failureBreakdown}
           catalogTotal={CATALOG_IMPORT_ORDER.length}
           sourceCount={sources.length}
         />

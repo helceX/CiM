@@ -18,6 +18,7 @@ export * from "./email-provider";
 export * from "./jobs";
 export * from "./restricted-publishers";
 export * from "./crawl-interval";
+export * from "./feed-failure";
 export * from "./error-reporting";
 export * from "./source-categories";
 export * from "./regions";

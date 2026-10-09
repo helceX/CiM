@@ -112,6 +112,42 @@ narrowing.
 The Postgres log line means Railway's Query Statistics page queries a view that was never created in this
 database. See "Enabling Query Statistics" below.
 
+### F9 — the catalog import: `failed 25`, `failed 9`, and the repeats behind them
+
+`apps/worker/src/jobs/import-catalog.ts` adds catalog feeds 50 at a time every 5 minutes, each fetch-tested first. Its
+log line said `added 0, failed 25, skipped 0` and nothing else. Reading the job and the table it writes:
+
+1. **The reason was stored but never shown.** `catalog_import_attempts.error` held the message, the admin page showed
+   only a count, so "failed 25" could mean 25 dead feeds or one timeout storm.
+2. **An exception was logged and not recorded.** The `catch` branch counted a failure but wrote no attempt row, so the
+   same feed was picked again at the next run — five minutes later, every five minutes, forever. That is the only
+   unbounded repeat in the job (and is a cost: a fetch plus a parse each time).
+3. **Candidates came in catalog order**, and the catalog has publishers with up to 265 category feeds in a row, so a
+   batch was often one publisher asked for 20–50 feeds at concurrency 6.
+4. **Every failure was retried once after three days**, whatever its cause, and a timeout (8 s, hit when the worker's
+   event loop is busy crawling) was treated as "the feed is dead".
+5. A finished import still scanned the whole catalog (about 25 chunks of two queries) and read every source row to count
+   them (`listActiveSources(...).length`) every 5 minutes.
+
+What changed: failures are classified (`packages/core/src/feed-failure.ts`); dead feeds (404/410, not a feed, empty,
+refused, policy) are tried twice, three days apart, failures of the moment (timeout, network, 429, 5xx) after a day and
+up to five times; at most two feeds per publisher per batch and never two at once; a batch of ≥ 10 failures over ≥ 5
+publishers that are ≥ 80 % transient and added nothing is treated as *our* fault — those failures are **not** recorded
+against the feeds, the run says so in its note and the import waits 30 minutes; exceptions are recorded with their
+reason; a finished import looks again after an hour (resuming from `/admin/sources` clears the hold); sources are
+counted with `count(*)`. `/admin/sources` shows the failure breakdown, the job logs it
+(`failures: timeout 22, network 3 over 17 sites`). No failure is shown as a success: `failed` still counts every one.
+
+Safe re-run: nothing needs cleaning up. Feeds recorded `failed` before this change are classified from their stored
+message the next time the import looks at them (a stored timeout becomes eligible after one day instead of three).
+To look again at everything now, press "Pause import" then "Resume import" on `/admin/sources`.
+
+**Expected effect:** fewer fetches and parses per hour once the catalog is done or backing off, no repeat of the
+exception path, and failures that say what they are. It is *not* expected to move the Postgres CPU figure on its own;
+the first crawls of newly imported feeds were (clustering, F1), which are now cheap. Verify with the import log
+line and the `catalog_import_attempts` breakdown on the admin page; on Railway compare the worker's outbound request
+count (not exposed by Railway — use the log line `[import-catalog] added …`) before and after.
+
 ## What changed (this change)
 
 | Change | Where | Verified by |

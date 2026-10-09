@@ -15,6 +15,7 @@ export function CatalogImportPanel({
   added,
   failed,
   skipped,
+  failureBreakdown,
   catalogTotal,
   sourceCount,
 }: {
@@ -24,6 +25,8 @@ export function CatalogImportPanel({
   added: number;
   failed: number;
   skipped: number;
+  /** Why the unreadable feeds failed, most common first; `transient` ones are tried again after a day. */
+  failureBreakdown: { label: string; count: number; transient: boolean }[];
   catalogTotal: number;
   sourceCount: number;
 }) {
@@ -79,7 +82,7 @@ export function CatalogImportPanel({
           <dd className="tabular-nums text-foreground">{added.toLocaleString()}</dd>
         </div>
         <div>
-          <dt className="text-xs text-muted-foreground">Unreadable (retried once)</dt>
+          <dt className="text-xs text-muted-foreground">Unreadable</dt>
           <dd className="tabular-nums text-foreground">{failed.toLocaleString()}</dd>
         </div>
         <div>
@@ -87,6 +90,19 @@ export function CatalogImportPanel({
           <dd className="tabular-nums text-foreground">{skipped.toLocaleString()}</dd>
         </div>
       </dl>
+      {failureBreakdown.length > 0 ? (
+        <div>
+          <p className="text-xs font-medium text-foreground">Why feeds could not be added</p>
+          <ul className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+            {failureBreakdown.map((row) => (
+              <li key={row.label}>
+                {row.label}: <span className="tabular-nums text-foreground">{row.count.toLocaleString()}</span>
+                {row.transient ? " — tried again after a day" : " — tried twice, three days apart"}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
       <p className="text-xs text-muted-foreground" role="status">
         {lastRunAt ? `Last run ${new Date(lastRunAt).toLocaleString()}` : "Has not run yet"}
         {lastNote ? ` — ${lastNote}` : ""}

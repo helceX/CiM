@@ -4,6 +4,7 @@ import { ingestSource } from "@cim/ingestion";
 import { isSourceDue, type CrawlSourceJobData, type SendEmailJobData } from "@cim/core";
 import { db, markSourceChecked, schema } from "@cim/db";
 import { getConnectorFor } from "../connector-registry";
+import type { SourceConnector } from "@cim/ingestion";
 import { evaluateNewMentionAlerts } from "../alerts/evaluate";
 
 /**
@@ -14,6 +15,7 @@ import { evaluateNewMentionAlerts } from "../alerts/evaluate";
 export async function processCrawlSourceJob(
   job: Job<CrawlSourceJobData>,
   emailQueue: Queue<SendEmailJobData>,
+  deps: { connectorFor?: (connector: string) => SourceConnector | undefined } = {},
 ): Promise<void> {
   const [source] = await db
     .select()
@@ -29,7 +31,7 @@ export async function processCrawlSourceJob(
   // check, so it is "not due" by design.
   if (job.attemptsMade === 0 && !isSourceDue(source)) return;
 
-  const connector = getConnectorFor(source.connector);
+  const connector = (deps.connectorFor ?? getConnectorFor)(source.connector);
   if (!connector) {
     await markSourceChecked(db, source.id, "unavailable");
     console.warn(`[worker] no connector implemented for "${source.connector}", skipping`);

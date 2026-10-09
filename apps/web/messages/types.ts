@@ -4,4 +4,4 @@ import type auth from "./en/auth.json";
 import type feedback from "./en/feedback.json";
 
 /** The shape of a complete catalog: English is the source, every other language mirrors it key for key. */
-export type Messages = typeof marketing & typeof shell & typeof auth & typeof feedback;
+export type Messages = typeof marketing & typeof shell & typeof auth & typeof feedback & typeof opportunities;

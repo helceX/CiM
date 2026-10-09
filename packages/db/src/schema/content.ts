@@ -210,6 +210,7 @@ export const mentions = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
+    uniqueIndex("mentions_org_id_uidx").on(table.organizationId, table.id),
     index("mentions_org_created_idx").on(table.organizationId, table.createdAt),
     index("mentions_org_project_idx").on(table.organizationId, table.projectId),
     index("mentions_article_idx").on(table.articleId),

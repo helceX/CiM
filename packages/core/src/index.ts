@@ -35,3 +35,4 @@ export * from "./visuals";
 export * from "./source-catalog";
 export * from "./social-feeds";
 export * from "./archive-period";
+export * from "./opportunity-match";

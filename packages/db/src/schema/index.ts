@@ -16,3 +16,4 @@ export * from "./teams";
 export * from "./social-connections";
 export * from "./catalog-import";
 export * from "./archive";
+export * from "./opportunities";

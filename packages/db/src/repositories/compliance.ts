@@ -42,7 +42,7 @@ export async function createTakedownRequest(db: Db, input: NewTakedownRequest) {
 
   return db.transaction(async (tx) => {
     // Serialize the rare duplicate public submission without storing the
-    // contact/target digest or adding any workload to crawl transactions.
+    // contact/target digest or adding workload to crawl transactions.
     await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${`publisher-request:${fingerprint}`}, 0))`);
     const [existing] = await tx
       .select({ id: takedownRequests.id })

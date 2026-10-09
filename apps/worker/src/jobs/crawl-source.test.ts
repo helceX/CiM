@@ -59,6 +59,16 @@ beforeEach(() => {
 });
 
 describe("processCrawlSourceJob — stale queued jobs", () => {
+  it("does not fetch a source paused after its job was queued, including on retry", async () => {
+    selectResult.mockResolvedValue([{ ...staleSource, status: "unavailable" }]);
+
+    await processCrawlSourceJob(job(0), emailQueue, deps());
+    await processCrawlSourceJob(job(1), emailQueue, deps());
+
+    expect(healthCheck).not.toHaveBeenCalled();
+    expect(ingestSource).not.toHaveBeenCalled();
+  });
+
   it("does nothing for a source that was checked minutes ago (first attempt)", async () => {
     selectResult.mockResolvedValue([{ id: "s1", name: "Feed", connector: "rss", lastCheckedAt: minutesAgo(5) }]);
     await processCrawlSourceJob(job(0), emailQueue, deps());

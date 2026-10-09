@@ -101,6 +101,25 @@ describe("publisher compliance (integration)", () => {
     expect(await isHostBlocked(db, domain)).toBe(false);
   });
 
+  it("pauses only an exactly matched feed URL on a publisher request", async () => {
+    const feedUrl = `https://www.${domain}/requested.xml`;
+    const created = await createSource(db, feed("/requested.xml"));
+    if (!created.ok) throw new Error("setup");
+    sourceIds.push(created.id);
+
+    const id = await createTakedownRequest(db, {
+      requesterName: "Publisher",
+      requesterEmail: `owner@${domain}`,
+      publisher: "Pub",
+      targets: feedUrl,
+      message: "Please stop polling this feed",
+    });
+    requestIds.push(id);
+
+    const [paused] = await db.select({ status: sources.status }).from(sources).where(eq(sources.id, created.id));
+    expect(paused?.status).toBe("unavailable");
+  });
+
   it("closes a takedown request once, and counts open ones", async () => {
     const before = await countOpenTakedownRequests(db);
     const id = await createTakedownRequest(db, {

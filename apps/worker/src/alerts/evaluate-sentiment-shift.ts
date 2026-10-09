@@ -3,9 +3,11 @@ import type { SendEmailJobData } from "@cim/core";
 import {
   db,
   getActiveSentimentShiftAlertRules,
+  getQueryIdsWithClassifiedMentions,
   getQuerySentimentShiftStats,
 } from "@cim/db";
 import { fireAlert } from "./notify";
+import { rulesWorthEvaluating } from "./rules-worth-evaluating";
 
 const MIN_CLASSIFIED_COUNT = 3; // never alert off 1-2 AI-classified mentions
 const SHIFT_THRESHOLD = 0.3; // 30 percentage points of negative share, over baseline
@@ -20,7 +22,11 @@ const SHIFT_THRESHOLD = 0.3; // 30 percentage points of negative share, over bas
 export async function evaluateSentimentShiftAlerts(
   emailQueue: Queue<SendEmailJobData>,
 ): Promise<void> {
-  const rules = await getActiveSentimentShiftAlertRules(db);
+  const rules = await rulesWorthEvaluating(
+    await getActiveSentimentShiftAlertRules(db),
+    (queryIds) => getQueryIdsWithClassifiedMentions(db, queryIds, MIN_CLASSIFIED_COUNT),
+    "evaluateSentimentShiftAlerts",
+  );
 
   for (const rule of rules) {
     // Same per-rule isolation as generate-insight.ts's cross-tenant

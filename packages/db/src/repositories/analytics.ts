@@ -1,4 +1,4 @@
-import { and, count, eq, gte, isNull, sql } from "drizzle-orm";
+import { and, count, eq, gte, inArray, isNull, sql } from "drizzle-orm";
 import type { Db } from "../client";
 import { articles, mentions, sources } from "../schema/content";
 import { monitoringQueries } from "../schema/monitoring";
@@ -184,35 +184,34 @@ export async function getQuerySpikeStats(
   db: Db,
   queryId: string,
 ): Promise<QuerySpikeStats> {
+  // One pass over the last 25 hours of this query's mentions (the (query_id, created_at) index), bucketed by hour;
+  // the 24 baseline hours are zero-filled afterwards so an empty hour still counts as 0 in the mean and deviation.
+  // (The earlier form joined 24 generated hours to every mention of the query on date_trunc(created_at), which
+  // cannot use an index and read the query's whole history, twice.)
   const [row] = (
     await db.execute<{
       current_count: number;
       baseline_avg: string | null;
       baseline_stddev: string | null;
     }>(sql`
-      with hours as (
-        select generate_series(
+      with buckets as (
+        select date_trunc('hour', created_at) as hour, count(*)::int as cnt
+        from ${mentions}
+        where query_id = ${queryId}
+          and created_at >= date_trunc('hour', now()) - interval '24 hours'
+        group by 1
+      ),
+      hourly as (
+        select coalesce(b.cnt, 0) as cnt
+        from generate_series(
           date_trunc('hour', now()) - interval '24 hours',
           date_trunc('hour', now()) - interval '1 hour',
           interval '1 hour'
-        ) as hour
-      ),
-      hourly as (
-        select h.hour, count(m.id) as cnt
-        from hours h
-        left join ${mentions} m
-          on date_trunc('hour', m.created_at) = h.hour
-          and m.query_id = ${queryId}
-        group by h.hour
-      ),
-      current_hour as (
-        select count(*) as cnt
-        from ${mentions}
-        where query_id = ${queryId}
-          and created_at >= date_trunc('hour', now())
+        ) as h(hour)
+        left join buckets b on b.hour = h.hour
       )
       select
-        (select cnt from current_hour) as current_count,
+        coalesce((select cnt from buckets where hour = date_trunc('hour', now())), 0) as current_count,
         avg(hourly.cnt) as baseline_avg,
         stddev_pop(hourly.cnt) as baseline_stddev
       from hourly
@@ -224,6 +223,48 @@ export async function getQuerySpikeStats(
     baselineAvg: Number(row?.baseline_avg ?? 0),
     baselineStdDev: Number(row?.baseline_stddev ?? 0),
   };
+}
+
+const ID_CHUNK = 1000;
+
+/**
+ * Which of these monitoring queries already have at least `minCount` mentions in the current hour — one grouped
+ * read instead of one statistics query per rule. The spike evaluator ignores every query below its own floor
+ * (`currentHourCount < MIN_ABSOLUTE_COUNT`), so skipping them here changes nothing but the work done.
+ */
+export async function getQueryIdsWithCurrentHourMentions(db: Db, queryIds: string[], minCount: number): Promise<Set<string>> {
+  const found = new Set<string>();
+  for (let i = 0; i < queryIds.length; i += ID_CHUNK) {
+    const rows = await db
+      .select({ queryId: mentions.queryId })
+      .from(mentions)
+      .where(and(inArray(mentions.queryId, queryIds.slice(i, i + ID_CHUNK)), gte(mentions.createdAt, sql`date_trunc('hour', now())`)))
+      .groupBy(mentions.queryId)
+      .having(sql`count(*) >= ${minCount}`);
+    for (const row of rows) found.add(row.queryId);
+  }
+  return found;
+}
+
+/** Same for the sentiment-shift floor: at least `minCount` mentions in the last 24 hours that sentiment analysis has scored. */
+export async function getQueryIdsWithClassifiedMentions(db: Db, queryIds: string[], minCount: number): Promise<Set<string>> {
+  const found = new Set<string>();
+  for (let i = 0; i < queryIds.length; i += ID_CHUNK) {
+    const rows = await db
+      .select({ queryId: mentions.queryId })
+      .from(mentions)
+      .where(
+        and(
+          inArray(mentions.queryId, queryIds.slice(i, i + ID_CHUNK)),
+          gte(mentions.createdAt, sql`now() - interval '24 hours'`),
+          sql`${mentions.sentiment} is not null`,
+        ),
+      )
+      .groupBy(mentions.queryId)
+      .having(sql`count(*) >= ${minCount}`);
+    for (const row of rows) found.add(row.queryId);
+  }
+  return found;
 }
 
 export type EmergingTopicStat = {
@@ -337,6 +378,7 @@ export async function getQuerySentimentShiftStats(
         ) as baseline_negative
       from ${mentions}
       where query_id = ${queryId}
+        and created_at >= now() - interval '8 days'
     `)
   ).rows;
 

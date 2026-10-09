@@ -1,7 +1,8 @@
 import type { Queue } from "bullmq";
 import type { SendEmailJobData } from "@cim/core";
-import { db, getActiveSpikeAlertRules, getQuerySpikeStats } from "@cim/db";
+import { db, getActiveSpikeAlertRules, getQueryIdsWithCurrentHourMentions, getQuerySpikeStats } from "@cim/db";
 import { fireAlert } from "./notify";
+import { rulesWorthEvaluating } from "./rules-worth-evaluating";
 
 const MIN_ABSOLUTE_COUNT = 3; // never alert on 1-2 mentions regardless of baseline
 const STDDEV_MULTIPLIER = 3; // ~3-sigma, transparent and explainable
@@ -13,7 +14,11 @@ const STDDEV_MULTIPLIER = 3; // ~3-sigma, transparent and explainable
  * evaluateNewMentionAlerts (which runs inline after each crawl).
  */
 export async function evaluateSpikeAlerts(emailQueue: Queue<SendEmailJobData>): Promise<void> {
-  const rules = await getActiveSpikeAlertRules(db);
+  const rules = await rulesWorthEvaluating(
+    await getActiveSpikeAlertRules(db),
+    (queryIds) => getQueryIdsWithCurrentHourMentions(db, queryIds, MIN_ABSOLUTE_COUNT),
+    "evaluateSpikeAlerts",
+  );
 
   for (const rule of rules) {
     // Same per-rule isolation as generate-insight.ts's cross-tenant

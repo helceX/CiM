@@ -220,6 +220,10 @@ export const mentions = pgTable(
     // Re-processing the same Article must not duplicate a Mention for the
     // same query (docs/architecture/INGESTION.md — pipeline idempotency).
     uniqueIndex("mentions_query_article_uidx").on(table.queryId, table.articleId),
+    // The alert evaluators ask, per rule and every minute, for one query's mentions in the last hours or days (spike,
+    // sentiment shift, competitor, emerging topic). Without this they read the query's whole history through the
+    // unique index above and filter created_at in the heap — see docs/architecture/CRAWL_COST.md (F6).
+    index("mentions_query_created_idx").on(table.queryId, table.createdAt),
     // The scoring job's work list: mentions that have no signal yet, newest first. Empty once caught up.
     index("mentions_unscored_idx")
       .on(table.createdAt)

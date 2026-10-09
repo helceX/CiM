@@ -1,4 +1,4 @@
-import { and, desc, eq, getTableColumns, gt, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, getTableColumns, gt, inArray, isNull, sql } from "drizzle-orm";
 import type { Db } from "../client";
 import { alertEvents, alertRules } from "../schema/alerts";
 import { monitoringQueries } from "../schema/monitoring";
@@ -190,6 +190,29 @@ export async function findRecentAlertEvent(
     )
     .limit(1);
   return event;
+}
+
+/**
+ * Which of these rules are inside their cooldown right now (an event newer than the rule's own cooldown). A read-only
+ * shortcut for the evaluators, so a rule that cannot fire is not evaluated; the authoritative, locked check stays in
+ * createAlertEventIfNotInCooldown. Uses alert_events_rule_created_idx.
+ */
+export async function listRuleIdsInCooldown(db: Db, alertRuleIds: string[]): Promise<Set<string>> {
+  if (alertRuleIds.length === 0) return new Set();
+  const rows = await db
+    .select({ id: alertRules.id })
+    .from(alertRules)
+    .where(
+      and(
+        inArray(alertRules.id, alertRuleIds),
+        sql`exists (
+          select 1 from ${alertEvents}
+          where ${alertEvents.alertRuleId} = ${alertRules.id}
+            and ${alertEvents.createdAt} > now() - (${alertRules.cooldownMinutes}::text || ' minutes')::interval
+        )`,
+      ),
+    );
+  return new Set(rows.map((row) => row.id));
 }
 
 export async function createAlertEvent(

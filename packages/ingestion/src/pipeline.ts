@@ -17,7 +17,7 @@ import {
   findExistingArticle,
   findOrCreateSocialProfile,
   findSimilarRecentArticle,
-  insertArticle,
+  insertArticleWithOutcome,
   listActiveMonitoringQueriesForSourceType,
   signalFor,
   type ActiveMonitoringQuery,
@@ -100,14 +100,16 @@ export async function ingestSource(
       canonicalUrl: normalized.canonicalUrl,
       contentHash: normalized.contentHash,
     });
-    const article =
-      existing ??
-      (await insertArticle(db, {
-        ...normalized,
-        authorProfileId: await resolveAuthorProfileId(db, raw),
-      }));
-    let clusterId = existing?.storyClusterId ?? null;
-    if (!existing) {
+    const { article, created } = existing
+      ? { article: existing, created: false }
+      : await insertArticleWithOutcome(db, {
+          ...normalized,
+          authorProfileId: await resolveAuthorProfileId(db, raw),
+        });
+    let clusterId = article.storyClusterId ?? null;
+    // Only the insert winner clusters and reports a new article. A concurrent
+    // crawl may have inserted the row after our initial lookup.
+    if (created) {
       articlesCreated += 1;
       clusterId = await maybeAssignStoryCluster(db, article);
     }
@@ -170,7 +172,7 @@ export async function ingestSource(
       }
     }
     // The story just gained an outlet: the mentions of the same story elsewhere pick up its wider reach.
-    if (!existing && clusterId && outlets >= 3) await applyCoverageToCluster(db, clusterId);
+    if (created && clusterId && outlets >= 3) await applyCoverageToCluster(db, clusterId);
   }
 
   return {

@@ -1,7 +1,7 @@
 import type { Job, Queue } from "bullmq";
 import { eq } from "drizzle-orm";
 import { crawlSignature, ingestSource } from "@cim/ingestion";
-import { crawlBackoffMs, crawlIntervalMs, isSourceDue, type CrawlSourceJobData, type SendEmailJobData } from "@cim/core";
+import { crawlBackoffMs, crawlIntervalMs, isGoogleTrendsEnabled, isSourceDue, type CrawlSourceJobData, type SendEmailJobData } from "@cim/core";
 import { db, markSourceChecked, schema, type ActiveMonitoringQuery } from "@cim/db";
 import { getConnectorFor } from "../connector-registry";
 import type { SourceConnector } from "@cim/ingestion";
@@ -57,6 +57,14 @@ export async function processCrawlSourceJob(
   // source (for example after a publisher opt-out). Re-check the current
   // state in the worker so a queued or retried job cannot contact it again.
   if (source.status === "unavailable") return;
+
+  // Keep this provider inert until an operator enables both external-coverage
+  // switches. Record the check to prevent a disabled source from being queued
+  // on every scheduler tick, but keep its status resumable when enabled later.
+  if (source.connector === "google-trends" && !isGoogleTrendsEnabled(process.env)) {
+    await markSourceChecked(db, source.id, source.status as Parameters<typeof markSourceChecked>[2]);
+    return;
+  }
 
   // A job that waited in the queue while the source was crawled by another one
   // (or an older backlog) must not fetch the publisher again. Only a first attempt

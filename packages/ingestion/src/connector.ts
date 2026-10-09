@@ -42,12 +42,24 @@ export type SourceHealthStatus =
   | "blocked"
   | "unavailable";
 
+/** What the publisher said about the feed's version last time (HTTP validators). */
+export type FeedValidators = { etag?: string; lastModified?: string };
+
 export type SourceHealth = {
   status: SourceHealthStatus;
   message?: string;
+  /** The publisher answered 304 to a conditional request: nothing changed since `hints.validators`. */
+  notModified?: boolean;
+  /** The version the publisher reported with a full answer — kept by the caller once the feed has been ingested. */
+  validators?: FeedValidators;
+  /** How long the publisher asked us to stay away (Retry-After), when it said so. */
+  retryAfterMs?: number;
 };
+
+/** Passed to `healthCheck` by a caller that remembers the previous crawl (apps/worker crawl-source). */
+export type HealthHints = { validators?: FeedValidators };
 
 export interface SourceConnector {
   fetch(source: Source): Promise<RawFetchResult[]>;
-  healthCheck(source: Source): Promise<SourceHealth>;
+  healthCheck(source: Source, hints?: HealthHints): Promise<SourceHealth>;
 }

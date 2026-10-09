@@ -1,5 +1,6 @@
 import type { Source } from "@cim/db/schema";
-import type { RawFetchResult, SourceConnector, SourceHealth } from "./connector";
+import { parseRetryAfter } from "@cim/core";
+import type { HealthHints, RawFetchResult, SourceConnector, SourceHealth } from "./connector";
 import { parseFeed } from "./feed-parse";
 import { isExplicitlyBlockedByRobots } from "./robots";
 import { safeFetch, SsrfBlockedError } from "./safe-fetch";
@@ -69,17 +70,27 @@ export class RSSConnector implements SourceConnector {
       }));
   }
 
-  async healthCheck(source: Source): Promise<SourceHealth> {
+  async healthCheck(source: Source, hints: HealthHints = {}): Promise<SourceHealth> {
     if (!source.url) return { status: "unavailable", message: "No feed URL configured" };
     try {
       if (await this.robotsBlocked(source.url)) {
         return { status: "blocked", message: "robots.txt asks Mediaory-Bot not to fetch this feed" };
       }
-      const { status, body } = await this.fetcher(source.url, { timeoutMs: 8000 });
-      if (status >= 400) return { status: "error", message: `Feed responded HTTP ${status}` };
+      // Ask "has it changed?" when the last crawl kept the publisher's version: a 304 costs the publisher nothing and
+      // costs us no download, no parse and no database work.
+      const conditional: Record<string, string> = {};
+      if (hints.validators?.etag) conditional["if-none-match"] = hints.validators.etag;
+      if (hints.validators?.lastModified) conditional["if-modified-since"] = hints.validators.lastModified;
+      const { status, body, headers } = await this.fetcher(source.url, { timeoutMs: 8000, headers: conditional });
+      if (status === 304) return { status: "healthy", notModified: true };
+      if (status >= 400) {
+        return { status: "error", message: `Feed responded HTTP ${status}`, retryAfterMs: parseRetryAfter(headers?.get("retry-after")) ?? undefined };
+      }
       parseFeed(body);
       rememberBody(source.url, body);
-      return { status: "healthy" };
+      const etag = headers?.get("etag") ?? undefined;
+      const lastModified = headers?.get("last-modified") ?? undefined;
+      return { status: "healthy", validators: etag || lastModified ? { etag, lastModified } : undefined };
     } catch (error) {
       if (error instanceof SsrfBlockedError) return { status: "blocked", message: error.message };
       return { status: "error", message: error instanceof Error ? error.message : String(error) };

@@ -351,22 +351,32 @@ async function crawlScenario() {
   return { results, stored: { articles: Number(counts!.articles), mentions: Number(counts!.mentions) } };
 }
 
+/**
+ * `baseline` runs the crawl job with its memory switched off (nothing remembered between crawls, the active monitorings
+ * read from Postgres for every crawl): what every crawl did before. `v2` is the job as shipped — conditional requests,
+ * remembered stories, the monitorings kept for a minute — with the memory held in-process instead of Redis.
+ */
 async function crawlRunner(): Promise<{ beforeCycle: () => Promise<void>; one: (id: string) => Promise<unknown> }> {
-  if (impl === "baseline") {
-    const { processCrawlSourceJob } = await import("../src/jobs/crawl-source");
-    const { RSSConnector } = await import("@cim/ingestion");
-    const connector = new RSSConnector({ fetcher: fakeFetcher() as never, robotsBlocked: async () => false });
-    const connectorFor = () => connector;
-    return {
-      // The old scheduler decides by last_checked_at: make every source due, as it is two hours on.
-      beforeCycle: async () => {
-        await db.update(schema.sources).set({ lastCheckedAt: new Date(Date.now() - 3 * 3_600_000) });
-      },
-      one: (id) => processCrawlSourceJob({ data: { sourceId: id }, attemptsMade: 0 } as never, emailQueue, { connectorFor }),
-    };
-  }
-  const { createBenchCrawlRunner } = await import("./v2-adapter");
-  return createBenchCrawlRunner({ emailQueue, scale, getCycle: () => currentCycle, served });
+  const { processCrawlSourceJob } = await import("../src/jobs/crawl-source");
+  const { RSSConnector } = await import("@cim/ingestion");
+  const { memoryCrawlStateStore } = await import("../src/crawl-state");
+  const { getActiveQueries } = await import("../src/active-queries-cache");
+  const { listActiveMonitoringQueriesForSourceType } = await import("@cim/db");
+  const connector = new RSSConnector({ fetcher: fakeFetcher() as never, robotsBlocked: async () => false });
+  const connectorFor = () => connector;
+  const noStats = async () => {};
+  const forgetful = { get: async () => null, set: async () => {} };
+  const deps =
+    impl === "baseline"
+      ? { connectorFor, state: forgetful, stats: noStats, activeQueries: (type: string) => listActiveMonitoringQueriesForSourceType(db, type) }
+      : { connectorFor, state: memoryCrawlStateStore(), stats: noStats, activeQueries: (type: string) => getActiveQueries(type) };
+  return {
+    // The scheduler decides by last_checked_at: make every source due, as it is two hours on.
+    beforeCycle: async () => {
+      await db.update(schema.sources).set({ lastCheckedAt: new Date(Date.now() - 3 * 3_600_000) });
+    },
+    one: (id) => processCrawlSourceJob({ data: { sourceId: id }, attemptsMade: 0 } as never, emailQueue, deps as never),
+  };
 }
 
 async function schedulerScenario() {
@@ -389,17 +399,13 @@ async function schedulerScenario() {
 
 async function schedulerRunner(): Promise<{ prepare: (dueShare: number) => Promise<void>; tick: () => Promise<unknown> }> {
   const queue = { getJob: async () => undefined, add: async () => ({}), getWaitingCount: async () => 0 } as never;
-  if (impl === "baseline") {
-    const { processCrawlSchedulerJob } = await import("../src/jobs/crawl-scheduler");
-    return {
-      prepare: async (dueShare) => {
-        await db.execute(sql`update sources set last_checked_at = case when random() < ${dueShare} then now() - interval '3 hours' else now() end`);
-      },
-      tick: () => processCrawlSchedulerJob(queue),
-    };
-  }
-  const { createBenchSchedulerRunner } = await import("./v2-adapter");
-  return createBenchSchedulerRunner(queue);
+  const { processCrawlSchedulerJob } = await import("../src/jobs/crawl-scheduler");
+  return {
+    prepare: async (dueShare) => {
+      await db.execute(sql`update sources set last_checked_at = case when random() < ${dueShare} then now() - interval '3 hours' else now() end`);
+    },
+    tick: () => processCrawlSchedulerJob(queue),
+  };
 }
 
 async function alertsScenario() {
@@ -420,25 +426,21 @@ async function alertsScenario() {
 }
 
 async function alertEvaluators(): Promise<Record<string, () => Promise<unknown>>> {
-  if (impl === "baseline") {
-    const [{ evaluateSpikeAlerts }, { evaluateSentimentShiftAlerts }, { evaluateEmergingTopicAlerts }, { evaluateCompetitorAlerts }, { evaluateCreatorSpikeAlerts }] =
-      await Promise.all([
-        import("../src/alerts/evaluate-spikes"),
-        import("../src/alerts/evaluate-sentiment-shift"),
-        import("../src/alerts/evaluate-emerging-topics"),
-        import("../src/alerts/evaluate-competitor"),
-        import("../src/alerts/evaluate-creator-spike"),
-      ]);
-    return {
-      "spike (one minute)": () => evaluateSpikeAlerts(emailQueue),
-      "sentiment shift (one minute)": () => evaluateSentimentShiftAlerts(emailQueue),
-      "emerging topic (one minute)": () => evaluateEmergingTopicAlerts(emailQueue),
-      "competitor (one minute)": () => evaluateCompetitorAlerts(emailQueue),
-      "creator spike (one minute)": () => evaluateCreatorSpikeAlerts(emailQueue),
-    };
-  }
-  const { createBenchAlertRunners } = await import("./v2-adapter");
-  return createBenchAlertRunners(emailQueue);
+  const [{ evaluateSpikeAlerts }, { evaluateSentimentShiftAlerts }, { evaluateEmergingTopicAlerts }, { evaluateCompetitorAlerts }, { evaluateCreatorSpikeAlerts }] =
+    await Promise.all([
+      import("../src/alerts/evaluate-spikes"),
+      import("../src/alerts/evaluate-sentiment-shift"),
+      import("../src/alerts/evaluate-emerging-topics"),
+      import("../src/alerts/evaluate-competitor"),
+      import("../src/alerts/evaluate-creator-spike"),
+    ]);
+  return {
+    "spike (one minute)": () => evaluateSpikeAlerts(emailQueue),
+    "sentiment shift (one minute)": () => evaluateSentimentShiftAlerts(emailQueue),
+    "emerging topic (one minute)": () => evaluateEmergingTopicAlerts(emailQueue),
+    "competitor (one minute)": () => evaluateCompetitorAlerts(emailQueue),
+    "creator spike (one minute)": () => evaluateCreatorSpikeAlerts(emailQueue),
+  };
 }
 
 // --------------------------------------------------------------------------------------------- main

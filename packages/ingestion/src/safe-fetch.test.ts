@@ -240,4 +240,19 @@ describe("safeFetch — fetch machinery (via injected resolver)", () => {
     expect(receivedMethod).toBe("POST");
     expect(receivedBody).toBe('{"hello":"world"}');
   });
+  it("returns a 304 answer to a conditional request as a result instead of failing it as a redirect without a Location", async () => {
+    const seen: string[] = [];
+    const { port } = await listen((req, res) => {
+      seen.push(String(req.headers["if-none-match"]));
+      res.writeHead(304, { etag: '"v1"' });
+      res.end();
+    });
+    const result = await safeFetch(`http://example-cim-test.invalid:${port}/feed.xml`, {
+      headers: { "if-none-match": '"v1"' },
+      resolveHostname: loopbackResolver(),
+    });
+    expect(result.status).toBe(304);
+    expect(result.body).toBe("");
+    expect(seen).toEqual(['"v1"']);
+  });
 });

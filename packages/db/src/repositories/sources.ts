@@ -21,6 +21,12 @@ export async function listActiveSources(db: Db) {
   return db.select().from(sources).where(ne(sources.status, "unavailable"));
 }
 
+/** How many sources are not "unavailable" — for callers that only need the number, not up to 9,000 full rows. */
+export async function countActiveSources(db: Db): Promise<number> {
+  const [row] = await db.select({ n: sql<number>`count(*)::int` }).from(sources).where(ne(sources.status, "unavailable"));
+  return Number(row?.n ?? 0);
+}
+
 export async function markSourceChecked(
   db: Db,
   sourceId: string,

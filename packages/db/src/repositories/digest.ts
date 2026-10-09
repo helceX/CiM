@@ -1,4 +1,5 @@
 import { and, count, desc, eq, gte, isNull, sql } from "drizzle-orm";
+import { describeSignal } from "@cim/core";
 import type { Db } from "../client";
 import { articles, mentions, sources } from "../schema/content";
 import { organizations } from "../schema/organizations";
@@ -28,10 +29,14 @@ export type DigestMentionItem = {
   canonicalUrl: string;
   sentiment: string | null;
   priority: string;
+  /** Why the story ranks where it does ("The headline names “X” …"); null when it has not been scored yet. */
+  why: string | null;
 };
 
 export type DigestOrgSummary = {
   totalNewMentions: number;
+  /** How many of them are important for the monitoring that found them (priority high). */
+  importantCount: number;
   sentimentCounts: { positive: number; neutral: number; negative: number; unclassified: number };
   topMentions: DigestMentionItem[];
 };
@@ -51,7 +56,13 @@ export async function getDigestSummaryForOrganization(
   const since = sql`now() - (${sinceHours}::text || ' hours')::interval`;
   const scope = and(eq(mentions.organizationId, organizationId), gte(mentions.createdAt, since));
 
-  const [totalRow] = await db.select({ total: count() }).from(mentions).where(scope);
+  const [totalRow] = await db
+    .select({
+      total: count(),
+      important: sql<number>`count(*) filter (where ${mentions.priority} in ('high', 'critical'))::int`,
+    })
+    .from(mentions)
+    .where(scope);
 
   const sentimentRows = await db
     .select({ sentiment: mentions.sentiment, total: count() })
@@ -73,13 +84,19 @@ export async function getDigestSummaryForOrganization(
       canonicalUrl: articles.canonicalUrl,
       sentiment: mentions.sentiment,
       priority: mentions.priority,
+      reasons: mentions.signalReasons,
     })
     .from(mentions)
     .innerJoin(articles, eq(articles.id, mentions.articleId))
     .innerJoin(sources, eq(sources.id, articles.sourceId))
     .where(scope)
-    .orderBy(desc(mentionPriorityRank()), desc(mentions.createdAt))
+    .orderBy(desc(mentionPriorityRank()), desc(sql`coalesce(${mentions.signalScore}, 0)`), desc(mentions.createdAt))
     .limit(topLimit);
 
-  return { totalNewMentions: Number(totalRow?.total ?? 0), sentimentCounts, topMentions };
+  return {
+    totalNewMentions: Number(totalRow?.total ?? 0),
+    importantCount: Number(totalRow?.important ?? 0),
+    sentimentCounts,
+    topMentions: topMentions.map(({ reasons, ...mention }) => ({ ...mention, why: describeSignal(mention.priority, reasons)?.short ?? null })),
+  };
 }

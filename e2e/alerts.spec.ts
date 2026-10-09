@@ -33,16 +33,20 @@ test("create a keyword alert rule, trigger it for real, and see the notification
   await page.getByRole("button", { name: /Notifications/ }).click();
   const notificationsMenu = page.getByRole("menu", { name: /Notifications/ });
   await expect(notificationsMenu.getByText(ruleName, { exact: true })).toBeVisible({ timeout: 5000 });
+  // This notification is the one under test. Onboarding also created an "important stories" rule for the
+  // first monitoring (its notification answer is no longer ignored), which fires on the same crawl — so look
+  // at this rule's own entry rather than at every unread badge in the menu.
+  const entry = notificationsMenu.getByRole("menuitem").filter({ hasText: ruleName });
   // exact:true matters here — the notification body text itself reads
   // "1 new mention matched …", which getByText("New") would otherwise
   // also match case-insensitively as a substring, alongside the actual
   // unread Badge this is meant to check for.
-  await expect(notificationsMenu.getByText("New", { exact: true })).toBeVisible();
+  await expect(entry.getByText("New", { exact: true })).toBeVisible();
 
   const readResponse = page.waitForResponse(
     (response) => /\/api\/notifications\/.+\/read$/.test(response.url()) && response.ok(),
   );
-  await notificationsMenu.getByRole("menuitem").filter({ hasText: ruleName }).click();
+  await entry.click();
   await readResponse;
-  await expect(notificationsMenu.getByText("New", { exact: true })).toHaveCount(0);
+  await expect(entry.getByText("New", { exact: true })).toHaveCount(0);
 });

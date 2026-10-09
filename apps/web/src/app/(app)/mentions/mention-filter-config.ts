@@ -15,13 +15,12 @@ export function buildMentionSelects(tags: Tag[], brandGroups: { id: string; name
       ],
     },
     {
-      key: "priority",
-      label: "Priority",
+      key: "min",
+      label: "Importance",
       options: [
-        { value: "low", label: "Low" },
-        { value: "normal", label: "Normal" },
-        { value: "high", label: "High" },
-        { value: "critical", label: "Critical" },
+        { value: "high", label: "Important only" },
+        { value: "normal", label: "Worth a look and up" },
+        { value: "low", label: "Passing mentions only" },
       ],
     },
     {

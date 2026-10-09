@@ -45,6 +45,39 @@ export async function createAlertRule(
   return rule;
 }
 
+/** How a person wants to hear about a monitoring: not at all, only important stories, or every new story. */
+export type NotifyMode = "none" | "important" | "every";
+
+/**
+ * The alert rule behind the answer to "how should we tell you?" when a monitoring is saved (and during
+ * onboarding): "important" is a high-relevance rule, "every" a keyword rule. In-app always, e-mail when
+ * asked. Returns null for "none". One rule per answer — it shows up in Alerts like any other rule and can
+ * be changed or paused there.
+ */
+export async function createNotifyRuleForQuery(
+  db: Db,
+  organizationId: OrganizationId,
+  input: {
+    projectId: string;
+    queryId: string;
+    createdByUserId: string;
+    monitoringName: string;
+    mode: NotifyMode;
+    email?: boolean;
+  },
+) {
+  if (input.mode === "none") return null;
+  return createAlertRule(db, organizationId, {
+    projectId: input.projectId,
+    queryId: input.queryId,
+    createdByUserId: input.createdByUserId,
+    name: `${input.mode === "important" ? "Important stories" : "Every new story"} — ${input.monitoringName}`.slice(0, 160),
+    type: input.mode === "important" ? "high_relevance" : "keyword",
+    channels: input.email ? ["in_app", "email"] : ["in_app"],
+    cooldownMinutes: 60,
+  });
+}
+
 export async function listAlertRules(db: Db, organizationId: OrganizationId) {
   return db
     .select({ rule: alertRules, queryName: monitoringQueries.name })

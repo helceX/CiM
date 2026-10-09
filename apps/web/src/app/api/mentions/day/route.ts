@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { effectiveAliasGroups } from "@cim/core";
+import { describeSignal, effectiveAliasGroups, type FocusLevel } from "@cim/core";
 import { db, listBrandGroups, listMentionsForDay } from "@cim/db";
 import { monitoringFamily } from "@/lib/monitoring-families";
 import { mentionFiltersFromParams } from "@/lib/mention-filters";
@@ -32,7 +32,16 @@ export async function GET(request: Request) {
   const groupNames = new Map((await listBrandGroups(db, context.organizationId)).map((group) => [group.id, group.name]));
   const seen = new Map<
     string,
-    { id: string; name: string; createdAt: number; terms: string[]; aliasGroups: string[][]; family: { key: string; label: string; mapped: boolean } }
+    {
+      id: string;
+      name: string;
+      createdAt: number;
+      terms: string[];
+      aliasGroups: string[][];
+      family: { key: string; label: string; mapped: boolean };
+      /** How much the person wants to see without asking; null for a monitoring saved before it existed (everything). */
+      focus: FocusLevel | null;
+    }
   >();
   for (const { mention, queryName, queryCreatedAt, queryAst, queryBrandGroupId } of items) {
     if (!seen.has(mention.queryId)) {
@@ -46,6 +55,7 @@ export async function GET(request: Request) {
         aliasGroups: effectiveAliasGroups(queryAst.aliasGroups, queryAst.include),
         // monitorings of one family (BTM Monitoring v1, v2, v3 — or one group the customer chose) are read together
         family: monitoringFamily({ name: queryName, brandGroupId: queryBrandGroupId }, groupNames),
+        focus: queryAst.intent?.focus ?? null,
       });
     }
   }
@@ -57,7 +67,7 @@ export async function GET(request: Request) {
       }
       return a.createdAt - b.createdAt || a.name.localeCompare(b.name);
     })
-    .map(({ id, name, terms, aliasGroups, family }) => ({ id, name, terms, aliasGroups, family }));
+    .map(({ id, name, terms, aliasGroups, family, focus }) => ({ id, name, terms, aliasGroups, family, focus }));
 
   return NextResponse.json({
     truncated,
@@ -76,6 +86,11 @@ export async function GET(request: Request) {
       matchedTerms: mention.matchedTerms ?? [],
       sentiment: mention.sentiment,
       priority: mention.priority,
+      signalScore: mention.signalScore,
+      // why the story is here and where it ranks, in a line ("The headline names “X” · Risks & crises: “lawsuit”")
+      why: describeSignal(mention.priority, mention.signalReasons)?.short ?? null,
+      // stories of one cluster are the same story reported by several outlets
+      storyClusterId: article.storyClusterId,
       assigneeName,
       print: article.print ?? null,
     })),

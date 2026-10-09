@@ -20,6 +20,7 @@ import {
   type SyncSocialConnectionsJobData,
   type ImportCatalogJobData,
   type PruneArticlesJobData,
+  type ScoreSignalsJobData,
   type WeeklyArchiveJobData,
   captureException,
   configureErrorReporting,
@@ -38,6 +39,7 @@ import { processSyncSocialConnectionsJob } from "./jobs/sync-social-connections"
 import { processImportCatalogJob } from "./jobs/import-catalog";
 import { processPruneArticlesJob } from "./jobs/prune-articles";
 import { processWeeklyArchiveJob } from "./jobs/weekly-archive";
+import { processScoreSignalsJob } from "./jobs/score-signals";
 import { evaluateSpikeAlerts } from "./alerts/evaluate-spikes";
 import { evaluateSentimentShiftAlerts } from "./alerts/evaluate-sentiment-shift";
 import { evaluateEmergingTopicAlerts } from "./alerts/evaluate-emerging-topics";
@@ -316,6 +318,18 @@ const weeklyArchiveWorker = new Worker<WeeklyArchiveJobData>(
   { connection, concurrency: 1 },
 );
 
+const scoreSignalsQueue = new Queue<ScoreSignalsJobData>(QUEUE_NAMES.scoreSignals, {
+  connection,
+  defaultJobOptions: DEFAULT_JOB_OPTIONS,
+});
+const scoreSignalsWorker = new Worker<ScoreSignalsJobData>(
+  QUEUE_NAMES.scoreSignals,
+  async () => {
+    await processScoreSignalsJob();
+  },
+  { connection, concurrency: 1 },
+);
+
 const allWorkers = [
   sendEmailWorker,
   crawlSourceWorker,
@@ -337,6 +351,7 @@ const allWorkers = [
   importCatalogWorker,
   pruneArticlesWorker,
   weeklyArchiveWorker,
+  scoreSignalsWorker,
 ];
 // Off unless SENTRY_DSN is set. Tags carry only the queue and job id — never job data.
 configureErrorReporting({
@@ -496,8 +511,14 @@ async function scheduleRepeatingJobs() {
     { pattern: "0 4 * * *" },
     { name: QUEUE_NAMES.weeklyArchive, data: {} },
   );
+  // Gives older mentions (and those of an edited monitoring) their signal; an empty list costs one indexed look.
+  await scoreSignalsQueue.upsertJobScheduler(
+    "score-signals-repeat",
+    { every: 2 * 60_000 },
+    { name: QUEUE_NAMES.scoreSignals, data: {} },
+  );
   console.log(
-    "Schedulers registered: source crawl (30s), spike alert check (60s), " +
+    "Schedulers registered: source crawl (30s), signal scoring (2m), spike alert check (60s), " +
       "sentiment shift alert check (60s), emerging topic alert check (60s), " +
       "creator spike alert check (60s), " +
       "AI enrichment (20s), insight generation (2m), " +

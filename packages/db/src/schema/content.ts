@@ -8,6 +8,7 @@ import {
   numeric,
   pgTable,
   primaryKey,
+  smallint,
   text,
   timestamp,
   uniqueIndex,
@@ -17,7 +18,7 @@ import { organizations, projects } from "./organizations";
 import { monitoringQueries } from "./monitoring";
 import { users } from "./users";
 import { socialProfiles } from "./social";
-import type { ArticlePrint } from "@cim/core";
+import type { ArticlePrint, SignalReason } from "@cim/core";
 
 /**
  * docs/architecture/ADR-002-SEARCH.md / SEARCH.md — no built-in drizzle-orm
@@ -143,6 +144,11 @@ export const articles = pgTable(
     index("articles_fetched_at_idx").on(table.fetchedAt),
     index("articles_title_trgm_idx").using("gin", sql`${table.title} gin_trgm_ops`),
     index("articles_author_profile_idx").on(table.authorProfileId),
+    // "Who else carries this story": counted when a story is scored and listed in the drawer. Only
+    // clustered stories (a look-alike from another outlet exists) are in it, so it stays small.
+    index("articles_story_cluster_idx")
+      .on(table.storyClusterId)
+      .where(sql`${table.storyClusterId} is not null`),
   ],
 );
 
@@ -191,7 +197,13 @@ export const mentions = pgTable(
     aiSummary: text("ai_summary"),
     aiMethod: text("ai_method"), // e.g. "mock-heuristic-v1" | "anthropic:claude-haiku-4-5"
     aiAnalyzedAt: timestamp("ai_analyzed_at", { withTimezone: true }),
+    // How much the story matters for this monitoring (docs/product/SIGNAL_AND_INTENT.md): `priority` is the
+    // level (low | normal | high; critical is reserved), `signalScore` an ordering key within it and
+    // `signalReasons` the plain facts behind both ("the headline names X", "reported by 6 outlets") that the
+    // UI turns into "why am I seeing this?". All three are derived — null reasons mean not scored yet.
     priority: text("priority").notNull().default("normal"), // low | normal | high | critical
+    signalScore: smallint("signal_score"),
+    signalReasons: jsonb("signal_reasons").$type<SignalReason[]>(),
     status: text("status").notNull().default("new"), // new | reviewed | archived
     reviewFeedback: text("review_feedback"), // relevant | irrelevant | duplicate
     assignedToUserId: uuid("assigned_to_user_id"),
@@ -208,6 +220,10 @@ export const mentions = pgTable(
     // Re-processing the same Article must not duplicate a Mention for the
     // same query (docs/architecture/INGESTION.md — pipeline idempotency).
     uniqueIndex("mentions_query_article_uidx").on(table.queryId, table.articleId),
+    // The scoring job's work list: mentions that have no signal yet, newest first. Empty once caught up.
+    index("mentions_unscored_idx")
+      .on(table.createdAt)
+      .where(sql`${table.signalReasons} is null`),
   ],
 );
 

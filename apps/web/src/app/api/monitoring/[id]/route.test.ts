@@ -4,6 +4,8 @@ const requirePermission = vi.fn();
 const getMonitoringQuery = vi.fn();
 const updateMonitoringQuery = vi.fn();
 const backfillMentionsForQuery = vi.fn();
+const clearSignalsForQuery = vi.fn();
+const scoreUnscoredMentions = vi.fn();
 const recordAuditLog = vi.fn();
 
 vi.mock("@/lib/tenant", () => ({ requirePermission: (...args: unknown[]) => requirePermission(...args) }));
@@ -12,6 +14,8 @@ vi.mock("@cim/db", () => ({
   getMonitoringQuery: (...args: unknown[]) => getMonitoringQuery(...args),
   updateMonitoringQuery: (...args: unknown[]) => updateMonitoringQuery(...args),
   backfillMentionsForQuery: (...args: unknown[]) => backfillMentionsForQuery(...args),
+  clearSignalsForQuery: (...args: unknown[]) => clearSignalsForQuery(...args),
+  scoreUnscoredMentions: (...args: unknown[]) => scoreUnscoredMentions(...args),
   recordAuditLog: (...args: unknown[]) => recordAuditLog(...args),
 }));
 
@@ -26,13 +30,18 @@ beforeEach(() => {
   vi.clearAllMocks();
   requirePermission.mockResolvedValue({ organizationId: "org-1", userId: "u-1" });
   getMonitoringQuery.mockResolvedValue({ id: "q-1", projectId: "p-1" });
-  updateMonitoringQuery.mockImplementation(async (_db: unknown, _org: string, id: string, patch: { sourceTypes: string[]; regionScopes: string[] }) => ({
-    id,
-    projectId: "p-1",
-    sourceTypes: patch.sourceTypes,
-    regionScopes: patch.regionScopes,
-  }));
+  updateMonitoringQuery.mockImplementation(
+    async (_db: unknown, _org: string, id: string, patch: { sourceTypes: string[]; regionScopes: string[]; trackingTarget?: string }) => ({
+      id,
+      projectId: "p-1",
+      sourceTypes: patch.sourceTypes,
+      regionScopes: patch.regionScopes,
+      trackingTarget: patch.trackingTarget ?? "company",
+    }),
+  );
   backfillMentionsForQuery.mockResolvedValue({ scanned: 10, created: 2 });
+  clearSignalsForQuery.mockResolvedValue(undefined);
+  scoreUnscoredMentions.mockResolvedValue(0);
 });
 
 describe("PATCH /api/monitoring/[id]", () => {
@@ -77,5 +86,31 @@ describe("PATCH /api/monitoring/[id]", () => {
     const response = await PATCH(request(payload), params());
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({ backfilled: 0 });
+  });
+
+  it("keeps what the person wants from the monitoring on the query and scores its stories again", async () => {
+    const response = await PATCH(
+      request({ ...payload, intent: { goals: ["risk", "nonsense"], focus: "essentials", signalWords: [" Q3 results "] } }),
+      params(),
+    );
+    expect(response.status).toBe(200);
+    expect(updateMonitoringQuery.mock.calls[0]![3].queryAst.intent).toEqual({ goals: ["risk"], focus: "essentials", signalWords: ["Q3 results"] });
+    // The names in the story are scored for the kind of thing being tracked.
+    expect(backfillMentionsForQuery.mock.calls[0]![2]).toMatchObject({ trackingTarget: "company" });
+    expect(clearSignalsForQuery).toHaveBeenCalledWith({}, "org-1", "q-1");
+    expect(scoreUnscoredMentions).toHaveBeenCalledWith({}, { queryId: "q-1", limit: 1500 });
+  });
+
+  it("leaves the intent off the query when none was sent", async () => {
+    await PATCH(request(payload), params());
+    expect(updateMonitoringQuery.mock.calls[0]![3].queryAst).not.toHaveProperty("intent");
+  });
+
+  it("still saves when scoring again fails", async () => {
+    scoreUnscoredMentions.mockRejectedValue(new Error("boom"));
+    const spy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const response = await PATCH(request(payload), params());
+    spy.mockRestore();
+    expect(response.status).toBe(200);
   });
 });

@@ -26,6 +26,7 @@ export const QUEUE_NAMES = {
   importCatalog: "import_catalog",
   pruneArticles: "prune_articles",
   weeklyArchive: "weekly_archive",
+  scoreSignals: "score_signals",
 } as const;
 
 export type SendEmailJobData = {
@@ -73,3 +74,5 @@ export type ImportCatalogJobData = Record<string, never>;
 export type PruneArticlesJobData = Record<string, never>;
 
 export type WeeklyArchiveJobData = Record<string, never>;
+
+export type ScoreSignalsJobData = Record<string, never>;

@@ -44,3 +44,4 @@ export * from "./repositories/brand-groups";
 export * from "./repositories/visuals";
 export * from "./repositories/credits";
 export * from "./repositories/archive";
+export * from "./repositories/signals";

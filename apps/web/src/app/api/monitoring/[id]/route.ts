@@ -1,7 +1,15 @@
 import { NextResponse } from "next/server";
 import { updateMonitoringQuerySchema } from "@cim/validation";
 import { assembleQueryAst, astToBooleanQuery, expandSourceCategoriesToTypes } from "@cim/core";
-import { backfillMentionsForQuery, db, getMonitoringQuery, recordAuditLog, updateMonitoringQuery } from "@cim/db";
+import {
+  backfillMentionsForQuery,
+  clearSignalsForQuery,
+  db,
+  getMonitoringQuery,
+  recordAuditLog,
+  scoreUnscoredMentions,
+  updateMonitoringQuery,
+} from "@cim/db";
 import { requirePermission } from "@/lib/tenant";
 
 /**
@@ -52,10 +60,17 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     queryAst: ast,
     sourceTypes: query.sourceTypes,
     regionScopes: query.regionScopes,
+    trackingTarget: query.trackingTarget,
   }).catch((error) => {
     console.error("[monitoring] backfill after edit failed:", error);
     return { scanned: 0, created: 0 };
   });
+
+  // New keywords or a new intent change how much each story matters: forget the old scores and redo the
+  // newest ones now; the scoring job catches up with the rest. Best effort, like the backfill.
+  await clearSignalsForQuery(db, context.organizationId, query.id)
+    .then(() => scoreUnscoredMentions(db, { queryId: query.id, limit: 1500 }))
+    .catch((error) => console.error("[monitoring] rescoring after edit failed:", error));
 
   await recordAuditLog(db, context.organizationId, {
     actorUserId: context.userId,

@@ -1,4 +1,5 @@
 import { conceptKey, normalizeAliasGroups } from "./concepts";
+import { normalizeIntent, type MonitoringIntent } from "./intent";
 import { companyNames, type QueryAst } from "./query-ast";
 
 export type MonitoringInput = {
@@ -7,6 +8,8 @@ export type MonitoringInput = {
   exactPhrases: readonly string[];
   aliasGroups?: readonly (readonly string[])[];
   company?: { name: string; short?: string } | undefined;
+  /** What the person wants from the monitoring (see intent.ts). */
+  intent?: MonitoringIntent | undefined;
 };
 
 /**
@@ -40,5 +43,7 @@ export function assembleQueryAst(input: MonitoringInput): QueryAst {
   if (input.company?.name.trim()) {
     ast.company = { name: input.company.name.trim(), ...(input.company.short?.trim() ? { short: input.company.short.trim() } : {}) };
   }
+  const intent = normalizeIntent(input.intent);
+  if (intent) ast.intent = intent;
   return ast;
 }

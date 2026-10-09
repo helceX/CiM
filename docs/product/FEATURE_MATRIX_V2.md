@@ -34,6 +34,7 @@ exists) · **Future** (explicitly out of scope for this pass).
 | Query quality assistant | Yes | Yes | Yes | Yes | 28 | Shipped |
 | Admin console (orgs/sources/jobs/health) | Yes | Yes | — | Yes | 8, 33 | Shipped |
 | Webhook alert delivery (Slack/Teams-compatible) | Yes | Yes | — | Yes | 17, 26 | Shipped |
+| **Signal & intent** — per-story importance + "why am I seeing this", monitoring goals/focus questionnaire, folded low-importance stories, same-story grouping, alerts/digest that lead with what matters ([SIGNAL_AND_INTENT.md](SIGNAL_AND_INTENT.md)) | Yes | Yes | — | Yes | 49 | Shipped |
 | Desktop application (OS notifications, tray, native integrations) | — | — | — | — | — | **Dropped** — no existing desktop client; out of scope (user-confirmed) |
 | — | | | | | | |
 | **Social profile entity** (followers/verified/account type) | Yes | Yes | — | Yes | 43 | New |

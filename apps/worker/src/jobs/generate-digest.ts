@@ -41,7 +41,9 @@ export async function processGenerateDigestJob(emailQueue: Queue<SendEmailJobDat
       if (recipients.length === 0) continue;
 
       const bodyText = renderDigestEmailBody(summary);
-      const subject = `Daily digest: ${summary.totalNewMentions} new mention${summary.totalNewMentions === 1 ? "" : "s"}`;
+      const subject =
+        `Daily digest: ${summary.totalNewMentions} new mention${summary.totalNewMentions === 1 ? "" : "s"}` +
+        (summary.importantCount > 0 ? ` · ${summary.importantCount} important` : "");
 
       for (const toEmail of recipients) {
         // Isolated per recipient too (queueOutboxEmail's own doc comment)
@@ -64,14 +66,15 @@ export async function processGenerateDigestJob(emailQueue: Queue<SendEmailJobDat
 function renderDigestEmailBody(summary: DigestOrgSummary): string {
   const { positive, neutral, negative, unclassified } = summary.sentimentCounts;
   const lines = [
-    `${summary.totalNewMentions} new mention(s) in the last 24 hours.`,
+    `${summary.totalNewMentions} new mention(s) in the last 24 hours${summary.importantCount > 0 ? ` — ${summary.importantCount} important` : ""}.`,
     "",
     `Sentiment: ${positive} positive, ${neutral} neutral, ${negative} negative, ${unclassified} unclassified.`,
     "",
-    "Top stories:",
-    ...summary.topMentions.map(
-      (mention) => `- ${mention.title} (${mention.sourceName}${mention.sentiment ? `, ${mention.sentiment}` : ""})`,
-    ),
+    "Most important first:",
+    ...summary.topMentions.flatMap((mention) => [
+      `- ${mention.title} (${mention.sourceName}${mention.sentiment ? `, ${mention.sentiment}` : ""})`,
+      ...(mention.why ? [`  ${mention.why}`] : []),
+    ]),
     "",
     `Open dashboard: ${getEnv().APP_URL}/dashboard`,
   ];

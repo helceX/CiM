@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Badge, Button, EmptyState } from "@cim/ui";
 import { Radar } from "lucide-react";
+import { signalLevelLabel } from "@cim/core";
 import {
   db,
   getBrandGroupComparison,
@@ -304,7 +305,7 @@ export default async function DashboardPage() {
                           PRIORITY_TONE[mention.priority as keyof typeof PRIORITY_TONE]
                         }
                       >
-                        {mention.priority}
+                        {signalLevelLabel(mention.priority)}
                       </Badge>
                     </div>
                   </div>

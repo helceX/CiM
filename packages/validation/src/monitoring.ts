@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { normalizeAliasGroups, normalizeRegionScopes } from "@cim/core";
+import { normalizeAliasGroups, normalizeIntent, normalizeRegionScopes } from "@cim/core";
 import { sourceTypeSelectionSchema, trackingTargetSchema } from "./onboarding";
 
 const companySchema = z
@@ -9,6 +9,20 @@ const companySchema = z
   })
   .optional()
   .transform((company) => (company && company.name ? { name: company.name, ...(company.short ? { short: company.short } : {}) } : undefined));
+
+/** What the person wants from the monitoring (see @cim/core intent.ts): unknown goals are dropped, not rejected. */
+const intentSchema = z
+  .object({
+    goals: z.array(z.string().max(40)).max(12).default([]),
+    focus: z.string().max(20).optional(),
+    signalWords: z.array(z.string().max(120)).max(60).default([]),
+  })
+  .optional()
+  .transform((value) => normalizeIntent(value));
+
+/** How to tell the person about a new monitoring's stories: a rule is created for "important" and "every". */
+export const notifyModeSchema = z.enum(["none", "important", "every"]);
+export const notifySchema = z.object({ mode: notifyModeSchema.default("none"), email: z.boolean().default(false) });
 
 const monitoringFields = {
   name: z.string().trim().min(1, "Name is required").max(160),
@@ -31,9 +45,12 @@ const monitoringFields = {
   trackingTarget: trackingTargetSchema.default("company"),
   /** The company being tracked: full name and optional short name (both are searched; see QueryAst.company). */
   company: companySchema,
+  /** What the person is looking for and how much to show (stored on the query AST). */
+  intent: intentSchema,
 };
 
-export const createMonitoringQuerySchema = z.object({ projectId: z.uuid(), ...monitoringFields });
+/** A new monitoring may also say how to be told about its stories; editing leaves existing alert rules alone. */
+export const createMonitoringQuerySchema = z.object({ projectId: z.uuid(), ...monitoringFields, notify: notifySchema.optional() });
 /** Editing a monitoring: the same fields, no project change. */
 export const updateMonitoringQuerySchema = z.object(monitoringFields);
 export type UpdateMonitoringQueryInput = z.infer<typeof updateMonitoringQuerySchema>;
@@ -48,5 +65,8 @@ export const previewMonitoringQuerySchema = z.object({
   include: z.array(z.string().trim().min(1).max(120)).max(50).default([]),
   exclude: z.array(z.string().trim().min(1).max(120)).max(50).default([]),
   exactPhrases: z.array(z.string().trim().min(1).max(200)).max(20).default([]),
+  /** With these, the preview also says how many of the stories would be important. */
+  trackingTarget: trackingTargetSchema.optional(),
+  intent: intentSchema,
 });
 export type PreviewMonitoringQueryInput = z.infer<typeof previewMonitoringQuerySchema>;

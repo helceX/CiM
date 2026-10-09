@@ -9,15 +9,20 @@ import {
   countryName,
   collapseTypesToCategories,
   conceptKey,
+  FOCUS_OPTIONS,
+  focusFloor,
   mergeKeywords,
   parseBooleanQuery,
-  parseKeywordList,
-  parseKeywordSpec,
+  priorityRank,
+  type FocusLevel,
+  type GoalKey,
   type QueryAst,
 } from "@cim/core";
 import type { TrackingTarget } from "@cim/validation";
 import { TRACKING_TARGET_OPTIONS } from "@/lib/tracking-targets";
 import { AliasGroups } from "./alias-groups";
+import { ChipInput } from "./chip-input";
+import { IntentSection, type NotifyChoice } from "./intent-section";
 import { RegionPicker } from "./region-picker";
 
 type Project = { id: string; name: string };
@@ -52,103 +57,14 @@ type PreviewResult = {
   scanned?: number;
   scannedSince?: string | null;
   byCountry?: { code: string | null; count: number }[];
+  /** How many of the matches are important, worth a look or passing mentions for the chosen goals. */
+  levels?: { high: number; normal: number; low: number };
+  /** A few of the highest-ranked matches and the reason each ranks where it does. */
+  top?: { title: string; sourceName: string; level: string; why: string }[];
   sample: { title: string; sourceName: string; publishedAt: string | null }[];
   warning: string | null;
   aiAssessment: { text: string; confidence: number; method: string } | null;
 };
-
-function ChipInput({
-  label,
-  values,
-  onChange,
-  placeholder,
-  hint,
-}: {
-  label: string;
-  values: string[];
-  onChange: (next: string[]) => void;
-  placeholder?: string;
-  hint?: string;
-}) {
-  const hintId = hint ? `${label.toLowerCase().replace(/\s+/g, "-")}-hint` : undefined;
-  const [draft, setDraft] = useState("");
-
-  // One keyword = one comma-separated item (a word or a whole sentence);
-  // pasting "a, b, c" adds three chips.
-  function add() {
-    const additions = parseKeywordList(draft);
-    if (additions.length === 0) return;
-    onChange(mergeKeywords(values, additions));
-    setDraft("");
-  }
-
-  return (
-    <div className="flex flex-col gap-1.5">
-      <span className="text-sm font-medium text-foreground">{label}</span>
-      <div className="flex gap-2">
-        <Input
-          value={draft}
-          placeholder={placeholder}
-          aria-label={label}
-          aria-describedby={hintId}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === ",") {
-              e.preventDefault();
-              add();
-            }
-          }}
-        />
-        <Button type="button" variant="secondary" onClick={add}>
-          Add
-        </Button>
-      </div>
-      {hint ? (
-        <p id={hintId} className="text-xs text-muted-foreground">
-          {hint}
-        </p>
-      ) : null}
-      {values.length > 0 ? (
-        <ul className="flex flex-wrap gap-2">
-          {values.map((value) => {
-            const spec = parseKeywordSpec(value);
-            const rule = spec.caseSensitive
-              ? "exact capitals, whole word"
-              : spec.prefix
-                ? "word starts with"
-                : null;
-            return (
-            <li
-              key={value}
-              title={
-                spec.caseSensitive
-                  ? "Short all-caps abbreviation: matched as the whole word, with exactly these capitals."
-                  : spec.prefix
-                    ? "Matches words that start with this (any ending)."
-                    : "Matches this word or phrase and its forms: plural, possessive and case endings (girişimci → girişimcilerin, girişimciye; startup → startups)."
-              }
-              className="flex items-center gap-2 rounded-sm bg-secondary px-2.5 py-1 text-sm text-secondary-foreground"
-            >
-              {value}
-              {rule ? (
-                <span className="rounded-sm bg-background/60 px-1.5 text-[11px] text-muted-foreground">{rule}</span>
-              ) : null}
-              <button
-                type="button"
-                onClick={() => onChange(values.filter((v) => v !== value))}
-                aria-label={`Remove ${value}`}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                &times;
-              </button>
-            </li>
-            );
-          })}
-        </ul>
-      ) : null}
-    </div>
-  );
-}
 
 export function QueryBuilderForm({
   projects,
@@ -182,6 +98,13 @@ export function QueryBuilderForm({
   const [companyName, setCompanyName] = useState(existing?.queryAst.company?.name ?? "");
   const [companyShort, setCompanyShort] = useState(existing?.queryAst.company?.short ?? "");
   const [brandGroupId, setBrandGroupId] = useState(existing?.brandGroupId ?? "");
+  // What the person wants from the monitoring. A monitoring saved before this existed showed everything, so it
+  // starts there; a new one starts balanced.
+  const [goals, setGoals] = useState<GoalKey[]>((existing?.queryAst.intent?.goals ?? []).filter((goal) => goal !== "coverage"));
+  const [signalWords, setSignalWords] = useState<string[]>(existing?.queryAst.intent?.signalWords ?? []);
+  const [focus, setFocus] = useState<FocusLevel>(existing?.queryAst.intent?.focus ?? (existing ? "everything" : "balanced"));
+  const [notify, setNotify] = useState<NotifyChoice>({ mode: "important", email: false });
+  const [previewedFor, setPreviewedFor] = useState<string | null>(null);
   const [preview, setPreview] = useState<PreviewResult | null>(null);
   const [isPreviewing, setIsPreviewing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -195,6 +118,14 @@ export function QueryBuilderForm({
         : parseBooleanQuery(advancedText),
     [mode, include, exclude, exactPhrases, advancedText],
   );
+
+  const intent = useMemo(
+    () => ({ goals: goals.length > 0 ? goals : (["coverage"] as GoalKey[]), focus, signalWords }),
+    [goals, focus, signalWords],
+  );
+  // The choices that change how a preview's stories are ranked: when they differ from the previewed ones the
+  // levels are stale. (The focus only decides what is folded, which the breakdown recomputes as it changes.)
+  const intentKey = JSON.stringify([trackingTarget, intent.goals, intent.signalWords]);
 
   // Forms of one word (girişimci · girişimcilik · girişimcinin) are read together on their own.
   const autoClusters = useMemo(() => autoKeywordClusters(currentAst.include), [currentAst.include]);
@@ -232,10 +163,11 @@ export function QueryBuilderForm({
       const response = await fetch("/api/monitoring/preview", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...currentAst, regionScopes }),
+        body: JSON.stringify({ ...currentAst, regionScopes, trackingTarget, intent }),
       });
       if (response.ok) {
         setPreview(await response.json());
+        setPreviewedFor(intentKey);
       } else {
         setError("Couldn't preview this query. Please try again.");
       }
@@ -273,6 +205,8 @@ export function QueryBuilderForm({
           regionScopes,
           trackingTarget,
           company: companyName.trim() ? { name: companyName.trim(), short: companyShort.trim() || undefined } : undefined,
+          intent,
+          ...(existing ? {} : { notify }),
         }),
       });
       const data = await response.json();
@@ -437,6 +371,17 @@ export function QueryBuilderForm({
         )}
       </div>
 
+      <IntentSection
+        goals={goals}
+        onGoalsChange={setGoals}
+        signalWords={signalWords}
+        onSignalWordsChange={setSignalWords}
+        focus={focus}
+        onFocusChange={setFocus}
+        notify={editing ? undefined : notify}
+        onNotifyChange={editing ? undefined : setNotify}
+      />
+
       {editing && brandGroups.length > 0 ? (
         <Field
           id="brand-group"
@@ -501,6 +446,14 @@ export function QueryBuilderForm({
                 every stored story that contains your words.
               </p>
             ) : null}
+            {preview.levels ? (
+              <LevelBreakdown
+                levels={preview.levels}
+                focus={focus}
+                top={preview.top ?? []}
+                stale={previewedFor !== null && previewedFor !== intentKey}
+              />
+            ) : null}
             {preview.byCountry && preview.byCountry.length > 0 ? (
               <p className="text-xs text-muted-foreground">
                 Where they come from:{" "}
@@ -557,6 +510,56 @@ export function QueryBuilderForm({
           {isSubmitting ? "Saving…" : editing ? "Save changes" : "Save monitoring"}
         </Button>
       </div>
+    </div>
+  );
+}
+
+/**
+ * The answer to "how much will I actually see?": the previewed stories split by how much they matter for the
+ * chosen goals, and what the chosen focus does with each group.
+ */
+function LevelBreakdown({
+  levels,
+  focus,
+  top,
+  stale,
+}: {
+  levels: { high: number; normal: number; low: number };
+  focus: FocusLevel;
+  top: { title: string; sourceName: string; level: string; why: string }[];
+  stale: boolean;
+}) {
+  const total = levels.high + levels.normal + levels.low;
+  if (total === 0) return null;
+  const floor = focusFloor(focus);
+  const shown = (priorityRank("high") >= floor ? levels.high : 0) + (priorityRank("normal") >= floor ? levels.normal : 0) + (priorityRank("low") >= floor ? levels.low : 0);
+  const folded = total - shown;
+  const focusLabel = FOCUS_OPTIONS.find((option) => option.key === focus)?.label ?? focus;
+  return (
+    <div className="flex flex-col gap-1.5 rounded-md bg-surface-muted p-3 text-xs" aria-live="polite">
+      <p className="text-sm text-foreground">
+        <strong>{levels.high.toLocaleString("en-US")}</strong> important · <strong>{levels.normal.toLocaleString("en-US")}</strong> worth a look ·{" "}
+        <strong>{levels.low.toLocaleString("en-US")}</strong> passing mention{levels.low === 1 ? "" : "s"}
+      </p>
+      <p className="text-muted-foreground">
+        {folded > 0
+          ? `At “${focusLabel}” you would see ${shown.toLocaleString("en-US")} of them; ${folded.toLocaleString("en-US")} would be folded away, one click from view.`
+          : `At “${focusLabel}” you would see all of them, the most important first.`}
+      </p>
+      {stale ? <p className="text-warning">You changed these choices after this preview — preview again to see the effect.</p> : null}
+      {top.length > 0 ? (
+        <div className="mt-1">
+          <p className="font-medium text-foreground">What ranks highest, and why</p>
+          <ul className="mt-0.5 flex flex-col gap-1 text-muted-foreground">
+            {top.map((story, index) => (
+              <li key={index}>
+                {story.title} <span>— {story.sourceName}</span>
+                <span className="block text-[11px]">{story.why}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
     </div>
   );
 }

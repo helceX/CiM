@@ -1,3 +1,4 @@
+import type { MonitoringIntent } from "./intent";
 import { keywordMatches, prepareText, type MatchOptions } from "./keyword-match";
 
 /**
@@ -25,6 +26,12 @@ export type QueryAst = {
    * view lists the stories that name the company directly.
    */
   company?: { name: string; short?: string };
+  /**
+   * What the person wants from the monitoring: what they are looking for, how much to show, which of
+   * their own words matter (see intent.ts). Never changes what MATCHES — only how matches are ranked and
+   * which are shown first. Absent on monitorings saved before it existed (they show everything).
+   */
+  intent?: MonitoringIntent;
 };
 
 /** The company's names (full, then short) when the monitoring has a company. */

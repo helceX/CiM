@@ -144,4 +144,51 @@ describe("mention days (integration)", () => {
     // Newest first across the whole day.
     expect(day.items.map((item) => item.article.title)).toEqual(["Broad story 4", "Broad story 3", "Broad story 2", "Narrow story"]);
   });
+
+  it("counts the important stories of a day, keeps the most important ones when a day is capped, and filters by importance", async () => {
+    const org = await makeOrg("d");
+    const [source] = await db
+      .insert(sources)
+      .values({ name: `${tag}-rank`, domain: `${tag}-rank.example`, type: "news", connector: "mock" })
+      .returning();
+    let n = 2000;
+    async function add(title: string, publishedAt: string, priority: "low" | "normal" | "high", signalScore: number | null) {
+      n += 1;
+      const [article] = await db
+        .insert(articles)
+        .values({ sourceId: source!.id, canonicalUrl: `https://${tag}.example/r${n}`, contentHash: `${tag}-r${n}`, title, publishedAt: new Date(publishedAt) })
+        .returning();
+      await db.insert(mentions).values({
+        organizationId: org.organizationId,
+        projectId: org.projectId,
+        queryId: org.queryId,
+        articleId: article!.id,
+        matchedTerms: ["x"],
+        priority,
+        signalScore,
+      });
+    }
+    // The newest story is the least important one.
+    await add("Oldest, important", "2026-10-02T06:00:00Z", "high", 70);
+    await add("Middle, worth a look", "2026-10-02T09:00:00Z", "normal", 40);
+    await add("Newest, passing mention", "2026-10-02T12:00:00Z", "low", 10);
+    await add("Middle too, a bit better", "2026-10-02T08:00:00Z", "normal", 50);
+
+    const { days } = await listMentionDays(db, org.organizationId, {}, { page: 1, pageSize: 5 });
+    expect(days[0]).toMatchObject({ day: "2026-10-02", total: 4, important: 1 });
+
+    // A day that does not fit keeps what matters, not just what is newest.
+    const capped = await listMentionsForDay(db, org.organizationId, {}, "2026-10-02", 3);
+    expect(capped.truncated).toBe(true);
+    expect(capped.totals[org.queryId]).toBe(4);
+    expect(capped.items.map((item) => item.article.title).sort()).toEqual(["Middle too, a bit better", "Middle, worth a look", "Oldest, important"]);
+
+    // The importance filter narrows days and stories alike.
+    const important = await listMentionDays(db, org.organizationId, { minPriority: "high" }, { page: 1, pageSize: 5 });
+    expect(important.days[0]).toMatchObject({ total: 1, important: 1 });
+    const worthALook = await listMentionsForDay(db, org.organizationId, { minPriority: "normal" }, "2026-10-02");
+    expect(worthALook.items.map((item) => item.article.title).sort()).toEqual(["Middle too, a bit better", "Middle, worth a look", "Oldest, important"]);
+    const passing = await listMentionsForDay(db, org.organizationId, { priority: "low" }, "2026-10-02");
+    expect(passing.items.map((item) => item.article.title)).toEqual(["Newest, passing mention"]);
+  });
 });

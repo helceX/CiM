@@ -344,6 +344,21 @@ const purgePrivacyWorker = new Worker<PurgePrivacyJobData>(
   { connection, concurrency: 1 },
 );
 
+const QUIET_QUEUES = new Set<string>([
+  QUEUE_NAMES.crawlSource,
+  QUEUE_NAMES.crawlScheduler,
+  QUEUE_NAMES.alertSpikeCheck,
+  QUEUE_NAMES.alertSentimentShiftCheck,
+  QUEUE_NAMES.alertEmergingTopicCheck,
+  QUEUE_NAMES.alertCompetitorCheck,
+  QUEUE_NAMES.alertCreatorSpikeCheck,
+  QUEUE_NAMES.aiEnrich,
+  QUEUE_NAMES.insightGenerate,
+  QUEUE_NAMES.scoreSignals,
+  QUEUE_NAMES.importCatalog,
+  QUEUE_NAMES.syncSocialConnections,
+]);
+
 const allWorkers = [
   sendEmailWorker,
   crawlSourceWorker,
@@ -385,9 +400,13 @@ for (const worker of allWorkers) {
     console.error(`[worker] job ${job?.id} (${worker.name}) failed:`, error);
     void captureException(error, { queue: worker.name, jobId: job?.id, attempt: job?.attemptsMade });
   });
-  worker.on("completed", (job) => {
-    console.log(`[worker] job ${job.id} (${worker.name}) completed`);
-  });
+  // The queues that run every few seconds or once per source would write ~100 lines a minute saying nothing
+  // ("job crawl-<id> completed"); a failure is always logged above, and the jobs that matter log what they did.
+  if (!QUIET_QUEUES.has(worker.name)) {
+    worker.on("completed", (job) => {
+      console.log(`[worker] job ${job.id} (${worker.name}) completed`);
+    });
+  }
 }
 
 async function scheduleRepeatingJobs() {

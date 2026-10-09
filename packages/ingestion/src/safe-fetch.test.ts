@@ -118,6 +118,30 @@ describe("safeFetch — SSRF rejection (real DNS, no mocking)", () => {
 });
 
 describe("safeFetch — fetch machinery (via injected resolver)", () => {
+  it("sends a truthful bot identity and only sends From for a valid configured contact", async () => {
+    let userAgent: string | undefined;
+    let from: string | undefined;
+    const { port } = await listen((req, res) => {
+      userAgent = req.headers["user-agent"];
+      const header = req.headers.from;
+      from = Array.isArray(header) ? header[0] : header;
+      res.end("ok");
+    });
+    await safeFetch(`http://example-cim-test.invalid:${port}/`, {
+      resolveHostname: loopbackResolver(),
+      contactEmail: "crawler@example.org",
+    });
+    expect(userAgent).toBe("Mediaory-Bot/1.0 (+https://mediaory.io/bot)");
+    expect(from).toBe("crawler@example.org");
+
+    from = undefined;
+    await safeFetch(`http://example-cim-test.invalid:${port}/`, {
+      resolveHostname: loopbackResolver(),
+      contactEmail: "not-an-email\\r\\nInjected: yes",
+    });
+    expect(from).toBeUndefined();
+  });
+
   it("fetches a real 200 response end to end", async () => {
     const { port } = await listen((_req, res) => {
       res.writeHead(200, { "content-type": "text/plain" });

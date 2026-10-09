@@ -549,6 +549,17 @@
       "sending": "Sending…",
       "doneTitle": "Request received",
       "doneBody": "Thank you. We will review it and reply by email, normally within two business days.",
+      "requestId": "Reference: {id}.",
+      "checkStatus": "Check request status",
+      "statusTitle": "Publisher request status",
+      "statusValue": "Status: {status}",
+      "statusUpdated": "Last updated: {date}",
+      "newRequest": "Submit another request",
+      "status": {
+        "open": "Received; awaiting review",
+        "resolved": "Completed",
+        "rejected": "Closed"
+      },
       "error": "We could not send your request. Please check the form and try again."
     },
     "footerTerms": "Terms of Service",

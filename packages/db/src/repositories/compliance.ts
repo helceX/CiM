@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { hostMatchesDomain, normalizeHost } from "@cim/core";
 import type { Db } from "../client";
@@ -16,9 +17,64 @@ export type NewTakedownRequest = {
 };
 
 export async function createTakedownRequest(db: Db, input: NewTakedownRequest) {
-  const [row] = await db.insert(takedownRequests).values(input).returning({ id: takedownRequests.id });
-  if (!row) throw new Error("failed to create takedown request");
-  return row.id;
+  // Only pause on an unambiguous, exact feed URL. A domain or page request
+  // stays in admin review so a narrow request cannot accidentally stop every
+  // feed belonging to that publisher.
+  let exactFeedUrl: string | null = null;
+  try {
+    const parsed = new URL(input.targets.trim());
+    if ((parsed.protocol === "http:" || parsed.protocol === "https:") && !parsed.username && !parsed.password) {
+      parsed.hash = "";
+      exactFeedUrl = parsed.toString();
+    }
+  } catch {
+    // Non-URL or multi-target requests require admin triage.
+  }
+
+  const normalizedInput = {
+    ...input,
+    requesterEmail: input.requesterEmail.toLowerCase(),
+    targets: input.targets.trim(),
+  };
+  const fingerprint = createHash("sha256")
+    .update(`${normalizedInput.requesterEmail}\0${normalizedInput.targets}`)
+    .digest("hex");
+
+  return db.transaction(async (tx) => {
+    // Serialize the rare duplicate public submission without storing the
+    // contact/target digest or adding workload to crawl transactions.
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${`publisher-request:${fingerprint}`}, 0))`);
+    const [existing] = await tx
+      .select({ id: takedownRequests.id })
+      .from(takedownRequests)
+      .where(and(
+        eq(takedownRequests.status, "open"),
+        eq(takedownRequests.requesterEmail, normalizedInput.requesterEmail),
+        eq(takedownRequests.targets, normalizedInput.targets),
+      ))
+      .limit(1);
+    if (existing) return existing.id;
+
+    const [row] = await tx.insert(takedownRequests).values(normalizedInput).returning({ id: takedownRequests.id });
+    if (!row) throw new Error("failed to create takedown request");
+    if (exactFeedUrl) {
+      const [source] = await tx.select({ id: sources.id }).from(sources).where(eq(sources.url, exactFeedUrl)).limit(1);
+      if (source) {
+        await tx.update(sources).set({ status: "unavailable", updatedAt: new Date() }).where(eq(sources.id, source.id));
+      }
+    }
+    return row.id;
+  });
+}
+
+/** A request UUID is an unguessable public reference; return status only, never requester data. */
+export async function getPublicTakedownStatus(db: Db, id: string) {
+  const [row] = await db
+    .select({ id: takedownRequests.id, status: takedownRequests.status, createdAt: takedownRequests.createdAt, resolvedAt: takedownRequests.resolvedAt })
+    .from(takedownRequests)
+    .where(eq(takedownRequests.id, id))
+    .limit(1);
+  return row ?? null;
 }
 
 export async function listTakedownRequests(db: Db, status?: "open" | "resolved" | "rejected") {

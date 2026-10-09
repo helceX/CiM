@@ -549,6 +549,17 @@
       "sending": "Gönderiliyor…",
       "doneTitle": "Talebiniz alındı",
       "doneBody": "Teşekkürler. Talebi inceleyip e-postayla yanıtlayacağız, genellikle iki iş günü içinde.",
+      "requestId": "Talep numarası: {id}.",
+      "checkStatus": "Talep durumunu kontrol et",
+      "statusTitle": "Yayıncı talebinin durumu",
+      "statusValue": "Durum: {status}",
+      "statusUpdated": "Son güncelleme: {date}",
+      "newRequest": "Yeni bir talep gönder",
+      "status": {
+        "open": "Alındı; incelenmeyi bekliyor",
+        "resolved": "Tamamlandı",
+        "rejected": "Kapatıldı"
+      },
       "error": "Talebiniz gönderilemedi. Formu kontrol edip tekrar deneyin."
     },
     "footerTerms": "Kullanım Şartları",

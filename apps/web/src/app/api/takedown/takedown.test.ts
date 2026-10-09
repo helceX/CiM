@@ -43,6 +43,7 @@ describe("POST /api/takedown (public)", () => {
   it("stores the request, normalises the e-mail, and notifies every platform admin", async () => {
     const res = await post(valid);
     expect(res.status).toBe(201);
+    await expect(res.json()).resolves.toMatchObject({ ok: true, requestId: "id-1" });
     const stored = createTakedownRequest.mock.calls[0]![1] as Record<string, unknown>;
     expect(stored.requesterEmail).toBe("ayse@pub.example");
     expect(stored).not.toHaveProperty("confirmAuthority");

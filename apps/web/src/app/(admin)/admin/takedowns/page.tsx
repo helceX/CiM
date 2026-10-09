@@ -4,6 +4,17 @@ import { db, listBlockedDomains, listTakedownRequests } from "@cim/db";
 import { requireSuperAdmin } from "@/lib/admin";
 import { BlockDomainForm, ResolveTakedownForm, UnblockButton } from "./takedown-controls";
 
+function maskTargetQueries(targets: string): string {
+  return targets.split(/\r?\n/).map((line) => {
+    try {
+      const url = new URL(line.trim());
+      return `${url.protocol}//${url.host}${url.pathname}${url.search ? "?[query hidden]" : ""}`;
+    } catch {
+      return line;
+    }
+  }).join("\n");
+}
+
 /**
  * Publisher requests to be removed, and the list of blocked domains. A blocked
  * domain is never crawled again and cannot be re-added as a source.
@@ -51,7 +62,7 @@ export default async function AdminTakedownsPage() {
                 <p className="mt-1 text-sm text-muted-foreground">
                   {req.requesterName} &lt;{req.requesterEmail}&gt;
                 </p>
-                <p className="mt-2 whitespace-pre-wrap break-words text-sm text-foreground">{req.targets}</p>
+                <p className="mt-2 whitespace-pre-wrap break-words text-sm text-foreground">{maskTargetQueries(req.targets)}</p>
                 {req.message ? (
                   <p className="mt-2 whitespace-pre-wrap break-words text-sm text-muted-foreground">{req.message}</p>
                 ) : null}

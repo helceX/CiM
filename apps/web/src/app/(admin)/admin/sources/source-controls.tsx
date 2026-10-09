@@ -3,12 +3,12 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Input, Label } from "@cim/ui";
-import { COUNTRIES, SOCIAL_FEED_PLATFORMS, buildSocialFeed, type CatalogSource } from "@cim/core";
+import { COUNTRIES, SOCIAL_FEED_PLATFORMS, buildGoogleTrendsFeedUrl, buildSocialFeed, type CatalogSource } from "@cim/core";
 
 type NewSource = {
   name: string;
   url: string;
-  connector: "rss" | "sitemap" | "api";
+  connector: "rss" | "sitemap" | "api" | "google-trends";
   apiKey: string;
   apiKeyHeaderName: string;
   type: string;
@@ -106,7 +106,13 @@ export function AddSourceForm({ countryCodes, defaultCountry = "TR" }: { country
   const [licenseConfirmed, setLicenseConfirmed] = useState(false);
 
   function update<K extends keyof NewSource>(key: K, value: NewSource[K]) {
-    setForm((current) => ({ ...current, [key]: value }));
+    setForm((current) => {
+      const next = { ...current, [key]: value } as NewSource;
+      if (key === "country" && current.connector === "google-trends") {
+        next.url = buildGoogleTrendsFeedUrl(String(value)) ?? "";
+      }
+      return next;
+    });
     setMessage(null);
     if (key === "url") {
       setNeedsLicense(false);
@@ -196,11 +202,22 @@ export function AddSourceForm({ countryCodes, defaultCountry = "TR" }: { country
           id="source-connector"
           className={select}
           value={form.connector}
-          onChange={(e) => update("connector", e.target.value as NewSource["connector"])}
+          onChange={(e) => {
+            const connector = e.target.value as NewSource["connector"];
+            setForm((current) => ({
+              ...current,
+              connector,
+              ...(connector === "google-trends"
+                ? { type: "trends", name: current.name || "Google Trends", url: buildGoogleTrendsFeedUrl(current.country) ?? "" }
+                : {}),
+            }));
+            setMessage(null);
+          }}
         >
           <option value="rss">RSS / Atom feed</option>
           <option value="sitemap">Sitemap</option>
           <option value="api">Clipping / data provider (JSON API)</option>
+          <option value="google-trends">Google Trends RSS (geo only)</option>
         </select>
       </div>
       {form.connector === "api" ? (
@@ -243,6 +260,7 @@ export function AddSourceForm({ countryCodes, defaultCountry = "TR" }: { country
           <option value="website">Website</option>
           <option value="forum">Forum</option>
           <option value="comments">Comments</option>
+          <option value="trends">Google Trends</option>
         </select>
       </div>
       <div className="flex flex-col gap-1">

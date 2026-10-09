@@ -1,8 +1,16 @@
 import AxeBuilder from "@axe-core/playwright";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { test, expect } from "@playwright/test";
 import { asOrganizationId, createMonitoringQuery, db, schema } from "@cim/db";
 import { registerAndOnboard } from "./helpers";
+
+const createdSourceIds: string[] = [];
+
+// The stories this test stores would otherwise stay in the shared database and be clustered with look-alike
+// headlines of later runs.
+test.afterAll(async () => {
+  if (createdSourceIds.length > 0) await db.delete(schema.sources).where(inArray(schema.sources.id, createdSourceIds));
+});
 
 /**
  * docs/product/SIGNAL_AND_INTENT.md — every story says why it is there and how much it matters; what the
@@ -40,6 +48,7 @@ test("stories are ranked, explained and folded by what the monitoring asked for"
       })),
     )
     .returning();
+  createdSourceIds.push(wire!.id, local!.id, regional!.id);
   const cluster = crypto.randomUUID();
   let n = 0;
   async function story(
@@ -68,7 +77,7 @@ test("stories are ranked, explained and folded by what the monitoring asked for"
   }
   await story(wire!.id, `${brand} sued over data breach`, "high", 90, [
     { code: "headline", terms: [brand] },
-    { code: "goal", goal: "risk", terms: ["sued", "data breach"], where: "headline" },
+    { code: "goal", goal: "risk", headline: ["sued", "data breach"], text: [] },
     { code: "editorial" },
   ]);
   await story(wire!.id, "Plant opens in Izmir", "normal", 38, [{ code: "lead", terms: [brand] }, { code: "editorial" }]);

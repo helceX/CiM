@@ -95,7 +95,7 @@ describe("signals at ingest (integration)", () => {
     const high = await mentionOf(headline);
     expect(high.priority).toBe("high");
     expect(high.signalReasons?.map((reason) => reason.code)).toEqual(["headline", "goal", "editorial"]);
-    expect(high.signalReasons).toContainEqual({ code: "goal", goal: "risk", terms: ["sued", "data breach"], where: "headline" });
+    expect(high.signalReasons).toContainEqual({ code: "goal", goal: "risk", headline: ["sued", "data breach"], text: [] });
 
     const normal = await mentionOf(opening);
     expect(normal.priority).toBe("normal");
@@ -112,7 +112,7 @@ describe("signals at ingest (integration)", () => {
     expect(result.newMentions.map((record) => record.priority).sort()).toEqual(["high", "low", "normal"]);
 
     // The same headline on a blog: a name in the headline is still a name in the headline, but a blog is not a news outlet.
-    const onBlog = await ingestSource(db, blog, new StoriesConnector([{ title: `${brand} opens a research centre`, body: "x" }]));
+    const onBlog = await ingestSource(db, blog, new StoriesConnector([{ title: `${brand} inaugurates a robotics laboratory`, body: "x" }]));
     expect(onBlog.newMentions.map((record) => record.priority)).toEqual(["normal"]);
   });
 

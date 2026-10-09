@@ -28,7 +28,7 @@ export type SignalReason =
   | { code: "deep" }
   | { code: "identity"; terms: string[] }
   | { code: "several"; n: number }
-  | { code: "goal"; goal: GoalKey | "custom"; terms: string[]; where: "headline" | "text" }
+  | { code: "goal"; goal: GoalKey | "custom"; headline: string[]; text: string[] }
   | { code: "covered"; n: number }
   | { code: "editorial" };
 
@@ -177,12 +177,7 @@ export function scoreSignal(input: SignalInput): Signal {
     const points = Math.min(W.goalPerGoalMax, inTitleWords.length * W.goalHeadline + inLeadWords.length * W.goalLead);
     if (points === 0) continue;
     goalTotal += points;
-    reasons.push({
-      code: "goal",
-      goal: pack.goal,
-      terms: top([...inTitleWords, ...inLeadWords]),
-      where: inTitleWords.length > 0 ? "headline" : "text",
-    });
+    reasons.push({ code: "goal", goal: pack.goal, headline: top(inTitleWords), text: top(inLeadWords) });
   }
   score += Math.min(W.goalTotalMax, goalTotal);
 
@@ -242,8 +237,13 @@ function reasonLine(reason: SignalReason): string {
       return `Exact match on ${quoted(reason.terms)}`;
     case "several":
       return `Touches ${reason.n} of the things you track`;
-    case "goal":
-      return `${goalLabel(reason.goal)}: ${quoted(reason.terms)} ${reason.where === "headline" ? "in the headline" : "in the text"}`;
+    case "goal": {
+      const where = [
+        ...(reason.headline.length > 0 ? [`${quoted(reason.headline)} in the headline`] : []),
+        ...(reason.text.length > 0 ? [`${quoted(reason.text)} in the text`] : []),
+      ];
+      return `${goalLabel(reason.goal)}: ${where.join(", ")}`;
+    }
     case "covered":
       return `Reported by ${reason.n} outlets`;
     case "editorial":

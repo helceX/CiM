@@ -127,7 +127,7 @@ describe("signals (integration)", () => {
     expect((await signalOf(id)).signalReasons).toBeNull();
     expect(await scoreUnscoredMentions(db, { queryId: query.id })).toBe(1);
     const after = await signalOf(id);
-    expect(after.signalReasons).toContainEqual({ code: "goal", goal: "opportunity", terms: ["grant"], where: "headline" });
+    expect(after.signalReasons).toContainEqual({ code: "goal", goal: "opportunity", headline: ["grant"], text: [] });
     expect(after.signalScore!).toBeGreaterThan(before.signalScore!);
   });
 

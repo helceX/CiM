@@ -104,7 +104,7 @@ describe("what adds up", () => {
     const inText = scoreSignal({ ...base, title: "Acme opens a plant", lead: "Acme was sued last year." });
     expect(inHeadline.score).toBeGreaterThan(inText.score);
     expect(inText.score).toBeGreaterThan(plain.score);
-    expect(inHeadline.reasons).toContainEqual({ code: "goal", goal: "risk", terms: ["sued", "data breach"], where: "headline" });
+    expect(inHeadline.reasons).toContainEqual({ code: "goal", goal: "risk", headline: ["sued", "data breach"], text: [] });
   });
 
   it("goal words only count for the goals that were chosen", () => {
@@ -121,18 +121,18 @@ describe("what adds up", () => {
 
   it("the person's own signal words work like a goal", () => {
     const signal = scoreSignal({ ast: ast(["Acme"]), target: "company", sourceType: "blog", language: "en", intent: intent(["coverage"], ["Q3 results"]), title: "Acme Q3 results beat forecasts" });
-    expect(signal.reasons).toContainEqual({ code: "goal", goal: "custom", terms: ["Q3 results"], where: "headline" });
+    expect(signal.reasons).toContainEqual({ code: "goal", goal: "custom", headline: ["Q3 results"], text: [] });
   });
 
   it("Turkish endings and abbreviations behave like they do in matching", () => {
     const signal = scoreSignal({ ast: ast(["Acme"]), target: "company", sourceType: "news", language: "tr", intent: intent(["opportunity"]), title: "Acme yeni hibelerden yararlandı" });
-    expect(signal.reasons).toContainEqual({ code: "goal", goal: "opportunity", terms: ["hibe"], where: "headline" });
+    expect(signal.reasons).toContainEqual({ code: "goal", goal: "opportunity", headline: ["hibe"], text: [] });
     // KVKK is an abbreviation: exact capitals.
     const policy = intent(["policy"]);
     const shout = scoreSignal({ ast: ast(["Acme"]), target: "company", sourceType: "blog", language: "tr", intent: policy, title: "Acme KVKK cezası aldı" });
     const quiet = scoreSignal({ ast: ast(["Acme"]), target: "company", sourceType: "blog", language: "tr", intent: policy, title: "Acme kvkk cezası aldı" });
-    expect(shout.reasons.some((r) => r.code === "goal" && r.terms.includes("KVKK"))).toBe(true);
-    expect(quiet.reasons.some((r) => r.code === "goal" && r.terms.includes("KVKK"))).toBe(false);
+    expect(shout.reasons.some((r) => r.code === "goal" && r.headline.includes("KVKK"))).toBe(true);
+    expect(quiet.reasons.some((r) => r.code === "goal" && r.headline.includes("KVKK"))).toBe(false);
   });
 
   it("goal points are capped so a pile of words cannot bury the rest", () => {
@@ -227,6 +227,22 @@ describe("describeSignal", () => {
   it("is null when nothing was scored", () => {
     expect(describeSignal("normal", null)).toBeNull();
     expect(describeSignal("normal", [])).toBeNull();
+  });
+
+  it("says which goal words were in the headline and which only in the text", () => {
+    const signal = scoreSignal({
+      ast: ast(["Acme"]),
+      target: "company",
+      sourceType: "blog",
+      language: "en",
+      intent: intent(["opportunity"]),
+      title: "Acme opens grant programme",
+      lead: "Applications are open; the deadline is in May.",
+    });
+    expect(signal.reasons).toContainEqual({ code: "goal", goal: "opportunity", headline: ["grant"], text: ["deadline"] });
+    expect(describeSignal(signal.level, signal.reasons)!.lines).toContain(
+      "Opportunities & funding: “grant” in the headline, “deadline” in the text",
+    );
   });
 
   it("a deep mention says so", () => {

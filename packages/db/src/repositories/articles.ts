@@ -1,5 +1,13 @@
+import { randomUUID } from "node:crypto";
 import { and, desc, eq, gte, min, or, sql } from "drizzle-orm";
-import { turkishFold, type ArticlePrint } from "@cim/core";
+import {
+  STORY_CANDIDATE_LIMIT,
+  STORY_WINDOW_HOURS,
+  clusterQueryWords,
+  toTsQueryAny,
+  turkishFold,
+  type ArticlePrint,
+} from "@cim/core";
 import type { Db } from "../client";
 import { articles, sources } from "../schema/content";
 
@@ -149,21 +157,54 @@ export async function listStoriesForPreview(
 /**
  * docs/architecture/ADR-004-INGESTION.md's own promise — "title/semantic
  * similarity... producing StoryCluster rows" — implemented here as the
- * title-similarity slice, via the same pg_trgm extension/index
- * `articles_title_trgm_idx` already exists for. Deliberately excludes
- * `excludeSourceId`: the point of clustering is cross-source
- * corroboration ("who else is covering this"), not linking an outlet's
- * own two headlines about the same event. 0.5 is a stricter floor than
- * pg_trgm's own 0.3 default `%` threshold — clustering drives what a
- * user is shown as "related coverage" (master prompt §38: never framed
- * as a certain link), so a false-positive costs more here than in a
- * plain search match.
+ * title-similarity slice. Deliberately excludes `excludeSourceId`: the
+ * point of clustering is cross-source corroboration ("who else is
+ * covering this"), not linking an outlet's own two headlines about the
+ * same event. 0.5 is a stricter floor than pg_trgm's own 0.3 default `%`
+ * threshold — clustering drives what a user is shown as "related
+ * coverage" (master prompt §38: never framed as a certain link), so a
+ * false-positive costs more here than in a plain search match.
+ *
+ * This runs once for EVERY new story, so its cost is the cost of the crawl. It used to compare the headline
+ * with every story of the last 48 hours (`similarity()` on 40–200 thousand rows, ~0.6 s of Postgres CPU
+ * each, and 99.9% of the database time of a crawl in the benchmark — docs/architecture/CRAWL_COST.md).
+ * Now the full-text index first narrows those to the stories that share one of the headline's most
+ * distinctive words (single-digit milliseconds), the newest few hundred of them are compared exactly, and
+ * the same 0.5 rule decides. A look-alike that shares none of the six longest words is not found; headlines
+ * of one story almost always share several. `findSimilarRecentArticleExact` is the original full scan.
  */
 export async function findSimilarRecentArticle(
   db: Db,
   input: { title: string; excludeSourceId: string; sinceHours?: number },
 ): Promise<{ id: string; storyClusterId: string | null } | undefined> {
-  const sinceHours = input.sinceHours ?? 48;
+  const sinceHours = input.sinceHours ?? STORY_WINDOW_HOURS;
+  const words = clusterQueryWords(input.title);
+  if (words.length === 0) return undefined;
+  const rows = await db.execute<{ id: string; story_cluster_id: string | null }>(sql`
+    select id, story_cluster_id
+    from (
+      select id, story_cluster_id, title
+      from articles
+      where source_id != ${input.excludeSourceId}
+        and fetched_at >= now() - (${sinceHours}::text || ' hours')::interval
+        and search_vector @@ to_tsquery('simple', ${toTsQueryAny(words)})
+      order by fetched_at desc
+      limit ${STORY_CANDIDATE_LIMIT}
+    ) candidates
+    where similarity(title, ${input.title}) > 0.5
+    order by similarity(title, ${input.title}) desc
+    limit 1
+  `);
+  const row = rows.rows[0];
+  return row ? { id: row.id, storyClusterId: row.story_cluster_id } : undefined;
+}
+
+/** The original lookup: every story of the window, compared exactly. Kept as the reference the fast one is tested against. */
+export async function findSimilarRecentArticleExact(
+  db: Db,
+  input: { title: string; excludeSourceId: string; sinceHours?: number },
+): Promise<{ id: string; storyClusterId: string | null } | undefined> {
+  const sinceHours = input.sinceHours ?? STORY_WINDOW_HOURS;
   const rows = await db.execute<{ id: string; story_cluster_id: string | null }>(sql`
     select id, story_cluster_id
     from articles
@@ -183,6 +224,46 @@ export async function setArticleStoryCluster(
   storyClusterId: string,
 ): Promise<void> {
   await db.update(articles).set({ storyClusterId }).where(eq(articles.id, articleId));
+}
+
+/**
+ * Puts a new story in the cluster of the look-alike it was found to resemble, and returns the cluster id.
+ *
+ * Joining a cluster that already exists is a single idempotent UPDATE (whoever writes it writes the same id),
+ * so it takes no lock. Only starting a NEW cluster needs one: two stories that find each other (or two that
+ * find the same third) at the same moment must end up with one id, not each generating their own. The locks
+ * cover just the stories involved, are held for two primary-key reads and two writes (milliseconds — the
+ * expensive look-alike search has already happened, outside it), and re-reads the rows under the lock so a
+ * cluster created a moment earlier is joined instead of replaced. It used to be one global lock around a
+ * second full search, so every cluster started anywhere waited for it.
+ */
+export async function assignStoryCluster(
+  db: Db,
+  input: { articleId: string; candidate: { id: string; storyClusterId: string | null } },
+): Promise<string> {
+  if (input.candidate.storyClusterId) {
+    await setArticleStoryCluster(db, input.articleId, input.candidate.storyClusterId);
+    return input.candidate.storyClusterId;
+  }
+  return db.transaction(async (tx) => {
+    // One lock per story, taken in a fixed order (so two transactions can never wait on each other): stories
+    // that find each other share both locks, stories that find the same third share its lock, and stories
+    // with nothing in common share none and never wait.
+    for (const id of [input.articleId, input.candidate.id].sort()) {
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${`story-cluster:${id}`}, 0))`);
+    }
+    const rows = await tx.execute<{ id: string; story_cluster_id: string | null }>(
+      sql`select id, story_cluster_id from articles where id in (${input.articleId}, ${input.candidate.id})`,
+    );
+    const clusterOf = (id: string) => rows.rows.find((row) => row.id === id)?.story_cluster_id ?? null;
+    const own = clusterOf(input.articleId);
+    const other = clusterOf(input.candidate.id);
+    const clusterId = other ?? own ?? randomUUID();
+    const txDb = tx as unknown as Db;
+    if (own !== clusterId) await setArticleStoryCluster(txDb, input.articleId, clusterId);
+    if (other !== clusterId) await setArticleStoryCluster(txDb, input.candidate.id, clusterId);
+    return clusterId;
+  });
 }
 
 /**

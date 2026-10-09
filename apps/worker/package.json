@@ -7,7 +7,9 @@
     "dev": "tsx watch --env-file-if-exists=.env.local src/index.ts",
     "build": "tsc -p tsconfig.json",
     "start": "tsx --env-file-if-exists=.env src/index.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "bench:crawl": "tsx bench/crawl-bench.ts",
+    "bench:seed-articles": "tsx bench/seed-articles.ts"
   },
   "dependencies": {
     "@cim/ai": "workspace:*",

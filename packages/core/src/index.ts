@@ -13,6 +13,7 @@ export * from "./monitoring-check";
 export { morphologyPacksFor, type MorphologyPack } from "./morphology";
 export * from "./word-fingerprint";
 export * from "./turkish";
+export * from "./story-cluster";
 export * from "./email-provider";
 export * from "./jobs";
 export * from "./restricted-publishers";

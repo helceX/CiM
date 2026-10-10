@@ -69,7 +69,11 @@ test("scrolling controls the product mockup and reverses the workflow", async ({
   expect(Number(await story.getAttribute("data-progress"))).toBeLessThan(4);
   await story.getByRole("button", { name: "05 Report", exact: true }).click();
   await expect(device).toHaveAttribute("data-product-stage", "4");
-  await expect(story).toHaveAttribute("data-progress", "4.000");
+  // Browsers round scroll positions to physical pixels: a completed jump
+  // can end at 3.999 on one viewport and 4.000 on another.
+  await expect
+    .poll(async () => Number(await story.getAttribute("data-progress")))
+    .toBeGreaterThan(3.99);
   await expect(device.locator(".product-report")).toBeVisible();
   await steps.first().scrollIntoViewIfNeeded();
   await expect(device).toHaveAttribute("data-product-stage", "0");

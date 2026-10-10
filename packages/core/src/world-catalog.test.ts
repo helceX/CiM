@@ -97,12 +97,15 @@ describe("catalog import order", () => {
     }
   });
 
-  it("keeps user-provided supplements browsable without auto-importing them", async () => {
+  it("imports publisher supplements after validation while keeping search feeds manual", async () => {
     const { CATALOG_IMPORT_ORDER } = await import("./catalog-import");
-    const supplements = WORLD_SOURCE_CATALOG.filter((e) => e.manualOnly);
-    expect(supplements.length).toBeGreaterThan(1000);
-    expect(supplements.every((entry) => !CATALOG_IMPORT_ORDER.some((candidate) => candidate.url === entry.url))).toBe(true);
-    expect(supplements.some((entry) => entry.group === "search" && entry.country === "TR")).toBe(true);
-    expect(supplements.some((entry) => entry.name.includes("Scotland") && entry.country === "GB")).toBe(true);
+    const publishers = WORLD_SOURCE_CATALOG.filter((e) => e.key.startsWith("supplement-") && e.group !== "search");
+    expect(publishers.length).toBeGreaterThan(900);
+    const imported = new Set(CATALOG_IMPORT_ORDER.map((candidate) => candidate.url));
+    expect(publishers.every((entry) => imported.has(entry.url))).toBe(true);
+    expect(WORLD_SOURCE_CATALOG.some((entry) => entry.name.includes("Scotland") && entry.country === "GB")).toBe(true);
+    const searchFeeds = WORLD_SOURCE_CATALOG.filter((e) => e.group === "search");
+    expect(searchFeeds.some((entry) => entry.country === "TR")).toBe(true);
+    expect(searchFeeds.every((entry) => entry.manualOnly && !imported.has(entry.url))).toBe(true);
   });
 });

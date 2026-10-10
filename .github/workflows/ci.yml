@@ -104,6 +104,13 @@ jobs:
         # runs first; no database is touched).
         if: matrix.target == 'web'
         run: |
+          # Shared hosted-runner IPs can also hit ECR's short burst limit.
+          # Retry the pull separately so docker run never skips the smoke test.
+          for delay in 5 10 20 40; do
+            docker pull public.ecr.aws/docker/library/redis:8-alpine && break
+            sleep "$delay"
+          done
+          docker image inspect public.ecr.aws/docker/library/redis:8-alpine >/dev/null
           docker run -d --name redis --network host public.ecr.aws/docker/library/redis:8-alpine
           docker run -d --name web --network host \
             -e SESSION_SECRET=ci-only-session-secret-0123456789abcdef0123456789abcdef \

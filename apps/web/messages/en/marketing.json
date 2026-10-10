@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Mediaory — Communication Intelligence Platform",
-    "description": "Monitor, understand, and act on what the world is saying about your brand. News and the open web today, social, video and broadcast next: watch, filter, understand, alert, report."
+    "description": "Monitor news, the open web and selected social feeds. Turn source-backed insights and profile-matched opportunities into your next move, with reports your team can share."
   },
   "nav": {
     "features": "Features",
@@ -40,8 +40,8 @@
       "eyebrow": "Communication intelligence platform",
       "titleA": "See the story",
       "titleB": "before it becomes the headline.",
-      "subtitle": "Mediaory watches news sites and the open web around the clock, folds the noise into stories, and tells your team what matters — with the evidence attached.",
-      "note": "Set up your first monitor in under three minutes.",
+      "subtitle": "From news to open social feeds, see what matters in one place. Understand the source, discover opportunities for your organization and share the story with your team.",
+      "note": "Start with a query. Follow the story to an opportunity.",
       "screenAlt": "The Mediaory dashboard showing mention totals, an AI summary of the last 24 hours and a mention trend.",
       "chipMentions": "38 mentions · last 7 days",
       "chipAi": "AI summary · 90% confidence",
@@ -54,30 +54,30 @@
       }
     },
     "sources": {
-      "label": "Watches the places your audience reads — and more on the way",
+      "label": "News, the open web and the public feeds you choose",
       "items": [
         "News sites",
-        "Web pages",
         "RSS feeds",
-        "Sitemaps",
-        "Custom APIs",
-        "Social · coming soon",
-        "Video · coming soon",
-        "Podcasts · coming soon",
-        "TV & radio · coming soon"
+        "Open web",
+        "YouTube feeds",
+        "Mastodon",
+        "Bluesky",
+        "GitHub",
+        "Forum feeds",
+        "Podcast RSS"
       ]
     },
     "story": {
-      "eyebrow": "One continuous loop",
+      "eyebrow": "You direct the story",
       "title": "From noise to a decision,",
       "titleAccent": "in five moves.",
-      "lead": "Scroll through how a single question — “what is being said about us?” — becomes an answer your leadership can act on.",
+      "lead": "Scroll to build a query, bring in the news and surface what matters. Follow one workspace from information to opportunity to report.",
       "listLabel": "How Mediaory works, step by step",
       "steps": {
         "watch": {
           "kicker": "Watch",
           "title": "Tell it what to watch.",
-          "body": "Brands, executives, competitors, campaigns. Build a query with simple chips or full Boolean syntax — it is the same query either way — and pick your sources.",
+          "body": "Choose your brand and topic. Select keywords, exclusions and sources to build a monitoring feed of your own.",
           "alt": "The new monitoring form with include, exclude and exact-phrase fields and source checkboxes.",
           "scene": {
             "example": "Illustrative flow · not live data",
@@ -90,7 +90,7 @@
         "filter": {
           "kicker": "Filter",
           "title": "Cut the noise, keep the signal.",
-          "body": "Filter by sentiment, priority, date and owner. Duplicates collapse, so one story carried by dozens of outlets shows up once — with every source attached.",
+          "body": "Narrow the feed by date, sentiment and priority. Review relevant news alongside its sources and matching reasons.",
           "alt": "The mentions table with search and sentiment, priority, date and assignment filters.",
           "scene": {
             "example": "Illustrative flow · not live data",
@@ -103,7 +103,7 @@
         "understand": {
           "kicker": "Understand",
           "title": "Know why it matched — and what it means.",
-          "body": "Every mention explains why it was picked up and carries an AI summary with its confidence and method. No black boxes, no unsupported claims.",
+          "body": "See the source and matching reason alongside the summary. Review how a story connects to your brand and decide what comes next.",
           "alt": "A mention detail drawer showing why it matched, sentiment, an AI summary with confidence, tags and feedback.",
           "scene": {
             "example": "Illustrative flow · not live data",
@@ -116,7 +116,7 @@
         "alert": {
           "kicker": "Find opportunity",
           "title": "Connect the news to your next move.",
-          "body": "Match grants, investments, partnerships and calls to your organisation’s profile. Every match comes with a source you can review.",
+          "body": "Select your sector, technologies and goals. Opportunity radar matches relevant funding, investment and partnership signals to your profile; confirm eligibility at the source.",
           "alt": "The new alert form listing keyword, high relevance, spike, sentiment shift, emerging topic and competitor alert types.",
           "scene": {
             "example": "Illustrative flow · not live data",
@@ -129,7 +129,7 @@
         "report": {
           "kicker": "Report",
           "title": "Hand leadership a finished report.",
-          "body": "Weekly summaries, monitoring overviews, or a custom build. Export to PDF, CSV or XLSX, or put it on a schedule and forget it.",
+          "body": "Bring findings and sources together in a report. Export PDF, CSV or XLSX, and schedule recurring reports to keep your team on the same page.",
           "alt": "The new report form with weekly summary, monitoring overview and custom templates.",
           "scene": {
             "example": "Illustrative flow · not live data",
@@ -166,8 +166,8 @@
           "body": "Organizations, projects and role-based access. Assign mentions, comment, tag and hand off — from analysts to executives."
         },
         "social": {
-          "title": "Social listening (live data coming soon)",
-          "body": "Conversations, authors and hashtags in one view — including the unprompted brand chatter that never tags you. The view is built; connecting live platform data is next."
+          "title": "Open social sources",
+          "body": "Add public feeds from YouTube, Mastodon, Bluesky, GitHub and supported forums. Coverage follows your selected sources, with clear boundaries rather than a promise to monitor every platform."
         },
         "control": {
           "title": "Your data, your control",
@@ -222,6 +222,66 @@
         }
       ],
       "cta": "Set up your radar"
+    },
+    "demo": {
+      "example": "Illustrative product experience · not live data",
+      "scroll": "Scroll to direct the story",
+      "workspace": "Workspace",
+      "brand": "Example Brand",
+      "navigation": [
+        "Overview",
+        "Monitoring",
+        "Mentions",
+        "Source-backed insights",
+        "Opportunity radar",
+        "Reports"
+      ],
+      "headings": [
+        "Build your monitoring",
+        "News that matters",
+        "Understand the story",
+        "Opportunity radar",
+        "A report to share"
+      ],
+      "labels": [
+        "Your brand. Your topic. Your feed.",
+        "Monitoring name",
+        "Included topics",
+        "Selected sources",
+        "Filters",
+        "Example story",
+        "Matched phrase",
+        "Source-backed summary",
+        "Matching reason",
+        "Review source",
+        "Organization profile",
+        "WEEKLY BRIEF"
+      ],
+      "sources": ["News / RSS", "Open web", "YouTube", "Mastodon"],
+      "articles": [
+        "Example Brand announces a sustainability project",
+        "A new industry partnership call opens",
+        "Emerging technologies move into focus"
+      ],
+      "summary": "The new project connects to sustainability goals. Review the source text and share the development with your team.",
+      "evidence": "“Example Brand” appears in the source headline. Sustainability is a selected monitoring topic.",
+      "profile": ["Sustainability", "Artificial intelligence", "Funding and support"],
+      "opportunity": "An illustrative sustainable technology funding call",
+      "match": "A signal related to your profile",
+      "verify": "Example match. Confirm eligibility, dates and application terms with the official source.",
+      "report": "From the news to the decision table.",
+      "reportSections": [
+        "Stories that matter",
+        "Sources and findings",
+        "Opportunities to review"
+      ],
+      "actions": [
+        "Monitoring ready",
+        "Filter the noise",
+        "Understand the source",
+        "Match opportunities",
+        "Share with your team"
+      ]
     }
   },
   "devices": {
@@ -253,7 +313,7 @@
         "body": "Track brands, products, executives, competitors and topics with a chip-based simple mode or full Boolean syntax — the same query, either way. Preview what a query would have matched before you save it.",
         "points": [
           "Include, exclude and exact phrases",
-          "News sites, web pages, RSS feeds, sitemaps and custom APIs — social, video, podcast and broadcast sources are coming soon",
+          "News sites, the open web, RSS and sitemaps; selected YouTube, open social and podcast feeds",
           "Query quality suggestions"
         ],
         "alt": "The new monitoring form."
@@ -294,7 +354,7 @@
         "points": [
           "Volume and sentiment over time",
           "Source and topic breakdowns",
-          "Social listening dashboard (live platform data coming soon)"
+          "Social sources and selected public feeds"
         ],
         "alt": "The analytics view."
       },

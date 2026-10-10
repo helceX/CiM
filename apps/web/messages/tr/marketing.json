@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Mediaory — İletişim İstihbaratı Platformu",
-    "description": "Dünyanın markanız hakkında söylediklerini izleyin, anlayın ve harekete geçin. Bugün haber ve açık web, sırada sosyal medya, video ve yayın: izleyin, filtreleyin, anlayın, uyarın, raporlayın."
+    "description": "Haberleri, açık web’i ve seçili sosyal akışları izleyin. Kaynaklı içgörüler, profilinize göre fırsatlar ve paylaşılabilir raporlarla gündemi bir sonraki adımınıza bağlayın."
   },
   "nav": {
     "features": "Özellikler",
@@ -40,8 +40,8 @@
       "eyebrow": "İletişim istihbaratı platformu",
       "titleA": "Hikâyeyi görün,",
       "titleB": "manşet olmadan önce.",
-      "subtitle": "Mediaory haber sitelerini ve açık web’i günün her saati izler, gürültüyü hikâyelere dönüştürür ve ekibinize neyin önemli olduğunu kanıtlarıyla birlikte söyler.",
-      "note": "İlk izlemenizi üç dakikadan kısa sürede kurun.",
+      "subtitle": "Haberlerden açık sosyal akışlara, önemli olanı tek yerde görün. Kaynağıyla anlayın, kuruluşunuza uygun fırsatları keşfedin ve ekibinizle paylaşın.",
+      "note": "Bir sorguyla başlayın. Gündemden fırsata uzanın.",
       "screenAlt": "Mediaory panosu: bahsetme toplamları, son 24 saatin yapay zekâ özeti ve bahsetme trendi.",
       "chipMentions": "38 bahsetme · son 7 gün",
       "chipAi": "Yapay zekâ özeti · %90 güven",
@@ -54,30 +54,30 @@
       }
     },
     "sources": {
-      "label": "Kitlenizin okuduğu yerleri izler — yenileri yolda",
+      "label": "Haberler, açık web ve seçtiğiniz herkese açık akışlar",
       "items": [
         "Haber siteleri",
-        "Web sayfaları",
         "RSS akışları",
-        "Site haritaları",
-        "Özel API’ler",
-        "Sosyal medya · yakında",
-        "Video · yakında",
-        "Podcast · yakında",
-        "TV ve radyo · yakında"
+        "Açık web",
+        "YouTube akışları",
+        "Mastodon",
+        "Bluesky",
+        "GitHub",
+        "Forum akışları",
+        "Podcast RSS"
       ]
     },
     "story": {
-      "eyebrow": "Kesintisiz tek bir döngü",
+      "eyebrow": "Kontrol sizde",
       "title": "Gürültüden karara,",
       "titleAccent": "beş hamlede.",
-      "lead": "“Hakkımızda ne konuşuluyor?” sorusunun, yönetimin harekete geçebileceği bir yanıta nasıl dönüştüğünü kaydırarak izleyin.",
+      "lead": "Kaydırın. Sorgunuz kurulsun, haberler aksın, önemli olan öne çıksın. Aynı çalışma alanında bilgiden fırsata ve rapora ilerleyin.",
       "listLabel": "Mediaory adım adım nasıl çalışır",
       "steps": {
         "watch": {
           "kicker": "İzle",
           "title": "Neyi izleyeceğini söyleyin.",
-          "body": "Markalar, yöneticiler, rakipler, kampanyalar. Basit etiketlerle ya da tam Boolean sözdizimiyle sorgu oluşturun — iki yolla da aynı sorgu — ve kaynaklarınızı seçin.",
+          "body": "Markanızı ve konunuzu belirleyin. Anahtar kelimeleri, hariç tutmaları ve kaynakları seçerek size ait bir izleme akışı kurun.",
           "alt": "Dahil etme, hariç tutma ve tam ifade alanları ile kaynak kutucuklarını içeren yeni izleme formu.",
           "scene": {
             "example": "Örnek akış · canlı veri değildir",
@@ -90,7 +90,7 @@
         "filter": {
           "kicker": "Filtrele",
           "title": "Gürültüyü eleyin, sinyali tutun.",
-          "body": "Duygu, öncelik, tarih ve sorumluya göre filtreleyin. Yinelenenler tek satırda toplanır; onlarca mecrada çıkan haber tüm kaynaklarıyla birlikte bir kez görünür.",
+          "body": "Tarih, duygu ve öncelikle akışınızı daraltın. İlgili haberleri, eşleşme nedenlerini ve kaynaklarını birlikte inceleyin.",
           "alt": "Arama ile duygu, öncelik, tarih ve atama filtrelerini içeren bahsetmeler tablosu.",
           "scene": {
             "example": "Örnek akış · canlı veri değildir",
@@ -103,7 +103,7 @@
         "understand": {
           "kicker": "Anla",
           "title": "Neden eşleştiğini — ve ne anlama geldiğini bilin.",
-          "body": "Her bahsetme neden yakalandığını açıklar; güveni ve yöntemiyle birlikte yapay zekâ özeti taşır. Kara kutu yok, kanıtsız iddia yok.",
+          "body": "Özetin yanında kaynağı ve eşleşme nedenini görün. Haberin markanız ve gündeminizle bağlantısını inceleyip bir sonraki adımı belirleyin.",
           "alt": "Eşleşme nedenini, duyguyu, güvenli yapay zekâ özetini, etiketleri ve geri bildirimi gösteren bahsetme detay paneli.",
           "scene": {
             "example": "Örnek akış · canlı veri değildir",
@@ -116,7 +116,7 @@
         "alert": {
           "kicker": "Fırsatı gör",
           "title": "Gündemi bir sonraki adımınıza bağlayın.",
-          "body": "Hibe, yatırım, ortaklık ve çağrıları kuruluşunuzun profiliyle eşleştirin. Her eşleşme, inceleyebileceğiniz bir kaynakla gelir.",
+          "body": "Sektörünüzü, teknolojilerinizi ve hedeflerinizi seçeneklerden belirleyin. Fırsat radarı ilgili hibe, yatırım ve ortaklık sinyallerini profilinizle eşleştirsin; koşulları kaynağından doğrulayın.",
           "alt": "Anahtar kelime, yüksek ilgi, ani artış, duygu değişimi, yükselen konu ve rakip uyarı türlerini listeleyen yeni uyarı formu.",
           "scene": {
             "example": "Örnek akış · canlı veri değildir",
@@ -129,7 +129,7 @@
         "report": {
           "kicker": "Raporla",
           "title": "Yönetime bitmiş bir rapor sunun.",
-          "body": "Haftalık özetler, izleme genel bakışları veya özel tasarım. PDF, CSV ya da XLSX olarak dışa aktarın; ya da zamanlayıp unutun.",
+          "body": "Bulguları kaynaklarıyla bir raporda birleştirin. PDF, CSV veya XLSX olarak dışa aktarın; düzenli raporları zamanlayarak ekibinizle aynı gündemde kalın.",
           "alt": "Haftalık özet, izleme genel bakışı ve özel şablonları içeren yeni rapor formu.",
           "scene": {
             "example": "Örnek akış · canlı veri değildir",
@@ -166,8 +166,8 @@
           "body": "Kuruluşlar, projeler ve rol tabanlı erişim. Bahsetmeleri atayın, yorumlayın, etiketleyin ve devredin — analistten yöneticiye."
         },
         "social": {
-          "title": "Sosyal dinleme (canlı veri yakında)",
-          "body": "Konuşmalar, yazarlar ve etiketler tek görünümde — sizi hiç etiketlemeyen, kendiliğinden gelişen marka konuşmaları da dahil. Ekran hazır; canlı platform verisini bağlamak sırada."
+          "title": "Açık sosyal kaynaklar",
+          "body": "YouTube, Mastodon, Bluesky, GitHub ve uygun forumların herkese açık akışlarını kaynak listenize ekleyin. İzleme kapsamı seçtiğiniz kaynaklarla sınırlıdır; tüm platformların tamamını taradığımızı iddia etmiyoruz."
         },
         "control": {
           "title": "Verileriniz, sizin kontrolünüzde",
@@ -222,6 +222,66 @@
         }
       ],
       "cta": "Kendi radarınızı kurun"
+    },
+    "demo": {
+      "example": "Temsili ürün deneyimi · canlı veri değil",
+      "scroll": "Kaydırın, akışı siz yönetin",
+      "workspace": "Çalışma alanı",
+      "brand": "Örnek Marka",
+      "navigation": [
+        "Genel bakış",
+        "İzlemeler",
+        "Bahsetmeler",
+        "Kaynaklı içgörü",
+        "Fırsat radarı",
+        "Raporlar"
+      ],
+      "headings": [
+        "İzlemenizi kurun",
+        "Önemli haberler",
+        "Hikâyeyi anlayın",
+        "Fırsat radarı",
+        "Paylaşılabilir rapor"
+      ],
+      "labels": [
+        "Markanız. Konunuz. Sizin akışınız.",
+        "İzleme adı",
+        "Dahil edilen konular",
+        "Seçtiğiniz kaynaklar",
+        "Filtreler",
+        "Örnek haber",
+        "Eşleşen ifade",
+        "Kaynaklı özet",
+        "Eşleşme nedeni",
+        "Kaynağı incele",
+        "Kuruluş profiliniz",
+        "HAFTALIK ÖZET"
+      ],
+      "sources": ["Haber / RSS", "Açık web", "YouTube", "Mastodon"],
+      "articles": [
+        "Örnek Marka yeni sürdürülebilirlik projesini duyurdu",
+        "Sektörde yeni iş birliği çağrısı açıldı",
+        "Yeni teknolojiler gündemde öne çıkıyor"
+      ],
+      "summary": "Yeni proje, sürdürülebilirlik hedefleriyle bağlantılı. Gelişmeyi kaynak metniyle birlikte inceleyin ve ekibinize aktarın.",
+      "evidence": "“Örnek Marka” ifadesi kaynak başlığında yer alıyor. Sürdürülebilirlik, seçtiğiniz izleme konusu.",
+      "profile": ["Sürdürülebilirlik", "Yapay zekâ", "Hibe ve destek"],
+      "opportunity": "Sürdürülebilir teknoloji için örnek destek çağrısı",
+      "match": "Profilinizle ilişkili sinyal",
+      "verify": "Örnek eşleşme. Başvuru koşullarını, tarihleri ve uygunluğu resmi kaynaktan doğrulayın.",
+      "report": "Gündemden karar masasına.",
+      "reportSections": [
+        "Öne çıkan haberler",
+        "Kaynaklar ve bulgular",
+        "İncelenecek fırsatlar"
+      ],
+      "actions": [
+        "İzleme hazır",
+        "Gürültüyü filtreleyin",
+        "Kaynağıyla anlayın",
+        "Fırsatları eşleştirin",
+        "Ekibinizle paylaşın"
+      ]
     }
   },
   "devices": {
@@ -253,7 +313,7 @@
         "body": "Markaları, ürünleri, yöneticileri, rakipleri ve konuları etiket tabanlı basit modla ya da tam Boolean sözdizimiyle takip edin — iki yolla da aynı sorgu. Kaydetmeden önce sorgunun neleri yakalayacağını önizleyin.",
         "points": [
           "Dahil etme, hariç tutma ve tam ifadeler",
-          "Haber siteleri, web sayfaları, RSS akışları, site haritaları ve özel API’ler — sosyal medya, video, podcast ve yayın kaynakları yakında",
+          "Haber siteleri, açık web, RSS ve site haritaları; seçili YouTube, açık sosyal ve podcast akışları",
           "Sorgu kalitesi önerileri"
         ],
         "alt": "Yeni izleme formu."
@@ -294,7 +354,7 @@
         "points": [
           "Zaman içinde hacim ve duygu",
           "Kaynak ve konu kırılımları",
-          "Sosyal dinleme panosu (canlı platform verisi yakında)"
+          "Sosyal kaynaklar ve seçili herkese açık akışlar"
         ],
         "alt": "Analitik görünümü."
       },

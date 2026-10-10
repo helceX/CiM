@@ -6,6 +6,7 @@ import { pickMessages } from "@/i18n/pick";
 import { MarketingHeader } from "@/components/marketing/site-header";
 import { MarketingFooter } from "@/components/marketing/site-footer";
 import "../marketing.css";
+import "../product-story.css";
 
 export default async function MarketingLayout({ children }: { children: ReactNode }) {
   const [t, messages] = await Promise.all([

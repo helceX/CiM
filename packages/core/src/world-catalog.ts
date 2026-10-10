@@ -71,7 +71,7 @@ export type WorldCatalogSource = {
   group: WorldCatalogGroup;
   /** The pack's own XML check passed (not a guarantee of freshness). */
   verified: boolean;
-  /** New user-provided candidates stay out of background import until an admin adds them. */
+  /** Search feeds require an explicit admin add; publisher feeds are validated by background import. */
   manualOnly?: boolean;
 };
 
@@ -130,7 +130,7 @@ const supplementFeeds: WorldCatalogSource[] = (() => {
       country: row.country || inferCountryFromHost(host) || "",
       group: row.group as WorldCatalogGroup,
       verified: row.verified,
-      manualOnly: true,
+      manualOnly: row.group === "search",
     });
   }
   return out;

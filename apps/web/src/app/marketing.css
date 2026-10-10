@@ -515,8 +515,8 @@
     display: grid;
     grid-template-columns: 1fr;
     align-items: center;
-    gap: 1.25rem;
-    padding: 2rem 0;
+    gap: 0.8rem;
+    padding: 1.25rem 0;
   }
   .mk-signal-inputs {
     display: grid;
@@ -528,7 +528,7 @@
     flex-direction: column;
     gap: 0.6rem;
     min-width: 0;
-    padding: 0.9rem 0.65rem;
+    padding: 0.7rem 0.65rem;
     border: 1px solid rgb(255 255 255 / 0.12);
     border-radius: 1rem;
     color: #d9d5ec;
@@ -551,9 +551,9 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    width: 9rem;
-    height: 9rem;
-    margin: 0.5rem auto;
+    width: 7rem;
+    height: 7rem;
+    margin: 0.25rem auto;
     border: 1px solid rgb(192 167 255 / 0.55);
     border-radius: 50%;
     background: linear-gradient(145deg, #39236a, #151a3a);
@@ -601,7 +601,7 @@
     gap: 0.7rem;
     border: 1px solid rgb(132 202 226 / 0.2);
     border-radius: 0.85rem;
-    padding: 0.85rem 1rem;
+    padding: 0.65rem 1rem;
     font-size: 0.82rem;
     background: linear-gradient(90deg, rgb(61 73 123 / 0.24), rgb(255 255 255 / 0.02));
   }
@@ -618,6 +618,7 @@
   .mk-signal-caption {
     border-top: 1px solid rgb(255 255 255 / 0.1);
     padding-top: 1.25rem;
+    animation: mk-signal-caption-in 350ms ease-out;
   }
   .mk-signal-caption > span {
     font-size: clamp(1.2rem, 2vw, 1.6rem);
@@ -668,12 +669,25 @@
       margin-block: 1rem;
     }
     .mk-signal-flow {
-      padding-block: 1.5rem;
+      padding-block: 1.25rem;
     }
   }
   @media (prefers-reduced-motion: reduce) {
     .mk #story * {
       transition: none !important;
+    }
+    .mk-signal-caption {
+      animation: none;
+    }
+  }
+  @keyframes mk-signal-caption-in {
+    from {
+      opacity: 0.6;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
     }
   }
 }

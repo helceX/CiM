@@ -176,10 +176,23 @@ and 1.27 s → 0.58 s. The larger a monitoring's history, the larger the gain (7
 `articles` holds 342 MB of indexes on 588k rows. `articles_title_trgm_idx` (GIN, `gin_trgm_ops` on `title`) is not
 used by either query that touches titles: the clustering query above, and `PostgresSearchIndex.search` which
 compares `word_similarity(unaccent(lower(…)), unaccent(lower(title)))` — an expression the raw-`title` index cannot
-serve. It is maintained on every insert and is the biggest "unused" candidate. **It is not dropped by code**: the
-decision needs production `idx_scan` figures — run `docs/deployment/postgres-diagnostics.sql` first (section 3).
+serve. It is maintained on every insert and was the biggest "unused" candidate. On 10 Oct 2026 the production
+index was checked through Railway: **207 MB, zero `idx_scan`, non-unique**, with its definition confirmed as
+`USING gin (title gin_trgm_ops)`. The owner approved removal, and it was dropped concurrently without deleting
+articles or mentions. Database size immediately fell to **1,690 MB**, and article indexes to **467 MB**.
+Migration 0047 and the schema now omit it; `DROP INDEX IF EXISTS` also handles the already-updated production
+database. To restore it if a future query needs it, run the `CREATE INDEX CONCURRENTLY` command in
+`docs/deployment/postgres-diagnostics.sql` section 3 and restore its schema declaration.
 A trigram-index version of the clustering lookup was tried and rejected: 95–290 ms against 8 ms for the full-text
 narrowing.
+
+Production cost snapshot on 10 Oct: Railway showed $22.67 current usage ($19.36 Postgres, $1.96 worker,
+$0.99 web, $0.36 Redis); Postgres CPU alone was $16.39. These are accumulated billing-period costs,
+not a prediction of savings. Active clustering queries were observed waiting on disk reads for up to a minute.
+The worker was configured with `CRAWL_CONCURRENCY=3` (instead of the default 15) to reduce concurrent disk
+pressure, 510 per-writer feeds were paused, and catalog import was temporarily paused during the investigation.
+The existing $30 compute usage limit was preserved. Compare interval deltas in Query Statistics and the
+subsequent CPU curve before claiming a monetary saving; older expensive statements remain in cumulative stats.
 
 ### F8 — `pg_stat_statements does not exist`
 

@@ -348,12 +348,15 @@ export const OPPORTUNITY_PROFILE_OPTIONS = {
   ],
 } as const;
 
+// Build once, rather than scanning the vocabulary for every term on every signal.
+const ALIASES_BY_TERM = new Map<string, readonly string[]>();
+for (const option of Object.values(OPPORTUNITY_PROFILE_OPTIONS).flat()) {
+  for (const alias of option.aliases) {
+    const key = alias.toLocaleLowerCase("tr-TR");
+    if (!ALIASES_BY_TERM.has(key)) ALIASES_BY_TERM.set(key, option.aliases);
+  }
+}
+
 export function opportunityThemeAliases(theme: string): readonly string[] {
-  const normalized = theme.trim().toLocaleLowerCase("tr-TR");
-  const option = Object.values(OPPORTUNITY_PROFILE_OPTIONS)
-    .flat()
-    .find((item) =>
-      item.aliases.some((alias) => alias.toLocaleLowerCase("tr-TR") === normalized),
-    );
-  return option?.aliases ?? [theme];
+  return ALIASES_BY_TERM.get(theme.trim().toLocaleLowerCase("tr-TR")) ?? [theme];
 }

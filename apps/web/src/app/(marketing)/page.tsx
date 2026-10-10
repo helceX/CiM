@@ -11,7 +11,8 @@ import {
   Sparkles,
   Users,
 } from "lucide-react";
-import { SignalScene } from "@/components/marketing/signal-scene";
+import type { ProductDemoCopy } from "@/components/marketing/product-mockup";
+import { HeroProduct } from "@/components/marketing/hero-product";
 import { GlowCard } from "@/components/marketing/glow-card";
 import { IconTile } from "@/components/marketing/icon-tile";
 import { Marquee } from "@/components/marketing/marquee";
@@ -41,8 +42,29 @@ export default async function LandingPage() {
   }));
 
   const sources = t.raw("sources.items") as string[];
-  const soon = ["charts", "credits"] as const;
-  const soonIcons = { charts: LineChart, credits: Gauge } as const;
+  const demoT = await getTranslations("home.demo");
+  const demo: ProductDemoCopy = {
+    example: demoT("example"),
+    scroll: demoT("scroll"),
+    workspace: demoT("workspace"),
+    brand: demoT("brand"),
+    navigation: demoT.raw("navigation"),
+    headings: demoT.raw("headings"),
+    labels: demoT.raw("labels"),
+    sources: demoT.raw("sources"),
+    articles: demoT.raw("articles"),
+    summary: demoT("summary"),
+    evidence: demoT("evidence"),
+    profile: demoT.raw("profile"),
+    opportunity: demoT("opportunity"),
+    match: demoT("match"),
+    verify: demoT("verify"),
+    report: demoT("report"),
+    reportSections: demoT.raw("reportSections"),
+    actions: demoT.raw("actions"),
+  };
+  const workspaceFeatures = ["charts", "usage"] as const;
+  const workspaceIcons = { charts: LineChart, usage: Gauge } as const;
 
   return (
     <>
@@ -70,15 +92,7 @@ export default async function LandingPage() {
             </div>
             <p className="text-sm text-[var(--mk-muted)]">{t("hero.note")}</p>
           </Reveal>
-          <SignalScene
-            copy={{
-              example: t("hero.scene.example"),
-              inputs: t.raw("hero.scene.inputs") as string[],
-              outputs: t.raw("hero.scene.outputs") as string[],
-              center: t("hero.scene.center"),
-              detail: t("hero.scene.detail"),
-            }}
-          />
+          <HeroProduct copy={demo} />
         </div>
       </section>
 
@@ -112,7 +126,7 @@ export default async function LandingPage() {
             lead={t("story.lead")}
           />
           <div className="mt-16 lg:mt-24">
-            <ScrollStory steps={steps} label={t("story.listLabel")} />
+            <ScrollStory steps={steps} label={t("story.listLabel")} demo={demo} />
           </div>
         </div>
       </section>
@@ -253,30 +267,30 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* ROADMAP */}
+      {/* ACTIVE WORKSPACE FEATURES */}
       <section className="mk-section">
         <div className="mk-wrap">
           <SectionHead
-            eyebrow={t("soon.eyebrow")}
-            title={t("soon.title")}
-            lead={t("soon.lead")}
+            eyebrow={t("workspace.eyebrow")}
+            title={t("workspace.title")}
+            lead={t("workspace.lead")}
           />
           <ul className="mx-auto mt-14 grid max-w-3xl gap-5 md:grid-cols-2">
-            {soon.map((key, index) => (
+            {workspaceFeatures.map((key, index) => (
               <Reveal as="li" key={key} delay={index * 90}>
                 <GlowCard className="h-full p-7">
                   <div className="flex items-center justify-between">
                     <IconTile
-                      icon={soonIcons[key]}
+                      icon={workspaceIcons[key]}
                       tone={key === "charts" ? "violet" : "coral"}
                     />
-                    <span className="mk-chip mk-chip-soon">{common("comingSoon")}</span>
+                    <span className="mk-chip">{t("workspace.badge")}</span>
                   </div>
                   <h3 className="mt-6 text-xl font-semibold">
-                    {t(`soon.items.${key}.title`)}
+                    {t(`workspace.items.${key}.title`)}
                   </h3>
                   <p className="mt-2 text-[var(--mk-muted)]">
-                    {t(`soon.items.${key}.body`)}
+                    {t(`workspace.items.${key}.body`)}
                   </p>
                 </GlowCard>
               </Reveal>

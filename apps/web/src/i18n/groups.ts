@@ -28,7 +28,7 @@ export const AUTH_NAMESPACES = [...MARKETING_NAMESPACES, "auth", "validation", "
 export const ONBOARDING_NAMESPACES = ["onboarding", "trackingTargets", "validation", "errors"] as const;
 
 /** The signed-in panel (grows with each translated area). */
-export const PANEL_NAMESPACES = ["ui", "shell", "notifications", "palette", "validation"] as const;
+export const PANEL_NAMESPACES = ["ui", "shell", "notifications", "palette", "validation", "opportunities"] as const;
 
 /** Read on the server (API messages); sent to a browser only where a group above lists it. */
 export const SERVER_NAMESPACES = ["errors"] as const;

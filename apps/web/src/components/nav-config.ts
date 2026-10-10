@@ -10,6 +10,7 @@ import {
   Radar,
   Settings,
   Share2,
+  Target,
   Users,
 } from "lucide-react";
 
@@ -18,6 +19,7 @@ export type NavKey =
   | "dashboard"
   | "monitoring"
   | "mentions"
+  | "opportunities"
   | "social"
   | "alerts"
   | "analytics"
@@ -37,6 +39,7 @@ export const NAV_ITEMS: { href: string; key: NavKey; icon: LucideIcon }[] = [
   { href: "/dashboard", key: "dashboard", icon: LayoutDashboard },
   { href: "/monitoring", key: "monitoring", icon: Radar },
   { href: "/mentions", key: "mentions", icon: Inbox },
+  { href: "/opportunities", key: "opportunities", icon: Target },
   { href: "/social", key: "social", icon: Share2 },
   { href: "/alerts", key: "alerts", icon: BellRing },
   { href: "/analytics", key: "analytics", icon: BarChart3 },

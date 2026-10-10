@@ -63,8 +63,8 @@ export default async function LandingPage() {
     reportSections: demoT.raw("reportSections"),
     actions: demoT.raw("actions"),
   };
-  const soon = ["charts", "credits"] as const;
-  const soonIcons = { charts: LineChart, credits: Gauge } as const;
+  const workspaceFeatures = ["charts", "usage"] as const;
+  const workspaceIcons = { charts: LineChart, usage: Gauge } as const;
 
   return (
     <>
@@ -267,30 +267,30 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* ROADMAP */}
+      {/* ACTIVE WORKSPACE FEATURES */}
       <section className="mk-section">
         <div className="mk-wrap">
           <SectionHead
-            eyebrow={t("soon.eyebrow")}
-            title={t("soon.title")}
-            lead={t("soon.lead")}
+            eyebrow={t("workspace.eyebrow")}
+            title={t("workspace.title")}
+            lead={t("workspace.lead")}
           />
           <ul className="mx-auto mt-14 grid max-w-3xl gap-5 md:grid-cols-2">
-            {soon.map((key, index) => (
+            {workspaceFeatures.map((key, index) => (
               <Reveal as="li" key={key} delay={index * 90}>
                 <GlowCard className="h-full p-7">
                   <div className="flex items-center justify-between">
                     <IconTile
-                      icon={soonIcons[key]}
+                      icon={workspaceIcons[key]}
                       tone={key === "charts" ? "violet" : "coral"}
                     />
-                    <span className="mk-chip mk-chip-soon">{common("comingSoon")}</span>
+                    <span className="mk-chip">{t("workspace.badge")}</span>
                   </div>
                   <h3 className="mt-6 text-xl font-semibold">
-                    {t(`soon.items.${key}.title`)}
+                    {t(`workspace.items.${key}.title`)}
                   </h3>
                   <p className="mt-2 text-[var(--mk-muted)]">
-                    {t(`soon.items.${key}.body`)}
+                    {t(`workspace.items.${key}.body`)}
                   </p>
                 </GlowCard>
               </Reveal>

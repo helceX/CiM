@@ -9,7 +9,7 @@ import { test, expect } from "@playwright/test";
  * and reduced-motion visitors see all the content without animation.
  */
 
-test("home page tells the story: hero, steps, roadmap, call to action", async ({
+test("home page tells the story: hero, steps, active features, call to action", async ({
   page,
 }) => {
   await page.goto("/");
@@ -19,7 +19,10 @@ test("home page tells the story: hero, steps, roadmap, call to action", async ({
       .getByRole("list", { name: "How Mediaory works, step by step" })
       .getByRole("listitem"),
   ).toHaveCount(5);
-  await expect(page.getByText("Coming soon").first()).toBeVisible();
+  await expect(page.getByText("Available now").first()).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Chart & table builder" }),
+  ).toBeAttached();
   await expect(
     page.getByRole("link", { name: "Start monitoring" }).first(),
   ).toHaveAttribute("href", "/register");

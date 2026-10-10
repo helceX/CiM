@@ -182,21 +182,6 @@
       "laptopAlt": "The Mediaory analytics view with mention volume and sentiment trend charts.",
       "note": "Phone screen is illustrative."
     },
-    "soon": {
-      "eyebrow": "On the roadmap",
-      "title": "Where Mediaory goes next.",
-      "lead": "We build in the open with our users. These are in design now — tell us what would make them useful for you.",
-      "items": {
-        "charts": {
-          "title": "Chart & table builder",
-          "body": "Build your own charts and tables from your monitoring data and drop them straight into reports."
-        },
-        "credits": {
-          "title": "Pay for what you track",
-          "body": "A credit system priced by the keywords you actually monitor, instead of one-size-fits-all tiers."
-        }
-      }
-    },
     "cta": {
       "title": "Know first. Know why.",
       "body": "Set up a monitor, watch the first mentions land, and see how much quieter a day can be.",
@@ -282,6 +267,22 @@
         "Match opportunities",
         "Share with your team"
       ]
+    },
+    "workspace": {
+      "eyebrow": "In your workspace today",
+      "title": "Make the data speak your team’s language.",
+      "lead": "Build visuals from your monitoring, enrich your reports and review usage in the same workspace.",
+      "badge": "Available now",
+      "items": {
+        "charts": {
+          "title": "Chart & table builder",
+          "body": "Turn your data into charts or tables. Pin them to your dashboard, export CSV and include them in reports."
+        },
+        "usage": {
+          "title": "See your usage",
+          "body": "Review tracked keywords, plan limits and usage in one place. Make informed choices about your monitoring coverage."
+        }
+      }
     }
   },
   "devices": {

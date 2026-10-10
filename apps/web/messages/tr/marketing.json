@@ -182,21 +182,6 @@
       "laptopAlt": "Bahsetme hacmi ve duygu trendi grafiklerini içeren Mediaory analitik görünümü.",
       "note": "Telefon ekranı temsilidir."
     },
-    "soon": {
-      "eyebrow": "Yol haritasında",
-      "title": "Mediaory’nin sıradaki durağı.",
-      "lead": "Kullanıcılarımızla birlikte, şeffaf biçimde geliştiriyoruz. Bunlar şu an tasarım aşamasında — sizin için neyin faydalı olacağını bize söyleyin.",
-      "items": {
-        "charts": {
-          "title": "Grafik ve tablo oluşturucu",
-          "body": "İzleme verilerinizden kendi grafik ve tablolarınızı oluşturun, doğrudan raporlarınıza ekleyin."
-        },
-        "credits": {
-          "title": "Takip ettiğiniz kadar ödeyin",
-          "body": "Herkese uyan sabit paketler yerine, gerçekten izlediğiniz anahtar kelimelere göre fiyatlanan bir kredi sistemi."
-        }
-      }
-    },
     "cta": {
       "title": "Önce bilin. Nedenini de bilin.",
       "body": "Bir izleme kurun, ilk bahsetmelerin düşmesini izleyin ve bir günün ne kadar sakinleşebileceğini görün.",
@@ -282,6 +267,22 @@
         "Fırsatları eşleştirin",
         "Ekibinizle paylaşın"
       ]
+    },
+    "workspace": {
+      "eyebrow": "Bugün çalışma alanınızda",
+      "title": "Veriyi ekibinizin diline çevirin.",
+      "lead": "İzlemelerinizden grafikler oluşturun, raporlarınızı zenginleştirin ve kullanımınızı aynı çalışma alanında görün.",
+      "badge": "Kullanıma hazır",
+      "items": {
+        "charts": {
+          "title": "Grafik ve tablo oluşturucu",
+          "body": "Verilerinizi grafik veya tabloya dönüştürün. Panonuza sabitleyin, CSV olarak aktarın ve raporlarınıza ekleyin."
+        },
+        "usage": {
+          "title": "Kullanımınızı görün",
+          "body": "Takip ettiğiniz anahtar kelimeleri, plan limitlerini ve kullanımınızı tek yerde inceleyin. İzleme kapsamınızı bilinçli biçimde yönetin."
+        }
+      }
     }
   },
   "devices": {

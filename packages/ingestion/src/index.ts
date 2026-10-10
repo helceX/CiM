@@ -2,6 +2,7 @@ export * from "./connector";
 export * from "./mock-connector";
 export * from "./mock-social-connector";
 export * from "./rss-connector";
+export * from "./google-trends-connector";
 export * from "./sitemap-connector";
 export * from "./web-connector";
 export * from "./api-connector";

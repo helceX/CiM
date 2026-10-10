@@ -12,6 +12,7 @@ const HOUR = 60 * MINUTE;
 
 const CRAWL_INTERVAL_MS: Record<string, number> = {
   rss: 2 * HOUR,
+  "google-trends": 15 * MINUTE,
   api: 2 * HOUR,
   sitemap: 2 * HOUR,
   web: 2 * HOUR,

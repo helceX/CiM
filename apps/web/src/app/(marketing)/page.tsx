@@ -47,14 +47,14 @@ export default async function LandingPage() {
   return (
     <>
       {/* HERO */}
-      <section className="relative px-4 pb-8 pt-14 sm:pt-20">
+      <section className="relative px-4 pb-8 pt-8 sm:pt-10">
         <div className="mk-wrap grid items-center gap-12 lg:grid-cols-[1.15fr_1fr] lg:gap-8">
           <Reveal className="flex flex-col items-start gap-7">
             <span className="mk-eyebrow">
               <i aria-hidden="true" />
               {t("hero.eyebrow")}
             </span>
-            <h1 className="max-w-5xl text-[clamp(2.9rem,6.2vw,5.8rem)] font-extrabold">
+            <h1 className="max-w-5xl text-[clamp(2.9rem,5.6vw,5.1rem)] font-extrabold">
               {t("hero.titleA")}
               <br />
               <span className="mk-gradient-text">{t("hero.titleB")}</span>

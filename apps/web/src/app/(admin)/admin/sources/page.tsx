@@ -168,10 +168,11 @@ export default async function AdminSourcesPage() {
           Social feeds
         </h2>
         <p className="mt-1 max-w-2xl text-xs text-muted-foreground">
-          Public feeds a platform publishes on purpose — YouTube channels, Reddit, Mastodon, Bluesky. Mediaory never
-          scrapes a network or logs in as someone. X, Instagram, TikTok and LinkedIn publish no such feeds: run your
-          own bridge (e.g. RSSHub) and add its route here, or have each customer connect their own account under
-          Settings. Customers&apos; keywords are matched against these feeds like any other source.
+          Follow public feeds from YouTube, Mastodon, Bluesky, GitHub releases and Discourse forums. Mediaory never
+          scrapes a network or logs in as someone. Reddit commercial use requires approval. Instagram, X, LinkedIn
+          and Facebook have no free public RSS connector here; see their access requirements below. An open-source
+          bridge does not grant platform permissions. Customers&apos; keywords are matched against permitted feeds
+          like any other source.
         </p>
         <div className="mt-3">
           <AddSocialFeedForm />

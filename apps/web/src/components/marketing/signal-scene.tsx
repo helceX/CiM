@@ -57,7 +57,7 @@ export function SignalScene({
           ))}
         </div>
       </div>
-      <div className="mk-signal-caption">
+      <div className="mk-signal-caption" key={copy.center}>
         <span className="mk-gradient-text">{copy.center}</span>
         <p>{copy.detail}</p>
       </div>

@@ -89,6 +89,7 @@ describe("opportunity profile and follow-up (integration)", () => {
         canonicalUrl: `https://${tag}.example/grant`,
         contentHash: `${tag}-hash`,
         title: "Grant programme opens",
+        storedExcerpt: "Applications are open; the deadline is in May.",
         language: "en",
         publishedAt: new Date(),
       })

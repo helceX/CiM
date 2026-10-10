@@ -2,6 +2,26 @@ import { describe, expect, it } from "vitest";
 import { explainOpportunityMatch } from "./opportunity-match";
 
 describe("explainOpportunityMatch", () => {
+  it("matches a curated English selection against Turkish evidence and counts the concept once", () => {
+    const result = explainOpportunityMatch({
+      themes: ["Artificial intelligence", "Grant"],
+      title: "Yapay zekâ ve AI projelerine yeni hibe çağrısı",
+      language: "tr",
+    });
+    expect(result.matchedThemes).toEqual(["Artificial intelligence", "Grant"]);
+    expect(result.score).toBe(100);
+    expect(result.verification.checkOpenStatus).toBe(true);
+  });
+
+  it("matches a Turkish profile term against English evidence while keeping custom terms exact", () => {
+    const result = explainOpportunityMatch({
+      themes: ["Sürdürülebilirlik", "custom cooperative"],
+      title: "Sustainability grant for cooperatives",
+      language: "en",
+    });
+    expect(result.matchedThemes).toEqual(["Sürdürülebilirlik"]);
+    expect(result.score).toBe(50);
+  });
   it("explains Turkish profile overlap and leaves eligibility unverified", () => {
     const result = explainOpportunityMatch({
       themes: ["yapay zeka", "yeşil dönüşüm"],

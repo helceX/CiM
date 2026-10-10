@@ -46,7 +46,7 @@ describe("GoogleTrendsConnector", () => {
   it("keeps repeated polls idempotent but distinguishes the same trend on a new day", async () => {
     let day = "2026-10-09";
     const connector = new GoogleTrendsConnector({
-      fetcher: async () => ({ status: 200, body: rss }),
+      fetcher: vi.fn().mockResolvedValue({ status: 200, body: rss }),
       robotsBlocked: async () => false,
       environment: { CIM_EXTERNAL_COVERAGE_ENABLED: "true", CIM_GOOGLE_TRENDS_RSS_ENABLED: "true" },
       now: () => new Date(`${day}T12:00:00.000Z`),

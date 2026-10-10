@@ -171,7 +171,7 @@ Worst case — every rule has real volume, so every statistic is computed (`benc
 spike statistics 1.4 s → 0.58 s and sentiment 1.0 s → 0.60 s per tick with the index; without the index 2.16 s → 1.83 s
 and 1.27 s → 0.58 s. The larger a monitoring's history, the larger the gain (70× in the 15 000-mention plan above).
 
-### F7 — indexes (verified in the plans, nothing dropped)
+### F7 — indexes (production removal verified)
 
 `articles` holds 342 MB of indexes on 588k rows. `articles_title_trgm_idx` (GIN, `gin_trgm_ops` on `title`) is not
 used by either query that touches titles: the clustering query above, and `PostgresSearchIndex.search` which
@@ -273,7 +273,7 @@ Postgres CPU is the number to move. Compare **two equal windows** (for example t
 `docs/deployment/postgres-diagnostics.sql` holds the read-only queries for steps 2–3 and for table/index sizes,
 `idx_scan`, dead tuples and last autovacuum.
 
-## Railway configuration review (from the code; nothing here was changed on Railway)
+## Original Railway configuration review (superseded by the 10 Oct production snapshot in F7)
 
 - **Postgres** is the cost (CPU 16.10 $ of 18.30 $). Everything above is aimed at its CPU. It stays on: the worker, the
   schedulers and the web app need it, and shutting it down or letting it sleep ("serverless") would stop crawling and
@@ -299,7 +299,7 @@ Postgres CPU is the number to move. Compare **two equal windows** (for example t
 
 ## What is not done (open, in order of expected value)
 
-1. **Real numbers.** Everything measured here is a benchmark on one machine. Enable Query Statistics, take the Railway
+1. **Before/after cost rate.** The 10 Oct production baseline is recorded in F7. Query Statistics is enabled. Take the Railway
    before/after windows described above, and compare. The expectation (not a promise): clustering (#73), the alert
    evaluators and scheduler (#75) and the crawl memory (this change) all remove Postgres CPU; how much of the 1.66 vCPU
    average they remove depends on the production mix, which only Query Statistics will show.
@@ -312,8 +312,7 @@ Postgres CPU is the number to move. Compare **two equal windows** (for example t
    for the scheduler) — a schema change, left for a decision.
 4. **Per-host politeness across sources.** Different sources on one host (catalog feeds of one publisher) are crawled
    independently; only the catalog import limits per host.
-5. **`articles_title_trgm_idx`** (the biggest unused-index candidate, F7) and the table maintenance report: need
-   production `idx_scan` / dead-tuple numbers from `docs/deployment/postgres-diagnostics.sql` before any decision.
+5. **Table maintenance.** The unused title index was removed and verified (F7). Continue monitoring dead tuples and autovacuum; a manual VACUUM was not verified.
 6. **Alert delivery tracing.** `alert_events` records why a rule fired (`trigger_summary`) and when; per-channel
    delivery results (in-app / e-mail outbox / webhook) are not joined in one view yet.
 

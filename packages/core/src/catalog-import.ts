@@ -10,7 +10,7 @@ import { STARTUP_PAGE_CANDIDATES, WORLD_SOURCE_CATALOG } from "./world-catalog";
  *
  * Order matters because the crawler's capacity is finite: the Türkiye news feeds
  * first (the home market), then the world feeds the research pack's own XML check
- * passed, then Türkiye's one-per-writer columns and forums, then the rest of the
+ * passed, then Türkiye's forums, then the rest of the
  * world — blogs, forums, podcasts and video last.
  */
 export type ImportCandidate = {

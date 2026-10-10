@@ -52,6 +52,7 @@ const staleSource = { id: "s1", name: "Feed", connector: "rss", status: "healthy
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.unstubAllEnvs();
   state.states.clear();
   queries = [{ id: "q1" }];
   healthCheck.mockResolvedValue({ status: "healthy" });
@@ -59,6 +60,18 @@ beforeEach(() => {
 });
 
 describe("processCrawlSourceJob — stale queued jobs", () => {
+  it("does not contact Google Trends while the external coverage switches are off", async () => {
+    selectResult.mockResolvedValue([{ ...staleSource, connector: "google-trends" }]);
+    vi.stubEnv("CIM_EXTERNAL_COVERAGE_ENABLED", "");
+    vi.stubEnv("CIM_GOOGLE_TRENDS_RSS_ENABLED", "");
+
+    await processCrawlSourceJob(job(0), emailQueue, deps());
+
+    expect(healthCheck).not.toHaveBeenCalled();
+    expect(ingestSource).not.toHaveBeenCalled();
+    expect(markSourceChecked).toHaveBeenCalledWith(expect.anything(), "s1", "healthy");
+  });
+
   it("does not fetch a source paused after its job was queued, including on retry", async () => {
     selectResult.mockResolvedValue([{ ...staleSource, status: "unavailable" }]);
 

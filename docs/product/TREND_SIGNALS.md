@@ -1,6 +1,8 @@
 # Google signals — assessment of the "Trend Alert Brief"
 
-Status: **assessment only, nothing is built** (9 Oct 2026).
+Status: **geo-only Google Trends RSS adapter implemented, disabled by default** (9 Oct 2026). Google News search and Google Alerts remain assessment-only.
+
+The adapter requires both `CIM_EXTERNAL_COVERAGE_ENABLED=true` and `CIM_GOOGLE_TRENDS_RSS_ENABLED=true`, and limits source URLs to geographies in `CIM_GOOGLE_TRENDS_GEOS` (default `TR`). It stores trend labels and synthetic daily identity only; approximate search-volume buckets from the feed body are discarded. It does not transmit tenant monitoring terms. No production source is seeded and the flags remain false in `.env.example`; rollout still needs an operator decision.
 
 The owner supplied a brief (`CiM_Trend_Alert_Brief_Claude_Code.md`) for a self-service "Signals" area with two
 Google-derived sources — **Trends "Trending now"** and **Google News search** — plus an optional **Google Alerts**

@@ -22,7 +22,10 @@ const rss = `<?xml version="1.0"?><rss version="2.0"><channel><title>T</title>
 const sitemap = `<?xml version="1.0"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 <url><loc>https://example.com/a</loc></url></urlset>`;
 
-beforeEach(() => safeFetch.mockReset());
+beforeEach(() => {
+  vi.unstubAllEnvs();
+  safeFetch.mockReset();
+});
 
 describe("testSourceUrl", () => {
   it("counts feed items and samples titles", async () => {
@@ -57,5 +60,28 @@ describe("testSourceUrl", () => {
       message: "That address is not allowed.",
     });
     expect(safeFetch).not.toHaveBeenCalled();
+  });
+
+  it("fails closed for Google Trends until both switches are enabled", async () => {
+    expect(await testSourceUrl("https://trends.google.com/trending/rss?geo=TR", "google-trends")).toMatchObject({
+      ok: false,
+      message: "Google Trends RSS is disabled by configuration.",
+    });
+    expect(safeFetch).not.toHaveBeenCalled();
+  });
+
+  it("allows only the configured Google Trends geography", async () => {
+    vi.stubEnv("CIM_EXTERNAL_COVERAGE_ENABLED", "true");
+    vi.stubEnv("CIM_GOOGLE_TRENDS_RSS_ENABLED", "true");
+    safeFetch.mockResolvedValue({ status: 200, body: rss });
+    expect(await testSourceUrl("https://trends.google.com/trending/rss?geo=US", "google-trends")).toMatchObject({
+      ok: false,
+      message: "That Google Trends geography is not allowlisted.",
+    });
+    expect(await testSourceUrl("https://trends.google.com/trending/rss?geo=TR", "google-trends")).toMatchObject({
+      ok: true,
+      itemCount: 2,
+    });
+    expect(safeFetch).toHaveBeenCalledTimes(1);
   });
 });

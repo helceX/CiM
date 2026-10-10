@@ -14,9 +14,10 @@ export function HeroProduct({ copy }: { copy: ProductDemoCopy }) {
       frame = 0;
       if (!root.current) return;
       const bounds = root.current.getBoundingClientRect();
+      const start = Math.max(0, bounds.top + window.scrollY - innerHeight * 0.25);
       const moved = Math.max(
         0,
-        Math.min(1, -bounds.top / Math.max(1, bounds.height * 0.5)),
+        Math.min(1, (window.scrollY - start) / Math.max(1, bounds.height * 0.8)),
       );
       setProgress(preference.matches ? Math.round(moved) : moved);
     };

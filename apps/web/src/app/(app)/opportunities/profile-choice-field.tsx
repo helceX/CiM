@@ -42,6 +42,7 @@ export function ProfileChoiceField({
     )
     .map((option) => option.value);
   const [other, setOther] = useState(custom.length > 0);
+  const [otherValue, setOtherValue] = useState(custom.join(", "));
   const [selection, setSelection] = useState<string>(
     custom.length ? "__other__" : (initial[0] ?? ""),
   );
@@ -104,18 +105,23 @@ export function ProfileChoiceField({
         </div>
       )}
       {other ? (
-        <label className="mt-3 flex flex-col gap-1">
-          {t("otherTerms")}
+        <div className="mt-3 flex flex-col gap-1">
+          <label htmlFor={`${id}-other`}>{t("otherTerms")}</label>
           <input
+            id={`${id}-other`}
             name={`${name}Other`}
-            defaultValue={custom.join(", ")}
+            value={otherValue}
+            onChange={(event) => setOtherValue(event.target.value)}
+            aria-describedby={!single ? `${id}-other-help` : undefined}
             maxLength={single ? (name === "sector" ? 120 : 80) : undefined}
             className="rounded-md border border-border bg-background px-3 py-2"
           />
           {!single ? (
-            <span className="text-xs text-muted-foreground">{t("commaSeparated")}</span>
+            <span id={`${id}-other-help`} className="text-xs text-muted-foreground">
+              {t("commaSeparated")}
+            </span>
           ) : null}
-        </label>
+        </div>
       ) : null}
     </fieldset>
   );

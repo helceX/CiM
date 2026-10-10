@@ -17,13 +17,15 @@ type ResolvedAddress = { address: string; family: number };
  * otherwise return a mix and hope Node's own connection logic picks the
  * unsafe one.
  */
-async function resolveValidatedIp(hostname: string): Promise<ResolvedAddress> {
+export async function resolveValidatedIp(hostname: string): Promise<ResolvedAddress> {
   // `URL#hostname` keeps the brackets for an IPv6 literal (`"[::1]"`),
   // but `dns.lookup` doesn't accept them — passing them straight
   // through fails every such literal with a generic ENOTFOUND, never
   // reaching (or exercising) ssrf-guard's IPv6 classification at all.
   const dnsHostname =
-    hostname.startsWith("[") && hostname.endsWith("]") ? hostname.slice(1, -1) : hostname;
+    hostname.startsWith("[") && hostname.endsWith("]")
+      ? hostname.slice(1, -1)
+      : hostname;
   const results = await new Promise<dns.LookupAddress[]>((resolve, reject) => {
     dns.lookup(dnsHostname, { all: true, verbatim: true }, (err, addresses) => {
       if (err) reject(err);
@@ -42,7 +44,9 @@ async function resolveValidatedIp(hostname: string): Promise<ResolvedAddress> {
       );
     }
   }
-  const first = results[0]!;
+  // Railway egress may be IPv4-only. Validate EVERY answer first, then
+  // prefer a validated IPv4 address; never use an unchecked fallback.
+  const first = results.find((result) => result.family === 4) ?? results[0]!;
   return { address: first.address, family: first.family };
 }
 
@@ -55,7 +59,7 @@ async function resolveValidatedIp(hostname: string): Promise<ResolvedAddress> {
  * DNS-rebinding window a "check now, resolve again later" approach leaves
  * open.
  */
-function pinnedLookup(resolved: ResolvedAddress) {
+export function pinnedLookup(resolved: ResolvedAddress) {
   return (
     _hostname: string,
     lookupOptions: { all?: boolean },
@@ -71,11 +75,16 @@ function pinnedLookup(resolved: ResolvedAddress) {
     // the legacy single-address path. Both forms return the exact same
     // pre-validated address; there is never a second, unvalidated one to
     // choose between.
-    if (lookupOptions.all) {
-      callback(null, [{ address: resolved.address, family: resolved.family }]);
-    } else {
-      callback(null, resolved.address, resolved.family);
-    }
+    // Match dns.lookup's asynchronous completion. A synchronous lookup can
+    // trigger an immediate TLS connection failure before undici has attached
+    // its socket error listener, terminating the entire worker (ENETUNREACH).
+    queueMicrotask(() => {
+      if (lookupOptions.all) {
+        callback(null, [{ address: resolved.address, family: resolved.family }]);
+      } else {
+        callback(null, resolved.address, resolved.family);
+      }
+    });
   };
 }
 
@@ -147,7 +156,9 @@ export async function safeFetch(
   const maxRedirects = options.maxRedirects ?? DEFAULT_MAX_REDIRECTS;
   const maxResponseBytes = options.maxResponseBytes ?? DEFAULT_MAX_RESPONSE_BYTES;
   const resolveHostname = options.resolveHostname ?? resolveValidatedIp;
-  const contactEmail = (options.contactEmail ?? process.env.CIM_BOT_CONTACT_EMAIL)?.trim();
+  const contactEmail = (
+    options.contactEmail ?? process.env.CIM_BOT_CONTACT_EMAIL
+  )?.trim();
   const identityHeaders: Record<string, string> = {
     "user-agent": "Mediaory-Bot/1.0 (+https://mediaory.io/bot)",
   };
@@ -155,7 +166,9 @@ export async function safeFetch(
     identityHeaders.from = contactEmail;
   }
   const forwardedHeaders = Object.fromEntries(
-    Object.entries(options.headers ?? {}).filter(([name]) => name.toLowerCase() !== "from"),
+    Object.entries(options.headers ?? {}).filter(
+      ([name]) => name.toLowerCase() !== "from",
+    ),
   );
 
   let currentUrl = new URL(url);
@@ -163,7 +176,12 @@ export async function safeFetch(
     assertProtocolIsFetchable(currentUrl);
     const resolved = await resolveHostname(currentUrl.hostname);
     const agent = new Agent({
-      connect: { lookup: pinnedLookup(resolved), timeout: timeoutMs },
+      connect: {
+        lookup: pinnedLookup(resolved),
+        family: resolved.family,
+        autoSelectFamily: false,
+        timeout: timeoutMs,
+      },
     });
 
     // agent.close() must not run until the response body has been fully
@@ -186,7 +204,12 @@ export async function safeFetch(
       // 304 Not Modified answers a conditional request (If-None-Match / If-Modified-Since): it is a result, not a redirect.
       if (response.status === 304) {
         await response.body?.cancel().catch(() => {});
-        return { status: 304, headers: response.headers, body: "", finalUrl: currentUrl.toString() };
+        return {
+          status: 304,
+          headers: response.headers,
+          body: "",
+          finalUrl: currentUrl.toString(),
+        };
       }
 
       if (response.status >= 300 && response.status < 400) {

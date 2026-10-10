@@ -154,6 +154,23 @@ describe("safeFetch — fetch machinery (via injected resolver)", () => {
     expect(result.body).toBe("hello from the test server");
   });
 
+  it("rejects a TLS connection error without preventing the next fetch", async () => {
+    const stopped = await listen((_req, res) => res.end("unused"));
+    await new Promise<void>((resolve) => stopped.server.close(() => resolve()));
+    await expect(
+      safeFetch(`https://example-cim-test.invalid:${stopped.port}/`, {
+        resolveHostname: loopbackResolver(),
+        timeoutMs: 1000,
+      }),
+    ).rejects.toThrow();
+    const healthy = await listen((_req, res) => res.end("worker still running"));
+    const response = await safeFetch(
+      `http://example-cim-test.invalid:${healthy.port}/`,
+      { resolveHostname: loopbackResolver() },
+    );
+    expect(response.body).toBe("worker still running");
+  });
+
   it("follows a same-server redirect and revalidates the new hop", async () => {
     const { port } = await listen((req, res) => {
       if (req.url === "/start") {

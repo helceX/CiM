@@ -3,7 +3,14 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Input, Label } from "@cim/ui";
-import { COUNTRIES, SOCIAL_FEED_PLATFORMS, buildGoogleTrendsFeedUrl, buildSocialFeed, type CatalogSource } from "@cim/core";
+import {
+  COUNTRIES,
+  RESTRICTED_SOCIAL_FEED_PLATFORMS,
+  SOCIAL_FEED_PLATFORMS,
+  buildGoogleTrendsFeedUrl,
+  buildSocialFeed,
+  type CatalogSource,
+} from "@cim/core";
 
 type NewSource = {
   name: string;
@@ -83,10 +90,17 @@ export function CatalogAddButton({ entry }: { entry: CatalogSource }) {
   );
 }
 
-export function AddSourceForm({ countryCodes, defaultCountry = "TR" }: { countryCodes?: string[]; defaultCountry?: string } = {}) {
+export function AddSourceForm({
+  countryCodes,
+  defaultCountry = "TR",
+}: { countryCodes?: string[]; defaultCountry?: string } = {}) {
   const router = useRouter();
-  const countryChoices = countryCodes ? COUNTRIES.filter((country) => countryCodes.includes(country.code)) : COUNTRIES;
-  const initialCountry = countryChoices.some((country) => country.code === defaultCountry)
+  const countryChoices = countryCodes
+    ? COUNTRIES.filter((country) => countryCodes.includes(country.code))
+    : COUNTRIES;
+  const initialCountry = countryChoices.some(
+    (country) => country.code === defaultCountry,
+  )
     ? defaultCountry
     : (countryChoices[0]?.code ?? defaultCountry);
   const [form, setForm] = useState<NewSource>({
@@ -100,7 +114,9 @@ export function AddSourceForm({ countryCodes, defaultCountry = "TR" }: { country
     country: initialCountry,
   });
   const [busy, setBusy] = useState<"test" | "add" | null>(null);
-  const [message, setMessage] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
+  const [message, setMessage] = useState<{ tone: "ok" | "error"; text: string } | null>(
+    null,
+  );
   // Shown only after the server says this is a licensed news agency.
   const [needsLicense, setNeedsLicense] = useState(false);
   const [licenseConfirmed, setLicenseConfirmed] = useState(false);
@@ -127,13 +143,20 @@ export function AddSourceForm({ countryCodes, defaultCountry = "TR" }: { country
       const { ok, data } = await post("/api/admin/sources/test", {
         url: form.url,
         connector: form.connector,
-        ...(form.connector === "api" && form.apiKey ? { apiKey: form.apiKey, apiKeyHeaderName: form.apiKeyHeaderName } : {}),
+        ...(form.connector === "api" && form.apiKey
+          ? { apiKey: form.apiKey, apiKeyHeaderName: form.apiKeyHeaderName }
+          : {}),
       });
       if (!ok) {
         setMessage({ tone: "error", text: data.error ?? "Could not test." });
       } else if (data.ok) {
-        const sample = data.sampleTitles?.length ? ` e.g. “${data.sampleTitles[0]}”` : "";
-        setMessage({ tone: "ok", text: `Readable: ${data.itemCount} items found.${sample}` });
+        const sample = data.sampleTitles?.length
+          ? ` e.g. “${data.sampleTitles[0]}”`
+          : "";
+        setMessage({
+          tone: "ok",
+          text: `Readable: ${data.itemCount} items found.${sample}`,
+        });
       } else {
         setMessage({ tone: "error", text: data.message ?? "Could not read it." });
       }
@@ -186,7 +209,11 @@ export function AddSourceForm({ countryCodes, defaultCountry = "TR" }: { country
         />
       </div>
       <div className="flex flex-col gap-1">
-        <Label htmlFor="source-url">{form.connector === "api" ? "Provider endpoint (JSON)" : "Feed or sitemap address"}</Label>
+        <Label htmlFor="source-url">
+          {form.connector === "api"
+            ? "Provider endpoint (JSON)"
+            : "Feed or sitemap address"}
+        </Label>
         <Input
           id="source-url"
           type="url"
@@ -208,7 +235,11 @@ export function AddSourceForm({ countryCodes, defaultCountry = "TR" }: { country
               ...current,
               connector,
               ...(connector === "google-trends"
-                ? { type: "trends", name: current.name || "Google Trends", url: buildGoogleTrendsFeedUrl(current.country) ?? "" }
+                ? {
+                    type: "trends",
+                    name: current.name || "Google Trends",
+                    url: buildGoogleTrendsFeedUrl(current.country) ?? "",
+                  }
                 : {}),
             }));
             setMessage(null);
@@ -297,7 +328,12 @@ export function AddSourceForm({ countryCodes, defaultCountry = "TR" }: { country
         </select>
       </div>
       <div className="flex items-end gap-2">
-        <Button type="button" variant="secondary" onClick={test} disabled={busy !== null || !form.url}>
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={test}
+          disabled={busy !== null || !form.url}
+        >
           {busy === "test" ? "Testing…" : "Test"}
         </Button>
         <Button type="submit" disabled={busy !== null}>
@@ -337,15 +373,19 @@ export function AddSocialFeedForm() {
   const [platformKey, setPlatformKey] = useState(SOCIAL_FEED_PLATFORMS[0]!.key);
   const platform = SOCIAL_FEED_PLATFORMS.find((entry) => entry.key === platformKey)!;
   const [kindKey, setKindKey] = useState(platform.kinds[0]!.key);
-  const kind = platform.kinds.find((entry) => entry.key === kindKey) ?? platform.kinds[0]!;
+  const kind =
+    platform.kinds.find((entry) => entry.key === kindKey) ?? platform.kinds[0]!;
   const [value, setValue] = useState("");
   const [instance, setInstance] = useState("");
   const [language, setLanguage] = useState("other");
   const [country, setCountry] = useState("ZZ");
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
+  const [message, setMessage] = useState<{ tone: "ok" | "error"; text: string } | null>(
+    null,
+  );
 
-  const select = "h-9 rounded-md border border-border bg-background px-2 text-sm text-foreground";
+  const select =
+    "h-9 rounded-md border border-border bg-background px-2 text-sm text-foreground";
 
   function changePlatform(key: string) {
     setPlatformKey(key);
@@ -355,7 +395,12 @@ export function AddSocialFeedForm() {
 
   async function add(event: React.FormEvent) {
     event.preventDefault();
-    const built = buildSocialFeed({ platform: platformKey, kind: kind.key, value, instance });
+    const built = buildSocialFeed({
+      platform: platformKey,
+      kind: kind.key,
+      value,
+      instance,
+    });
     if (!built.ok) {
       setMessage({ tone: "error", text: built.error });
       return;
@@ -389,17 +434,51 @@ export function AddSocialFeedForm() {
     <form onSubmit={add} className="grid max-w-2xl gap-3 sm:grid-cols-2">
       <div className="flex flex-col gap-1">
         <Label htmlFor="social-platform">Platform</Label>
-        <select id="social-platform" className={select} value={platformKey} onChange={(e) => changePlatform(e.target.value)}>
+        <select
+          id="social-platform"
+          className={select}
+          value={platformKey}
+          onChange={(e) => changePlatform(e.target.value)}
+        >
           {SOCIAL_FEED_PLATFORMS.map((entry) => (
             <option key={entry.key} value={entry.key}>
               {entry.label}
             </option>
           ))}
+          {RESTRICTED_SOCIAL_FEED_PLATFORMS.map((entry) => (
+            <option key={entry.key} disabled value={entry.key}>
+              {entry.label} — no free public RSS
+            </option>
+          ))}
         </select>
+      </div>
+      <div className="text-sm text-muted-foreground sm:col-span-2">
+        <p>
+          No paid API or new server is used. Each feed you add joins the existing crawl
+          queue and uses Railway resources; add a small, relevant set first.
+        </p>
+        {platform.note ? <p className="mt-2">{platform.note}</p> : null}
+        <details className="mt-2">
+          <summary className="cursor-pointer">
+            Instagram, X, LinkedIn and Facebook availability
+          </summary>
+          <ul className="mt-2 space-y-1">
+            {RESTRICTED_SOCIAL_FEED_PLATFORMS.map((entry) => (
+              <li key={entry.key}>
+                <strong>{entry.label}:</strong> {entry.note}
+              </li>
+            ))}
+          </ul>
+        </details>
       </div>
       <div className="flex flex-col gap-1">
         <Label htmlFor="social-kind">Follow</Label>
-        <select id="social-kind" className={select} value={kind.key} onChange={(e) => setKindKey(e.target.value)}>
+        <select
+          id="social-kind"
+          className={select}
+          value={kind.key}
+          onChange={(e) => setKindKey(e.target.value)}
+        >
           {platform.kinds.map((entry) => (
             <option key={entry.key} value={entry.key}>
               {entry.label}
@@ -414,18 +493,31 @@ export function AddSocialFeedForm() {
             id="social-instance"
             value={instance}
             onChange={(e) => setInstance(e.target.value)}
-            placeholder={platform.key === "rsshub" ? "rsshub.example.com" : "mastodon.social"}
+            placeholder={
+              platform.key === "rsshub" ? "rsshub.example.com" : "mastodon.social"
+            }
             required
           />
         </div>
       ) : null}
       <div className="flex flex-col gap-1">
         <Label htmlFor="social-value">{kind.valueLabel}</Label>
-        <Input id="social-value" value={value} onChange={(e) => setValue(e.target.value)} placeholder={kind.placeholder} required />
+        <Input
+          id="social-value"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          placeholder={kind.placeholder}
+          required
+        />
       </div>
       <div className="flex flex-col gap-1">
         <Label htmlFor="social-country">Audience region</Label>
-        <select id="social-country" className={select} value={country} onChange={(e) => setCountry(e.target.value)}>
+        <select
+          id="social-country"
+          className={select}
+          value={country}
+          onChange={(e) => setCountry(e.target.value)}
+        >
           <option value="ZZ">Global (no country)</option>
           {COUNTRIES.map((entry) => (
             <option key={entry.code} value={entry.code}>
@@ -436,7 +528,12 @@ export function AddSocialFeedForm() {
       </div>
       <div className="flex flex-col gap-1">
         <Label htmlFor="social-language">Feed language</Label>
-        <select id="social-language" className={select} value={language} onChange={(e) => setLanguage(e.target.value)}>
+        <select
+          id="social-language"
+          className={select}
+          value={language}
+          onChange={(e) => setLanguage(e.target.value)}
+        >
           <option value="other">Mixed / other</option>
           <option value="tr">Turkish</option>
           <option value="en">English</option>
@@ -464,7 +561,15 @@ export function AddSocialFeedForm() {
   );
 }
 
-export function CrawlToggle({ id, name, paused }: { id: string; name: string; paused: boolean }) {
+export function CrawlToggle({
+  id,
+  name,
+  paused,
+}: {
+  id: string;
+  name: string;
+  paused: boolean;
+}) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
 
@@ -492,9 +597,21 @@ export function CrawlToggle({ id, name, paused }: { id: string; name: string; pa
   );
 }
 
-export type CatalogEntry = { key: string; name: string; url: string; group: string; type: string; language: string; country: string };
+export type CatalogEntry = {
+  key: string;
+  name: string;
+  url: string;
+  group: string;
+  type: string;
+  language: string;
+  country: string;
+};
 
-export type BulkOutcome = { added: number; skipped: number; failed: { name: string; error: string }[] };
+export type BulkOutcome = {
+  added: number;
+  skipped: number;
+  failed: { name: string; error: string }[];
+};
 
 /**
  * The Türkiye feed catalog: search, filter by category, add one feed, or add
@@ -515,7 +632,9 @@ export function CatalogBrowser({
   const [query, setQuery] = useState("");
   const [group, setGroup] = useState("all");
   const [running, setRunning] = useState(false);
-  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(
+    null,
+  );
   const [outcome, setOutcome] = useState<BulkOutcome | null>(null);
   const [cancelRequested, setCancelRequested] = useState(false);
   const cancelRef = useRef(false);
@@ -525,11 +644,14 @@ export function CatalogBrowser({
   const shown = entries.filter(
     (entry) =>
       (group === "all" || entry.group === group) &&
-      (!needle || entry.name.toLocaleLowerCase("tr").includes(needle) || entry.url.toLowerCase().includes(needle)),
+      (!needle ||
+        entry.name.toLocaleLowerCase("tr").includes(needle) ||
+        entry.url.toLowerCase().includes(needle)),
   );
   const pending = shown.filter((entry) => !added.has(entry.url));
   const counts = new Map<string, number>();
-  for (const entry of entries) counts.set(entry.group, (counts.get(entry.group) ?? 0) + 1);
+  for (const entry of entries)
+    counts.set(entry.group, (counts.get(entry.group) ?? 0) + 1);
 
   async function addAll() {
     if (
@@ -563,12 +685,19 @@ export function CatalogBrowser({
           });
           if (ok) result.added += 1;
           else if (data.code === "duplicate") result.skipped += 1;
-          else result.failed.push({ name: entry.name, error: data.error ?? "Could not add." });
+          else
+            result.failed.push({
+              name: entry.name,
+              error: data.error ?? "Could not add.",
+            });
         } catch {
           result.failed.push({ name: entry.name, error: "Network error." });
         }
         done += 1;
-        setProgress({ done, total: result.added + result.skipped + result.failed.length + queue.length });
+        setProgress({
+          done,
+          total: result.added + result.skipped + result.failed.length + queue.length,
+        });
       }
     }
     await Promise.all([worker(), worker(), worker()]);
@@ -614,7 +743,12 @@ export function CatalogBrowser({
               ))}
           </select>
         </div>
-        <Button type="button" variant="secondary" onClick={addAll} disabled={running || pending.length === 0}>
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={addAll}
+          disabled={running || pending.length === 0}
+        >
           {running ? "Adding…" : `Test & add all shown (${pending.length})`}
         </Button>
         {running ? (
@@ -640,11 +774,14 @@ export function CatalogBrowser({
       {outcome ? (
         <div role="status" className="rounded-lg border border-border p-3 text-sm">
           <p className="text-foreground">
-            Added {outcome.added}, already present {outcome.skipped}, could not add {outcome.failed.length}.
+            Added {outcome.added}, already present {outcome.skipped}, could not add{" "}
+            {outcome.failed.length}.
           </p>
           {outcome.failed.length > 0 ? (
             <details className="mt-2">
-              <summary className="cursor-pointer text-muted-foreground">Show feeds that failed</summary>
+              <summary className="cursor-pointer text-muted-foreground">
+                Show feeds that failed
+              </summary>
               <ul className="mt-2 max-h-64 overflow-auto text-xs text-muted-foreground">
                 {outcome.failed.map((item) => (
                   <li key={item.name + item.error}>
@@ -667,14 +804,22 @@ export function CatalogBrowser({
             className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2"
           >
             <div className="min-w-0">
-              <div className="truncate text-sm font-medium text-foreground">{entry.name}</div>
+              <div className="truncate text-sm font-medium text-foreground">
+                {entry.name}
+              </div>
               <div className="truncate text-xs text-muted-foreground">{entry.url}</div>
             </div>
             {added.has(entry.url) ? (
               <span className="shrink-0 text-xs font-medium text-success">Added</span>
             ) : (
               <CatalogAddButton
-                entry={{ ...entry, type: entry.type as "news", language: entry.language as "tr", country: "TR", group: entry.group as "general" }}
+                entry={{
+                  ...entry,
+                  type: entry.type as "news",
+                  language: entry.language as "tr",
+                  country: "TR",
+                  group: entry.group as "general",
+                }}
               />
             )}
           </li>

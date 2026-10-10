@@ -44,7 +44,14 @@
       "note": "İlk izlemenizi üç dakikadan kısa sürede kurun.",
       "screenAlt": "Mediaory panosu: bahsetme toplamları, son 24 saatin yapay zekâ özeti ve bahsetme trendi.",
       "chipMentions": "38 bahsetme · son 7 gün",
-      "chipAi": "Yapay zekâ özeti · %90 güven"
+      "chipAi": "Yapay zekâ özeti · %90 güven",
+      "scene": {
+        "example": "Örnek akış · canlı veri değildir",
+        "inputs": ["Haber akışları", "Açık web", "Seçtiğiniz kaynaklar"],
+        "outputs": ["Önemli haber", "Kaynaklı içgörü", "Olası fırsat"],
+        "center": "Dağınık bilgi. Net bir hikâye.",
+        "detail": "İzleyin. Anlayın. Bir sonraki adımı görün."
+      }
     },
     "sources": {
       "label": "Kitlenizin okuduğu yerleri izler — yenileri yolda",
@@ -71,31 +78,66 @@
           "kicker": "İzle",
           "title": "Neyi izleyeceğini söyleyin.",
           "body": "Markalar, yöneticiler, rakipler, kampanyalar. Basit etiketlerle ya da tam Boolean sözdizimiyle sorgu oluşturun — iki yolla da aynı sorgu — ve kaynaklarınızı seçin.",
-          "alt": "Dahil etme, hariç tutma ve tam ifade alanları ile kaynak kutucuklarını içeren yeni izleme formu."
+          "alt": "Dahil etme, hariç tutma ve tam ifade alanları ile kaynak kutucuklarını içeren yeni izleme formu.",
+          "scene": {
+            "example": "Örnek akış · canlı veri değildir",
+            "inputs": ["Haber akışları", "Açık web", "Seçtiğiniz kaynaklar"],
+            "outputs": ["Önemli haber", "Kaynaklı içgörü", "Olası fırsat"],
+            "center": "Kaynaklar tek bir akışta.",
+            "detail": "Markanızı ve takip etmek istediğiniz konuları belirleyin."
+          }
         },
         "filter": {
           "kicker": "Filtrele",
           "title": "Gürültüyü eleyin, sinyali tutun.",
           "body": "Duygu, öncelik, tarih ve sorumluya göre filtreleyin. Yinelenenler tek satırda toplanır; onlarca mecrada çıkan haber tüm kaynaklarıyla birlikte bir kez görünür.",
-          "alt": "Arama ile duygu, öncelik, tarih ve atama filtrelerini içeren bahsetmeler tablosu."
+          "alt": "Arama ile duygu, öncelik, tarih ve atama filtrelerini içeren bahsetmeler tablosu.",
+          "scene": {
+            "example": "Örnek akış · canlı veri değildir",
+            "inputs": ["Haber akışları", "Açık web", "Seçtiğiniz kaynaklar"],
+            "outputs": ["Önemli haber", "Kaynaklı içgörü", "Olası fırsat"],
+            "center": "Tekrarlardan arınmış bir hikâye.",
+            "detail": "İlgili haberleri bulun, aynı hikâyenin kaynaklarını birlikte görün."
+          }
         },
         "understand": {
           "kicker": "Anla",
           "title": "Neden eşleştiğini — ve ne anlama geldiğini bilin.",
           "body": "Her bahsetme neden yakalandığını açıklar; güveni ve yöntemiyle birlikte yapay zekâ özeti taşır. Kara kutu yok, kanıtsız iddia yok.",
-          "alt": "Eşleşme nedenini, duyguyu, güvenli yapay zekâ özetini, etiketleri ve geri bildirimi gösteren bahsetme detay paneli."
+          "alt": "Eşleşme nedenini, duyguyu, güvenli yapay zekâ özetini, etiketleri ve geri bildirimi gösteren bahsetme detay paneli.",
+          "scene": {
+            "example": "Örnek akış · canlı veri değildir",
+            "inputs": ["Haber akışları", "Açık web", "Seçtiğiniz kaynaklar"],
+            "outputs": ["Önemli haber", "Kaynaklı içgörü", "Olası fırsat"],
+            "center": "Her içgörünün bir dayanağı var.",
+            "detail": "Özetin yanında kaynağa ve eşleşme nedenine ulaşın."
+          }
         },
         "alert": {
-          "kicker": "Uyar",
-          "title": "Önemli olan için bildirim alın.",
-          "body": "Anahtar kelime, yüksek ilgi, ani artış, duygu değişimi, yükselen konu, rakip ve içerik üreticisi uyarıları — bekleme süreleriyle, gelen kutunuz sakin kalsın.",
-          "alt": "Anahtar kelime, yüksek ilgi, ani artış, duygu değişimi, yükselen konu ve rakip uyarı türlerini listeleyen yeni uyarı formu."
+          "kicker": "Fırsatı gör",
+          "title": "Gündemi bir sonraki adımınıza bağlayın.",
+          "body": "Hibe, yatırım, ortaklık ve çağrıları kuruluşunuzun profiliyle eşleştirin. Her eşleşme, inceleyebileceğiniz bir kaynakla gelir.",
+          "alt": "Anahtar kelime, yüksek ilgi, ani artış, duygu değişimi, yükselen konu ve rakip uyarı türlerini listeleyen yeni uyarı formu.",
+          "scene": {
+            "example": "Örnek akış · canlı veri değildir",
+            "inputs": ["Haber akışları", "Açık web", "Seçtiğiniz kaynaklar"],
+            "outputs": ["Önemli haber", "Kaynaklı içgörü", "Olası fırsat"],
+            "center": "İlginize uyan olası fırsatlar.",
+            "detail": "Hibe, yatırım ve ortaklık sinyallerini profilinizle eşleştirin."
+          }
         },
         "report": {
           "kicker": "Raporla",
           "title": "Yönetime bitmiş bir rapor sunun.",
           "body": "Haftalık özetler, izleme genel bakışları veya özel tasarım. PDF, CSV ya da XLSX olarak dışa aktarın; ya da zamanlayıp unutun.",
-          "alt": "Haftalık özet, izleme genel bakışı ve özel şablonları içeren yeni rapor formu."
+          "alt": "Haftalık özet, izleme genel bakışı ve özel şablonları içeren yeni rapor formu.",
+          "scene": {
+            "example": "Örnek akış · canlı veri değildir",
+            "inputs": ["Haber akışları", "Açık web", "Seçtiğiniz kaynaklar"],
+            "outputs": ["Önemli haber", "Kaynaklı içgörü", "Olası fırsat"],
+            "center": "Ekibinizle aynı hikâyeye bakın.",
+            "detail": "Haberlerden karar toplantısına: paylaşılabilir raporlarla ilerleyin."
+          }
         }
       }
     },
@@ -107,7 +149,8 @@
         "grounded": {
           "title": "Dayanaklı yapay zekâ",
           "body": "Her içgörü kanıt, kaynak ve güven skoru ile gelir. Veri bir iddiayı desteklemiyorsa Mediaory o iddiayı yapmaz.",
-          "meta": "Güven %90 · 21 bahsetmeye dayalı"
+          "meta": "Özeti dayanağıyla birlikte inceleyin",
+          "sourceLabel": "Kaynakla birlikte"
         },
         "honest": {
           "title": "Dürüst veri",
@@ -159,6 +202,26 @@
       "body": "Bir izleme kurun, ilk bahsetmelerin düşmesini izleyin ve bir günün ne kadar sakinleşebileceğini görün.",
       "primary": "İzlemeye başla",
       "secondary": "Bizimle konuşun"
+    },
+    "radar": {
+      "eyebrow": "Fırsat radarı",
+      "title": "Bir haber, bir sonraki adımınız olabilir.",
+      "lead": "Hibe, yatırım, ortaklık ve çağrıları kuruluşunuzun profiliyle eşleştirin. Her eşleşme, inceleyebileceğiniz bir kaynakla gelir.",
+      "items": [
+        {
+          "title": "Profilinizi seçin",
+          "body": "Sektör, teknoloji, bölge ve ilgi alanlarını belirleyin."
+        },
+        {
+          "title": "Sinyali yakalayın",
+          "body": "Profilinize uyan olası fırsatları tek yerde görün."
+        },
+        {
+          "title": "Kaynağı doğrulayın",
+          "body": "Eşleşme nedenini inceleyin; uygunluk ve başvuru koşullarını asıl kaynaktan kontrol edin."
+        }
+      ],
+      "cta": "Kendi radarınızı kurun"
     }
   },
   "devices": {
@@ -589,9 +652,7 @@
       "sections": [
         {
           "title": "Hangi kişisel verileri işliyoruz",
-          "body": [
-            "İşlenen veriler, Mediaory'yi nasıl kullandığınıza göre değişir:"
-          ],
+          "body": ["İşlenen veriler, Mediaory'yi nasıl kullandığınıza göre değişir:"],
           "items": [
             "Hesap verileri: ad, soyad, e-posta adresi, unvan, dil ve saat dilimi tercihleri ve hashlenmiş parola.",
             "Organizasyon ve fatura iletişimi verileri: bağlı olduğunuz organizasyon ve rolünüz. Fatura profili eklerseniz girdiğiniz şirket unvanı, vergi dairesi, vergi numarası, adres ve fatura e-postası.",
@@ -638,9 +699,7 @@
         },
         {
           "title": "Kimlere aktarıyoruz",
-          "body": [
-            "Kişisel verileri yalnızca şu gruplarla paylaşırız:"
-          ],
+          "body": ["Kişisel verileri yalnızca şu gruplarla paylaşırız:"],
           "items": [
             "Verileri bizim talimatımızla işleyen hizmet sağlayıcılarımız: bulut barındırma ve veritabanı, arşivler için nesne depolama, e-posta gönderimi, herkese açık formlarda bot koruması ve — yalnızca yapay zekâ özellikleri açıksa — bir yapay zekâ sağlayıcısı. Her birinin amacı ve işlediği veriler hizmet sağlayıcılar sayfasında listelenir.",
             "Bağladığınız platformlar (Google/YouTube, X): yalnızca o bağlantı için veri alışverişi yapılır.",
@@ -669,9 +728,7 @@
         },
         {
           "title": "Haklarınız",
-          "body": [
-            "KVKK'nın 11. maddesi uyarınca şu haklara sahipsiniz:"
-          ],
+          "body": ["KVKK'nın 11. maddesi uyarınca şu haklara sahipsiniz:"],
           "items": [
             "kişisel verilerinizin işlenip işlenmediğini öğrenmek;",
             "işlenmişse buna ilişkin bilgi talep etmek;",
@@ -694,9 +751,7 @@
         },
         {
           "title": "Güvenlik",
-          "body": [
-            "Riske uygun teknik ve idari tedbirler alırız; bunlar arasında:"
-          ],
+          "body": ["Riske uygun teknik ve idari tedbirler alırız; bunlar arasında:"],
           "items": [
             "tarayıcınız ile Mediaory arasında şifreli bağlantı (HTTPS);",
             "parolaların yalnızca tuzlanmış özet (hash) olarak saklanması;",

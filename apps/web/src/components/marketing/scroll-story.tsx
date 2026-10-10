@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import { SignalScene, type SignalSceneCopy } from "./signal-scene";
 import { useEffect, useRef, useState } from "react";
 
 export type StoryStep = {
@@ -8,22 +8,16 @@ export type StoryStep = {
   kicker: string;
   title: string;
   body: string;
-  src: string;
-  alt: string;
+  scene: SignalSceneCopy;
 };
 
-/**
- * Scroll-driven storytelling. On large screens the device stays pinned while
- * the copy scrolls past and the screen crossfades to the matching real
- * product view; on small screens each step carries its own screenshot
- * inline (a pinned device would eat the viewport). Everything is
- * readable/operable without the animation: all steps are plain content.
- */
+/** Scroll updates one signal flow; all text and mobile scenes remain readable without JavaScript. */
 export function ScrollStory({ steps, label }: { steps: StoryStep[]; label: string }) {
   const [active, setActive] = useState(0);
   const refs = useRef<(HTMLLIElement | null)[]>([]);
 
   useEffect(() => {
+    if (!("IntersectionObserver" in window)) return;
     const observer = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
@@ -53,7 +47,7 @@ export function ScrollStory({ steps, label }: { steps: StoryStep[]; label: strin
           >
             <div
               className={`flex flex-col gap-4 transition-opacity duration-500 ${
-                active === index ? "lg:opacity-100" : "lg:opacity-35"
+                active === index ? "lg:opacity-100" : "lg:opacity-75"
               }`}
             >
               <span className="mk-gradient-text font-[family-name:var(--mk-display)] text-5xl font-semibold tabular-nums">
@@ -66,36 +60,14 @@ export function ScrollStory({ steps, label }: { steps: StoryStep[]; label: strin
               <p className="mk-lead max-w-md">{step.body}</p>
             </div>
             <div className="lg:hidden">
-              <div className="mk-laptop">
-                <div className="mk-laptop-screen">
-                  <Image src={step.src} alt={step.alt} width={1800} height={1125} sizes="92vw" />
-                </div>
-              </div>
+              <SignalScene copy={step.scene} stage={index} />
             </div>
           </li>
         ))}
       </ol>
 
       <div className="sticky top-24 hidden lg:block" aria-hidden="true">
-        <div className="mk-laptop">
-          <div className="mk-laptop-screen">
-            {steps.map((step, index) => (
-              <Image
-                key={step.id}
-                src={step.src}
-                alt=""
-                width={1800}
-                height={1125}
-                sizes="720px"
-                className="absolute inset-0 transition-[opacity,transform] duration-700 ease-out"
-                style={{
-                  opacity: active === index ? 1 : 0,
-                  transform: active === index ? "scale(1)" : "scale(1.03)",
-                }}
-              />
-            ))}
-          </div>
-        </div>
+        <SignalScene copy={steps[active]!.scene} stage={active} />
         <div className="mt-10 flex justify-center gap-2">
           {steps.map((step, index) => (
             <span
@@ -103,7 +75,8 @@ export function ScrollStory({ steps, label }: { steps: StoryStep[]; label: strin
               className="h-1.5 rounded-full transition-all duration-500"
               style={{
                 width: active === index ? "2.25rem" : "0.5rem",
-                background: active === index ? "var(--mk-gradient-solid)" : "var(--mk-line)",
+                background:
+                  active === index ? "var(--mk-gradient-solid)" : "var(--mk-line)",
               }}
             />
           ))}

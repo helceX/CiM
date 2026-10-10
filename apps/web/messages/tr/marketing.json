@@ -493,6 +493,10 @@
     },
     "bot": {
       "eyebrow": "Yayıncılar için",
+      "operatorTitle": "İşletici ve iletişim",
+      "operatorName": "{name} tarafından işletilir. Yayıncı talepleri aşağıdaki engelleme formuyla ekibimize ulaşır.",
+      "operatorContact": "Yapılandırılmış bot iletişim adresi: {email}. Bu adres HTTP From başlığında da gönderilir.",
+      "updated": "Son güncelleme: 10 Ekim 2026",
       "title": "Tanışın:",
       "accent": "Mediaory-Bot",
       "lead": "Mediaory-Bot, işletmelere yönelik bir medya izleme hizmeti olan Mediaory'nin tarayıcısıdır. Bu sayfa ne yaptığını ve onu durdurmak için nasıl başvuracağınızı anlatır.",
@@ -506,19 +510,21 @@
         {
           "title": "Neleri okur",
           "body": [
-            "Herkese açık RSS/Atom beslemelerini ve site haritalarını, ayrıca yalnızca robots.txt dosyanız izin veriyorsa herkese açık sayfaları. Hiçbir zaman oturum açmaz, ücretli duvarı aşmaz, özel alanları okumaz."
+            "Herkese açık RSS/Atom beslemelerini ve site haritalarını, ayrıca yalnızca robots.txt dosyanız izin veriyorsa herkese açık sayfaları. Hiçbir zaman oturum açmaz, ücretli duvarı aşmaz, özel alanları okumaz.",
+            "Bot yayıncılara otomatik yorum, form gönderisi, doğrudan mesaj veya e-posta göndermez. robots.txt kuralı tarama tercihidir; içerik lisansı değildir."
           ]
         },
         {
           "title": "Neyi saklar",
           "body": [
-            "Başlık, bağlantı, yayın zamanı ve en fazla 200 karakterlik bir özet. Haberin tam metnini veya görsellerini saklamayız. Müşteriye gösterilen her sonuç, sizin orijinal sayfanıza bağlantı verir."
+            "Başlık, bağlantı, yayın zamanı ve en fazla 200 karakterlik bir özet. Haberin tam metnini veya görsellerini saklamayız. Müşteriye gösterilen her sonuç, sizin orijinal sayfanıza bağlantı verir.",
+            "Saklanan sonuçlar her müşteri kuruluşunun saklama ayarlarına tabidir. Yayıncı aşağıdaki formla saklanan sonuçların kaldırılmasını isteyebilir."
           ]
         },
         {
           "title": "Ne sıklıkla",
           "body": [
-            "Her RSS beslemesi en fazla 10 dakikada bir, site haritaları ve sayfalar en fazla 30 dakikada bir okunur."
+            "Yayıncı RSS/Atom akışları, site haritaları ve izin verilen sayfalar normalde iki saatte bir kontrol edilir. İsteğe bağlı Google Trends ülke akışları en fazla 15 dakikada bir kontrol edilir. Koşullu istekler değişmemiş akışların yeniden indirilmesini önler; hatalar ve istek sınırları sonraki kontrolü geciktirir."
           ]
         },
         {

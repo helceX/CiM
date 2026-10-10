@@ -330,6 +330,13 @@
       "when": 1791290000000,
       "tag": "0046_opportunity_intelligence",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1791300000000,
+      "tag": "0047_remove_unused_title_index",
+      "breakpoints": true
     }
   ]
 }

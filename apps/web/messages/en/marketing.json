@@ -493,6 +493,10 @@
     },
     "bot": {
       "eyebrow": "For publishers",
+      "operatorTitle": "Operator and contact",
+      "operatorName": "Operated by {name}. Publisher requests reach our team through the opt-out form below.",
+      "operatorContact": "Configured crawler contact: {email}. This address is also sent in the HTTP From header.",
+      "updated": "Last updated: 10 October 2026",
       "title": "Meet",
       "accent": "Mediaory-Bot",
       "lead": "Mediaory-Bot is the crawler behind Mediaory, a media-monitoring service for businesses. This page explains what it does and how to ask it to stop.",
@@ -506,19 +510,21 @@
         {
           "title": "What it fetches",
           "body": [
-            "Public RSS/Atom feeds and sitemaps, and — only where your robots.txt allows it — public pages. It never signs in, never bypasses a paywall and never fetches private areas."
+            "Public RSS/Atom feeds and sitemaps, and — only where your robots.txt allows it — public pages. It never signs in, never bypasses a paywall and never fetches private areas.",
+            "The crawler does not post comments, submit forms, send direct messages or email publishers automatically. A robots.txt rule is a crawl preference, not a content licence."
           ]
         },
         {
           "title": "What we keep",
           "body": [
-            "A headline, the link, the publication time and an excerpt of at most 200 characters. We do not store full article text or images. Every result shown to a customer links back to your original page."
+            "A headline, the link, the publication time and an excerpt of at most 200 characters. We do not store full article text or images. Every result shown to a customer links back to your original page.",
+            "Stored results follow each customer organization's retention settings. A publisher can request removal of stored results using the form below."
           ]
         },
         {
           "title": "How often",
           "body": [
-            "Each RSS feed is read at most every 10 minutes; sitemaps and pages at most every 30 minutes."
+            "Publisher RSS/Atom feeds, sitemaps and allowed pages are normally checked every two hours. Optional Google Trends country feeds are checked at most every 15 minutes. Conditional requests avoid downloading unchanged feeds; errors and rate limits delay the next attempt."
           ]
         },
         {

@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
+import { ProfileChoiceField } from "./profile-choice-field";
+import { readProfileTerms, readProfileSingle } from "./profile-form-data";
 
 type Profile = {
   organizationType: string;
@@ -124,14 +126,6 @@ const STATUS_LABELS: Record<
   not_awarded: "statuses.not_awarded",
   archived: "statuses.archived",
 };
-const splitTerms = (value: string) => [
-  ...new Set(
-    value
-      .split(",")
-      .map((part) => part.trim())
-      .filter(Boolean),
-  ),
-];
 
 export function OpportunitiesClient({
   profile,
@@ -154,16 +148,14 @@ export function OpportunitiesClient({
     const data = new FormData(event.currentTarget);
     const payload = {
       organizationType: String(data.get("organizationType")),
-      sector: String(data.get("sector") ?? ""),
-      startupStage: String(data.get("startupStage") ?? ""),
-      operatingRegions: splitTerms(String(data.get("operatingRegions") ?? "")),
-      sectors: splitTerms(String(data.get("sectors") ?? "")),
-      technologies: splitTerms(String(data.get("technologies") ?? "")),
-      themes: splitTerms(String(data.get("themes") ?? "")),
-      opportunityTypes: splitTerms(String(data.get("opportunityTypes") ?? "")),
-      eligibilityConstraints: splitTerms(
-        String(data.get("eligibilityConstraints") ?? ""),
-      ),
+      sector: readProfileSingle(data, "sector"),
+      startupStage: readProfileSingle(data, "startupStage"),
+      operatingRegions: readProfileTerms(data, "operatingRegions"),
+      sectors: readProfileTerms(data, "sectors"),
+      technologies: readProfileTerms(data, "technologies"),
+      themes: readProfileTerms(data, "themes"),
+      opportunityTypes: readProfileTerms(data, "opportunityTypes"),
+      eligibilityConstraints: readProfileTerms(data, "eligibilityConstraints"),
       languages: data.getAll("languages").map(String),
     };
     setSaving(true);
@@ -226,54 +218,56 @@ export function OpportunitiesClient({
               ))}
             </select>
           </label>
-          <TextField
+          <ProfileChoiceField
             name="sector"
             label={t("sector")}
-            value={current.sector}
+            values={current.sector ? [current.sector] : []}
             disabled={!canWrite}
+            single
           />
-          <TextField
+          <ProfileChoiceField
             name="startupStage"
             label={t("stage")}
-            value={current.startupStage}
+            values={current.startupStage ? [current.startupStage] : []}
             disabled={!canWrite}
+            single
           />
-          <TextField
+          <ProfileChoiceField
             name="operatingRegions"
             label={t("regions")}
-            value={current.operatingRegions.join(", ")}
+            values={current.operatingRegions}
             disabled={!canWrite}
           />
-          <TextField
+          <ProfileChoiceField
             name="sectors"
             label={t("sectors")}
-            value={current.sectors.join(", ")}
+            values={current.sectors}
             disabled={!canWrite}
           />
-          <TextField
+          <ProfileChoiceField
             name="technologies"
             label={t("technologies")}
-            value={current.technologies.join(", ")}
+            values={current.technologies}
             disabled={!canWrite}
           />
-          <TextField
+          <ProfileChoiceField
             name="themes"
             label={t("themes")}
-            value={current.themes.join(", ")}
+            values={current.themes}
             disabled={!canWrite}
-            hint={t("commaSeparated")}
           />
-          <TextField
+          <ProfileChoiceField
             name="opportunityTypes"
             label={t("opportunityTypes")}
-            value={current.opportunityTypes.join(", ")}
+            values={current.opportunityTypes}
             disabled={!canWrite}
           />
-          <TextField
+          <ProfileChoiceField
             name="eligibilityConstraints"
             label={t("constraints")}
-            value={current.eligibilityConstraints.join(", ")}
+            values={current.eligibilityConstraints}
             disabled={!canWrite}
+            hint={t("constraintsHelp")}
           />
           <fieldset
             className="flex items-center gap-4 text-sm md:col-span-2"
@@ -491,33 +485,5 @@ export function OpportunitiesClient({
         )}
       </section>
     </div>
-  );
-}
-
-function TextField({
-  name,
-  label,
-  value,
-  disabled,
-  hint,
-}: {
-  name: string;
-  label: string;
-  value: string;
-  disabled: boolean;
-  hint?: string;
-}) {
-  return (
-    <label className="flex flex-col gap-1 text-sm">
-      {label}
-      <input
-        name={name}
-        defaultValue={value}
-        disabled={disabled}
-        maxLength={1000}
-        className="rounded-md border border-border bg-background px-3 py-2 disabled:opacity-60"
-      />
-      {hint ? <span className="text-xs text-muted-foreground">{hint}</span> : null}
-    </label>
   );
 }

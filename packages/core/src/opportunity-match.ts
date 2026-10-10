@@ -1,4 +1,5 @@
 import { keywordMatches, prepareText } from "./keyword-match";
+import { opportunityThemeAliases } from "./opportunity-profile-options";
 
 export type OpportunityMatch = {
   score: number;
@@ -29,9 +30,12 @@ export function explainOpportunityMatch(input: {
   const options = { language: input.language };
   const matchedThemes = [
     ...new Set(input.themes.map((theme) => theme.trim()).filter(Boolean)),
-  ].filter(
-    (theme) =>
-      keywordMatches(theme, title, options) || keywordMatches(theme, excerpt, options),
+  ].filter((theme) =>
+    opportunityThemeAliases(theme).some(
+      (alias) =>
+        keywordMatches(alias, title, options) ||
+        keywordMatches(alias, excerpt, options),
+    ),
   );
   const denominator = Math.max(
     1,

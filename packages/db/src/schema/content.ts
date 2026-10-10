@@ -142,7 +142,8 @@ export const articles = pgTable(
     uniqueIndex("articles_canonical_url_uidx").on(table.canonicalUrl),
     index("articles_search_vector_idx").using("gin", table.searchVector),
     index("articles_fetched_at_idx").on(table.fetchedAt),
-    index("articles_title_trgm_idx").using("gin", sql`${table.title} gin_trgm_ops`),
+    // Title searches use the full-text index or a normalized expression;
+    // the raw-title trigram index served neither and taxed every insert.
     index("articles_author_profile_idx").on(table.authorProfileId),
     // "Who else carries this story": counted when a story is scored and listed in the drawer. Only
     // clustered stories (a look-alike from another outlet exists) are in it, so it stays small.

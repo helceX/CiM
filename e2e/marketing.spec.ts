@@ -56,14 +56,20 @@ test("scrolling controls the product mockup and reverses the workflow", async ({
   await expect(steps.nth(3)).toHaveAttribute("data-active", "true");
   await expect(device).toHaveAttribute("data-product-stage", "3");
   await expect(device.locator(".product-opportunity")).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Connect the news to your next move." }),
+  ).toBeInViewport();
+  await page.mouse.wheel(0, 120);
+  await expect
+    .poll(async () => Number(await story.getAttribute("data-progress")))
+    .toBeGreaterThan(3);
+  expect(Number(await story.getAttribute("data-progress"))).toBeLessThan(4);
   await story.getByRole("button", { name: "05 Report", exact: true }).click();
   await expect(device).toHaveAttribute("data-product-stage", "4");
+  await expect(story).toHaveAttribute("data-progress", "4.000");
   await expect(device.locator(".product-report")).toBeVisible();
   await steps.first().scrollIntoViewIfNeeded();
   await expect(device).toHaveAttribute("data-product-stage", "0");
-  await expect(
-    page.getByRole("heading", { name: "Connect the news to your next move." }),
-  ).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "A story can become your next move." }),
   ).toBeAttached();

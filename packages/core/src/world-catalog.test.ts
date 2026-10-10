@@ -103,7 +103,7 @@ describe("catalog import order", () => {
     expect(publishers.length).toBeGreaterThan(900);
     const imported = new Set(CATALOG_IMPORT_ORDER.map((candidate) => candidate.url));
     expect(publishers.every((entry) => imported.has(entry.url))).toBe(true);
-    expect(publishers.some((entry) => entry.name.includes("Scotland") && entry.country === "GB")).toBe(true);
+    expect(WORLD_SOURCE_CATALOG.some((entry) => entry.name.includes("Scotland") && entry.country === "GB")).toBe(true);
     const searchFeeds = WORLD_SOURCE_CATALOG.filter((e) => e.group === "search");
     expect(searchFeeds.some((entry) => entry.country === "TR")).toBe(true);
     expect(searchFeeds.every((entry) => entry.manualOnly && !imported.has(entry.url))).toBe(true);

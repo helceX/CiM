@@ -60,6 +60,14 @@ beforeEach(() => {
 });
 
 describe("processCrawlSourceJob — stale queued jobs", () => {
+  it("does not fetch public social searches after their last customer monitoring is paused or deleted", async () => {
+    selectResult.mockResolvedValue([{ ...staleSource, connector: "bluesky-search", type: "social", url: "https://api.bsky.app/xrpc/app.bsky.feed.searchPosts?q=Lunavera" }]);
+    await processCrawlSourceJob(job(0), emailQueue, deps({ activeQueries: async () => [] }));
+    expect(healthCheck).not.toHaveBeenCalled();
+    expect(ingestSource).not.toHaveBeenCalled();
+    expect(markSourceChecked).toHaveBeenCalledWith(expect.anything(), "s1", "healthy");
+  });
+
   it("does not contact Google Trends while the external coverage switches are off", async () => {
     selectResult.mockResolvedValue([{ ...staleSource, connector: "google-trends" }]);
     vi.stubEnv("CIM_EXTERNAL_COVERAGE_ENABLED", "");

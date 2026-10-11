@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getLocale } from "next-intl/server";
 import { Badge, EmptyState } from "@cim/ui";
 import { Share2 } from "lucide-react";
 import {
@@ -9,12 +10,14 @@ import {
   getTopSocialAuthors,
   getTopSocialPosts,
   getTrendingHashtags,
+  listMonitoringQueries,
 } from "@cim/db";
 import { requireOrgContext } from "@/lib/tenant";
 import { ChangeBadge } from "@/components/change-badge";
 import { DistributionBarChart } from "@/components/charts/distribution-bar-chart";
 import { KpiRow } from "@/components/kpi-row";
 import { RangeSelect } from "@/components/range-select";
+import { SocialSetup } from "./social-setup";
 
 const VALID_RANGES = [7, 30, 90];
 
@@ -36,13 +39,16 @@ const SENTIMENT_TONE = {
 export default async function SocialListeningPage({
   searchParams,
 }: {
-  searchParams: Promise<{ since?: string }>;
+  searchParams: Promise<{ since?: string; query?: string }>;
 }) {
   const context = await requireOrgContext();
+  const locale = await getLocale();
   const resolved = await searchParams;
   const sinceDaysRaw = Number(resolved.since ?? "30");
   const sinceDays = VALID_RANGES.includes(sinceDaysRaw) ? sinceDaysRaw : 30;
-  const scope = { sinceDays };
+  const socialQueries = (await listMonitoringQueries(db, context.organizationId)).filter((query) => query.sourceTypes.includes("social"));
+  const selectedQuery = socialQueries.find((query) => query.id === resolved.query);
+  const scope = { sinceDays, ...(selectedQuery ? { queryId: selectedQuery.id } : {}) };
 
   const [overview, platforms, sentiment, hashtags, authors, posts] = await Promise.all([
     getSocialOverviewStats(db, context.organizationId, scope),
@@ -76,6 +82,12 @@ export default async function SocialListeningPage({
         </div>
       </div>
 
+      <SocialSetup canSetup={context.permissions.includes("monitoring:write") && context.permissions.includes("alerts:write")} turkish={locale === "tr"} />
+      {socialQueries.length > 0 ? <nav aria-label={locale === "tr" ? "Sosyal izleme seçimi" : "Social monitoring selection"} className="flex flex-wrap gap-2">
+        <Link href={`/social?since=${sinceDays}`} aria-current={!selectedQuery ? "page" : undefined} className="rounded border border-border px-3 py-2 text-sm">{locale === "tr" ? "Tüm izlemeler" : "All monitorings"}</Link>
+        {socialQueries.map((query) => <Link key={query.id} href={`/social?since=${sinceDays}&query=${query.id}`} aria-current={selectedQuery?.id === query.id ? "page" : undefined} className="rounded border border-border px-3 py-2 text-sm">{query.name}</Link>)}
+      </nav> : null}
+
       {overview.totalConversations === 0 ? (
         <EmptyState
           icon={<Share2 className="size-8" aria-hidden="true" />}
@@ -87,10 +99,11 @@ export default async function SocialListeningPage({
           <KpiRow
             items={[
               {
-                label: "Total conversations",
+                label: "Monitoring matches",
                 value: String(overview.totalConversations),
               },
               { label: "Direct mentions", value: String(overview.directMentions) },
+              { label: "Name / topic matches without a tag", value: String(overview.totalConversations - overview.directMentions) },
               { label: "Unique authors", value: String(overview.uniqueAuthors) },
               {
                 label: "Sentiment classified",
@@ -101,6 +114,7 @@ export default async function SocialListeningPage({
               },
             ]}
           />
+          <p className="text-xs text-muted-foreground">Counts refer to monitoring matches, not unique posts. A post matching several monitorings can count more than once. Working-example results stay under their explicitly named monitoring.</p>
 
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <section className="rounded-lg border border-border p-4">
@@ -230,6 +244,7 @@ export default async function SocialListeningPage({
                 ) : (
                   posts.map((post) => (
                     <li key={post.mentionId} className="text-sm">
+                      <p className="mb-1 text-xs text-muted-foreground">{post.queryName} · {post.matchType === "direct_mention" ? (locale === "tr" ? "Hesap etiketi" : "Account tag") : (locale === "tr" ? "Marka / konu eşleşmesi" : "Name / topic match")}</p>
                       <a
                         href={post.canonicalUrl}
                         target="_blank"
@@ -238,6 +253,8 @@ export default async function SocialListeningPage({
                       >
                         {post.title}
                       </a>
+                      {post.excerpt ? <p className="mt-1 text-sm text-muted-foreground">{post.excerpt}</p> : null}
+                      <p className="mt-1 text-xs text-muted-foreground">{locale === "tr" ? "Eşleşen ifade" : "Matched term"}: {post.matchedTerms?.join(", ") ?? "—"}</p>
                       <p className="text-xs text-muted-foreground">
                         {post.authorHandle ?? "Unknown author"} ·{" "}
                         {new Date(post.createdAt).toLocaleDateString()}

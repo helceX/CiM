@@ -27,6 +27,8 @@ export type RawFetchResult = {
   // structured author distinct from the plain-string `authorName` above.
   // Absent (not just null) on every non-social connector.
   socialPlatform?: string;
+  /** When provided, these @handles are backed by platform mention metadata; [] means no verified tags. */
+  socialMentionHandles?: string[];
   socialAuthorExternalId?: string;
   socialAuthorHandle?: string;
   socialAuthorDisplayName?: string | null;

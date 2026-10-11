@@ -98,6 +98,9 @@ describe("safeFetch — SSRF rejection (real DNS, no mocking)", () => {
     // actually classified and blocked, not just failing for the wrong
     // reason.
     await expect(safeFetch("http://[::1]:1/")).rejects.toThrow(SsrfBlockedError);
+    await expect(safeFetch("http://[::ffff:7f00:1]:1/")).rejects.toThrow(
+      SsrfBlockedError,
+    );
   });
 
   it("rejects a non-HTTP(S) protocol", async () => {
@@ -118,6 +121,58 @@ describe("safeFetch — SSRF rejection (real DNS, no mocking)", () => {
 });
 
 describe("safeFetch — fetch machinery (via injected resolver)", () => {
+  it("retains credentials on same-origin redirects but strips every custom header across origins", async () => {
+    const seen: http.IncomingHttpHeaders[] = [];
+    const destination = await listen((req, res) => {
+      seen.push(req.headers);
+      res.end("ok");
+    });
+    const origin = await listen((req, res) => {
+      seen.push(req.headers);
+      res.writeHead(302, {
+        Location:
+          req.url === "/start"
+            ? "/same"
+            : `http://example-cim-test.invalid:${destination.port}/final`,
+      });
+      res.end();
+    });
+    await safeFetch(`http://example-cim-test.invalid:${origin.port}/start`, {
+      resolveHostname: loopbackResolver(),
+      headers: {
+        Authorization: "Bearer test-only",
+        "X-Custom-Provider-Key": "test-only",
+        Cookie: "test-only",
+      },
+    });
+    expect(seen[0]?.authorization).toBe("Bearer test-only");
+    expect(seen[1]?.["x-custom-provider-key"]).toBe("test-only");
+    for (const key of ["authorization", "x-custom-provider-key", "cookie"])
+      expect(seen[2]?.[key]).toBeUndefined();
+    expect(seen[2]?.["user-agent"]).toContain("Mediaory-Bot");
+  });
+  it("does not replay a webhook payload or credential to a different origin", async () => {
+    let destinationHit = false;
+    const destination = await listen((_req, res) => {
+      destinationHit = true;
+      res.end("unexpected");
+    });
+    const origin = await listen((_req, res) => {
+      res.writeHead(307, {
+        Location: `http://example-cim-test.invalid:${destination.port}/`,
+      });
+      res.end();
+    });
+    await expect(
+      safeFetch(`http://example-cim-test.invalid:${origin.port}/`, {
+        resolveHostname: loopbackResolver(),
+        method: "POST",
+        body: '{"test":"private webhook"}',
+        headers: { "X-Custom-Key": "test-only" },
+      }),
+    ).rejects.toThrow(SsrfBlockedError);
+    expect(destinationHit).toBe(false);
+  });
   it("sends a truthful bot identity and only sends From for a valid configured contact", async () => {
     let userAgent: string | undefined;
     let from: string | undefined;

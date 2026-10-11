@@ -14,6 +14,40 @@ const source = {
   language: "en",
 };
 describe("crawl collections", () => {
+  it("retains directory-discovered funding feeds without trusting unrelated names", () => {
+    expect(
+      sourceCollections({
+        ...source,
+        name: "SBIR STTR",
+        domain: "sbir.gov",
+        url: "https://www.sbir.gov/rss.xml",
+      }),
+    ).toEqual(["startup"]);
+    expect(
+      sourceCollections({
+        ...source,
+        name: "FundsforNGOs",
+        domain: "www2.fundsforngos.org",
+        url: "https://www2.fundsforngos.org/feed/",
+      }),
+    ).toEqual(["startup"]);
+    expect(
+      sourceCollections({
+        ...source,
+        name: "SBA",
+        domain: "unrelated.com",
+        url: "https://unrelated.com/feed",
+      }),
+    ).toEqual([]);
+    expect(
+      sourceCollections({
+        ...source,
+        name: "SBA",
+        domain: "sba.gov",
+        url: "https://sba.gov.unrelated.com/feed",
+      }),
+    ).toEqual([]);
+  });
   it("keeps Turkish feeds worldwide, including explicit locale URLs", () => {
     expect(sourceCollections({ ...source, language: "tr-TR" })).toContain("turkey");
     expect(

@@ -95,4 +95,26 @@ describe("Türkiye + Startup crawl scope", () => {
       (await applyTurkeyStartupCrawlPolicy(db, [fixture!.id])).correctedCountries,
     ).toBe(0);
   });
+  it("reopens a funding directory's discovered feed without deleting it", async () => {
+    const [fixture] = await db
+      .insert(sources)
+      .values({
+        name: "SBIR STTR",
+        domain: "sbir.gov",
+        url: "https://www.sbir.gov/rss.xml",
+        type: "website",
+        connector: "rss",
+        language: "en",
+        country: "US",
+        status: "unavailable",
+      })
+      .returning({ id: sources.id });
+    ids.push(fixture!.id);
+    const result = await applyTurkeyStartupCrawlPolicy(db, [fixture!.id]);
+    expect(result.resumed).toBe(1);
+    expect(result.startup).toBe(1);
+    const [row] = await db.select().from(sources).where(eq(sources.id, fixture!.id));
+    expect(row?.status).toBe("delayed");
+    expect(row?.country).toBe("US");
+  });
 });

@@ -10,6 +10,8 @@
  * on resolve-then-connect).
  */
 
+import { isIP } from "node:net";
+
 const IPV4_METADATA = "169.254.169.254";
 
 /** IPv4 dotted-quad -> 4-byte tuple, or null if not a valid dotted-quad. */
@@ -44,16 +46,21 @@ function isBlockedIpv4([a, b]: [number, number, number, number]): boolean {
  * inside a v6 literal).
  */
 function isBlockedIpv6(ip: string): boolean {
-  const normalized = ip.toLowerCase();
+  if (isIP(ip) !== 6) return true;
+  // DNS preserves literal spellings. Canonicalize expanded and dotted forms
+  // before checking ranges, including hexadecimal IPv4-mapped addresses.
+  const normalized = new URL(`http://[${ip}]/`).hostname.slice(1, -1);
   if (normalized === "::1" || normalized === "::") return true;
-  const mapped = normalized.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/);
-  if (mapped?.[1]) {
-    const v4 = parseIpv4(mapped[1]);
-    return v4 ? isBlockedIpv4(v4) : true;
+  const mapped = normalized.match(/^::ffff:([0-9a-f]+):([0-9a-f]+)$/);
+  if (mapped?.[1] && mapped[2]) {
+    const high = parseInt(mapped[1], 16);
+    const low = parseInt(mapped[2], 16);
+    return isBlockedIpv4([high >> 8, high & 255, low >> 8, low & 255]);
   }
   const firstGroup = normalized.split(":")[0] ?? "";
   if (/^fe[89ab][0-9a-f]$/.test(firstGroup)) return true; // fe80::/10 link-local
   if (/^f[cd][0-9a-f]{2}$/.test(firstGroup)) return true; // fc00::/7 unique local
+  if (/^ff[0-9a-f]{2}$/.test(firstGroup)) return true; // multicast
   return false;
 }
 

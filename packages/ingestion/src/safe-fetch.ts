@@ -165,7 +165,7 @@ export async function safeFetch(
   if (contactEmail && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail)) {
     identityHeaders.from = contactEmail;
   }
-  const forwardedHeaders = Object.fromEntries(
+  let forwardedHeaders = Object.fromEntries(
     Object.entries(options.headers ?? {}).filter(
       ([name]) => name.toLowerCase() !== "from",
     ),
@@ -223,7 +223,22 @@ export async function safeFetch(
         if (hop >= maxRedirects) {
           throw new SsrfBlockedError(`Too many redirects (max ${maxRedirects})`);
         }
-        currentUrl = new URL(location, currentUrl);
+        const nextUrl = new URL(location, currentUrl);
+        if (nextUrl.origin !== currentUrl.origin) {
+          // API credentials can use any custom header name. Drop all caller
+          // headers permanently after crossing origins, even if a later hop
+          // returns to the original origin. Never replay a body to a new host.
+          if (
+            options.body !== undefined ||
+            !["GET", "HEAD"].includes((options.method ?? "GET").toUpperCase())
+          ) {
+            throw new SsrfBlockedError(
+              "Cross-origin redirect with a request body or non-read method",
+            );
+          }
+          forwardedHeaders = {};
+        }
+        currentUrl = nextUrl;
         continue;
       }
 

@@ -16,6 +16,12 @@ describe("isBlockedIp", () => {
     ["224.0.0.1", "multicast"],
     ["255.255.255.255", "broadcast/reserved"],
     ["::1", "IPv6 loopback"],
+    ["0:0:0:0:0:0:0:1", "expanded IPv6 loopback"],
+    ["0:0:0:0:0:0:0:0", "expanded IPv6 unspecified"],
+    ["::ffff:7f00:1", "hexadecimal mapped loopback"],
+    ["0:0:0:0:0:ffff:a9fe:a9fe", "expanded mapped metadata"],
+    ["ff02::1", "IPv6 multicast"],
+    ["invalid:address", "invalid IPv6 fails closed"],
     ["fe80::1", "IPv6 link-local"],
     ["fc00::1", "IPv6 unique local (fc)"],
     ["fd00::1", "IPv6 unique local (fd)"],
@@ -34,6 +40,7 @@ describe("isBlockedIp", () => {
     ["172.32.0.0", "just above RFC1918 172.16/12"],
     ["11.0.0.1", "just above RFC1918 10/8"],
     ["2606:4700:4700::1111", "public IPv6 (Cloudflare DNS)"],
+    ["::ffff:808:808", "hexadecimal mapped public IPv4"],
   ])("allows %s (%s)", (ip) => {
     expect(isBlockedIp(ip)).toBe(false);
   });
@@ -41,14 +48,20 @@ describe("isBlockedIp", () => {
 
 describe("assertProtocolIsFetchable", () => {
   it("allows http and https", () => {
-    expect(() => assertProtocolIsFetchable(new URL("http://example.com"))).not.toThrow();
-    expect(() => assertProtocolIsFetchable(new URL("https://example.com"))).not.toThrow();
+    expect(() =>
+      assertProtocolIsFetchable(new URL("http://example.com")),
+    ).not.toThrow();
+    expect(() =>
+      assertProtocolIsFetchable(new URL("https://example.com")),
+    ).not.toThrow();
   });
 
-  it.each(["file:///etc/passwd", "ftp://example.com/x", "gopher://example.com", "data:text/plain,hi"])(
-    "blocks %s",
-    (url) => {
-      expect(() => assertProtocolIsFetchable(new URL(url))).toThrow(SsrfBlockedError);
-    },
-  );
+  it.each([
+    "file:///etc/passwd",
+    "ftp://example.com/x",
+    "gopher://example.com",
+    "data:text/plain,hi",
+  ])("blocks %s", (url) => {
+    expect(() => assertProtocolIsFetchable(new URL(url))).toThrow(SsrfBlockedError);
+  });
 });

@@ -98,6 +98,9 @@ describe("safeFetch — SSRF rejection (real DNS, no mocking)", () => {
     // actually classified and blocked, not just failing for the wrong
     // reason.
     await expect(safeFetch("http://[::1]:1/")).rejects.toThrow(SsrfBlockedError);
+    await expect(safeFetch("http://[::ffff:7f00:1]:1/")).rejects.toThrow(
+      SsrfBlockedError,
+    );
   });
 
   it("rejects a non-HTTP(S) protocol", async () => {

@@ -47,3 +47,4 @@ export * from "./repositories/credits";
 export * from "./repositories/archive";
 export * from "./repositories/signals";
 export * from "./repositories/opportunities";
+export * from "./repositories/source-cost-policy";

@@ -6,6 +6,7 @@ const testSourceUrl = vi.fn();
 const createSource = vi.fn();
 const setSourceCrawlEnabled = vi.fn();
 const bulkSetSourcesCrawlEnabled = vi.fn();
+const applyTurkeyStartupCrawlPolicy = vi.fn();
 const checkSourcePolicy = vi.fn();
 
 vi.mock("@/lib/admin", () => ({ requireSuperAdmin: (...a: unknown[]) => requireSuperAdmin(...a) }));
@@ -17,12 +18,14 @@ vi.mock("@cim/db", () => ({
   checkSourcePolicy: (...a: unknown[]) => checkSourcePolicy(...a),
   setSourceCrawlEnabled: (...a: unknown[]) => setSourceCrawlEnabled(...a),
   bulkSetSourcesCrawlEnabled: (...a: unknown[]) => bulkSetSourcesCrawlEnabled(...a),
+  applyTurkeyStartupCrawlPolicy: (...a: unknown[]) => applyTurkeyStartupCrawlPolicy(...a),
 }));
 
 const sources = await import("./route");
 const test = await import("./test/route");
 const crawl = await import("./[id]/crawl/route");
 const bulk = await import("./bulk/route");
+const costPolicy = await import("./cost-policy/route");
 
 const json = (body: unknown) =>
   new Request("http://localhost/x", {
@@ -42,6 +45,20 @@ beforeEach(() => {
 });
 
 describe("admin source API", () => {
+  it("protects the cost policy from non-admins and excessive calls", async () => {
+    requireSuperAdmin.mockRejectedValueOnce(new Error("NOT_SUPER_ADMIN"));
+    expect((await costPolicy.POST()).status).toBe(404);
+    checkRateLimit.mockResolvedValueOnce({ allowed: false });
+    expect((await costPolicy.POST()).status).toBe(429);
+    expect(applyTurkeyStartupCrawlPolicy).not.toHaveBeenCalled();
+  });
+
+  it("applies only the server-defined source policy and returns its actual counts", async () => {
+    applyTurkeyStartupCrawlPolicy.mockResolvedValueOnce({ paused: 20, resumed: 1, reclassified: 2 });
+    const response = await costPolicy.POST();
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ ok: true, paused: 20, resumed: 1, reclassified: 2 });
+  });
   it("answers 404 to non-admins and does nothing", async () => {
     requireSuperAdmin.mockRejectedValue(new Error("NOT_SUPER_ADMIN"));
     expect((await sources.POST(json(valid))).status).toBe(404);

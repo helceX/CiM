@@ -64,6 +64,7 @@ export type ExplorerSource = {
   connector: string;
   country: string | null;
   status: string;
+  collections?: ("turkey" | "startup")[];
 };
 
 const STATUS_TONE: Record<string, "success" | "warning" | "danger" | "neutral"> = {
@@ -108,6 +109,7 @@ export function SourceExplorer({ sources }: { sources: ExplorerSource[] }) {
   const [kinds, setKinds] = useState<SourceKindKey[]>([]);
   const [status, setStatus] = useState<"all" | "crawling" | "paused" | "problem">("all");
   const [search, setSearch] = useState("");
+  const [collection, setCollection] = useState<"all" | "turkey" | "startup" | "other">("all");
   const [shownPer, setShownPer] = useState<Record<string, number>>({});
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
@@ -142,6 +144,7 @@ export function SourceExplorer({ sources }: { sources: ExplorerSource[] }) {
   // Region tree counts always reflect the other filters except region itself.
   const needle = search.trim().toLocaleLowerCase("tr");
   const matchesNonRegion = (s: ExplorerSource) =>
+    (collection === "all" || (collection === "other" ? !s.collections?.length : s.collections?.includes(collection))) &&
     (kinds.length === 0 || kinds.includes(sourceKindOfType(s.type))) &&
     (status === "all" ||
       (status === "paused" && isPaused(s)) ||
@@ -186,6 +189,7 @@ export function SourceExplorer({ sources }: { sources: ExplorerSource[] }) {
   }
   function matchesStatusAndSearch(s: ExplorerSource) {
     return (
+      (collection === "all" || (collection === "other" ? !s.collections?.length : s.collections?.includes(collection))) &&
       (status === "all" ||
         (status === "paused" && isPaused(s)) ||
         (status === "crawling" && !isPaused(s)) ||
@@ -198,7 +202,24 @@ export function SourceExplorer({ sources }: { sources: ExplorerSource[] }) {
   const totalPaused = real.length - totalCrawling;
   const shownCrawling = inRegion.filter((s) => !isPaused(s));
   const shownPausedList = inRegion.filter(isPaused);
-  const filteredByTextOrStatus = status !== "all" || needle.length > 0;
+  const filteredByTextOrStatus = status !== "all" || needle.length > 0 || collection !== "all";
+
+  async function applyCostPolicy() {
+    if (!window.confirm("Keep Türkiye / Turkish and Startup feeds active, and pause other world feeds? Sources and existing mentions stay. Previously paused columnist feeds stay paused. Turkish-language feeds join Türkiye monitoring scope.")) return;
+    setBusy(true);
+    setNotice(null);
+    try {
+      const response = await fetch("/api/admin/sources/cost-policy", { method: "POST" });
+      const data = await response.json() as { paused: number; resumed: number; reclassified: number; error?: string };
+      if (!response.ok) throw new Error(data.error ?? "Could not apply policy.");
+      setNotice({ tone: "ok", text: `Paused ${data.paused} other world sources; resumed ${data.resumed} startup feeds; placed ${data.reclassified} Turkish feeds in Türkiye. Nothing deleted.` });
+      router.refresh();
+    } catch (error) {
+      setNotice({ tone: "error", text: error instanceof Error ? error.message : "Could not apply policy." });
+    } finally {
+      setBusy(false);
+    }
+  }
 
   const regionLabel =
     region === "world"
@@ -258,6 +279,18 @@ export function SourceExplorer({ sources }: { sources: ExplorerSource[] }) {
 
   return (
     <div className="flex flex-col gap-5">
+      <section aria-label="Crawl collections" className="rounded-xl border border-border p-4">
+        <h3 className="text-sm font-semibold">Türkiye / Türkçe + Startup</h3>
+        <p className="mt-1 text-xs text-muted-foreground">Keep Turkish sources worldwide and startup, grant, funding, accelerator and investment-ecosystem feeds. Pause other world feeds to reduce database work; nothing is deleted. Existing paused columnist feeds stay paused. Collections can overlap.</p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {([ ["all", "All collections"], ["turkey", "Türkiye / Türkçe"], ["startup", "Startup"], ["other", "Other world"] ] as const).map(([key, label]) => (
+            <button key={key} type="button" className={chip(collection === key)} aria-pressed={collection === key} onClick={() => { setCollection(key); setContinent(null); setCountry(null); }}>
+              {label} · {real.filter((s) => key === "all" || (key === "other" ? !s.collections?.length : s.collections?.includes(key))).length}
+            </button>
+          ))}
+        </div>
+        <Button className="mt-3" type="button" disabled={busy} onClick={applyCostPolicy}>Apply Türkiye + Startup crawl scope</Button>
+      </section>
       {/* Master switch */}
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-surface-muted/50 p-4">
         <div>

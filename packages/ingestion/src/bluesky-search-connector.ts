@@ -88,7 +88,10 @@ export class BlueskySearchConnector implements SourceConnector {
     url.searchParams.set("sort", "latest");
     url.searchParams.set("limit", "30");
     // Bounded recent coverage, not a historical archive or a complete network scan.
-    url.searchParams.set("since", new Date(Date.now() - 3 * 24 * 60 * 60_000).toISOString());
+    const recentSince = Date.now() - 3 * 24 * 60 * 60_000;
+    // The official endpoint rejects wildcard mention searches combined with `since`.
+    // Keep the same 3-day bound locally for tagged searches, without pagination.
+    if (!search.did) url.searchParams.set("since", new Date(recentSince).toISOString());
     if (search.did) url.searchParams.set("mentions", search.did);
     const result = await this.fetcher(url.href, { timeoutMs: 8000, maxResponseBytes: 1024 * 1024, maxRedirects: 0 });
     if (result.status >= 400) {
@@ -96,7 +99,8 @@ export class BlueskySearchConnector implements SourceConnector {
       error.retryAfterMs = parseRetryAfter(result.headers?.get("retry-after")) ?? undefined;
       throw error;
     }
-    return parseBlueskyPosts(result.body, search.did && search.handle ? { did: search.did, handle: search.handle } : undefined);
+    const items = parseBlueskyPosts(result.body, search.did && search.handle ? { did: search.did, handle: search.handle } : undefined);
+    return search.did ? items.filter((item) => item.publishedAt && item.publishedAt.getTime() >= recentSince && item.publishedAt.getTime() <= Date.now()) : items;
   }
 
   async healthCheck(source: Source): Promise<SourceHealth> {

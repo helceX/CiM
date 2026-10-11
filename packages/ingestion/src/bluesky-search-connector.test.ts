@@ -59,4 +59,17 @@ describe("free public Bluesky search", () => {
     const result = await new BlueskySearchConnector(fetcher).healthCheck({ id: "source", url: blueskySearchUrl("Lunavera") } as Source);
     expect(result).toMatchObject({ status: "error", retryAfterMs: 120000 });
   });
+  it("applies the recent window locally for wildcard account searches, which reject the API since parameter", async () => {
+    const recent = post("@lunavera.bsky.social merhaba", true);
+    recent.record.createdAt = new Date().toISOString();
+    const old = post("@lunavera.bsky.social eski", true);
+    old.record.createdAt = new Date(Date.now() - 4 * 24 * 60 * 60_000).toISOString();
+    const fetcher = vi.fn<typeof safeFetch>().mockResolvedValue({ status: 200, body: body([recent, old]), headers: new Headers() as never, finalUrl: "https://api.bsky.app" });
+    const items = await new BlueskySearchConnector(fetcher).read(blueskySearchUrl("Lunavera", target));
+    const request = new URL(fetcher.mock.calls[0]![0]);
+    expect(request.searchParams.get("since")).toBeNull();
+    expect(request.searchParams.get("mentions")).toBe(target.did);
+    expect(items).toHaveLength(1);
+    expect(items[0]?.bodyText).toContain("merhaba");
+  });
 });

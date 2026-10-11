@@ -128,7 +128,7 @@
         },
         "report": {
           "kicker": "Raporla",
-          "title": "Yönetime bitmiş bir rapor sunun.",
+          "title": "Bulduklarınızı ekibinizle paylaşın.",
           "body": "Bulguları kaynaklarıyla bir raporda birleştirin. PDF, CSV veya XLSX olarak dışa aktarın; düzenli raporları zamanlayarak ekibinizle aynı gündemde kalın.",
           "alt": "Haftalık özet, izleme genel bakışı ve özel şablonları içeren yeni rapor formu.",
           "scene": {
@@ -136,15 +136,15 @@
             "inputs": ["Haber akışları", "Açık web", "Seçtiğiniz kaynaklar"],
             "outputs": ["Önemli haber", "Kaynaklı içgörü", "Olası fırsat"],
             "center": "Ekibinizle aynı hikâyeye bakın.",
-            "detail": "Haberlerden karar toplantısına: paylaşılabilir raporlarla ilerleyin."
+            "detail": "Önemli gelişmeleri bir araya getirin, ekibinizle paylaşın."
           }
         }
       }
     },
     "why": {
       "eyebrow": "Güven üzerine kurulu",
-      "title": "Yönetim kurulunda savunabileceğiniz istihbarat.",
-      "lead": "Hızlı olmak kolay. Doğru olmak — ve çalışmanızı göstermek — ürünün kendisi.",
+      "title": "Gündemi anlayın. Bir sonraki adımı güvenle atın.",
+      "lead": "Neyin önemli olduğunu görün, kaynağını inceleyin ve kendi kararınızı verin.",
       "cards": {
         "grounded": {
           "title": "Dayanaklı yapay zekâ",
@@ -212,7 +212,7 @@
       "example": "Temsili ürün deneyimi · canlı veri değil",
       "scroll": "Kaydırın, akışı siz yönetin",
       "workspace": "Çalışma alanı",
-      "brand": "Örnek Marka",
+      "brand": "Lunavera Teknoloji",
       "navigation": [
         "Genel bakış",
         "İzlemeler",
@@ -244,17 +244,17 @@
       ],
       "sources": ["Haber / RSS", "Açık web", "YouTube", "Mastodon"],
       "articles": [
-        "Örnek Marka yeni sürdürülebilirlik projesini duyurdu",
+        "Lunavera Teknoloji yeni sürdürülebilirlik projesini duyurdu",
         "Sektörde yeni iş birliği çağrısı açıldı",
         "Yeni teknolojiler gündemde öne çıkıyor"
       ],
       "summary": "Yeni proje, sürdürülebilirlik hedefleriyle bağlantılı. Gelişmeyi kaynak metniyle birlikte inceleyin ve ekibinize aktarın.",
-      "evidence": "“Örnek Marka” ifadesi kaynak başlığında yer alıyor. Sürdürülebilirlik, seçtiğiniz izleme konusu.",
+      "evidence": "“Lunavera Teknoloji” ifadesi kaynak başlığında yer alıyor. Sürdürülebilirlik, seçtiğiniz izleme konusu.",
       "profile": ["Sürdürülebilirlik", "Yapay zekâ", "Hibe ve destek"],
       "opportunity": "Sürdürülebilir teknoloji için örnek destek çağrısı",
       "match": "Profilinizle ilişkili sinyal",
       "verify": "Örnek eşleşme. Başvuru koşullarını, tarihleri ve uygunluğu resmi kaynaktan doğrulayın.",
-      "report": "Gündemden karar masasına.",
+      "report": "Gündemden bir sonraki adıma.",
       "reportSections": [
         "Öne çıkan haberler",
         "Kaynaklar ve bulgular",

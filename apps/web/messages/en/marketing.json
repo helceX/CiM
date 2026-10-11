@@ -128,7 +128,7 @@
         },
         "report": {
           "kicker": "Report",
-          "title": "Hand leadership a finished report.",
+          "title": "Share what you find with your team.",
           "body": "Bring findings and sources together in a report. Export PDF, CSV or XLSX, and schedule recurring reports to keep your team on the same page.",
           "alt": "The new report form with weekly summary, monitoring overview and custom templates.",
           "scene": {
@@ -136,15 +136,15 @@
             "inputs": ["News feeds", "Open web", "Selected sources"],
             "outputs": ["Relevant news", "Sourced insight", "Potential opportunity"],
             "center": "Your team, the same story.",
-            "detail": "From news to your next meeting: move forward with shareable reports."
+            "detail": "Bring relevant developments together and share them with your team."
           }
         }
       }
     },
     "why": {
       "eyebrow": "Built on trust",
-      "title": "Intelligence you can defend in the boardroom.",
-      "lead": "Speed is easy. Being right — and showing your work — is the product.",
+      "title": "Understand the story. Take your next step with confidence.",
+      "lead": "See what matters, check the source, and make your own decision.",
       "cards": {
         "grounded": {
           "title": "Grounded AI",
@@ -212,7 +212,7 @@
       "example": "Illustrative product experience · not live data",
       "scroll": "Scroll to direct the story",
       "workspace": "Workspace",
-      "brand": "Example Brand",
+      "brand": "Lunavera Teknoloji",
       "navigation": [
         "Overview",
         "Monitoring",
@@ -244,17 +244,17 @@
       ],
       "sources": ["News / RSS", "Open web", "YouTube", "Mastodon"],
       "articles": [
-        "Example Brand announces a sustainability project",
+        "Lunavera Teknoloji announces a sustainability project",
         "A new industry partnership call opens",
         "Emerging technologies move into focus"
       ],
       "summary": "The new project connects to sustainability goals. Review the source text and share the development with your team.",
-      "evidence": "“Example Brand” appears in the source headline. Sustainability is a selected monitoring topic.",
+      "evidence": "“Lunavera Teknoloji” appears in the source headline. Sustainability is a selected monitoring topic.",
       "profile": ["Sustainability", "Artificial intelligence", "Funding and support"],
       "opportunity": "An illustrative sustainable technology funding call",
       "match": "A signal related to your profile",
       "verify": "Example match. Confirm eligibility, dates and application terms with the official source.",
-      "report": "From the news to the decision table.",
+      "report": "From the news to your next step.",
       "reportSections": [
         "Stories that matter",
         "Sources and findings",

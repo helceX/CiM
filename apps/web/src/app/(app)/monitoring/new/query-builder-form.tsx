@@ -240,7 +240,7 @@ export function QueryBuilderForm({
         <Input
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="e.g. Brand monitoring"
+          placeholder="e.g. Lunavera monitoring"
         />
       </Field>
 
@@ -267,10 +267,10 @@ export function QueryBuilderForm({
         </div>
         <div className="grid gap-3 sm:grid-cols-[2fr_1fr]">
           <Field id="company-name" label="Company name">
-            <Input value={companyName} onChange={(e) => setCompanyName(e.target.value)} placeholder="e.g. İstanbul Ticaret Odası" />
+            <Input value={companyName} onChange={(e) => setCompanyName(e.target.value)} placeholder="e.g. Lunavera Teknoloji" />
           </Field>
           <Field id="company-short" label="Short name">
-            <Input value={companyShort} onChange={(e) => setCompanyShort(e.target.value)} placeholder="e.g. İTO" disabled={!companyName.trim()} />
+            <Input value={companyShort} onChange={(e) => setCompanyShort(e.target.value)} placeholder="e.g. Lunavera" disabled={!companyName.trim()} />
           </Field>
         </div>
       </div>
@@ -313,7 +313,7 @@ export function QueryBuilderForm({
               label="Include"
               values={include}
               onChange={setInclude}
-              placeholder="e.g. your brand, brand + product name"
+              placeholder="e.g. Lunavera, Lunavera + clean energy"
               hint="Matched as whole words together with their endings: “girişimci” also finds girişimciler, girişimcinin, girişimciye; “startup” also finds startups and startup's. Apostrophes, hyphens and dots inside a keyword are tolerated (O'Reilly = O’Reilly). A short ALL-CAPS abbreviation keeps its capitals (“AK” ≠ “ak”) and takes only an apostrophe ending (THY'nin). Add * to open a word completely: banka* also finds bankacılık."
             />
             <ChipInput
@@ -327,7 +327,7 @@ export function QueryBuilderForm({
               label="Exact phrase"
               values={exactPhrases}
               onChange={setExactPhrases}
-              placeholder='e.g. "full company name"'
+              placeholder='e.g. "Lunavera Teknoloji"'
             />
             <AliasGroups
               terms={[...include, ...exactPhrases]}

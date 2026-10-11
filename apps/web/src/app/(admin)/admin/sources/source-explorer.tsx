@@ -112,6 +112,7 @@ export function SourceExplorer({ sources }: { sources: ExplorerSource[] }) {
   const [collection, setCollection] = useState<"all" | "turkey" | "startup" | "other">("all");
   const [shownPer, setShownPer] = useState<Record<string, number>>({});
   const [busy, setBusy] = useState(false);
+  const [confirmCostScope, setConfirmCostScope] = useState(false);
   const [notice, setNotice] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
 
   async function fillCountries() {
@@ -205,14 +206,14 @@ export function SourceExplorer({ sources }: { sources: ExplorerSource[] }) {
   const filteredByTextOrStatus = status !== "all" || needle.length > 0 || collection !== "all";
 
   async function applyCostPolicy() {
-    if (!window.confirm("Keep Türkiye / Turkish and Startup feeds active, and pause other world feeds? Sources and existing mentions stay. Previously paused columnist feeds stay paused. Turkish-language feeds join Türkiye monitoring scope.")) return;
+    setConfirmCostScope(false);
     setBusy(true);
     setNotice(null);
     try {
       const response = await fetch("/api/admin/sources/cost-policy", { method: "POST" });
-      const data = await response.json() as { paused: number; resumed: number; reclassified: number; error?: string };
+      const data = await response.json() as { paused: number; resumed: number; reclassified: number; correctedCountries?: number; error?: string };
       if (!response.ok) throw new Error(data.error ?? "Could not apply policy.");
-      setNotice({ tone: "ok", text: `Paused ${data.paused} other world sources; resumed ${data.resumed} startup feeds; placed ${data.reclassified} Turkish feeds in Türkiye. Nothing deleted.` });
+      setNotice({ tone: "ok", text: `Paused ${data.paused} other world sources; resumed ${data.resumed} startup feeds; placed ${data.reclassified} Turkish feeds in Türkiye. Corrected ${data.correctedCountries ?? 0} world feed country labels. Nothing deleted.` });
       router.refresh();
     } catch (error) {
       setNotice({ tone: "error", text: error instanceof Error ? error.message : "Could not apply policy." });
@@ -289,7 +290,16 @@ export function SourceExplorer({ sources }: { sources: ExplorerSource[] }) {
             </button>
           ))}
         </div>
-        <Button className="mt-3" type="button" disabled={busy} onClick={applyCostPolicy}>Apply Türkiye + Startup crawl scope</Button>
+        <Button className="mt-3" type="button" disabled={busy} onClick={() => setConfirmCostScope(true)}>Apply Türkiye + Startup crawl scope</Button>
+        {confirmCostScope && (
+          <div role="region" aria-label="Confirm crawl scope" className="mt-3 rounded-lg border border-border bg-surface-muted p-3">
+            <p className="text-sm">Keep Türkiye / Turkish and Startup feeds; pause other world feeds. Sources and existing mentions stay. Previously paused columnist feeds stay paused. Turkish feeds join Türkiye monitoring scope.</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Button type="button" disabled={busy} onClick={applyCostPolicy}>Confirm Türkiye + Startup scope</Button>
+              <Button type="button" variant="secondary" onClick={() => setConfirmCostScope(false)}>Cancel</Button>
+            </div>
+          </div>
+        )}
       </section>
       {/* Master switch */}
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-surface-muted/50 p-4">

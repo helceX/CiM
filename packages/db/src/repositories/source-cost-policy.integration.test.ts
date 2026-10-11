@@ -70,4 +70,29 @@ describe("Türkiye + Startup crawl scope", () => {
     const [row] = await db.select().from(sources).where(eq(sources.id, ids[1]!));
     expect(row?.status).toBe("unavailable");
   });
+  it("corrects a translated English funding feed's country without pausing it", async () => {
+    const [fixture] = await db
+      .insert(sources)
+      .values({
+        name: "NIH finansman fırsatları",
+        domain: "grants.nih.gov",
+        url: "https://grants.nih.gov/grants/guide/newsfeed/fundingopps.xml",
+        type: "website",
+        connector: "rss",
+        language: "en",
+        country: "TR",
+        status: "healthy",
+      })
+      .returning({ id: sources.id });
+    ids.push(fixture!.id);
+    const result = await applyTurkeyStartupCrawlPolicy(db, [fixture!.id]);
+    expect(result.correctedCountries).toBe(1);
+    expect(result.paused).toBe(0);
+    const [row] = await db.select().from(sources).where(eq(sources.id, fixture!.id));
+    expect(row?.country).toBe("US");
+    expect(row?.status).toBe("healthy");
+    expect(
+      (await applyTurkeyStartupCrawlPolicy(db, [fixture!.id])).correctedCountries,
+    ).toBe(0);
+  });
 });

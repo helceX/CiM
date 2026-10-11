@@ -2,7 +2,9 @@ import AxeBuilder from "@axe-core/playwright";
 import { test, expect } from "@playwright/test";
 import { registerAndOnboard } from "./helpers";
 
-test("build a visual with a live preview, save it, see it as chart and table, delete it", async ({ page }) => {
+test("build a visual with a live preview, save it, see it as chart and table, delete it", async ({
+  page,
+}) => {
   await registerAndOnboard(page);
   await page.goto("/visuals");
   await expect(page.getByText("No visuals yet.")).toBeVisible();
@@ -23,17 +25,33 @@ test("build a visual with a live preview, save it, see it as chart and table, de
   await expect(page.getByRole("table")).toBeVisible();
 
   const violations = (
-    await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "best-practice"]).analyze()
+    await new AxeBuilder({ page })
+      .withTags(["wcag2a", "wcag2aa", "best-practice"])
+      .analyze()
   ).violations;
   expect(violations).toEqual([]);
 
   // A name is required.
   await page.getByRole("button", { name: "Save visual" }).click();
-  await expect(page.getByRole("alert").filter({ hasText: "Give this visual a name" })).toBeVisible();
+  await expect(
+    page.getByRole("alert").filter({ hasText: "Give this visual a name" }),
+  ).toBeVisible();
 
   await page.getByLabel("Name").fill("Sentiment mix");
+  const created = page.waitForResponse(
+    (response) =>
+      response.url().endsWith("/api/visuals") && response.request().method() === "POST",
+  );
   await page.getByRole("button", { name: "Save visual" }).click();
-  await expect(page).toHaveURL(/\/visuals\/[0-9a-f-]{36}$/);
+  // The trace showed the save succeeds, but the first detail-route compilation
+  // can outlast Playwright's default 5s URL assertion on a cold CI server.
+  const response = await created;
+  expect(response.status()).toBe(200);
+  const { visualId } = (await response.json()) as { visualId: string };
+  expect(visualId).toMatch(/^[0-9a-f-]{36}$/);
+  await expect(page).toHaveURL(new RegExp(`/visuals/${visualId}$`), {
+    timeout: 15_000,
+  });
   await expect(page.getByRole("heading", { name: "Sentiment mix" })).toBeVisible();
 
   await page.goto("/visuals");
@@ -46,10 +64,14 @@ test("build a visual with a live preview, save it, see it as chart and table, de
   await expect(page.getByText("No visuals yet.")).toBeVisible();
 });
 
-test("a preview answer that is not a preview shows an error instead of crashing the builder", async ({ page }) => {
+test("a preview answer that is not a preview shows an error instead of crashing the builder", async ({
+  page,
+}) => {
   await registerAndOnboard(page);
   // A 200 whose body is not the preview (an interrupted response, a proxy page) used to crash the whole page.
-  await page.route("**/api/visuals/preview", (route) => route.fulfill({ status: 200, contentType: "text/plain", body: "" }));
+  await page.route("**/api/visuals/preview", (route) =>
+    route.fulfill({ status: 200, contentType: "text/plain", body: "" }),
+  );
   await page.goto("/visuals/new");
   await expect(page.getByText("Couldn't compute this preview.")).toBeVisible();
   await expect(page.getByLabel("Name")).toBeVisible();
@@ -63,7 +85,9 @@ test("a visual id from nowhere is a 404, not an error page", async ({ page }) =>
   expect(response?.status()).toBe(404);
 });
 
-test("pin a visual to the Dashboard, export it as CSV, edit it, unpin it", async ({ page }) => {
+test("pin a visual to the Dashboard, export it as CSV, edit it, unpin it", async ({
+  page,
+}) => {
   await registerAndOnboard(page);
   await page.goto("/visuals/new");
   await expect(page.getByText("Computing…")).toBeHidden({ timeout: 10_000 });
@@ -78,7 +102,9 @@ test("pin a visual to the Dashboard, export it as CSV, edit it, unpin it", async
 
   await page.goto(detailUrl);
   await page.getByRole("button", { name: "Pin to Dashboard" }).click();
-  await expect(page.getByRole("button", { name: "Unpin from Dashboard" })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Unpin from Dashboard" }),
+  ).toBeVisible();
   await page.goto("/dashboard");
   await expect(page.getByRole("heading", { name: "Your visuals" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Daily volume" })).toBeVisible();
@@ -97,15 +123,22 @@ test("pin a visual to the Dashboard, export it as CSV, edit it, unpin it", async
   const csv = await fs.readFile((await download.path())!, "utf8");
   // Excel-ready: a byte-order mark and a separator hint first, then the header row.
   expect(csv.startsWith("\uFEFFsep=,\r\n")).toBe(true);
-  expect(csv.replace("\uFEFFsep=,\r\n", "").startsWith('"Day","Mentions"\r\n')).toBe(true);
+  expect(csv.replace("\uFEFFsep=,\r\n", "").startsWith('"Day","Mentions"\r\n')).toBe(
+    true,
+  );
 
   // Edit keeps the visual and changes it.
   await page.getByRole("link", { name: "Edit" }).click();
   await expect(page.getByLabel("Name")).toHaveValue("Daily volume");
   await page.getByLabel("Name").fill("Volume by source");
-  await page.getByRole("radiogroup", { name: "Group by" }).getByText("Source", { exact: true }).click();
+  await page
+    .getByRole("radiogroup", { name: "Group by" })
+    .getByText("Source", { exact: true })
+    .click();
   await page.getByRole("button", { name: "Save changes" }).click();
-  await expect(page.getByRole("heading", { name: "Volume by source" })).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByRole("heading", { name: "Volume by source" })).toBeVisible({
+    timeout: 15_000,
+  });
 
   await page.getByRole("button", { name: "Unpin from Dashboard" }).click();
   await expect(page.getByRole("button", { name: "Pin to Dashboard" })).toBeVisible();
@@ -124,30 +157,41 @@ test("a saved visual can be added to a custom report", async ({ page }) => {
   await page.goto("/reports/new");
   await page.getByLabel("Name").fill("Board report");
   await page.getByRole("radio", { name: /Custom/ }).check();
-  await page.getByRole("group", { name: "Your visuals" }).getByLabel("Volume for the board").check();
+  await page
+    .getByRole("group", { name: "Your visuals" })
+    .getByLabel("Volume for the board")
+    .check();
   await expect(page.getByText("1. Visual: Volume for the board")).toBeVisible();
 
   const created = page.waitForResponse(
-    (response) => response.url().endsWith("/api/reports") && response.request().method() === "POST",
+    (response) =>
+      response.url().endsWith("/api/reports") && response.request().method() === "POST",
   );
   await page.getByRole("button", { name: "Generate report" }).click();
   expect((await created).status()).toBe(200);
 });
 
-test("a visual can be limited to a monitoring query and exported as XLSX", async ({ page }) => {
+test("a visual can be limited to a monitoring query and exported as XLSX", async ({
+  page,
+}) => {
   const account = await registerAndOnboard(page);
   await page.goto("/visuals/new");
   await expect(page.getByText("Computing…")).toBeHidden({ timeout: 10_000 });
   await page.getByLabel("Name").fill("Only my query");
   await page.getByText("Narrow it down").click();
-  await page.getByRole("group", { name: "Monitoring queries" }).getByLabel(account.keyword).check();
+  await page
+    .getByRole("group", { name: "Monitoring queries" })
+    .getByLabel(account.keyword)
+    .check();
   await expect(page.getByText("Computing…")).toBeHidden({ timeout: 10_000 });
   await page.getByRole("button", { name: "Save visual" }).click();
   await expect(page).toHaveURL(/\/visuals\/[0-9a-f-]{36}$/);
 
   // The filter survives a save: the edit screen shows it still ticked.
   await page.getByRole("link", { name: "Edit" }).click();
-  await expect(page.getByRole("group", { name: "Monitoring queries" }).getByLabel(account.keyword)).toBeChecked();
+  await expect(
+    page.getByRole("group", { name: "Monitoring queries" }).getByLabel(account.keyword),
+  ).toBeChecked();
   await page.goBack();
 
   const fs = await import("node:fs/promises");
@@ -156,11 +200,15 @@ test("a visual can be limited to a monitoring query and exported as XLSX", async
       page.waitForEvent("download"),
       (async () => {
         // the menu stays open after a download; only open it when it is closed
-        if (!(await page.getByRole("link", { name }).isVisible())) await page.locator("summary", { hasText: "Export" }).click();
+        if (!(await page.getByRole("link", { name }).isVisible()))
+          await page.locator("summary", { hasText: "Export" }).click();
         await page.getByRole("link", { name }).click();
       })(),
     ]);
-    return { name: download.suggestedFilename(), bytes: await fs.readFile((await download.path())!) };
+    return {
+      name: download.suggestedFilename(),
+      bytes: await fs.readFile((await download.path())!),
+    };
   };
 
   const excel = await exportAs(/^Excel/);
@@ -181,7 +229,9 @@ test("a preset question fills in the builder", async ({ page }) => {
   await page.goto("/visuals/new");
   await expect(page.getByText("Computing…")).toBeHidden({ timeout: 10_000 });
   await page.getByRole("button", { name: /Tone of voice/ }).click();
-  await expect(page.getByRole("radio", { name: "Sentiment", exact: true })).toBeChecked();
+  await expect(
+    page.getByRole("radio", { name: "Sentiment", exact: true }),
+  ).toBeChecked();
   await expect(page.getByRole("radio", { name: "Pie" })).toBeChecked();
   await expect(page.getByLabel("Name")).toHaveValue("Tone of voice");
 });

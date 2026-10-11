@@ -4,9 +4,8 @@ import { getRedis } from "./redis";
 /**
  * Fixed-window rate limit backed by Redis (brief §76). Applied to
  * unauthenticated, abuse-prone endpoints: register, login, password
- * reset request. Fails open only on Redis being unreachable in dev — in
- * production a broken rate limiter should not be the reason auth is
- * fully down, but the failure is logged loudly so it's noticed.
+ * reset request. Production fails closed when Redis is unreachable;
+ * development can continue without the limiter.
  */
 export async function checkRateLimit(
   key: string,
@@ -15,14 +14,27 @@ export async function checkRateLimit(
   try {
     const redis = getRedis();
     const redisKey = `ratelimit:${key}`;
-    const count = await redis.incr(redisKey);
-    if (count === 1) {
-      await redis.expire(redisKey, options.windowSeconds);
-    }
-    return { allowed: count <= options.limit, remaining: Math.max(0, options.limit - count) };
+    // Count + expiry are atomic. Also repair legacy counters whose expiry
+    // was lost between INCR and EXPIRE during a connection failure.
+    const count = Number(
+      await redis.eval(
+        "local n = redis.call('INCR', KEYS[1]); if n == 1 or redis.call('TTL', KEYS[1]) < 0 then redis.call('EXPIRE', KEYS[1], ARGV[1]); end; return n",
+        1,
+        redisKey,
+        options.windowSeconds,
+      ),
+    );
+    return {
+      allowed: count <= options.limit,
+      remaining: Math.max(0, options.limit - count),
+    };
   } catch (error) {
-    console.error("Rate limiter unavailable, failing open:", error);
-    return { allowed: true, remaining: options.limit };
+    const allowed = process.env.NODE_ENV !== "production";
+    console.error(
+      `Rate limiter unavailable, failing ${allowed ? "open in development" : "closed"}:`,
+      error,
+    );
+    return { allowed, remaining: allowed ? options.limit : 0 };
   }
 }
 

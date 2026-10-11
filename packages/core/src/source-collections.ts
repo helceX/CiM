@@ -1,6 +1,8 @@
 import { inferCountryFromSource } from "./country-from-host";
 import { TURKEY_SOURCE_CATALOG } from "./source-catalog";
 import { WORLD_SOURCE_CATALOG } from "./world-catalog";
+import { STARTUP_PAGE_ROWS } from "./startup-catalog.generated";
+import { hostMatchesDomain } from "./restricted-publishers";
 
 export type CrawlCollection = "turkey" | "startup";
 export type CollectionSource = {
@@ -26,6 +28,21 @@ const worldFeeds = new Map(WORLD_SOURCE_CATALOG.map((s) => [identity(s.url), s])
 const startupFeeds = new Set(
   WORLD_SOURCE_CATALOG.filter((s) => s.group === "startup").map((s) => identity(s.url)),
 );
+// Page-directory imports store the discovered feed URL, not the directory page.
+// Match both the curated name and its publisher; never trust a name alone.
+function isDiscoveredStartupFeed(source: CollectionSource): boolean {
+  if (!source.url) return false;
+  let feedHost: string;
+  try {
+    feedHost = new URL(source.url).hostname;
+  } catch {
+    return false;
+  }
+  return STARTUP_PAGE_ROWS.some(([name, pageUrl]) => {
+    const host = new URL(pageUrl).hostname.replace(/^www\./i, "");
+    return source.name === name && hostMatchesDomain(feedHost, host);
+  });
+}
 const columnistFeeds = new Set(
   TURKEY_SOURCE_CATALOG.filter((s) => s.group === "columns").map((s) =>
     identity(s.url),
@@ -74,6 +91,7 @@ export function sourceCollections(source: CollectionSource): CrawlCollection[] {
     result.push("turkey");
   if (
     startupFeeds.has(url) ||
+    isDiscoveredStartupFeed(source) ||
     STARTUP_CUE.test(
       `${source.name.replace(/\bgrant\s+(?:county|thornton)\b/gi, "")} ${decoded}`,
     ) ||

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { checkRateLimit, clientIpFrom } from "./rate-limit";
+import { getRedis } from "./redis";
 
 /**
  * docs/testing/TEST_STRATEGY.md security suite — "rate limiting on
@@ -8,6 +9,21 @@ import { checkRateLimit, clientIpFrom } from "./rate-limit";
  * kind of logic that looks right and races in practice.
  */
 describe("checkRateLimit (integration)", () => {
+  it("repairs a counter left without expiry by an interrupted legacy request", async () => {
+    const key = `test-${crypto.randomUUID()}`;
+    const redisKey = `ratelimit:${key}`;
+    const redis = getRedis();
+    await redis.set(redisKey, "1");
+    try {
+      expect(await checkRateLimit(key, { limit: 3, windowSeconds: 30 })).toEqual({
+        allowed: true,
+        remaining: 1,
+      });
+      expect(await redis.ttl(redisKey)).toBeGreaterThan(0);
+    } finally {
+      await redis.del(redisKey);
+    }
+  });
   it("allows requests under the limit and reports remaining budget accurately", async () => {
     const key = `test-${crypto.randomUUID()}`;
     const first = await checkRateLimit(key, { limit: 3, windowSeconds: 30 });
@@ -19,7 +35,9 @@ describe("checkRateLimit (integration)", () => {
   it("blocks once the limit is exceeded within the window", async () => {
     const key = `test-${crypto.randomUUID()}`;
     for (let i = 0; i < 3; i += 1) {
-      expect((await checkRateLimit(key, { limit: 3, windowSeconds: 30 })).allowed).toBe(true);
+      expect((await checkRateLimit(key, { limit: 3, windowSeconds: 30 })).allowed).toBe(
+        true,
+      );
     }
     const blocked = await checkRateLimit(key, { limit: 3, windowSeconds: 30 });
     expect(blocked).toEqual({ allowed: false, remaining: 0 });
@@ -28,19 +46,27 @@ describe("checkRateLimit (integration)", () => {
   it("resets after the window expires, never staying locked out permanently", async () => {
     const key = `test-${crypto.randomUUID()}`;
     await checkRateLimit(key, { limit: 1, windowSeconds: 1 });
-    expect((await checkRateLimit(key, { limit: 1, windowSeconds: 1 })).allowed).toBe(false);
+    expect((await checkRateLimit(key, { limit: 1, windowSeconds: 1 })).allowed).toBe(
+      false,
+    );
 
     await new Promise((resolve) => setTimeout(resolve, 1100));
 
-    expect((await checkRateLimit(key, { limit: 1, windowSeconds: 1 })).allowed).toBe(true);
+    expect((await checkRateLimit(key, { limit: 1, windowSeconds: 1 })).allowed).toBe(
+      true,
+    );
   });
 
   it("tracks independent keys independently — one caller's abuse never blocks another's", async () => {
     const keyA = `test-${crypto.randomUUID()}`;
     const keyB = `test-${crypto.randomUUID()}`;
     await checkRateLimit(keyA, { limit: 1, windowSeconds: 30 });
-    expect((await checkRateLimit(keyA, { limit: 1, windowSeconds: 30 })).allowed).toBe(false);
-    expect((await checkRateLimit(keyB, { limit: 1, windowSeconds: 30 })).allowed).toBe(true);
+    expect((await checkRateLimit(keyA, { limit: 1, windowSeconds: 30 })).allowed).toBe(
+      false,
+    );
+    expect((await checkRateLimit(keyB, { limit: 1, windowSeconds: 30 })).allowed).toBe(
+      true,
+    );
   });
 });
 

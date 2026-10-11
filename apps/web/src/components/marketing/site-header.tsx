@@ -14,7 +14,10 @@ export async function MarketingHeader() {
   const t = await getTranslations("nav");
   return (
     <HeaderBar
-      links={LINKS.map((link) => ({ href: link.href, label: t(link.key) }))}
+      links={[
+        ...LINKS.map((link) => ({ href: link.href, label: t(link.key) })),
+        { href: "/blog", label: "Blog" },
+      ]}
       signIn={t("signIn")}
       getStarted={t("getStarted")}
       homeLabel={t("home")}

@@ -20,6 +20,7 @@ export async function MarketingFooter() {
       links: [
         { href: "/security", label: nav("security") },
         { href: "/resources", label: nav("resources") },
+        { href: "/blog", label: "Blog" },
         { href: "/contact", label: t("contact") },
         { href: "/terms", label: legal("footerTerms") },
         { href: "/privacy", label: legal("footerPrivacy") },
@@ -49,7 +50,10 @@ export async function MarketingFooter() {
             <ul className="mt-4 flex flex-col gap-2.5">
               {column.links.map((link) => (
                 <li key={link.href}>
-                  <Link href={link.href} className="text-sm text-[var(--mk-muted)] transition-colors hover:text-white">
+                  <Link
+                    href={link.href}
+                    className="text-sm text-[var(--mk-muted)] transition-colors hover:text-white"
+                  >
                     {link.label}
                   </Link>
                 </li>

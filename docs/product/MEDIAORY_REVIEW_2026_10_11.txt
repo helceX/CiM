@@ -1,0 +1,62 @@
+MEDIAORY — SİSTEM DEĞERLENDİRMESİ VE GELİŞTİRME ÖNCELİKLERİ
+11 Ekim 2026
+
+KAPSAM VE KANIT
+Bu değerlendirme güncel ana daldaki kod, ürün belgeleri ve açık kaynak projelerin kendi depoları üzerinden yapıldı. Bu turda üretim veritabanına erişilmedi; müşteri sayısı, gelir, günlük doğru eşleşme oranı ve güncel CPU profili ölçülmedi. Kodda bir özelliğin bulunması, üretimde yapılandırıldığı veya müşterilerce kullanıldığı anlamına gelmez. Güvenlik garantisi veya tam penetrasyon testi değildir.
+
+GENEL YORUM
+Mediaory'nin ürün temeli geniş: kuruluş/proje ayrımı, yetkiler, takip sorguları, haber eşleşmeleri, bildirimler, raporlar, kaynak yönetimi, fırsat radarı ve sosyal akışlar var. Bu aşamada en büyük kazanım daha fazla menü açmak değil; ilgili haberin zamanında ve doğru eşleşmesi, neden gösterildiğinin açıklanması ve müşterinin bununla bir karar verebilmesidir.
+
+En güçlü konumlandırma adayı Türkiye odaklı medya takibi ile girişim ve destek fırsatlarının aynı çalışma alanında birleşmesidir. Bu bir pazar başarısı kanıtı değil, mevcut üründen çıkan stratejik öneridir. Her sosyal ağı eksiksiz kapsayan genel bir rakip olmak; veri erişimi, bakım ve bütçe açısından mevcut ücretsiz hedefle uyuşmuyor.
+
+KODDA DOĞRULANAN GÜÇLÜ TARAFLAR
+- Haber toplama ile web uygulaması ayrı çalışan süreçlerde tutulmuş. Kuyruk, tekrar deneme ve kaynak duraklatma mekanizmaları var.
+- Koşullu RSS istekleri ve değişmeyen içerik belleği mevcut. Kaynak sayısı arttıkça her turda aynı haberleri tekrar işlememek önemli.
+- Kuruluş kapsamlı sosyal analiz sorguları var; alınamayan etkileşim ve erişim sayılarının uydurulmaması doğru yaklaşım.
+- Gerçek API ile örnek/demo veri sağlayıcıları ayrı tanımlanmış.
+- Platform izinleri ve ücretsiz RSS sınırları ürün belgelerinde açıkça belirtilmiş.
+- Yeni blog yazıları statik içerik; tek başına PostgreSQL'de sürekli RSS taraması başlatmıyor.
+
+GERÇEK SINIRLAR VE GELİŞTİRİLECEK NOKTALAR
+1. Ücretsiz sosyal akışlar çoğunlukla seçilen profil, kanal ve etiketin yeni içerikleridir. Bütün platformda marka araması veya tam geçmiş arşivi değildir.
+2. Bağlı hesap olayları social_connections/social events akışından; genel sosyal panel ise sources.type='social' olan haber eşleşmelerinden besleniyor. Tek bir müşteri görünümünde bunların kapsamını açıkça ayırmak ve gerektiğinde birleştirmek gerekir. Bir kanal bağlantısının tüm sosyal paneli dolduracağını varsayamayız.
+3. Sosyal platform dağılımı yazar profili olmayan içerikleri 'unknown' altında sayıyor. RSS içeriklerinde bu beklenebilir. Kaynak platformunu açık metadata olarak taşımak, gerçek veriye dayanarak dağılımı iyileştirmek için sonraki iş olmalı.
+4. Fırsat radarı mevcut eşleşen haberler üzerinden aday gösteriyor. Resmî başvuru kaynağını bağımsız doğrulamıyor; programın açık veya müşterinin uygun olduğuna garanti vermiyor. Son başvuru tarihi, resmî bağlantı, doğrulama tarihi ve uygunluk gerekçesi ayrı alanlar olmalı.
+5. AI sağlayıcı seçiminde 'openai' şu anda null dönüyor. Konfigürasyonda adının bulunması çalışır entegrasyon demek değil. 'mock' örnek yöntem; gerçek model olarak sunulmamalı. Üretim ayarı bu turda okunmadığından mevcut canlı AI davranışı hakkında hüküm verilmiyor.
+6. Ana README'nin worker açıklaması hâlâ yalnızca e-posta işi dönemini anlatıyor. Kurulum belgeleri gerçek özelliklerden geride. Müşteriye veya geliştiriciye anlatılan özellikler kod/config durumuyla eşleştirilmeli.
+7. Önceki maliyet belgesinde PostgreSQL benzer haber gruplama işlemleri CPU nedeni olarak ölçülmüş ve optimizasyonlar uygulanmış. Bunun bugünkü ana tüketim sebebi olduğunu yeni ölçüm olmadan söyleyemeyiz. Güncel servis CPU, sorgu süreleri ve yeni içerik başına maliyet yeniden ölçülmeli.
+8. Daha sık tarama her zaman daha iyi takip değildir. Kaynak bazında son başarılı okuma, son yeni içerik, gecikme ve hata oranı görünür olmalı. Güvenilirliği ölçmeden kaynak sayısını büyütmek gider ve gürültü yaratır.
+
+AÇIK KAYNAK İNCELEMESİ
+RSS-Bridge — https://github.com/RSS-Bridge/rss-bridge
+Unlicense. 11 Ekim kontrolünde arşivlenmemiş; son push 10 Ekim 2026. Seçilen Telegram bileşeni açık kanal önizlemelerini akışa dönüştürüyor. Küçük bir kaynak kopyası ve lisans sabit commit ile vendor/rss-bridge altında korundu. PHP servisinin tamamı kurulmadı. Mediaory yalnızca mevcut yetkili bridge adresine doğru akış bağlantısı oluşturuyor.
+
+RSSHub — https://github.com/DIYgod/RSSHub
+Güncel lisans AGPL-3.0. Geniş kaynak rotaları faydalı referans. Bazı sosyal rotalar hesap, çerez veya platform API'si istiyor; açık kaynak olması bunları bedelsiz yapmıyor. Bu turda kod kopyalanmadı ve yeni servis kurulmadı. Kaynak keşfi ve rota kataloğu fikirleri alınabilir; lisans yükümlülükleri değerlendirilmeden kod gömülmemeli.
+
+Media Cloud — https://www.mediacloud.org/ ve https://github.com/mediacloud/web-search
+Kaynak dizini, koleksiyonlarla sınırlanan haber araştırması ve karşılaştırmalı analiz için doğrudan ilgili örnek. Güncel web-search deposu Apache-2.0; 11 Ekim kontrolünde arşivlenmemiş ve aynı gün push almış. Eski https://github.com/mediacloud/backend deposu 14 Aralık 2023'te arşivlenmiş; eski backend'i hazır yeni altyapı sanıp kurmak doğru olmaz. Kamu hizmetindeki verilerin kullanım koşulları kod lisansından ayrıca incelenmeli. Bu turda veri veya tam backend kopyalanmadı.
+
+FreshRSS — https://github.com/FreshRSS/FreshRSS
+AGPL-3.0. Açık kaynak akış okuyucusu; etiketleme, paylaşım ve uygun yayıncılardan WebSub ile değişiklik alma fikirleri yararlı. Kurumsal medya ölçümünün doğrudan karşılığı değil. Mevcut Mediaory kuyruğunun yanına ikinci bir okuyucu kurmak şimdi gerekli değil. WebSub gelecekte uygun kaynaklarda gereksiz taramayı azaltabilir; callback doğrulaması ve tekrar saldırısı koruması olmadan uygulanmamalı.
+
+BU TURDA HAZIRLANAN GELİŞTİRMELER
+- Açık Telegram kanalı için mevcut, operatörün sağladığı RSS-Bridge bağlantısını oluşturma seçeneği.
+- Bluesky için profil bağlantısını doğrudan kabul etme.
+- Discourse açık kategorisini sayısal ID ile seçme.
+- Alt klasörde kurulu RSSHub adreslerinin klasörünü koruma; eski işleyiş bu kısmı düşürüyordu.
+- Köprü adreslerinde HTTP, kullanıcı bilgisi, port, query/fragment; rotalarda traversal ve yön değişimi girdilerini reddetme.
+- Seçilmiş RSS-Bridge kaynak dosyası, tam lisans, sabit commit ve kullanım açıklaması.
+- vendor dizininin üretim Docker bağlamından çıkarılması.
+Hiçbir yeni kaynak etkinleştirilmedi, tarama sıklığı artırılmadı ve ücretli API açılmadı. Telegram özelliğinin çalışması için mevcut uygun bridge gerekiyor. Bu çalışma kendi başına çalışan Telegram toplayıcısı değildir. Akışlar eklendiğinde mevcut sunucuda CPU/RAM tüketebilir.
+
+ÖNERİLEN SONRAKİ İŞLER
+Öncelik 1: Kaynak güvenilirliği ve maliyet görünümü. Başarılı okuma, yeni haber sayısı, gecikme, hatalar ve servis maliyetini izlemek. Ölçüt: ilgili yeni haber başına kaynak kullanımı ve başarısız tarama oranı.
+Öncelik 2: Tek sosyal gelen kutusu. RSS eşleşmesi ile bağlı hesap olaylarını kapsam etiketiyle göstermek; yinelenen olayları ayırmak. Ölçüt: müşteri tarafından yararlı işaretlenen olay oranı, atlanan/tekrarlanan olay sayısı.
+Öncelik 3: Fırsat doğrulama. Resmî başvuru linki, son tarih, açık/kapalı/bilinmiyor durumu ve insan tarafından doğrulama. Ölçüt: geçerli fırsat oranı ve kapanmış fırsatların gösterilme oranı.
+Öncelik 4: Kurulum ve veri kapsamını açık gösterme. Gerçek ve demo AI, hazır olmayan bağlantılar ve her kaynağın sınırlı kapsamını anlaşılır anlatmak.
+Öncelik 5: Küçük müşteri pilotu. 5–10 kullanıcıyla zaman tasarrufu, yanlış eşleşme, takip edilen fırsattan alınan aksiyon ve yeniden kullanım ölçümü. Bunlar önerilen pilot hedefleri; mevcut kullanıcı sayısı değildir.
+
+GELECEK DEĞERLENDİRMESİ
+Olumlu senaryo: Türkiye medya/girişim ekosisteminde az gürültü, açıklanabilir eşleşme ve doğrulanmış fırsatlar müşterinin düzenli kullandığı bir çalışma aracına dönüşür. Riskli senaryo: Çok sayıda özellik ve kaynak, sınırlı veri kapsamı ve yüksek toplama maliyetiyle birlikte müşterinin günlük kararına katkı vermez. Şu an satış, gelir, kullanım sürekliliği ve kalite ölçümü olmadan ticari başarı tahmini yapılamaz.
+Önerim önce doğruluk, güvenilirlik ve ölçülebilir müşteri faydası; sonra platform kapsamı ve ücretli model entegrasyonları. Startup kredileri geçici finansman sağlar, kalıcı düşük birim maliyetin yerine geçmez.

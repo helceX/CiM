@@ -124,6 +124,30 @@ export const SOCIAL_FEED_PLATFORMS: SocialFeedPlatform[] = [
         needsInstance: true,
         instanceLabel: "Public forum server",
       },
+      {
+        key: "category",
+        label: "Category",
+        valueLabel: "Category ID",
+        placeholder: "7",
+        needsInstance: true,
+        instanceLabel: "Public forum server",
+      },
+    ],
+  },
+  {
+    key: "rssbridge",
+    label: "Telegram via your RSS-Bridge",
+    sourceType: "social",
+    note: "Public channels only, using an RSS-Bridge you already operate and are authorised to use. No bridge server, login cookies or paid API is started by Mediaory.",
+    kinds: [
+      {
+        key: "telegram",
+        label: "Public Telegram channel",
+        valueLabel: "Channel username or public address",
+        placeholder: "https://t.me/s/rssbridge",
+        needsInstance: true,
+        instanceLabel: "Your RSS-Bridge address",
+      },
     ],
   },
   {
@@ -192,6 +216,29 @@ function cleanHost(input: string | undefined): string | null {
 
 const fail = (error: string): SocialFeedResult => ({ ok: false, error });
 
+/** Preserve subdirectory installs; never embed credentials or accept an arbitrary scheme. */
+function bridgeBase(input: string | undefined): URL | null {
+  if (!input) return null;
+  try {
+    const value = input.trim();
+    const url = new URL(value.includes("://") ? value : `https://${value}`);
+    if (
+      url.protocol !== "https:" ||
+      !HOST.test(url.hostname) ||
+      url.username ||
+      url.password ||
+      url.port ||
+      url.search ||
+      url.hash ||
+      /[\\\s]/.test(value)
+    )
+      return null;
+    return url;
+  } catch {
+    return null;
+  }
+}
+
 export function buildSocialFeed(request: SocialFeedRequest): SocialFeedResult {
   const platform = SOCIAL_FEED_PLATFORMS.find(
     (entry) => entry.key === request.platform,
@@ -208,6 +255,39 @@ export function buildSocialFeed(request: SocialFeedRequest): SocialFeedResult {
   });
 
   switch (`${platform.key}:${kind.key}`) {
+    case "rssbridge:telegram": {
+      const base = bridgeBase(request.instance);
+      if (!base)
+        return fail(
+          "Use your HTTPS RSS-Bridge address without credentials, a query or a fragment.",
+        );
+      const channel = raw
+        .replace(/^https:\/\/(?:t\.me|telegram\.me)\/(?:s\/)?/i, "")
+        .replace(/^@/, "")
+        .replace(/\/$/, "");
+      if (!/^[A-Za-z][A-Za-z0-9_]{4,31}$/.test(channel))
+        return fail(
+          "Use a public Telegram channel username, not an invite link or a private group.",
+        );
+      // Parameters match the pinned upstream TelegramBridge; no arbitrary bridge selection.
+      base.search = new URLSearchParams({
+        action: "display",
+        bridge: "Telegram",
+        username: channel,
+        format: "Atom",
+      }).toString();
+      return make(base.toString(), `Telegram · @${channel}`);
+    }
+    case "discourse:category": {
+      const host = cleanHost(request.instance);
+      if (!host) return fail("Enter the public Discourse forum server.");
+      if (!/^[1-9]\d{0,8}$/.test(raw))
+        return fail("Use the numeric public category ID.");
+      return make(
+        `https://${host}/c/-/${raw}.rss`,
+        `Discourse · category ${raw} (${host})`,
+      );
+    }
     case "github:releases": {
       const match = raw.match(
         /^(?:https:\/\/github\.com\/)?([A-Za-z0-9](?:[A-Za-z0-9-]{0,38}))\/([A-Za-z0-9_.-]{1,100})(?:\/releases(?:\.atom)?)?\/?$/,
@@ -298,22 +378,31 @@ export function buildSocialFeed(request: SocialFeedRequest): SocialFeedResult {
       return make(`https://${host}/@${name}.rss`, `Mastodon · @${name}@${host}`);
     }
     case "bluesky:profile": {
-      const handle = raw.replace(/^@/, "").toLowerCase();
+      const handle = raw
+        .replace(/^https:\/\/bsky\.app\/profile\//i, "")
+        .replace(/\/$/, "")
+        .replace(/^@/, "")
+        .toLowerCase();
       if (!HOST.test(handle))
         return fail("A Bluesky handle looks like name.bsky.social.");
       return make(`https://bsky.app/profile/${handle}/rss`, `Bluesky · @${handle}`);
     }
     case "rsshub:route": {
-      const host = cleanHost(request.instance);
-      if (!host)
+      const base = bridgeBase(request.instance);
+      if (!base)
         return fail(
           "Enter the address of the RSSHub (or bridge) you run, e.g. rsshub.example.com.",
         );
-      if (!raw.startsWith("/") || raw.includes("..") || /\s/.test(raw))
+      if (
+        !raw.startsWith("/") ||
+        raw.startsWith("//") ||
+        /\.\.|[\\\s#]|%2e|%2f|%5c|%25/i.test(raw)
+      )
         return fail(
           "A route starts with / and has no spaces, e.g. /twitter/keyword/mediaory.",
         );
-      return make(`https://${host}${raw}`, `Bridge · ${raw}`);
+      const prefix = base.pathname.replace(/\/$/, "");
+      return make(`${base.origin}${prefix}${raw}`, `Bridge · ${raw}`);
     }
     default:
       return fail("Choose a platform and what to follow.");

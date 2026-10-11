@@ -494,7 +494,13 @@ export function AddSocialFeedForm() {
             value={instance}
             onChange={(e) => setInstance(e.target.value)}
             placeholder={
-              platform.key === "rsshub" ? "rsshub.example.com" : "mastodon.social"
+              platform.key === "rsshub"
+                ? "rsshub.example.com"
+                : platform.key === "rssbridge"
+                  ? "https://feeds.example.com/bridge/"
+                  : platform.key === "discourse"
+                    ? "meta.discourse.org"
+                    : "mastodon.social"
             }
             required
           />

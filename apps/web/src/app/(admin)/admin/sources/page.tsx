@@ -170,7 +170,7 @@ export default async function AdminSourcesPage() {
           Social feeds
         </h2>
         <p className="mt-1 max-w-2xl text-xs text-muted-foreground">
-          Follow public feeds from YouTube, Mastodon, Bluesky, GitHub releases and Discourse forums. Mediaory never
+          Follow public feeds from YouTube, Mastodon, Bluesky, GitHub releases and Discourse forums, or public Telegram channels through your existing RSS-Bridge. Mediaory never
           scrapes a network or logs in as someone. Reddit commercial use requires approval. Instagram, X, LinkedIn
           and Facebook have no free public RSS connector here; see their access requirements below. An open-source
           bridge does not grant platform permissions. Customers&apos; keywords are matched against permitted feeds

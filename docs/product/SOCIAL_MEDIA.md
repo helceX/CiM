@@ -4,6 +4,8 @@ Reviewed 10 October 2026. A feed being reachable and an open-source scraper exis
 
 ## Available in Admin → Sources → Social feeds
 
+11 October extension: Discourse public categories can be selected by numeric ID; Bluesky accepts public profile links as well as handles. Telegram public channels can be configured through an existing operator-owned HTTPS RSS-Bridge. The small upstream Telegram source and Unlicense are pinned under `vendor/rss-bridge/` as an excluded reference snapshot, not installed PHP. This is integration support, not a newly running Telegram collector. Bridge base paths are preserved; credentials, insecure schemes and route traversal are refused. Existing feed testing and source activation remain mandatory.
+
 | Platform        | Scope                                               | Limits                                                                                                                                                                 |
 | --------------- | --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | YouTube         | Channel ID / playlist RSS                           | Recent videos only, not all comments, transcripts, historical or global keyword search. No API key needed for these feeds.                                             |

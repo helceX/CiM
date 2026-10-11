@@ -34,6 +34,14 @@ test("public blog can be explored and has crawlable metadata", async ({
   const feed = await request.get("/blog/feed.xml");
   expect(feed.headers()["content-type"]).toContain("application/rss+xml");
   expect((await feed.text()).match(/<item>/g)).toHaveLength(17);
+  const opportunityEntry = await request.get("/opportunities", { maxRedirects: 0 });
+  expect(opportunityEntry.status()).toBe(307);
+  const loginTarget = new URL(
+    opportunityEntry.headers()["location"]!,
+    "http://localhost:3000",
+  );
+  expect(loginTarget.pathname).toBe("/login");
+  expect(loginTarget.searchParams.get("next")).toBe("/opportunities");
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/blog");
   expect(

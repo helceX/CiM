@@ -20,6 +20,7 @@ const PROTECTED_PREFIXES = [
   "/alerts",
   "/analytics",
   "/reports",
+  "/opportunities",
   "/settings",
   "/onboarding",
   "/admin",
@@ -54,7 +55,10 @@ export function proxy(request: NextRequest) {
 
   if (pathname.startsWith("/api/") && MUTATING_METHODS.has(request.method)) {
     if (!isSameOriginRequest(request)) {
-      return NextResponse.json({ error: "Cross-origin request rejected" }, { status: 403 });
+      return NextResponse.json(
+        { error: "Cross-origin request rejected" },
+        { status: 403 },
+      );
     }
   }
 
@@ -78,6 +82,7 @@ export const config = {
     "/alerts/:path*",
     "/analytics/:path*",
     "/reports/:path*",
+    "/opportunities/:path*",
     "/settings/:path*",
     "/onboarding/:path*",
     "/admin/:path*",

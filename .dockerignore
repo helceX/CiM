@@ -21,4 +21,5 @@ next-env.d.ts
 .git/
 e2e/
 docs/
+vendor/
 *.md

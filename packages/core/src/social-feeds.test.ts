@@ -188,4 +188,151 @@ describe("buildSocialFeed", () => {
       );
     }
   });
+
+  it("uses the upstream Telegram bridge contract and preserves subdirectory installations", () => {
+    const request = {
+      platform: "rssbridge",
+      kind: "telegram",
+      instance: "https://feeds.example.com/bridge/",
+    };
+    for (const value of [
+      "rssbridge",
+      "@rssbridge",
+      "https://t.me/s/rssbridge",
+      "https://telegram.me/rssbridge/",
+    ]) {
+      const result = buildSocialFeed({ ...request, value });
+      expect(result.ok).toBe(true);
+      const built = new URL(url(result));
+      expect(built.origin).toBe("https://feeds.example.com");
+      expect(built.pathname).toBe("/bridge/");
+      expect(Object.fromEntries(built.searchParams)).toEqual({
+        action: "display",
+        bridge: "Telegram",
+        username: "rssbridge",
+        format: "Atom",
+      });
+    }
+    for (const value of [
+      "https://t.me/+invite",
+      "https://t.me/c/123/4",
+      "https://evil.example/rssbridge",
+      "rssbridge?bridge=Other",
+      "../secret",
+      "ab",
+    ]) {
+      expect(buildSocialFeed({ ...request, value }).ok).toBe(false);
+    }
+  });
+
+  it("refuses credential-bearing, private and non-HTTPS bridge addresses", () => {
+    for (const instance of [
+      "http://feeds.example.com",
+      "https://user:secret@feeds.example.com",
+      "https://localhost",
+      "https://127.0.0.1",
+      "https://feeds.example.com?token=secret",
+      "https://feeds.example.com#secret",
+      "https://feeds.example.com:8080",
+      "https://feeds.example.com\\evil",
+    ]) {
+      expect(
+        buildSocialFeed({
+          platform: "rssbridge",
+          kind: "telegram",
+          value: "rssbridge",
+          instance,
+        }).ok,
+      ).toBe(false);
+      expect(
+        buildSocialFeed({
+          platform: "rsshub",
+          kind: "route",
+          value: "/test/path",
+          instance,
+        }).ok,
+      ).toBe(false);
+    }
+  });
+
+  it("keeps RSSHub installs under their path and rejects encoded route traversal", () => {
+    expect(
+      url(
+        buildSocialFeed({
+          platform: "rsshub",
+          kind: "route",
+          value: "/mastodon/test",
+          instance: "feeds.example.com/rsshub/",
+        }),
+      ),
+    ).toBe("https://feeds.example.com/rsshub/mastodon/test");
+    for (const value of [
+      "//evil.example/feed",
+      "/%2e%2e/private",
+      "/%252e%252e/private",
+      "/%2fprivate",
+      "/x\\private",
+      "/feed#secret",
+    ]) {
+      expect(
+        buildSocialFeed({
+          platform: "rsshub",
+          kind: "route",
+          value,
+          instance: "feeds.example.com",
+        }).ok,
+      ).toBe(false);
+    }
+  });
+
+  it("accepts public Bluesky profile addresses but rejects unrelated hosts and post URLs", () => {
+    expect(
+      url(
+        buildSocialFeed({
+          platform: "bluesky",
+          kind: "profile",
+          value: "https://bsky.app/profile/name.bsky.social/",
+        }),
+      ),
+    ).toBe("https://bsky.app/profile/name.bsky.social/rss");
+    for (const value of [
+      "https://evil.example/name.bsky.social",
+      "https://bsky.app/profile/name.bsky.social/post/123",
+      "name.bsky.social?token=secret",
+    ]) {
+      expect(buildSocialFeed({ platform: "bluesky", kind: "profile", value }).ok).toBe(
+        false,
+      );
+    }
+  });
+
+  it("builds public forum category feeds without accepting path or query injection", () => {
+    expect(
+      url(
+        buildSocialFeed({
+          platform: "discourse",
+          kind: "category",
+          value: "7",
+          instance: "meta.discourse.org",
+        }),
+      ),
+    ).toBe("https://meta.discourse.org/c/-/7.rss");
+    for (const value of [
+      "0",
+      "-1",
+      "7/private",
+      "7?token=secret",
+      "7.1",
+      "1000000000",
+    ]) {
+      expect(
+        buildSocialFeed({
+          platform: "discourse",
+          kind: "category",
+          value,
+          instance: "meta.discourse.org",
+        }).ok,
+      ).toBe(false);
+    }
+  });
 });

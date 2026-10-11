@@ -18,8 +18,8 @@ system design.
 ```
 apps/
   web/       Next.js app — public site, authenticated app, API routes
-  worker/    BullMQ job consumers (email delivery today; ingestion/AI/
-             report jobs land here as those pipelines ship)
+  worker/    BullMQ consumers for ingestion, alerts, email, configured AI,
+             reports, social account sync and maintenance jobs
 packages/
   ui/        Design-system components (tokens + Radix-based primitives)
   db/        Drizzle schema, migrations, repositories, seed data
@@ -65,7 +65,7 @@ packages/
 6. Run the app and worker:
    ```
    pnpm dev          # apps/web on http://localhost:3000
-   pnpm dev:worker   # apps/worker (email delivery jobs)
+   pnpm dev:worker   # apps/worker (ingestion and background jobs)
    ```
 
 ## Testing

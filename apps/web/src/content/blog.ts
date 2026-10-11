@@ -1,3 +1,5 @@
+import expansion from "./blog-expansion.json" with { type: "json" };
+
 export type BlogSection = { title: string; paragraphs: string[]; steps?: string[] };
 export type BlogPost = {
   slug: string;
@@ -1065,7 +1067,7 @@ export const blogPosts: BlogPost[] = [
           "Google, kendi AI arama özellikleri için özel bir AI metin dosyası gerekmediğini belirtir. Diğer sistemlerin davranışı farklı olabilir; görünürlük garanti değildir.",
       },
       {
-        question: "On beş yazı yayınlamak trafik garantisi verir mi?",
+        question: "Çok sayıda yazı yayınlamak trafik garantisi verir mi?",
         answer:
           "Hayır. İçeriğin yararı, teknik erişim, rekabet ve kullanıcı ihtiyacı birlikte etkilidir. Sonuçlar ölçülerek değerlendirilmelidir.",
       },
@@ -1078,7 +1080,34 @@ export const blogPosts: BlogPost[] = [
       body: "Mediaory ile sektör ve marka gündemini izleyerek hedef kitlenizin sorularına bağlanan bir içerik planı oluşturun.",
     },
   },
+  ...expansion.posts,
 ];
+
+export const BLOG_PAGE_SIZE = 18;
+export function blogPageHref(category: string | undefined, page: number) {
+  const query = new URLSearchParams();
+  if (category) query.set("kategori", category);
+  if (page > 1) query.set("sayfa", String(page));
+  return `/blog${query.size ? `?${query}` : ""}`;
+}
+export function getBlogListing(category?: string, requestedPage?: string) {
+  const selectedCategory = blogCategories.includes(category ?? "")
+    ? category
+    : undefined;
+  const posts = selectedCategory
+    ? blogPosts.filter((post) => post.category === selectedCategory)
+    : blogPosts;
+  const pages = Math.ceil(posts.length / BLOG_PAGE_SIZE);
+  const page =
+    requestedPage && /^[1-9]\d*$/.test(requestedPage) ? Number(requestedPage) : 1;
+  return {
+    category: selectedCategory,
+    posts,
+    pages,
+    page,
+    visible: posts.slice((page - 1) * BLOG_PAGE_SIZE, page * BLOG_PAGE_SIZE),
+  };
+}
 
 export function getBlogPost(slug: string) {
   return blogPosts.find((post) => post.slug === slug);

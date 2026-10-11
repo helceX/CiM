@@ -1,16 +1,20 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import {
   BLOG_ORIGIN,
   blogCategories,
   blogCover,
   blogPosts,
   readingMinutes,
+  BLOG_PAGE_SIZE,
+  blogPageHref,
+  getBlogListing,
 } from "@/content/blog";
 import "./blog.css";
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   title: "Mediaory Blog | Medya takibi, iletişim ve fırsat rehberleri",
   description:
     "Medya takibi, PR ölçümü, fırsat radarı ve girişimcilik için uygulanabilir Türkçe rehberler. Kaynaklı cevaplar, örnekler ve kontrol listeleri.",
@@ -29,17 +33,38 @@ export const metadata: Metadata = {
   },
 };
 
+type BlogSearchParams = { kategori?: string | string[]; sayfa?: string | string[] };
+function listing(params: BlogSearchParams) {
+  const result = getBlogListing(
+    typeof params.kategori === "string" ? params.kategori : undefined,
+    typeof params.sayfa === "string" ? params.sayfa : undefined,
+  );
+  if (result.page > result.pages) notFound();
+  return result;
+}
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<BlogSearchParams>;
+}): Promise<Metadata> {
+  const { category, page } = listing(await searchParams);
+  const canonical = `${BLOG_ORIGIN}${blogPageHref(category, page)}`;
+  return {
+    ...baseMetadata,
+    title: page > 1 ? `Mediaory Blog | Sayfa ${page}` : baseMetadata.title,
+    alternates: { ...baseMetadata.alternates, canonical },
+    openGraph: { ...baseMetadata.openGraph, url: canonical },
+    ...(category ? { robots: { index: false, follow: true } } : {}),
+  };
+}
+
 export default async function BlogPage({
   searchParams,
 }: {
-  searchParams: Promise<{ kategori?: string }>;
+  searchParams: Promise<BlogSearchParams>;
 }) {
-  const { kategori } = await searchParams;
-  const category = blogCategories.includes(kategori ?? "") ? kategori : undefined;
-  const posts = category
-    ? blogPosts.filter((post) => post.category === category)
-    : blogPosts;
-  const featured = posts[0]!;
+  const { category, posts, visible, pages, page } = listing(await searchParams);
+  const featured = visible[0]!;
   return (
     <div className="blog-shell" lang="tr">
       <section className="blog-intro mk-wrap">
@@ -62,13 +87,18 @@ export default async function BlogPage({
         </div>
       </section>
       <nav className="blog-categories mk-wrap" aria-label="Blog kategorileri">
-        <Link href="/blog" aria-current={!category ? "page" : undefined}>
+        <Link
+          href="/blog"
+          prefetch={false}
+          aria-current={!category ? "page" : undefined}
+        >
           Tüm yazılar
         </Link>
         {blogCategories.map((item) => (
           <Link
             key={item}
             href={`/blog?kategori=${encodeURIComponent(item)}`}
+            prefetch={false}
             aria-current={category === item ? "page" : undefined}
           >
             {item}
@@ -76,7 +106,11 @@ export default async function BlogPage({
         ))}
       </nav>
       <section className="mk-wrap blog-featured" aria-label="Öne çıkan rehber">
-        <Link href={`/blog/${featured.slug}`} className="blog-featured-image">
+        <Link
+          href={`/blog/${featured.slug}`}
+          prefetch={false}
+          className="blog-featured-image"
+        >
           <Image
             src={blogCover(featured)}
             alt={`${featured.title} — Mediaory rehber kapağı`}
@@ -89,25 +123,35 @@ export default async function BlogPage({
         <div>
           <p className="blog-eyebrow">ÖNE ÇIKAN / {featured.category}</p>
           <h2>
-            <Link href={`/blog/${featured.slug}`}>{featured.title}</Link>
+            <Link href={`/blog/${featured.slug}`} prefetch={false}>
+              {featured.title}
+            </Link>
           </h2>
           <p>{featured.description}</p>
-          <Link className="blog-text-link" href={`/blog/${featured.slug}`}>
+          <Link
+            className="blog-text-link"
+            prefetch={false}
+            href={`/blog/${featured.slug}`}
+          >
             Rehberi oku <span aria-hidden="true">↗</span>
           </Link>
           <span className="blog-reading">{readingMinutes(featured)} dk okuma</span>
         </div>
       </section>
-      <section className="mk-wrap blog-library" aria-label="Blog yazıları">
+      <section id="yazilar" className="mk-wrap blog-library" aria-label="Blog yazıları">
         <div className="blog-library-title">
           <h2>{category ?? "Keşfet, ölç, harekete geç"}</h2>
-          <span>{posts.length} yazı</span>
+          <span>
+            {posts.length} yazı · {(page - 1) * BLOG_PAGE_SIZE + 1}–
+            {Math.min(page * BLOG_PAGE_SIZE, posts.length)}
+          </span>
         </div>
         <div className="blog-grid">
-          {posts.map((post) => (
+          {visible.map((post) => (
             <article key={post.slug} className="blog-card">
               <Link
                 href={`/blog/${post.slug}`}
+                prefetch={false}
                 className="blog-card-image"
                 tabIndex={-1}
                 aria-hidden="true"
@@ -125,16 +169,53 @@ export default async function BlogPage({
                   {post.category} <span>· {readingMinutes(post)} dk</span>
                 </p>
                 <h3>
-                  <Link href={`/blog/${post.slug}`}>{post.title}</Link>
+                  <Link href={`/blog/${post.slug}`} prefetch={false}>
+                    {post.title}
+                  </Link>
                 </h3>
                 <p>{post.description}</p>
-                <Link className="blog-text-link" href={`/blog/${post.slug}`}>
+                <Link
+                  className="blog-text-link"
+                  prefetch={false}
+                  href={`/blog/${post.slug}`}
+                >
                   Yazıyı oku <span aria-hidden="true">↗</span>
                 </Link>
               </div>
             </article>
           ))}
         </div>
+        {pages > 1 && (
+          <nav className="blog-pagination" aria-label="Blog sayfaları">
+            {page > 1 && (
+              <Link
+                prefetch={false}
+                href={`${blogPageHref(category, page - 1)}#yazilar`}
+              >
+                ← Önceki sayfa
+              </Link>
+            )}
+            {Array.from({ length: pages }, (_, index) => index + 1).map((number) => (
+              <Link
+                key={number}
+                prefetch={false}
+                href={`${blogPageHref(category, number)}#yazilar`}
+                aria-label={`${number}. sayfa`}
+                aria-current={page === number ? "page" : undefined}
+              >
+                {number}
+              </Link>
+            ))}
+            {page < pages && (
+              <Link
+                prefetch={false}
+                href={`${blogPageHref(category, page + 1)}#yazilar`}
+              >
+                Sonraki sayfa →
+              </Link>
+            )}
+          </nav>
+        )}
       </section>
       <section className="mk-wrap blog-bottom-cta">
         <p className="blog-eyebrow">OKUMAKTAN UYGULAMAYA</p>

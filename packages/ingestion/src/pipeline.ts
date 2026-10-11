@@ -134,9 +134,12 @@ export async function ingestSource(
       );
       const priority = signal.level;
       const organizationId = asOrganizationId(query.organizationId);
-      const matchedTerm = findMatchedTerm(query.queryAst, text, match);
+      const verifiedTag = raw.socialMentionHandles && query.queryAst.include.find((term) => term.startsWith("@") && raw.socialMentionHandles!.includes(term.toLowerCase()));
+      const matchedTerm = verifiedTag || findMatchedTerm(query.queryAst, text, match);
       const { matchType, matchedRule } = matchedTerm
-        ? classifyMatchType(query.queryAst, matchedTerm, source.type)
+        ? (matchedTerm.startsWith("@") && raw.socialMentionHandles && !raw.socialMentionHandles.includes(matchedTerm.toLowerCase())
+          ? { matchType: "contextual" as const, matchedRule: `Matched account name in text: "${matchedTerm}" (not a verified account tag)` }
+          : classifyMatchType(query.queryAst, matchedTerm, source.type))
         : { matchType: null, matchedRule: null };
       const mentionId = await createMentionIfNotExists(db, organizationId, {
         projectId: query.projectId,

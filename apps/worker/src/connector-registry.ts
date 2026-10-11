@@ -1,5 +1,6 @@
 import {
   APIConnector,
+  BlueskySearchConnector,
   GoogleTrendsConnector,
   MockNewsConnector,
   MockSocialConnector,
@@ -23,6 +24,7 @@ const registry: Record<string, SourceConnector> = {
   mock: new MockNewsConnector(),
   "mock-social": new MockSocialConnector(),
   rss: new RSSConnector(),
+  "bluesky-search": new BlueskySearchConnector(),
   sitemap: new SitemapConnector(),
   web: new WebConnector(),
   api: new APIConnector(),

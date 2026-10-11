@@ -2,9 +2,10 @@ import { and, eq, sql } from "drizzle-orm";
 import type { Db } from "../client";
 import { articles, mentions, sources } from "../schema/content";
 import { socialProfiles } from "../schema/social";
+import { monitoringQueries } from "../schema/monitoring";
 import type { OrganizationId } from "./tenant-scope";
 
-export type SocialScope = { projectId?: string; sinceDays: number };
+export type SocialScope = { projectId?: string; queryId?: string; sinceDays: number };
 
 /**
  * docs/architecture/ADR-006-SOCIAL-LISTENING.md — every query here scopes
@@ -17,6 +18,7 @@ function socialScopeWhere(organizationId: OrganizationId, scope: SocialScope) {
     eq(mentions.organizationId, organizationId),
     eq(sources.type, "social"),
     scope.projectId ? eq(mentions.projectId, scope.projectId) : undefined,
+    scope.queryId ? eq(mentions.queryId, scope.queryId) : undefined,
     sql`${mentions.createdAt} >= now() - (${scope.sinceDays}::text || ' days')::interval`,
   );
 }
@@ -143,6 +145,7 @@ export async function getTrendingHashtags(
       and s.type = 'social'
       and m.match_type = 'hashtag'
       ${scope.projectId ? sql`and m.project_id = ${scope.projectId}` : sql``}
+      ${scope.queryId ? sql`and m.query_id = ${scope.queryId}` : sql``}
       and m.created_at >= now() - (${scope.sinceDays * 2}::text || ' days')::interval
     group by hashtag
     order by current_count desc
@@ -271,6 +274,10 @@ export type TopSocialPost = {
   authorHandle: string | null;
   priority: string;
   createdAt: Date;
+  queryName: string;
+  matchType: string | null;
+  matchedTerms: string[] | null;
+  excerpt: string | null;
 };
 
 /**
@@ -296,11 +303,16 @@ export async function getTopSocialPosts(
       authorHandle: socialProfiles.handle,
       priority: mentions.priority,
       createdAt: mentions.createdAt,
+      queryName: monitoringQueries.name,
+      matchType: mentions.matchType,
+      matchedTerms: mentions.matchedTerms,
+      excerpt: articles.storedExcerpt,
     })
     .from(mentions)
     .innerJoin(articles, eq(articles.id, mentions.articleId))
     .innerJoin(sources, eq(sources.id, articles.sourceId))
     .leftJoin(socialProfiles, eq(socialProfiles.id, articles.authorProfileId))
+    .innerJoin(monitoringQueries, and(eq(monitoringQueries.id, mentions.queryId), eq(monitoringQueries.organizationId, organizationId)))
     .where(socialScopeWhere(organizationId, scope))
     .orderBy(
       sql`case ${mentions.priority}

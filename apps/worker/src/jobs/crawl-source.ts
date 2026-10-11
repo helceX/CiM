@@ -2,7 +2,7 @@ import type { Job, Queue } from "bullmq";
 import { eq } from "drizzle-orm";
 import { crawlSignature, ingestSource } from "@cim/ingestion";
 import { crawlBackoffMs, crawlIntervalMs, isGoogleTrendsEnabled, isSourceDue, type CrawlSourceJobData, type SendEmailJobData } from "@cim/core";
-import { db, markSourceChecked, schema, type ActiveMonitoringQuery } from "@cim/db";
+import { db, markSourceChecked, schema, listActiveMonitoringQueriesForSourceType, type ActiveMonitoringQuery } from "@cim/db";
 import { getConnectorFor } from "../connector-registry";
 import type { SourceConnector } from "@cim/ingestion";
 import { evaluateNewMentionAlerts } from "../alerts/evaluate";
@@ -92,7 +92,20 @@ export async function processCrawlSourceJob(
     return;
   }
 
-  const queries = await (deps.activeQueries ?? getActiveQueries)(source.type);
+  const queries = await (deps.activeQueries ?? (source.connector === "bluesky-search"
+    ? (type: string) => listActiveMonitoringQueriesForSourceType(db, type)
+    : getActiveQueries))(source.type);
+  if (source.connector === "bluesky-search") {
+    // Shared searches only run while an active customer monitoring needs this exact term/account.
+    if (!source.url) throw new Error("Missing social search URL");
+    const address = new URL(source.url);
+    const term = (address.searchParams.get("handle") ? `@${address.searchParams.get("handle")}` : address.searchParams.get("q") ?? "").toLocaleLowerCase();
+    const interested = queries.some((query) => [...query.queryAst.include, ...query.queryAst.exactPhrases].some((word) => word.toLocaleLowerCase() === term));
+    if (!interested) {
+      await markSourceChecked(db, source.id, source.status as Parameters<typeof markSourceChecked>[2]);
+      return;
+    }
+  }
   const sig = crawlSignature(source, queries);
   // The memory of the last crawl is only used while it was recorded under the same monitorings and is under a day old.
   const reusable = state !== null && state.sig === sig && now - state.fullAt < FULL_PASS_MS ? state : null;

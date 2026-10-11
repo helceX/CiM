@@ -67,7 +67,7 @@ export async function markSourceChecked(
 export type NewSourceInput = {
   name: string;
   url: string;
-  connector: "rss" | "sitemap" | "api" | "google-trends";
+  connector: "rss" | "sitemap" | "api" | "google-trends" | "bluesky-search";
   type: string;
   language: string;
   country: string;

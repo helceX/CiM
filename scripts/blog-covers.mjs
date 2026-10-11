@@ -3,6 +3,7 @@ import { URL } from "node:url";
 import console from "node:console";
 import { mkdir, writeFile } from "node:fs/promises";
 import sharp from "sharp";
+import expansion from "../apps/web/src/content/blog-expansion.json" with { type: "json" };
 const covers = [
   ["medya-takibi-nedir", "MEDYA TAKİBİ", "Gündemden karara", "radar"],
   [
@@ -92,7 +93,7 @@ function motif(kind, n) {
       return '<rect x="745" y="171" width="244" height="198" rx="18" fill="#211831" stroke="#a78bfa66"/><rect x="779" y="217" width="244" height="198" rx="18" fill="#211831" stroke="#ff6bb566"/><rect x="813" y="263" width="244" height="198" rx="18" fill="#211831" stroke="url(#accent)" stroke-width="3"/><path d="M851 310H1015M851 340H983M851 370H996" stroke="#ffffff88" stroke-width="8" stroke-linecap="round"/>';
     case "network":
       return (
-        '<path d="M771 233L883 319L993 214M883 319L1008 423M883 319L766 430" stroke="url(#accent)" stroke-width="4"/>' +
+        '<path d="M771 233L883 319L993 214M883 319L1008 423M883 319L766 430" stroke="url(#accent)" stroke-width="4" fill="none"/>' +
         [
           [771, 233],
           [993, 214],
@@ -111,6 +112,7 @@ function motif(kind, n) {
   }
 }
 const directory = new URL("../apps/web/public/blog/covers/", import.meta.url);
+covers.push(...expansion.covers);
 await mkdir(directory, { recursive: true });
 for (const [i, [slug, title, subtitle, kind]] of covers.entries()) {
   const [a, b] = tones[i % tones.length];

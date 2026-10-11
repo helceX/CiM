@@ -1,10 +1,20 @@
 import { existsSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { BLOG_ORIGIN, blogCover, blogJsonLd, blogPosts, getBlogPost } from "./blog";
+import {
+  BLOG_ORIGIN,
+  BLOG_PAGE_SIZE,
+  blogCover,
+  blogJsonLd,
+  blogPosts,
+  getBlogPost,
+  getBlogListing,
+  blogPageHref,
+} from "./blog";
 describe("published blog content", () => {
   it("has complete, unique articles with real covers and resolvable related links", () => {
-    expect(blogPosts.length).toBeGreaterThanOrEqual(15);
+    expect(blogPosts.length).toBe(100);
     expect(new Set(blogPosts.map((post) => post.slug)).size).toBe(blogPosts.length);
+    expect(new Set(blogPosts.map((post) => post.title)).size).toBe(blogPosts.length);
     for (const post of blogPosts) {
       expect(post.slug).toMatch(/^[a-z0-9]+(?:-[a-z0-9]+)*$/);
       expect(
@@ -21,6 +31,23 @@ describe("published blog content", () => {
       ).toBe(true);
       expect(post.cta.href).toMatch(/^\/(features|opportunities)$/);
     }
+  });
+  it("makes every article reachable through bounded, disjoint pages and keeps category navigation", () => {
+    const slugs: string[] = [];
+    const pages = getBlogListing().pages;
+    for (let page = 1; page <= pages; page++) {
+      const result = getBlogListing(undefined, String(page));
+      expect(result.visible.length).toBeLessThanOrEqual(BLOG_PAGE_SIZE);
+      slugs.push(...result.visible.map((post) => post.slug));
+    }
+    expect(slugs).toEqual(blogPosts.map((post) => post.slug));
+    const category = getBlogListing("Medya takibi", "2");
+    expect(category.visible.every((post) => post.category === "Medya takibi")).toBe(
+      true,
+    );
+    expect(blogPageHref(category.category, category.page)).toContain("sayfa=2");
+    expect(getBlogListing(undefined, "-1").page).toBe(1);
+    expect(getBlogListing(undefined, "Infinity").page).toBe(1);
   });
   it("keeps structured publication data consistent with visible articles", () => {
     for (const post of blogPosts) {

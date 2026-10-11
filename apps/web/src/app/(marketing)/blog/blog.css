@@ -101,6 +101,29 @@
 }
 .blog-library {
   padding-top: 64px;
+  scroll-margin-top: 90px;
+}
+.blog-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 36px;
+}
+.blog-pagination a {
+  padding: 12px 16px;
+  min-width: 44px;
+  text-align: center;
+  border: 1px solid var(--mk-line);
+  border-radius: 999px;
+  color: #ddd6fe;
+  font-size: 13px;
+}
+.blog-pagination a:hover,
+.blog-pagination a[aria-current] {
+  background: #7b5cff26;
+  border-color: #a78bfa;
 }
 .blog-library-title {
   display: flex;

@@ -1,6 +1,10 @@
 import { and, eq, inArray, ne, notInArray, sql } from "drizzle-orm";
 import { hostMatchesDomain } from "@cim/core";
-import { isColumnistFeed, sourceCollections } from "@cim/core/source-collections";
+import {
+  foreignCatalogCountry,
+  isColumnistFeed,
+  sourceCollections,
+} from "@cim/core/source-collections";
 import type { Db } from "../client";
 import { sources } from "../schema/content";
 import { blockedDomains } from "../schema/compliance";
@@ -34,10 +38,21 @@ export async function applyTurkeyStartupCrawlPolicy(db: Db, ids?: string[]) {
     const pause: string[] = [];
     const resume: string[] = [];
     const turkey: string[] = [];
+    const corrections = new Map<string | null, string[]>();
     let startup = 0;
     for (const source of rows) {
       const groups = sourceCollections(source);
       if (groups.includes("turkey")) turkey.push(source.id);
+      const catalogCountry = foreignCatalogCountry(source);
+      if (
+        !groups.includes("turkey") &&
+        source.country === "TR" &&
+        catalogCountry !== undefined
+      ) {
+        const list = corrections.get(catalogCountry) ?? [];
+        list.push(source.id);
+        corrections.set(catalogCountry, list);
+      }
       if (groups.includes("startup")) startup++;
       if (!groups.length && source.status !== "unavailable") pause.push(source.id);
       if (
@@ -51,6 +66,21 @@ export async function applyTurkeyStartupCrawlPolicy(db: Db, ids?: string[]) {
     let paused = 0;
     let resumed = 0;
     let reclassified = 0;
+    let correctedCountries = 0;
+    for (const [country, idsToCorrect] of corrections)
+      for (let i = 0; i < idsToCorrect.length; i += 500)
+        correctedCountries += (
+          await tx
+            .update(sources)
+            .set({ country, updatedAt: new Date() })
+            .where(
+              and(
+                inArray(sources.id, idsToCorrect.slice(i, i + 500)),
+                eq(sources.country, "TR"),
+              ),
+            )
+            .returning({ id: sources.id })
+        ).length;
     for (let i = 0; i < pause.length; i += 500)
       paused += (
         await tx
@@ -95,6 +125,7 @@ export async function applyTurkeyStartupCrawlPolicy(db: Db, ids?: string[]) {
       paused,
       resumed,
       reclassified,
+      correctedCountries,
       turkey: turkey.length,
       startup,
       total: rows.length,

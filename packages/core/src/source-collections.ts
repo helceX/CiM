@@ -22,6 +22,7 @@ function identity(url: string): string {
 }
 
 const turkishFeeds = new Set(TURKEY_SOURCE_CATALOG.map((s) => identity(s.url)));
+const worldFeeds = new Map(WORLD_SOURCE_CATALOG.map((s) => [identity(s.url), s]));
 const startupFeeds = new Set(
   WORLD_SOURCE_CATALOG.filter((s) => s.group === "startup").map((s) => identity(s.url)),
 );
@@ -34,6 +35,18 @@ const STARTUP_CUE =
   /(?:^|[^a-z])(?:startups?|entrepreneur(?:ship)?|incubators?|accelerators?|funding|grants?|venture[\s/-]+capital|angel[\s/-]+invest(?:or|ment)s?|seed[\s/-]+funding|girişim(?:cilik)?|girisim(?:cilik)?|kuluçka|kulucka|hibe|teknopark)(?:$|[^a-z])/iu;
 const STARTUP_HOST =
   /(?:^|\.)(?:techcrunch\.com|crunchbase\.com|venturebeat\.com|sifted\.eu|eu-startups\.com|ycombinator\.com|startup[^.]*\.[a-z.]+|mixergy\.com|webrazzi\.com|foundern\.com|swipeline\.co)$/i;
+
+/** English catalog metadata overrides Turkish translations of administrative feed names. */
+export function foreignCatalogCountry(
+  source: CollectionSource,
+): string | null | undefined {
+  const url = source.url ? identity(source.url) : "";
+  const entry = worldFeeds.get(url);
+  if (!entry || entry.country === "TR" || turkishFeeds.has(url)) return undefined;
+  if (!/^en(?:$|[-_])/i.test(entry.language) && !/\/en\//i.test(entry.url))
+    return undefined;
+  return entry.country || null;
+}
 
 /** Server-side catalog classification; never downloads a feed or changes publisher permissions. */
 export function sourceCollections(source: CollectionSource): CrawlCollection[] {
@@ -53,15 +66,17 @@ export function sourceCollections(source: CollectionSource): CrawlCollection[] {
     /^tr\./i.test(source.domain);
   const result: CrawlCollection[] = [];
   if (
-    source.country === "TR" ||
     explicitTurkish ||
     turkishFeeds.has(url) ||
-    inferCountryFromSource(source) === "TR"
+    (foreignCatalogCountry(source) === undefined &&
+      (source.country === "TR" || inferCountryFromSource(source) === "TR"))
   )
     result.push("turkey");
   if (
     startupFeeds.has(url) ||
-    STARTUP_CUE.test(`${source.name} ${decoded}`) ||
+    STARTUP_CUE.test(
+      `${source.name.replace(/\bgrant\s+(?:county|thornton)\b/gi, "")} ${decoded}`,
+    ) ||
     STARTUP_HOST.test(source.domain) ||
     /how i built this/i.test(source.name)
   )

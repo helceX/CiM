@@ -10,6 +10,7 @@ import { CatalogImportPanel } from "./catalog-import-panel";
 import { CrawlActivity } from "./crawl-activity";
 import { getCrawlStats } from "@/lib/crawl-stats";
 import { SourceExplorer } from "./source-explorer";
+import { sourceCollections } from "@cim/core/source-collections";
 import { WorldCatalogBrowser } from "./world-catalog-browser";
 
 const GROUP_LABEL: Record<string, string> = {
@@ -112,6 +113,7 @@ export default async function AdminSourcesPage() {
               connector: source.connector,
               country: source.country,
               status: source.status,
+              collections: sourceCollections(source),
             }))}
           />
         </div>

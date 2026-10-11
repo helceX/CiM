@@ -61,7 +61,7 @@ export async function markSourceChecked(
   await db
     .update(sources)
     .set({ status, lastCheckedAt: new Date(), updatedAt: new Date() })
-    .where(eq(sources.id, sourceId));
+    .where(and(eq(sources.id, sourceId), ne(sources.status, "unavailable")));
 }
 
 export type NewSourceInput = {

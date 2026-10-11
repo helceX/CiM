@@ -8,7 +8,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./world-catalog": "./src/world-catalog.ts",
-    "./catalog-import": "./src/catalog-import.ts"
+    "./catalog-import": "./src/catalog-import.ts",
+    "./source-collections": "./src/source-collections.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

@@ -1,6 +1,6 @@
 import { Buffer } from "node:buffer";
 import { URL } from "node:url";
-import { console } from "node:inspector";
+import console from "node:console";
 import { mkdir, writeFile } from "node:fs/promises";
 import sharp from "sharp";
 const covers = [

@@ -1,4 +1,5 @@
 .blog-shell {
+  padding-inline: 24px;
   padding-bottom: 80px;
 }
 .blog-intro {
@@ -372,6 +373,9 @@
   }
 }
 @media (max-width: 760px) {
+  .blog-shell {
+    padding-inline: 16px;
+  }
   .blog-intro {
     padding-top: 46px;
   }

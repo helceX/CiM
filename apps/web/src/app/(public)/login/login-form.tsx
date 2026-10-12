@@ -11,7 +11,8 @@ export function LoginForm() {
   const common = useTranslations("auth");
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [error, setError] = useState<string | null>(null);
+  const federatedError = searchParams.get("federated");
+  const [error, setError] = useState<string | null>(federatedError ? common(federatedError === "link" ? "federated.existing" : federatedError === "verify" ? "federated.verify" : "federated.failed") : null);
   const [needsVerification, setNeedsVerification] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 

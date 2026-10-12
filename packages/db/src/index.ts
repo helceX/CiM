@@ -2,6 +2,7 @@ export * from "./client";
 export * as schema from "./schema/index";
 export * from "./repositories/tenant-scope";
 export * from "./repositories/users";
+export * from "./repositories/login-identities";
 export * from "./repositories/memberships";
 export * from "./repositories/projects";
 export * from "./repositories/monitoring-queries";

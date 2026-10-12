@@ -1,4 +1,5 @@
 export * from "./users";
+export * from "./login-identities";
 export * from "./organizations";
 export * from "./auth";
 export * from "./monitoring";

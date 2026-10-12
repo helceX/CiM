@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import {
   db,
   getBillingProfile,
@@ -45,6 +46,7 @@ export default async function SettingsPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const context = await requireOrgContext();
+  const loginT = await getTranslations("auth.federated");
   const rawTab = (await searchParams).tab;
   const requested = Array.isArray(rawTab) ? rawTab[0] : rawTab;
   const tab: TabKey = TABS.some((t) => t.key === requested) ? (requested as TabKey) : "general";
@@ -154,6 +156,7 @@ export default async function SettingsPage({
         canManageSettings={canManageSettings}
       />
 
+      <Link className="text-sm text-primary underline underline-offset-4" href="/settings/login-methods">{loginT("title")}</Link>
       <ConnectedAccountsSection
         accounts={socialConnections.map((connection) => ({
           id: connection.id,

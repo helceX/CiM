@@ -7,7 +7,7 @@ import { Button, Field, Input } from "@cim/ui";
 import { TurnstileWidget } from "@/components/turnstile-widget";
 import { useLocalizedIssue } from "@/lib/use-localized-issue";
 
-export function RegisterForm({ turnstileSiteKey = null }: { turnstileSiteKey?: string | null }) {
+export function RegisterForm({ turnstileSiteKey = null, federated = null }: { turnstileSiteKey?: string | null; federated?: { email: string; name: string } | null }) {
   const t = useTranslations("auth.register");
   const common = useTranslations("auth");
   const legal = useTranslations("legal.forms");
@@ -34,6 +34,7 @@ export function RegisterForm({ turnstileSiteKey = null }: { turnstileSiteKey?: s
       jobTitle: String(formData.get("jobTitle") ?? ""),
       password: String(formData.get("password") ?? ""),
       turnstileToken: captchaToken ?? undefined,
+      federated: Boolean(federated),
     };
 
     try {
@@ -56,6 +57,7 @@ export function RegisterForm({ turnstileSiteKey = null }: { turnstileSiteKey?: s
         }
         return;
       }
+      if (data.signedIn) { window.location.assign("/onboarding"); return; }
       setSubmitted(true);
     } catch {
       setError(common("generic"));
@@ -86,14 +88,14 @@ export function RegisterForm({ turnstileSiteKey = null }: { turnstileSiteKey?: s
     <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
       <div className="grid grid-cols-2 gap-4">
         <Field id="firstName" label={t("firstName")} error={fieldErrors.firstName} required>
-          <Input name="firstName" autoComplete="given-name" required />
+          <Input name="firstName" defaultValue={federated?.name.split(" ")[0] ?? ""} autoComplete="given-name" required />
         </Field>
         <Field id="lastName" label={t("lastName")} error={fieldErrors.lastName} required>
-          <Input name="lastName" autoComplete="family-name" required />
+          <Input name="lastName" defaultValue={federated?.name.split(" ").slice(1).join(" ") ?? ""} autoComplete="family-name" required />
         </Field>
       </div>
       <Field id="email" label={t("email")} error={fieldErrors.email} required>
-        <Input name="email" type="email" autoComplete="email" required />
+        <Input name="email" defaultValue={federated?.email ?? ""} readOnly={Boolean(federated?.email)} type="email" autoComplete="email" required />
       </Field>
       <Field id="companyName" label={t("company")} error={fieldErrors.companyName} required>
         <Input name="companyName" autoComplete="organization" required />
@@ -101,7 +103,7 @@ export function RegisterForm({ turnstileSiteKey = null }: { turnstileSiteKey?: s
       <Field id="jobTitle" label={t("position")} error={fieldErrors.jobTitle} required>
         <Input name="jobTitle" required />
       </Field>
-      <Field
+      {!federated ? <Field
         id="password"
         label={t("password")}
         error={fieldErrors.password}
@@ -109,7 +111,7 @@ export function RegisterForm({ turnstileSiteKey = null }: { turnstileSiteKey?: s
         required
       >
         <Input name="password" type="password" autoComplete="new-password" required />
-      </Field>
+      </Field> : null}
 
       {error ? (
         <p role="alert" className="text-sm text-danger">

@@ -2,6 +2,7 @@ import { and, count, eq, isNull, ne } from "drizzle-orm";
 import type { Db } from "../client";
 import { organizationMemberships, organizations } from "../schema/organizations";
 import { users } from "../schema/users";
+import { loginIdentities } from "../schema/login-identities";
 import { revokeAllSessionsForUser } from "./auth";
 import { recordAuditLog } from "./audit-log";
 import { asOrganizationId, type OrganizationId } from "./tenant-scope";
@@ -132,6 +133,7 @@ export async function listMembershipOrganizationIdsForAudit(
  * persist so that history stays attributable to "a deleted user."
  */
 export async function anonymizeUser(db: Db, userId: string): Promise<void> {
+  await db.delete(loginIdentities).where(eq(loginIdentities.userId, userId));
   await db
     .update(users)
     .set({

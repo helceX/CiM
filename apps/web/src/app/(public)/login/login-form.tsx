@@ -5,13 +5,15 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Button, Field, Input } from "@cim/ui";
+import { safeLoginNext } from "@/lib/login-redirect";
 
 export function LoginForm() {
   const t = useTranslations("auth.signIn");
   const common = useTranslations("auth");
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [error, setError] = useState<string | null>(null);
+  const federatedError = searchParams.get("federated");
+  const [error, setError] = useState<string | null>(federatedError ? common(federatedError === "link" ? "federated.existing" : federatedError === "verify" ? "federated.verify" : "federated.failed") : null);
   const [needsVerification, setNeedsVerification] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -40,7 +42,7 @@ export function LoginForm() {
         return;
       }
       const next = searchParams.get("next") ?? "/dashboard";
-      router.push(next);
+      router.push(safeLoginNext(next));
       router.refresh();
     } catch {
       setError(common("generic"));

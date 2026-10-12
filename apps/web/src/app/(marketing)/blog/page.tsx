@@ -87,22 +87,20 @@ export default async function BlogPage({
         </div>
       </section>
       <nav className="blog-categories mk-wrap" aria-label="Blog kategorileri">
-        <Link
+        <a
           href="/blog"
-          prefetch={false}
           aria-current={!category ? "page" : undefined}
         >
           Tüm yazılar
-        </Link>
+        </a>
         {blogCategories.map((item) => (
-          <Link
+          <a
             key={item}
             href={`/blog?kategori=${encodeURIComponent(item)}`}
-            prefetch={false}
             aria-current={category === item ? "page" : undefined}
           >
             {item}
-          </Link>
+          </a>
         ))}
       </nav>
       <section className="mk-wrap blog-featured" aria-label="Öne çıkan rehber">
@@ -188,31 +186,28 @@ export default async function BlogPage({
         {pages > 1 && (
           <nav className="blog-pagination" aria-label="Blog sayfaları">
             {page > 1 && (
-              <Link
-                prefetch={false}
+              <a
                 href={`${blogPageHref(category, page - 1)}#yazilar`}
               >
                 ← Önceki sayfa
-              </Link>
+              </a>
             )}
             {Array.from({ length: pages }, (_, index) => index + 1).map((number) => (
-              <Link
+              <a
                 key={number}
-                prefetch={false}
                 href={`${blogPageHref(category, number)}#yazilar`}
                 aria-label={`${number}. sayfa`}
                 aria-current={page === number ? "page" : undefined}
               >
                 {number}
-              </Link>
+              </a>
             ))}
             {page < pages && (
-              <Link
-                prefetch={false}
+              <a
                 href={`${blogPageHref(category, page + 1)}#yazilar`}
               >
                 Sonraki sayfa →
-              </Link>
+              </a>
             )}
           </nav>
         )}

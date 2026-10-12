@@ -29,6 +29,8 @@ test("guided opportunity choices and custom terms survive saving and reopening",
   // Reopen independently of the save handler's in-flight router.refresh().
   page = await page.context().newPage();
   await page.goto("/opportunities");
+  await expect(page.getByRole("combobox", { name: "Primary sector", exact: true })).not.toBeVisible();
+  await page.getByText("Organization profile", { exact: true }).click();
   technologies = page.getByRole("group", { name: "Technologies", exact: true });
   types = page.getByRole("group", { name: "Opportunity types", exact: true });
   await expect(
@@ -56,4 +58,10 @@ test("guided opportunity choices and custom terms survive saving and reopening",
     (await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze())
       .violations,
   ).toEqual([]);
+  await page.getByRole("combobox", { name: "Date range", exact: true }).selectOption("7");
+  await page.getByRole("button", { name: "Apply", exact: true }).click();
+  await expect(page).toHaveURL(/since=7/);
+  await expect(page.getByRole("combobox", { name: "Date range", exact: true })).toHaveValue("7");
+  await page.getByRole("combobox", { name: "Group by", exact: true }).selectOption("source");
+  await expect(page.getByRole("combobox", { name: "Group by", exact: true })).toHaveValue("source");
 });

@@ -6,7 +6,7 @@ import { cookies } from "next/headers";
 import { getEnv } from "@cim/config";
 import { openLoginValue, sealLoginValue, LOGIN_TTL, PENDING_COOKIE, type LoginIdentity } from "@/lib/federated-login";
 import { FederatedLoginOptions } from "@/components/federated-login-options";
-import { getBlogPost } from "@/content/blog";
+import { validBlogSource } from "@/lib/blog-attribution";
 
 // Read per request: the Turnstile key comes from runtime environment variables.
 export const dynamic = "force-dynamic";
@@ -17,7 +17,7 @@ export default async function RegisterPage({ searchParams }: { searchParams: Pro
   const requested = query.federated === "1";
   const identity = requested ? openLoginValue<LoginIdentity & { expires: number }>((await cookies()).get(PENDING_COOKIE)?.value, getEnv().SESSION_SECRET) : null;
   const candidate = identity?.blogSource ?? query.blog;
-  const blogSource = typeof candidate === "string" && candidate.length <= 120 && getBlogPost(candidate) ? candidate : undefined;
+  const blogSource = validBlogSource(candidate);
   const attribution = blogSource ? sealLoginValue({ blogSource, expires: Date.now() + LOGIN_TTL * 1000 }, getEnv().SESSION_SECRET) : null;
   return (
     <AuthCard title={t("title")} subtitle={t("subtitle")}>

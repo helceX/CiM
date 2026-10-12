@@ -3,6 +3,7 @@ import { sql } from "drizzle-orm";
 import { db } from "@cim/db";
 import { getBlogPost } from "@/content/blog";
 import { requireSuperAdmin } from "@/lib/admin";
+import { validBlogSource } from "@/lib/blog-attribution";
 
 export const dynamic = "force-dynamic";
 export default async function GrowthPage() {
@@ -14,11 +15,11 @@ export default async function GrowthPage() {
       count(*)::int as registrations
     from audit_logs
     where action = 'user.registered' and created_at >= now() - interval '30 days'
-    group by 1 order by registrations desc limit 101
+    group by 1 order by registrations desc limit 102
   `);
   const rows = result.rows as { slug: string | null; registrations: number }[];
-  const blogRegistrations = rows.filter(row => row.slug && getBlogPost(row.slug));
-  const unmeasured = rows.filter(row => !row.slug || !getBlogPost(row.slug)).reduce((sum, row) => sum + row.registrations, 0);
+  const blogRegistrations = rows.filter(row => validBlogSource(row.slug));
+  const unmeasured = rows.filter(row => !validBlogSource(row.slug)).reduce((sum, row) => sum + row.registrations, 0);
   return <main className="mx-auto max-w-5xl space-y-6 p-6">
     <h1 className="text-2xl font-semibold">Blog ve kayıt dönüşümü</h1>
     <p className="text-muted-foreground">Son 30 gün. Blogdan kayıt ekranına gelen ve yeni hesap oluşturan kullanıcıların toplu sayısı. Bu sayı e-posta doğrulaması, aktif kullanım veya ücretli müşterilik anlamına gelmez.</p>
@@ -28,7 +29,7 @@ export default async function GrowthPage() {
     </div>
     <p className="text-sm text-muted-foreground">Ölçüm bu sürümle başladı; eski kayıtların kaynağı geriye dönük tahmin edilmez. Mevcut hesabıyla giriş yapan kullanıcı yeni kayıt olarak sayılmaz. Kaynak bilgisi olmayan veya süresi dolmuş bir geçiş diğer kayıtlara dahil edilir.</p>
     <table className="w-full text-left text-sm"><thead><tr><th className="p-3">Kaynak yazı</th><th className="p-3">Yeni kayıt</th></tr></thead><tbody>
-      {blogRegistrations.map(row => <tr key={row.slug} className="border-t border-border"><td className="p-3"><Link href={`/blog/${row.slug}`} className="underline">{getBlogPost(row.slug!)?.title}</Link></td><td className="p-3">{row.registrations}</td></tr>)}
+      {blogRegistrations.map(row => <tr key={row.slug} className="border-t border-border"><td className="p-3"><Link href={row.slug === "blog-library" ? "/blog" : `/blog/${row.slug}`} className="underline">{row.slug === "blog-library" ? "Blog ana sayfası" : getBlogPost(row.slug!)?.title}</Link></td><td className="p-3">{row.registrations}</td></tr>)}
       {!blogRegistrations.length ? <tr><td className="p-3" colSpan={2}>Henüz ölçülen blog kaynaklı kayıt yok.</td></tr> : null}
     </tbody></table>
     <section className="rounded-lg border border-border p-5 space-y-3"><h2 className="font-semibold">Ziyaret ve arama raporları</h2>

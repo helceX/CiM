@@ -13,4 +13,8 @@ describe("blog acquisition boundary", () => {
   it("ignores expired, malformed and unknown sources without blocking signup", () => {
     for (const value of [null, {}, "raw-slug", sealLoginValue({ blogSource: "unknown", expires: Date.now() + 60000 }, secret), sealLoginValue({ blogSource: "medya-takibi-nedir", expires: 1 }, secret)]) expect(blogAttribution(value, secret)).toBeUndefined();
   });
+  it("measures the blog library separately from individual articles", () => {
+    const token = sealLoginValue({ blogSource: "blog-library", expires: Date.now() + 60000 }, secret);
+    expect(blogAttribution(token, secret)).toEqual({ acquisition: { channel: "blog", slug: "blog-library" } });
+  });
 });

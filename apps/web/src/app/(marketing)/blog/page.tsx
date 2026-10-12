@@ -226,7 +226,8 @@ export default async function BlogPage({
         <div>
           <Link
             className="mk-btn mk-btn-primary"
-            href="/register?utm_source=mediaory_blog&utm_medium=internal&utm_campaign=blog_library"
+            prefetch={false}
+            href="/register/blog/blog-library"
           >
             Mediaory ile başlayın
           </Link>

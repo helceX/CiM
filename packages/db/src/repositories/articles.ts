@@ -37,6 +37,14 @@ export async function insertArticle(
   return (await insertArticleWithOutcome(db, input)).article;
 }
 
+/** Merge newly verified social metadata during normal crawls, without scanning history. */
+export async function recordSocialMatchMetadata(db: Db, id: string, handles: string[], wordFingerprint: Uint8Array | null) {
+  await db.update(articles).set({
+    socialMentionHandles: sql`(select coalesce(jsonb_agg(distinct value), '[]'::jsonb) from jsonb_array_elements(coalesce(${articles.socialMentionHandles}, '[]'::jsonb) || ${JSON.stringify(handles)}::jsonb))`,
+    wordFingerprint,
+  }).where(eq(articles.id, id));
+}
+
 /** Reports whether this call inserted the row, so a losing crawl does not cluster it again. */
 export async function insertArticleWithOutcome(
   db: Db,
@@ -53,6 +61,7 @@ export async function insertArticleWithOutcome(
     // pipeline when the raw fetch result carried a social author;
     // absent/null for every non-social article.
     authorProfileId?: string | null;
+    socialMentionHandles?: string[] | null;
     // Printed-edition reference (edition date, page, viewer link) — null/absent for digital stories.
     print?: ArticlePrint | null;
     // Hashed words of the headline and the feed's whole summary (@cim/core buildWordFingerprint).
@@ -99,6 +108,8 @@ export type PreviewStory = {
   sourceName: string;
   sourceType: string;
   sourceCountry: string | null;
+  sourceConnector?: string;
+  socialMentionHandles?: string[] | null;
 };
 
 const PREVIEW_COLUMNS = {
@@ -112,6 +123,8 @@ const PREVIEW_COLUMNS = {
   sourceName: sources.name,
   sourceType: sources.type,
   sourceCountry: sources.country,
+  sourceConnector: sources.connector,
+  socialMentionHandles: articles.socialMentionHandles,
 } as const;
 
 /**

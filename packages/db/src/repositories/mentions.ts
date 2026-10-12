@@ -1,4 +1,4 @@
-import { and, count, desc, eq, gte, inArray, isNull, sql } from "drizzle-orm";
+import { and, count, desc, eq, gte, inArray, isNull, ne, sql } from "drizzle-orm";
 import { companyNames, keywordMatches, prepareText, type GoalKey, type SignalReason } from "@cim/core";
 import type { Db } from "../client";
 import { articles, mentions, sources, type Tag } from "../schema/content";
@@ -151,6 +151,12 @@ export async function listRecentMentions(
  * pipeline over the same Article must not create a second Mention for the
  * same query — enforced by the DB unique index, not just this check.
  */
+/** A second search verified the account identity: improve the existing match without duplicating it or re-alerting. */
+export async function promoteVerifiedSocialMention(db: Db, organizationId: OrganizationId, queryId: string, articleId: string, handle: string) {
+  await db.update(mentions).set({ matchType: "direct_mention", matchedTerms: [handle], matchedRule: "Verified platform account tag" })
+    .where(and(eq(mentions.organizationId, organizationId), eq(mentions.queryId, queryId), eq(mentions.articleId, articleId), ne(mentions.matchType, "direct_mention")));
+}
+
 export async function createMentionIfNotExists(
   db: Db,
   organizationId: OrganizationId,

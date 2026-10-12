@@ -110,6 +110,8 @@ export const articles = pgTable(
     authorProfileId: uuid("author_profile_id").references(() => socialProfiles.id, {
       onDelete: "set null",
     }),
+    // Verified, resolved account tags; null means legacy/unknown, [] means none resolved yet.
+    socialMentionHandles: jsonb("social_mention_handles").$type<string[]>(),
     storyClusterId: uuid("story_cluster_id"),
     // Set only for stories that ran in a PRINTED edition (newspaper/magazine
     // clippings from a provider): edition date, page and where the page can

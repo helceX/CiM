@@ -267,7 +267,12 @@ export function queryQualityWarning(ast: QueryAst): string | null {
  * most of them. The same text is used at ingest, when a monitoring is saved
  * (backfill) and in the preview, so the three always agree.
  */
-export function matchableText(article: { title: string; lead?: string | null }): string {
+export function matchableText(article: { title: string; lead?: string | null; sourceType?: string; socialMentionHandles?: string[] | null }): string {
   const lead = article.lead?.trim();
-  return lead ? `${article.title}\n${lead}` : article.title;
+  const text = lead ? `${article.title}\n${lead}` : article.title;
+  if (article.sourceType !== "social") return text;
+  // Tracking parameters and paths are not a person's mention of a brand.
+  // Keep the published display text intact; only the matching copy drops URLs.
+  const visible = text.replace(/\b(?:https?:\/\/|www\.)[^\s<>]+/giu, " ");
+  return `${visible}\n${(article.socialMentionHandles ?? []).join(" ")}`;
 }

@@ -19,6 +19,8 @@ import {
   findSimilarRecentArticle,
   insertArticleWithOutcome,
   listActiveMonitoringQueriesForSourceType,
+  recordSocialMatchMetadata,
+  promoteVerifiedSocialMention,
   signalFor,
   type ActiveMonitoringQuery,
   touchSocialProfile,
@@ -107,6 +109,9 @@ export async function ingestSource(
           authorProfileId: await resolveAuthorProfileId(db, raw),
         });
     let clusterId = article.storyClusterId ?? null;
+    if (!created && source.type === "social" && raw.socialMentionHandles && (article.socialMentionHandles === null || raw.socialMentionHandles.some((handle) => !article.socialMentionHandles?.includes(handle)))) {
+      await recordSocialMatchMetadata(db, article.id, raw.socialMentionHandles, normalized.wordFingerprint);
+    }
     // Only the insert winner clusters and reports a new article. A concurrent
     // crawl may have inserted the row after our initial lookup.
     if (created) {
@@ -119,7 +124,7 @@ export async function ingestSource(
     // Headline plus the feed's own summary (see matchableText): a story that
     // names the brand in its first lines is a mention even when the headline
     // does not. The priority signal stays headline-only.
-    const text = matchableText({ title: article.title, lead: raw.bodyText });
+    const text = matchableText({ title: article.title, lead: raw.bodyText, sourceType: source.type, socialMentionHandles: raw.socialMentionHandles });
     // Keywords take the word endings of the story's language (see @cim/core morphology).
     const match = { language: raw.language ?? source.language };
     for (const query of activeQueries) {
@@ -161,6 +166,9 @@ export async function ingestSource(
         matchType,
         matchedRule,
       });
+      if (!mentionId && verifiedTag && source.type === "social") {
+        await promoteVerifiedSocialMention(db, organizationId, query.id, article.id, verifiedTag);
+      }
       if (mentionId) {
         newMentions.push({
           mentionId,

@@ -32,7 +32,7 @@ describe("free public Bluesky search", () => {
     const original = post("@lunavera.bsky.social merhaba", true);
     original.record.text = "Şimdi @lunavera.bsky.social";
     original.record.facets![0]!.index = { byteStart: Buffer.byteLength("Şimdi "), byteEnd: Buffer.byteLength(original.record.text) };
-    expect(parseBlueskyPosts(body([original]))[0]?.socialMentionHandles).toEqual(["@lunavera.bsky.social"]);
+    expect(parseBlueskyPosts(body([original]), target)[0]?.socialMentionHandles).toEqual(["@lunavera.bsky.social"]);
     expect(parseBlueskyPosts(body([{ ...original, uri: "https://evil.example/post" }, { ...original, author: { ...original.author, did: "did:plc:other" } }]))).toEqual([]);
   });
   it("only permits the fixed official endpoint and caps results", () => {
@@ -40,6 +40,14 @@ describe("free public Bluesky search", () => {
     expect(parseBlueskySearchUrl(url).term).toBe("Lunavera & enerji");
     for (const url of ["http://api.bsky.app/xrpc/app.bsky.feed.searchPosts?q=x", "https://user:pass@api.bsky.app/xrpc/app.bsky.feed.searchPosts?q=x", "https://evil.example/xrpc/app.bsky.feed.searchPosts?q=x", "https://api.bsky.app/xrpc/app.bsky.feed.searchPosts?q=x&cursor=all", "https://api.bsky.app/xrpc/app.bsky.feed.searchPosts?q=x&mentions=did:plc:x"]) expect(() => parseBlueskySearchUrl(url)).toThrow();
     expect(parseBlueskyPosts(body(Array.from({ length: 50 }, () => post("Lunavera"))))).toHaveLength(30);
+  });
+  it("never trusts the displayed handle when its actual facet identity points to another account", () => {
+    const spoof = post("@lunavera.bsky.social hello", true);
+    spoof.record.facets![0]!.features[0]!.did = "did:plc:differentaccount";
+    expect(parseBlueskyPosts(body([spoof]))[0]?.socialMentionHandles).toEqual([]);
+    expect(parseBlueskyPosts(body([spoof]), target)).toEqual([]);
+    const actual = post("@lunavera.bsky.social hello", true);
+    expect(parseBlueskyPosts(body([actual]), target)[0]?.bodyText).toBe(actual.record.text);
   });
   it("allows zero results and reuses the health response instead of downloading twice", async () => {
     const fetcher = vi.fn<typeof safeFetch>().mockResolvedValue({ status: 200, body: body([]), headers: new Headers() as never, finalUrl: "https://api.bsky.app" });

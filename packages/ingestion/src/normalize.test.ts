@@ -52,6 +52,13 @@ describe("computeContentHash", () => {
 });
 
 describe("normalizeToArticleInput", () => {
+  it("keeps identical social posts by different authors separate, while search-source duplicates keep the same identity", () => {
+    const source = fakeSource({ type: "social" });
+    const first = normalizeToArticleInput(source, { ...raw, canonicalUrl: "https://bsky.app/profile/author1/post/123" });
+    const second = normalizeToArticleInput(source, { ...raw, canonicalUrl: "https://bsky.app/profile/author2/post/123" });
+    expect(first.contentHash).not.toBe(second.contentHash);
+    expect(normalizeToArticleInput(source, { ...raw, canonicalUrl: "https://bsky.app/profile/author1/post/123" }).contentHash).toBe(first.contentHash);
+  });
   it("stores an excerpt when the source policy allows displaying one", () => {
     const article = normalizeToArticleInput(
       fakeSource({ canDisplayExcerpt: true }),

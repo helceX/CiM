@@ -3,9 +3,9 @@ import { z } from "zod";
 import { eq, sql } from "drizzle-orm";
 import {
   checkSourcePolicy, createSource, createMonitoringQueryWithPlanLimit, createAlertRule,
-  db, listProjects, listMonitoringQueries, listAlertRules, recordAuditLog, schema, type Db,
+  db, listProjects, listMonitoringQueries, listAlertRules, getMonitoringQuery, updateMonitoringQuery, recordAuditLog, schema, type Db,
 } from "@cim/db";
-import { astToBooleanQuery, type QueryAst } from "@cim/core";
+import { astToBooleanQuery, matchableText, matchesText, type QueryAst } from "@cim/core";
 import { BlueskySearchConnector, blueskySearchUrl, safeFetch } from "@cim/ingestion";
 import { requirePermission } from "@/lib/tenant";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -18,6 +18,8 @@ const inputSchema = z.object({
   handle: z.string().trim().max(100).default("").transform((s) => s.replace(/^@/, "").toLowerCase())
     .refine((s) => !s || /^[a-z0-9-]+(?:\.[a-z0-9-]+)+$/.test(s), "Bluesky hesabını bsky.app biçiminde yazın."),
   example: z.boolean().default(false),
+  excluded: z.array(z.string().trim().min(2).max(60)).max(10).default([]),
+  queryId: z.uuid().optional(),
 });
 
 /** Fixed public search sources are shared; customer queries and alerts stay tenant-scoped. */
@@ -32,7 +34,11 @@ export async function POST(request: Request) {
   if (!limited.allowed) return NextResponse.json({ error: "Kurulum sınırına ulaşıldı. Daha sonra tekrar deneyin." }, { status: 429 });
   const parsed = inputSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Geçersiz giriş." }, { status: 400 });
-  const { brand, handle, example } = parsed.data;
+  const { brand, handle, example, excluded, queryId } = parsed.data;
+  const editing = queryId ? await getMonitoringQuery(db, context.organizationId, queryId) : undefined;
+  if (queryId && (!editing || editing.sourceTypes.length !== 1 || editing.sourceTypes[0] !== "social")) {
+    return NextResponse.json({ error: "Sosyal izleme bulunamadı." }, { status: 404 });
+  }
   const [project] = await listProjects(db, context.organizationId);
   if (!project) return NextResponse.json({ error: "Önce bir çalışma alanı oluşturun." }, { status: 409 });
 
@@ -55,7 +61,7 @@ export async function POST(request: Request) {
     const reader = new BlueskySearchConnector();
     const samples = [];
     for (const address of addresses) samples.push(await reader.read(address));
-    const ast: QueryAst = { include: [...(handle ? [`@${handle}`] : []), brand], exclude: [], exactPhrases: [], company: { name: brand } };
+    const ast: QueryAst = { include: [...(handle ? [`@${handle}`] : []), brand], exclude: [...new Set(excluded)], exactPhrases: [], company: { name: brand } };
     const booleanQuery = astToBooleanQuery(ast);
     const name = `${example ? "Çalışma örneği" : "Sosyal takip"} — ${brand}`;
 
@@ -67,7 +73,12 @@ export async function POST(request: Request) {
       const needed = addresses.filter((url) => !currentSources.some((source) => source.url === url));
       if (Number(count?.total ?? 0) + needed.length > 40) throw new SetupError("Maliyeti sınırlamak için en fazla 40 Bluesky arama kaynağı kurulabilir.");
       const queries = await listMonitoringQueries(store, context.organizationId);
-      let query = queries.find((q) => q.name === name && q.booleanQuery === booleanQuery && q.sourceTypes.length === 1 && q.sourceTypes[0] === "social");
+      let query = editing ? queries.find((q) => q.id === editing.id) : queries.find((q) => q.name === name && q.booleanQuery === booleanQuery && q.sourceTypes.length === 1 && q.sourceTypes[0] === "social");
+      if (editing) {
+        if (!query) throw new SetupError("Sosyal izleme bulunamadı.");
+        query = await updateMonitoringQuery(store, context.organizationId, query.id, { name: editing.name.startsWith("Çalışma örneği") ? `Çalışma örneği — ${brand}` : name, queryAst: ast, booleanQuery, sourceTypes: ["social"], regionScopes: [], trackingTarget: "company" });
+        if (!query) throw new SetupError("Sosyal izleme bulunamadı.");
+      }
       if (!query) {
         if (queries.filter((q) => q.sourceTypes.length === 1 && q.sourceTypes[0] === "social").length >= 3) throw new SetupError("Kuruluş başına en fazla 3 sosyal izleme kurulabilir.");
         const created = await createMonitoringQueryWithPlanLimit(store, context.organizationId, {
@@ -92,14 +103,18 @@ export async function POST(request: Request) {
       }
       const rules = await listAlertRules(store, context.organizationId);
       let rule = rules.find(({ rule }) => rule.queryId === query!.id && rule.type === "keyword" && rule.channels.includes("in_app"));
+      if (rule && editing && rule.rule.name === `${editing.name} · yeni içerik`) {
+        await tx.update(schema.alertRules).set({ name: `${query.name} · yeni içerik`, updatedAt: new Date() }).where(eq(schema.alertRules.id, rule.rule.id));
+      }
       if (!rule) {
         const created = await createAlertRule(store, context.organizationId, { projectId: query.projectId, queryId: query.id, createdByUserId: context.userId, name: `${name} · yeni içerik`, type: "keyword", channels: ["in_app"], cooldownMinutes: 60 });
         rule = { rule: created, queryName: query.name };
       }
-      await recordAuditLog(store, context.organizationId, { actorUserId: context.userId, action: "social_monitoring.setup", targetType: "monitoring_query", targetId: query.id });
+      await recordAuditLog(store, context.organizationId, { actorUserId: context.userId, action: editing ? "social_monitoring.updated" : "social_monitoring.setup", targetType: "monitoring_query", targetId: query.id });
       return { queryId: query.id, alertRuleId: rule.rule.id, sourceIds: ids, active: query.status === "active" && rule.rule.status === "active" };
     });
-    return NextResponse.json({ ok: true, ...result, sampleCount: samples.reduce((n, s) => n + s.length, 0) });
+    const matchingSamples = samples.flat().filter((post) => matchesText(ast, matchableText({ title: post.title, lead: post.bodyText, sourceType: "social", socialMentionHandles: post.socialMentionHandles }), { language: post.language }));
+    return NextResponse.json({ ok: true, ...result, sampleCount: new Set(matchingSamples.map((post) => post.canonicalUrl)).size });
   } catch (error) {
     console.error("[social] setup failed", error instanceof Error ? error.message : "unknown");
     return NextResponse.json({ error: error instanceof SetupError ? error.message : "Kurulum tamamlanamadı. Kaynak geçici olarak yanıt vermiyor olabilir; daha sonra tekrar deneyin." }, { status: 422 });

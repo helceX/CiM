@@ -48,27 +48,29 @@ export function parseBlueskyPosts(body: string, target?: { did: string; handle: 
     const author = post.author;
     const record = post.record;
     if (!match || !author?.did || !DID.test(author.did) || match[1] !== author.did || !author.handle || !HANDLE.test(author.handle) || typeof record?.text !== "string") return [];
-    if (target && !record.facets?.some((facet) => facet.features?.some((feature) => feature.$type === "app.bsky.richtext.facet#mention" && feature.did === target.did))) return [];
     const bytes = Buffer.from(record.text, "utf8");
-    const handles = (record.facets ?? []).flatMap((facet) => {
+    const mentionedDids = (record.facets ?? []).flatMap((facet) => {
       if (!facet.features?.some((f) => f.$type === "app.bsky.richtext.facet#mention" && f.did && DID.test(f.did)) || !facet.index) return [];
       const { byteStart, byteEnd } = facet.index;
       if (!Number.isInteger(byteStart) || !Number.isInteger(byteEnd) || byteStart < 0 || byteEnd > bytes.length || byteEnd <= byteStart) return [];
-      const value = bytes.subarray(byteStart, byteEnd).toString("utf8");
-      return value.startsWith("@") && HANDLE.test(value.slice(1)) ? [value.toLowerCase()] : [];
+      const part = bytes.subarray(byteStart, byteEnd);
+      if (!Buffer.from(part.toString("utf8"), "utf8").equals(part)) return [];
+      return (facet.features ?? []).flatMap((feature) => feature.$type === "app.bsky.richtext.facet#mention" && feature.did && DID.test(feature.did) ? [feature.did] : []);
     });
+    if (target && !mentionedDids.includes(target.did)) return [];
     const date = record.createdAt ? new Date(record.createdAt) : null;
     return [{
       externalId: post.uri!,
       canonicalUrl: `https://bsky.app/profile/${author.did}/post/${match[2]}`,
       title: makeSnippet(record.text, 160),
-      // The label is backed by the structured mention facet, not a guessed textual match.
-      bodyText: record.text + (target ? `\nTagged account: @${target.handle}` : ""),
+      bodyText: record.text,
       language: record.langs?.[0] ?? null,
       publishedAt: date && Number.isFinite(date.getTime()) ? date : null,
       authorName: author.displayName ?? author.handle,
       socialPlatform: "bluesky",
-      socialMentionHandles: [...new Set([...handles, ...(target ? [`@${target.handle}`] : [])])],
+      // Facet display text can name a different account than its actual DID.
+      // Only the search account has a resolved, verified identity here.
+      socialMentionHandles: target ? [`@${target.handle}`] : [],
       socialAuthorExternalId: author.did,
       socialAuthorHandle: author.handle,
       socialAuthorDisplayName: author.displayName ?? null,

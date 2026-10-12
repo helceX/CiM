@@ -35,13 +35,16 @@ export function normalizeToArticleInput(source: Source, raw: RawFetchResult) {
   return {
     sourceId: source.id,
     canonicalUrl: raw.canonicalUrl,
-    contentHash: computeContentHash(raw.title, raw.bodyText),
+    // Identical campaign text from different people is still a different social post.
+    // The canonical post URL keeps search-source duplicates unified, without merging authors.
+    contentHash: computeContentHash(source.type === "social" ? `${raw.canonicalUrl}\n${raw.title}` : raw.title, raw.bodyText),
     title: raw.title,
     storedExcerpt: source.canDisplayExcerpt ? excerpt : null,
     language: raw.language ?? null,
     publishedAt: raw.publishedAt,
     authorName: raw.authorName ?? null,
+    socialMentionHandles: source.type === "social" ? raw.socialMentionHandles ?? null : null,
     print: raw.print ?? null,
-    wordFingerprint: buildWordFingerprint(matchableText({ title: raw.title, lead: raw.bodyText })),
+    wordFingerprint: buildWordFingerprint(matchableText({ title: raw.title, lead: raw.bodyText, sourceType: source.type, socialMentionHandles: raw.socialMentionHandles })),
   };
 }

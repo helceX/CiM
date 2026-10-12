@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, it } from "vitest";
-import { like } from "drizzle-orm";
+import { eq, like } from "drizzle-orm";
 import { db } from "../client";
 import { articles, sources } from "../schema/content";
 import { organizations, workspaces } from "../schema/organizations";
@@ -138,6 +138,12 @@ describe("opportunity profile and follow-up (integration)", () => {
     const otherCandidates = await listOpportunityCandidates(db, other.organizationId);
     expect(mineCandidates.map((row) => row.mention.id)).toContain(mineMention);
     expect(mineCandidates.map((row) => row.mention.id)).not.toContain(otherMention);
+    await db.update(articles).set({ publishedAt: new Date(Date.now() - 45 * 86400000) }).where(eq(articles.id, article!.id));
+    expect(await listOpportunityCandidates(db, mine.organizationId, 100, 30)).toEqual([]);
+    expect((await listOpportunityCandidates(db, mine.organizationId, 100, 90)).map(row => row.mention.id)).toContain(mineMention);
+    expect((await listOpportunityCandidates(db, mine.organizationId)).map(row => row.mention.id)).toContain(mineMention);
+    await db.update(articles).set({ publishedAt: null }).where(eq(articles.id, article!.id));
+    expect((await listOpportunityCandidates(db, mine.organizationId, 100, 7)).map(row => row.mention.id)).toContain(mineMention);
     expect(
       mineCandidates.find((row) => row.mention.id === mineMention)?.match.matchedThemes,
     ).toEqual(["grant"]);

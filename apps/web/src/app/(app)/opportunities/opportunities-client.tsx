@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { ProfileChoiceField } from "./profile-choice-field";
 import { readProfileTerms, readProfileSingle } from "./profile-form-data";
 
@@ -132,13 +132,27 @@ export function OpportunitiesClient({
   candidates,
   members,
   canWrite,
+  selectedRange,
 }: {
   profile: Profile;
   candidates: Candidate[];
   members: Member[];
   canWrite: boolean;
+  selectedRange: string;
 }) {
   const t = useTranslations("opportunities");
+  const locale = useLocale();
+  const [groupBy, setGroupBy] = useState("date");
+  const [page, setPage] = useState(0);
+  const sorted = [...candidates].sort((a, b) => Date.parse(b.publishedAt ?? b.observedAt) - Date.parse(a.publishedAt ?? a.observedAt));
+  const pageCount = Math.max(1, Math.ceil(sorted.length / 10));
+  const groups = new Map<string, Candidate[]>();
+  for (const candidate of sorted.slice(page * 10, page * 10 + 10)) {
+    const key = groupBy === "source" ? candidate.sourceName : groupBy === "status"
+      ? t(STATUS_LABELS[(candidate.followup?.status ?? "new") as keyof typeof STATUS_LABELS] ?? "statuses.new")
+      : new Intl.DateTimeFormat(locale, { dateStyle: "long", timeZone: "Europe/Istanbul" }).format(new Date(candidate.publishedAt ?? candidate.observedAt));
+    groups.set(key, [...(groups.get(key) ?? []), candidate]);
+  }
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const current = profile ?? EMPTY_PROFILE;
@@ -199,8 +213,8 @@ export function OpportunitiesClient({
         <p className="mt-1 max-w-3xl text-sm text-muted-foreground">{t("intro")}</p>
       </header>
 
-      <section className="rounded-xl border border-border bg-card p-5">
-        <h2 className="text-lg font-semibold">{t("profileTitle")}</h2>
+      <details open={!profile} className="rounded-xl border border-border bg-card p-5">
+        <summary className="cursor-pointer text-lg font-semibold">{t("profileTitle")}</summary>
         <p className="mb-4 mt-1 text-sm text-muted-foreground">{t("profileHelp")}</p>
         <form onSubmit={saveProfile} className="grid gap-4 md:grid-cols-2">
           <label className="flex flex-col gap-1 text-sm">
@@ -302,7 +316,7 @@ export function OpportunitiesClient({
             {message}
           </p>
         ) : null}
-      </section>
+      </details>
 
       <section>
         <div className="mb-3 flex items-end justify-between gap-4">
@@ -312,13 +326,31 @@ export function OpportunitiesClient({
           </div>
           <span className="text-sm text-muted-foreground">{candidates.length}</span>
         </div>
+        <div className="mb-4 flex flex-wrap items-end gap-4">
+          <form action="/opportunities" className="flex items-end gap-2">
+            <label className="flex flex-col gap-1 text-sm">{t("dateRange")}
+              <select name="since" defaultValue={selectedRange} className="rounded-md border border-border bg-background px-3 py-2">
+                {["7", "30", "90", "all"].map(value => <option key={value} value={value}>{value === "all" ? t("allDates") : t("lastDays", { days: Number(value) })}</option>)}
+              </select>
+            </label>
+            <button className="rounded-md border border-border px-3 py-2 text-sm">{t("applyFilters")}</button>
+          </form>
+          <label className="flex flex-col gap-1 text-sm">{t("groupBy")}
+            <select value={groupBy} onChange={event => { setGroupBy(event.target.value); setPage(0); }} className="rounded-md border border-border bg-background px-3 py-2">
+              <option value="date">{t("groupDate")}</option><option value="source">{t("groupSource")}</option><option value="status">{t("followupStatus")}</option>
+            </select>
+          </label>
+        </div>
+        <p className="mb-3 text-xs text-muted-foreground">{t("dateHelp")}</p>
         {candidates.length === 0 ? (
           <div className="rounded-xl border border-dashed border-border p-6 text-sm text-muted-foreground">
             {profile ? t("empty") : t("setupFirst")}
           </div>
         ) : (
           <div className="flex flex-col gap-4">
-            {candidates.map((candidate) => (
+            {[...groups].map(([group, items]) => <section key={group} className="flex flex-col gap-3" aria-label={group}>
+              <h3 className="text-sm font-semibold text-muted-foreground">{group} · {items.length}</h3>
+            {items.map((candidate) => (
               <article
                 key={candidate.mentionId}
                 className="rounded-xl border border-border bg-card p-5"
@@ -357,6 +389,8 @@ export function OpportunitiesClient({
                     {candidate.excerpt}
                   </p>
                 ) : null}
+                <details className="mt-3">
+                  <summary className="cursor-pointer text-sm font-medium">{t("showDetails")} · {t(STATUS_LABELS[(candidate.followup?.status ?? "new") as keyof typeof STATUS_LABELS] ?? "statuses.new")}</summary>
                 <div className="mt-4 grid gap-4 md:grid-cols-2">
                   <div>
                     <h4 className="text-sm font-medium">{t("whyMatched")}</h4>
@@ -479,8 +513,15 @@ export function OpportunitiesClient({
                     </div>
                   </form>
                 ) : null}
+                </details>
               </article>
             ))}
+            </section>)}
+            <nav aria-label={t("pagination")} className="flex items-center justify-between gap-3">
+              <button disabled={page === 0} onClick={() => setPage(page - 1)} className="rounded-md border border-border px-3 py-2 text-sm disabled:opacity-40">{t("previous")}</button>
+              <span className="text-sm">{t("pageOf", { page: page + 1, total: pageCount })}</span>
+              <button disabled={page + 1 >= pageCount} onClick={() => setPage(page + 1)} className="rounded-md border border-border px-3 py-2 text-sm disabled:opacity-40">{t("next")}</button>
+            </nav>
           </div>
         )}
       </section>

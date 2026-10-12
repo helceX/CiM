@@ -7,16 +7,19 @@ import {
 import { requireOrgContext } from "@/lib/tenant";
 import { OpportunitiesClient } from "./opportunities-client";
 
-export default async function OpportunitiesPage() {
+export default async function OpportunitiesPage({ searchParams }: { searchParams: Promise<{ since?: string }> }) {
+  const { since } = await searchParams;
+  const selectedRange = ["7", "30", "90", "all"].includes(since ?? "") ? since! : "30";
   const context = await requireOrgContext();
   const [profile, candidates, members] = await Promise.all([
     getOpportunityProfile(db, context.organizationId),
-    listOpportunityCandidates(db, context.organizationId),
+    listOpportunityCandidates(db, context.organizationId, 100, selectedRange === "all" ? undefined : Number(selectedRange)),
     listMembersForOrganization(db, context.organizationId),
   ]);
 
   return (
     <OpportunitiesClient
+      selectedRange={selectedRange}
       profile={
         profile
           ? {

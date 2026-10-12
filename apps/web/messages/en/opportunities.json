@@ -131,6 +131,19 @@
       "registered": "Registered legal entity",
       "cofinancing": "Co-financing available",
       "consortium": "Consortium participation"
-    }
+    },
+    "dateRange": "Date range",
+    "allDates": "All dates",
+    "lastDays": "Last {days} days",
+    "applyFilters": "Apply",
+    "groupBy": "Group by",
+    "groupDate": "Publication date",
+    "groupSource": "Source",
+    "dateHelp": "Filtered by publication date, or observed date when unknown. Shows up to 100 highest-priority signals in the selected period, 10 per page. This date is not an application deadline.",
+    "showDetails": "Match details and follow-up",
+    "pagination": "Opportunity pages",
+    "previous": "Previous",
+    "next": "Next",
+    "pageOf": "Page {page} of {total}"
   }
 }

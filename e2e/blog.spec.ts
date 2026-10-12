@@ -54,7 +54,7 @@ test("public blog can be explored and has crawlable metadata", async ({
   await page.getByRole("link", { name: "Mediaory hesabınızı oluşturun" }).click();
   await expect(page).toHaveURL(/\/register\/blog\/medya-takibi-nedir$/);
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", "noindex, nofollow");
-  await expect(page.getByRole("textbox", { name: /E-posta|Email/ })).toBeVisible();
+  await expect(page.getByRole("textbox", { name: /e-posta|email/i })).toBeVisible();
   // No account or conversion is created by this navigation-only regression test.
   expect((await request.get("/register/blog/not-a-published-article")).status()).toBe(404);
   await page.goto("/blog/kalici-gundem-icerigi");

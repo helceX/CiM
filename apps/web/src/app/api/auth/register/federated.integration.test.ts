@@ -11,6 +11,7 @@ vi.mock("@/lib/rate-limit", () => ({ clientIpFrom: () => "test", checkRateLimit:
 vi.mock("@/lib/turnstile", () => ({ rejectIfNotHuman: async () => null }));
 vi.mock("@/lib/email", () => ({ sendEmail, verificationEmailBody: () => "verification" }));
 const { sealLoginValue } = await import("../../../../lib/federated-login");
+const { sealBlogAttribution } = await import("../../../../lib/blog-attribution");
 const { getEnv } = await import("@cim/config");
 const { POST } = await import("./route");
 const cleanup: { userId: string; organizationId: string }[] = [];
@@ -33,7 +34,7 @@ async function remember(email: string) {
 it("registers from the verified provider email rather than a modified browser email", async () => {
   const email = `${tag}-google@example.com`;
   pending.set("cim_login_pending", sealLoginValue({ provider: "google", subject: tag, email, emailVerified: true, name: "Test", expires: Date.now() + 60000 }, getEnv().SESSION_SECRET));
-  const attribution = sealLoginValue({ blogSource: "medya-takibi-nedir", expires: Date.now() + 60000 }, getEnv().SESSION_SECRET);
+  const attribution = sealBlogAttribution("medya-takibi-nedir", getEnv().SESSION_SECRET);
   const response = await POST(request(`${tag}-attacker@example.com`, attribution));
   expect(await response.json()).toMatchObject({ ok: true, signedIn: true });
   const user = await remember(email);

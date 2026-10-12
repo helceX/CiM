@@ -1,5 +1,6 @@
 import "server-only";
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
+export { safeLoginNext } from "./login-redirect";
 
 export const LOGIN_PROVIDERS = ["google", "github", "microsoft"] as const;
 export type LoginProvider = typeof LOGIN_PROVIDERS[number];
@@ -15,10 +16,6 @@ export function loginCredentials(provider: LoginProvider) {
   return { id: process.env[`${key}_CLIENT_ID`] ?? "", secret: process.env[`${key}_CLIENT_SECRET`] ?? "" };
 }
 export function configuredLoginProviders() { return LOGIN_PROVIDERS.filter(provider => { const credentials = loginCredentials(provider); return Boolean(credentials.id && credentials.secret); }); }
-export function safeLoginNext(value: string | null) {
-  // Only destinations inside the application; no OAuth/API endpoints or protocol-relative URLs.
-  return value && /^\/(dashboard|monitoring|mentions|alerts|analytics|reports|opportunities|settings|onboarding)(\/|\?|$)/.test(value) && !/[\\\r\n]/.test(value) ? value : "/dashboard";
-}
 export function sealLoginValue(value: object, secret: string): string {
   const iv = randomBytes(12);
   const cipher = createCipheriv("aes-256-gcm", createHash("sha256").update(`federated-login:${secret}`).digest(), iv);

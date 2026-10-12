@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Button, Field, Input } from "@cim/ui";
+import { safeLoginNext } from "@/lib/login-redirect";
 
 export function LoginForm() {
   const t = useTranslations("auth.signIn");
@@ -41,7 +42,7 @@ export function LoginForm() {
         return;
       }
       const next = searchParams.get("next") ?? "/dashboard";
-      router.push(next);
+      router.push(safeLoginNext(next));
       router.refresh();
     } catch {
       setError(common("generic"));

@@ -20,7 +20,9 @@ export function signalFor(query: SignalQuery, story: SignalStory, outlets = 1): 
     lead: story.lead === null ? null : matchableText({ title: story.lead, sourceType: story.sourceType }),
     language: story.language,
     sourceType: story.sourceType,
-    outlets,
+    // Search URLs are not independent news outlets, and copies of a social
+    // post do not establish audience reach or engagement.
+    outlets: story.sourceType === "social" ? 1 : outlets,
   });
 }
 

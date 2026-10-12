@@ -100,6 +100,7 @@ describe("MockSocialConnector ingestion (integration)", () => {
 
     const article = mentions[0]?.article;
     expect(article?.authorProfileId).not.toBeNull();
+    expect(article?.storyClusterId).toBeNull(); // Social posts do not establish news outlet coverage.
 
     const [profile] = await db
       .select()

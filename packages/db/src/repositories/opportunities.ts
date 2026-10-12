@@ -72,6 +72,7 @@ export async function listOpportunityCandidates(
   db: Db,
   organizationId: OrganizationId,
   limit = 100,
+  sinceDays?: number,
 ) {
   const [profile] = await db
     .select()
@@ -106,6 +107,7 @@ export async function listOpportunityCandidates(
       and(
         eq(mentions.organizationId, organizationId),
         eq(monitoringQueries.status, "active"),
+        ...(sinceDays && Number.isInteger(sinceDays) && sinceDays > 0 ? [sql`coalesce(${articles.publishedAt}, ${mentions.createdAt}) >= now() - (${Math.min(sinceDays, 365)}::text || ' days')::interval`] : []),
         sql`${mentions.status} <> 'archived'`,
         sql`${mentions.signalReasons} @> '[{"code":"goal","goal":"opportunity"}]'::jsonb`,
         ...(profile.languages.length

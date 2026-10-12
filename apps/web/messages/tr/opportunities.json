@@ -131,6 +131,19 @@
       "registered": "Tüzel kişilik",
       "cofinancing": "Eş finansman sağlayabilir",
       "consortium": "Konsorsiyuma katılım"
-    }
+    },
+    "dateRange": "Tarih aralığı",
+    "allDates": "Tüm tarihler",
+    "lastDays": "Son {days} gün",
+    "applyFilters": "Uygula",
+    "groupBy": "Gruplandır",
+    "groupDate": "Yayın tarihi",
+    "groupSource": "Kaynak",
+    "dateHelp": "Yayın tarihine göre filtrelenir; tarih bilinmiyorsa görülme tarihi kullanılır. Seçili dönemin en yüksek öncelikli 100 sinyali gösterilir, her sayfada 10 kayıt vardır. Bu tarih, başvuru son tarihi değildir.",
+    "showDetails": "Eşleşme ayrıntıları ve takip",
+    "pagination": "Fırsat sayfaları",
+    "previous": "Önceki",
+    "next": "Sonraki",
+    "pageOf": "{page} / {total} sayfa"
   }
 }

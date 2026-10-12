@@ -48,8 +48,8 @@ export async function POST(request: Request) {
     .filter(
       (article) =>
         sourceInRegionScopes(article.sourceCountry, ast.regionScopes) &&
-        (matchesText(ast, matchableText({ title: article.title, lead: article.storedExcerpt }), { language: article.language }) ||
-          matchesFingerprint(ast, article.wordFingerprint, { language: article.language })),
+        (matchesText(ast, matchableText({ title: article.title, lead: article.storedExcerpt, sourceType: article.sourceType, socialMentionHandles: article.socialMentionHandles }), { language: article.language }) ||
+          (article.sourceConnector !== "bluesky-search" || article.socialMentionHandles != null) && matchesFingerprint(ast, article.wordFingerprint, { language: article.language })),
     )
     .sort((a, b) => b.fetchedAt.getTime() - a.fetchedAt.getTime());
   // Where the matches come from — shows the chosen scope is what is actually applied.
@@ -67,8 +67,8 @@ export async function POST(request: Request) {
       ast,
       target: ast.trackingTarget,
       intent: ast.intent,
-      title: story.title,
-      lead: story.storedExcerpt,
+      title: matchableText({ title: story.title, sourceType: story.sourceType }),
+      lead: story.storedExcerpt === null ? null : matchableText({ title: story.storedExcerpt, sourceType: story.sourceType }),
       language: story.language,
       sourceType: story.sourceType,
     }),

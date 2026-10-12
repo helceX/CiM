@@ -35,6 +35,18 @@ function sql(statement: string): string {
   return execFileSync("psql", [DATABASE_URL, "-t", "-A", "-c", statement], { encoding: "utf-8" }).trim();
 }
 
+/** Test-only customer social monitoring, with no external source or platform-admin privilege. */
+export function seedOwnSocialMonitoring(email: string): string {
+  const quotedEmail = email.replace(/'/g, "''");
+  const output = sql(`insert into monitoring_queries (organization_id, project_id, name, query_ast, boolean_query, source_types, tracking_target)
+    select p.organization_id, p.id, 'Sosyal takip — Lunavera Teknoloji', '{"include":["Lunavera Teknoloji"],"exclude":["giveaway"],"exactPhrases":[],"company":{"name":"Lunavera Teknoloji"}}'::jsonb, '"Lunavera Teknoloji"', array['social'], 'company'
+    from projects p join organization_memberships m on m.organization_id = p.organization_id join users u on u.id = m.user_id
+    where u.email = '${quotedEmail}' limit 1 returning id;`);
+  const id = output.match(/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/i)?.[0];
+  if (!id) throw new Error("Could not seed own social monitoring");
+  return id;
+}
+
 /** Test-only: grant the platform-admin flag the way the owner does it by hand in production. */
 export function makePlatformAdmin(email: string): void {
   sql(`update users set is_platform_super_admin = true where email = '${email}';`);

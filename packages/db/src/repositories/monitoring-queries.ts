@@ -134,6 +134,14 @@ export async function getMonitoringQuery(
   return query;
 }
 
+/** Tenant-scoped pause/resume; keeps the monitoring and all historical matches. */
+export async function setMonitoringQueryStatus(db: Db, organizationId: OrganizationId, id: string, status: "active" | "paused") {
+  const [query] = await db.update(monitoringQueries).set({ status, updatedAt: new Date() })
+    .where(and(eq(monitoringQueries.organizationId, organizationId), eq(monitoringQueries.id, id), isNull(monitoringQueries.deletedAt)))
+    .returning();
+  return query;
+}
+
 /**
  * The one deliberate cross-tenant read in this codebase: the ingestion
  * pipeline (a system process, not a user-facing code path) needs every

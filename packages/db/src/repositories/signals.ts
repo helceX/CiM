@@ -1,5 +1,5 @@
 import { and, desc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
-import { applyCoverage, scoreSignal, type Signal, type SignalLevel } from "@cim/core";
+import { applyCoverage, matchableText, scoreSignal, type Signal, type SignalLevel } from "@cim/core";
 import type { Db } from "../client";
 import { articles, mentions, sources } from "../schema/content";
 import { monitoringQueries, type QueryAst } from "../schema/monitoring";
@@ -16,8 +16,8 @@ export function signalFor(query: SignalQuery, story: SignalStory, outlets = 1): 
     ast: query.queryAst,
     target: query.trackingTarget,
     intent: query.queryAst.intent,
-    title: story.title,
-    lead: story.lead,
+    title: matchableText({ title: story.title, sourceType: story.sourceType }),
+    lead: story.lead === null ? null : matchableText({ title: story.lead, sourceType: story.sourceType }),
     language: story.language,
     sourceType: story.sourceType,
     outlets,

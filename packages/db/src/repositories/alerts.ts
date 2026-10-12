@@ -102,10 +102,13 @@ export async function getActiveAlertRulesForQuery(
     .select(getTableColumns(alertRules))
     .from(alertRules)
     .innerJoin(organizations, eq(organizations.id, alertRules.organizationId))
+    .innerJoin(monitoringQueries, and(eq(monitoringQueries.id, alertRules.queryId), eq(monitoringQueries.organizationId, alertRules.organizationId)))
     .where(
       and(
         eq(alertRules.queryId, queryId),
         eq(alertRules.status, "active"),
+        eq(monitoringQueries.status, "active"),
+        isNull(monitoringQueries.deletedAt),
         type ? eq(alertRules.type, type) : undefined,
         isNull(organizations.deletedAt),
       ),
@@ -140,9 +143,12 @@ async function getActiveAlertRulesOfType(db: Db, type: AlertRuleType) {
       // A soft-deleted organization must stop firing alerts — see the same
       // note in listActiveMonitoringQueriesForSourceType.
       .innerJoin(organizations, eq(organizations.id, alertRules.organizationId))
+      .innerJoin(monitoringQueries, and(eq(monitoringQueries.id, alertRules.queryId), eq(monitoringQueries.organizationId, alertRules.organizationId)))
       .where(
         and(
           eq(alertRules.status, "active"),
+          eq(monitoringQueries.status, "active"),
+          isNull(monitoringQueries.deletedAt),
           eq(alertRules.type, type),
           isNull(organizations.deletedAt),
         ),

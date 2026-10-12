@@ -61,6 +61,8 @@ export async function backfillMentionsForQuery(
         clusterId: articles.storyClusterId,
         sourceType: sources.type,
         sourceCountry: sources.country,
+        sourceConnector: sources.connector,
+        socialMentionHandles: articles.socialMentionHandles,
       })
       .from(articles)
       .innerJoin(sources, eq(sources.id, articles.sourceId))
@@ -84,11 +86,15 @@ export async function backfillMentionsForQuery(
       const text = matchableText(row);
       const match = { language: row.language };
       const exact = matchesText(query.queryAst, text, match);
-      const fingerprintTerm = exact ? null : findFingerprintMatch(query.queryAst, row.wordFingerprint, match);
+      // Older Bluesky fingerprints included URL parameters and have no verified tag metadata.
+      const fingerprintTerm = exact || (row.sourceConnector === "bluesky-search" && row.socialMentionHandles === null) ? null : findFingerprintMatch(query.queryAst, row.wordFingerprint, match);
       if (!exact && fingerprintTerm === null) continue;
-      const matchedTerm = exact ? findMatchedTerm(query.queryAst, text, match) : fingerprintTerm;
+      const verifiedTag = row.socialMentionHandles && query.queryAst.include.find((term) => term.startsWith("@") && row.socialMentionHandles!.includes(term.toLowerCase()));
+      const matchedTerm = verifiedTag || (exact ? findMatchedTerm(query.queryAst, text, match) : fingerprintTerm);
       const { matchType, matchedRule } = matchedTerm
-        ? classifyMatchType(query.queryAst, matchedTerm, row.sourceType)
+        ? (row.sourceConnector === "bluesky-search" && matchedTerm.startsWith("@") && !verifiedTag
+          ? { matchType: "contextual" as const, matchedRule: "Account name in text; no verified account tag metadata" }
+          : classifyMatchType(query.queryAst, matchedTerm, row.sourceType))
         : { matchType: null, matchedRule: null };
       const signal = signalFor(query, row, row.clusterId ? (outlets.get(row.clusterId) ?? 1) : 1);
       const id = await createMentionIfNotExists(db, organizationId, {

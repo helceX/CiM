@@ -4,6 +4,27 @@ import { articles, mentions, sources } from "../schema/content";
 import { socialProfiles } from "../schema/social";
 import { monitoringQueries } from "../schema/monitoring";
 import type { OrganizationId } from "./tenant-scope";
+import { listMonitoringQueries } from "./monitoring-queries";
+
+/** Shared source state is returned only for search terms in this tenant's own monitorings. */
+export async function getSocialSearchHealth(db: Db, organizationId: OrganizationId) {
+  const queries = (await listMonitoringQueries(db, organizationId)).filter((query) => query.sourceTypes.includes("social"));
+  const searches = await db.select({ id: sources.id, url: sources.url, status: sources.status, checkedAt: sources.lastCheckedAt })
+    .from(sources).where(eq(sources.connector, "bluesky-search"));
+  return queries.map((query) => {
+    const terms = [...query.queryAst.include, ...query.queryAst.exactPhrases].map((term) => term.toLocaleLowerCase());
+    const matched = searches.flatMap((source) => {
+      if (!source.url) return [];
+      try {
+        const url = new URL(source.url);
+        const handle = url.searchParams.get("handle");
+        const term = handle ? `@${handle}` : url.searchParams.get("q") ?? "";
+        return terms.includes(term.toLocaleLowerCase()) ? [{ id: source.id, term, status: source.status, checkedAt: source.checkedAt }] : [];
+      } catch { return []; }
+    });
+    return { queryId: query.id, queryName: query.name, queryStatus: query.status, canConfigure: query.sourceTypes.length === 1, sources: matched };
+  });
+}
 
 export type SocialScope = { projectId?: string; queryId?: string; sinceDays: number };
 
@@ -27,7 +48,16 @@ export type SocialOverviewStats = {
   totalConversations: number;
   directMentions: number;
   uniqueAuthors: number;
+  verifiedAccountTags: number;
 };
+
+function verifiedAccountTag() {
+  return sql<boolean>`coalesce(${mentions.matchType} = 'direct_mention' and exists (
+    select 1 from jsonb_array_elements_text(coalesce(${articles.socialMentionHandles}, '[]'::jsonb)) verified(handle)
+    cross join unnest(coalesce(${mentions.matchedTerms}, array[]::text[])) matched(term)
+    where lower(verified.handle) = lower(matched.term)
+  ), false)`;
+}
 
 /**
  * master prompt §47 "Social Listening Overview" KPIs. Only the KPIs this
@@ -48,12 +78,13 @@ export async function getSocialOverviewStats(
       totalConversations: sql<number>`count(distinct ${mentions.id})::int`,
       directMentions: sql<number>`count(distinct ${mentions.id}) filter (where ${mentions.matchType} = 'direct_mention')::int`,
       uniqueAuthors: sql<number>`count(distinct ${articles.authorProfileId})::int`,
+      verifiedAccountTags: sql<number>`count(distinct ${mentions.id}) filter (where ${verifiedAccountTag()})::int`,
     })
     .from(mentions)
     .innerJoin(articles, eq(articles.id, mentions.articleId))
     .innerJoin(sources, eq(sources.id, articles.sourceId))
     .where(socialScopeWhere(organizationId, scope));
-  return row ?? { totalConversations: 0, directMentions: 0, uniqueAuthors: 0 };
+  return row ?? { totalConversations: 0, directMentions: 0, uniqueAuthors: 0, verifiedAccountTags: 0 };
 }
 
 export type SocialPlatformCount = { platform: string; count: number };
@@ -278,6 +309,7 @@ export type TopSocialPost = {
   matchType: string | null;
   matchedTerms: string[] | null;
   excerpt: string | null;
+  accountTagVerified: boolean;
 };
 
 /**
@@ -307,6 +339,7 @@ export async function getTopSocialPosts(
       matchType: mentions.matchType,
       matchedTerms: mentions.matchedTerms,
       excerpt: articles.storedExcerpt,
+      accountTagVerified: verifiedAccountTag(),
     })
     .from(mentions)
     .innerJoin(articles, eq(articles.id, mentions.articleId))

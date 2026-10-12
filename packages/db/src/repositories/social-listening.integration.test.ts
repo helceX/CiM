@@ -145,6 +145,7 @@ describe("social listening repository (integration)", () => {
     const stats = await getSocialOverviewStats(db, organizationId, { sinceDays: 7 });
     expect(stats.totalConversations).toBe(3);
     expect(stats.directMentions).toBe(1);
+    expect(stats.verifiedAccountTags).toBe(0); // Legacy text matches are not account identity verification.
     expect(stats.uniqueAuthors).toBe(2);
   });
 

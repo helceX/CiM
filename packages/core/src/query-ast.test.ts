@@ -7,9 +7,22 @@ import {
   matchesText,
   parseBooleanQuery,
   queryQualityWarning,
+  matchableText,
 } from "./query-ast";
 
 describe("query AST", () => {
+  it("does not mistake social URL parameters for brand mentions, while keeping news matching unchanged", () => {
+    const ast = { include: ["Lunavera"], exclude: [], exactPhrases: [] };
+    const article = { title: "A new event", lead: "Read https://example.org/event?utm_source=Lunavera and www.example.org/Lunavera" };
+    expect(matchesText(ast, matchableText({ ...article, sourceType: "social" }))).toBe(false);
+    expect(matchesText(ast, matchableText({ ...article, sourceType: "news" }))).toBe(true);
+    expect(matchesText(ast, matchableText({ ...article, lead: `${article.lead} Lunavera açıkladı.`, sourceType: "social" }))).toBe(true);
+  });
+  it("keeps resolved account tags matchable even when their display text differs, and still honors exclusions", () => {
+    const ast = { include: ["@lunavera.bsky.social"], exclude: ["çekiliş"], exactPhrases: [] };
+    expect(matchesText(ast, matchableText({ title: "Bu şirkete bir sorum var", sourceType: "social", socialMentionHandles: ["@lunavera.bsky.social"] }))).toBe(true);
+    expect(matchesText(ast, matchableText({ title: "çekiliş yapılıyor", sourceType: "social", socialMentionHandles: ["@lunavera.bsky.social"] }))).toBe(false);
+  });
   it("round-trips a simple include/exclude AST to Boolean syntax and back", () => {
     const ast = {
       include: ["BTM", "Startup"],

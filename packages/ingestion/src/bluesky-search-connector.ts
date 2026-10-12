@@ -102,7 +102,9 @@ export class BlueskySearchConnector implements SourceConnector {
       throw error;
     }
     const items = parseBlueskyPosts(result.body, search.did && search.handle ? { did: search.did, handle: search.handle } : undefined);
-    return search.did ? items.filter((item) => item.publishedAt && item.publishedAt.getTime() >= recentSince && item.publishedAt.getTime() <= Date.now()) : items;
+    // API `since` is based on its search index timestamp, not necessarily the
+    // authored post date. Apply the published-date bound consistently to both modes.
+    return items.filter((item) => item.publishedAt && item.publishedAt.getTime() >= recentSince && item.publishedAt.getTime() <= Date.now());
   }
 
   async healthCheck(source: Source): Promise<SourceHealth> {

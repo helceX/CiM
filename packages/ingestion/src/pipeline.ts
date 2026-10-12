@@ -108,7 +108,7 @@ export async function ingestSource(
           ...normalized,
           authorProfileId: await resolveAuthorProfileId(db, raw),
         });
-    let clusterId = article.storyClusterId ?? null;
+    let clusterId = source.type === "social" ? null : article.storyClusterId ?? null;
     if (!created && source.type === "social" && raw.socialMentionHandles && (article.socialMentionHandles === null || raw.socialMentionHandles.some((handle) => !article.socialMentionHandles?.includes(handle)))) {
       await recordSocialMatchMetadata(db, article.id, raw.socialMentionHandles, normalized.wordFingerprint);
     }
@@ -116,7 +116,7 @@ export async function ingestSource(
     // crawl may have inserted the row after our initial lookup.
     if (created) {
       articlesCreated += 1;
-      clusterId = await maybeAssignStoryCluster(db, article);
+      if (source.type !== "social") clusterId = await maybeAssignStoryCluster(db, article);
     }
     // How many outlets carry this story: a story many outlets run is more important than one that stands alone.
     const outlets = clusterId ? await countClusterOutlets(db, clusterId) : 1;

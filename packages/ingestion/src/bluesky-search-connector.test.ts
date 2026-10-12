@@ -80,4 +80,14 @@ describe("free public Bluesky search", () => {
     expect(items).toHaveLength(1);
     expect(items[0]?.bodyText).toContain("merhaba");
   });
+  it("filters old and future authored dates from brand searches even when the API index returns them", async () => {
+    const recent = post("Lunavera announced a product");
+    recent.record.createdAt = new Date().toISOString();
+    const old = post("Lunavera old post indexed today");
+    old.record.createdAt = new Date(Date.now() - 4 * 24 * 60 * 60_000).toISOString();
+    const future = post("Lunavera with an invalid future authored date");
+    future.record.createdAt = new Date(Date.now() + 24 * 60 * 60_000).toISOString();
+    const fetcher = vi.fn<typeof safeFetch>().mockResolvedValue({ status: 200, body: body([recent, old, future]), headers: new Headers() as never, finalUrl: "https://api.bsky.app" });
+    expect(await new BlueskySearchConnector(fetcher).read(blueskySearchUrl("Lunavera"))).toHaveLength(1);
+  });
 });

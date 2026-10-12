@@ -44,3 +44,9 @@ it("stores only an encrypted short-lived registration identity, no provider toke
   expect(store.set).toHaveBeenCalledWith("cim_login_pending", expect.any(String), expect.objectContaining({ httpOnly: true, secure: true, maxAge: 600 }));
   expect(session).not.toHaveBeenCalled();
 });
+it("carries the server-held blog source through OAuth into the encrypted pending registration", async () => {
+  open.mockReturnValue({ provider: "google", state: "valid", verifier: "verifier", userId: null, next: "/dashboard", blogSource: "medya-takibi-nedir" });
+  await GET(request(), context);
+  const { openLoginValue } = await import("../../../../../../lib/federated-login");
+  expect(openLoginValue(store.set.mock.calls[0]?.[1], "secret")).toMatchObject({ blogSource: "medya-takibi-nedir", subject: "subject" });
+});

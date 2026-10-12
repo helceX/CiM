@@ -12,6 +12,7 @@ test("public blog can be explored and has crawlable metadata", async ({
     "href",
     "https://mediaory.io/blog?sayfa=2",
   );
+  await expect(page.locator('link[rel="canonical"]')).toHaveCount(1);
   await expect(page.locator(".blog-grid article")).toHaveCount(18);
   await page.getByRole("link", { name: "6. sayfa", exact: true }).click();
   await expect(page.locator(".blog-grid article")).toHaveCount(10);
@@ -49,6 +50,13 @@ test("public blog can be explored and has crawlable metadata", async ({
   expect(feed.headers()["content-type"]).toContain("application/rss+xml");
   expect((await feed.text()).match(/<item>/g)).toHaveLength(100);
   expect((await request.get("/blog?sayfa=999")).status()).toBe(404);
+  await page.goto("/blog/medya-takibi-nedir");
+  await page.getByRole("link", { name: "Mediaory hesabınızı oluşturun" }).click();
+  await expect(page).toHaveURL(/\/register\/blog\/medya-takibi-nedir$/);
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", "noindex, nofollow");
+  await expect(page.getByRole("textbox", { name: /e-posta|email/i })).toBeVisible();
+  // No account or conversion is created by this navigation-only regression test.
+  expect((await request.get("/register/blog/not-a-published-article")).status()).toBe(404);
   await page.goto("/blog/kalici-gundem-icerigi");
   await expect(page.getByRole("heading", { level: 1 })).toContainText("kalıcı rehber");
   await expect(page.locator(".blog-article-cover")).toBeVisible();

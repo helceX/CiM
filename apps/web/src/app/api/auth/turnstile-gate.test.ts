@@ -6,6 +6,7 @@ const fetchMock = vi.fn();
 
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/federated-login", () => import("../../../lib/federated-login"));
+vi.mock("@/lib/blog-attribution", () => import("../../../lib/blog-attribution"));
 vi.mock("@/lib/session", () => ({ createUserSession: vi.fn() }));
 // No `@/` alias under vitest — point it at the real implementation.
 vi.mock("@/lib/turnstile", () => import("../../../lib/turnstile"));

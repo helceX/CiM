@@ -141,6 +141,9 @@ export default async function BlogArticle({
             <p className="blog-eyebrow">MEDIAORY İLE SONRAKİ ADIM</p>
             <h2>{post.cta.title}</h2>
             <p>{post.cta.body}</p>
+            <Link className="mk-btn mk-btn-primary" prefetch={false} href={`/register/blog/${post.slug}`}>
+              Mediaory hesabınızı oluşturun ↗
+            </Link>
             <Link
               className="mk-btn mk-btn-primary"
               href={`${post.cta.href}?utm_source=mediaory_blog&utm_medium=internal&utm_campaign=${post.slug}`}

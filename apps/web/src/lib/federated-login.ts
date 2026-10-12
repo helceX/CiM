@@ -4,8 +4,8 @@ export { safeLoginNext } from "./login-redirect";
 
 export const LOGIN_PROVIDERS = ["google", "github", "microsoft"] as const;
 export type LoginProvider = typeof LOGIN_PROVIDERS[number];
-export type LoginIdentity = { provider: LoginProvider; subject: string; email: string; emailVerified: boolean; name: string };
-export type LoginFlow = { provider: LoginProvider; state: string; verifier: string; userId: string | null; next: string; expires: number };
+export type LoginIdentity = { provider: LoginProvider; subject: string; email: string; emailVerified: boolean; name: string; blogSource?: string };
+export type LoginFlow = { provider: LoginProvider; state: string; verifier: string; userId: string | null; next: string; expires: number; blogSource?: string };
 export const FLOW_COOKIE = "cim_login_flow";
 export const PENDING_COOKIE = "cim_login_pending";
 export const LOGIN_TTL = 600;

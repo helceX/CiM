@@ -43,4 +43,8 @@ describe("federated identity boundary", () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json({ error: "invalid_grant" })));
     await expect(exchangeLogin(flow, "code", "https://mediaory.io/callback")).rejects.toThrow();
   });
+  it("reports a safe provider stage without leaking its private response", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("private token and email", { status: 403 })));
+    await expect(exchangeLogin(flow, "private-code", "https://mediaory.io/callback")).rejects.toMatchObject({ reference: "token_http_403", message: "Login provider unavailable" });
+  });
 });

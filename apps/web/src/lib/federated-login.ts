@@ -42,21 +42,24 @@ export function loginAuthorizeUrl(flow: LoginFlow, callback: string) {
   url.search = new URLSearchParams({ client_id: loginCredentials(flow.provider).id, redirect_uri: callback, response_type: "code", scope: endpoints[flow.provider].scope, state: flow.state, code_challenge: createHash("sha256").update(flow.verifier).digest("base64url"), code_challenge_method: "S256" }).toString();
   return url.href;
 }
-async function providerJson(url: string, init: RequestInit = {}) {
+export class LoginProviderError extends Error {
+  constructor(public readonly reference: string) { super("Login provider unavailable"); }
+}
+async function providerJson(url: string, init: RequestInit = {}, reference = "provider") {
   const response = await fetch(url, { ...init, redirect: "error", cache: "no-store", signal: AbortSignal.timeout(10000), headers: { accept: "application/json", "user-agent": "Mediaory", ...init.headers } });
-  if (!response.ok) throw new Error("Provider request failed");
+  if (!response.ok) throw new LoginProviderError(`${reference}_http_${response.status}`);
   return response.json();
 }
 export async function exchangeLogin(flow: LoginFlow, code: string, callback: string): Promise<LoginIdentity> {
   const credentials = loginCredentials(flow.provider);
-  const token = await providerJson(endpoints[flow.provider].token, { method: "POST", body: new URLSearchParams({ grant_type: "authorization_code", client_id: credentials.id, client_secret: credentials.secret, code, redirect_uri: callback, code_verifier: flow.verifier }) }) as { access_token?: string; error?: string };
-  if (token.error || !token.access_token) throw new Error("Missing access token");
+  const token = await providerJson(endpoints[flow.provider].token, { method: "POST", body: new URLSearchParams({ grant_type: "authorization_code", client_id: credentials.id, client_secret: credentials.secret, code, redirect_uri: callback, code_verifier: flow.verifier }) }, "token") as { access_token?: string; error?: string };
+  if (token.error || !token.access_token) throw new LoginProviderError("token_rejected");
   const headers = { authorization: `Bearer ${token.access_token}` };
-  const user = await providerJson(endpoints[flow.provider].user, { headers }) as { sub?: string; id?: number; name?: string; login?: string; email?: string; email_verified?: boolean };
+  const user = await providerJson(endpoints[flow.provider].user, { headers }, "profile") as { sub?: string; id?: number; name?: string; login?: string; email?: string; email_verified?: boolean };
   let email = user.email ?? "";
   let emailVerified = flow.provider === "google" && user.email_verified === true;
   if (flow.provider === "github") {
-    const emails = await providerJson("https://api.github.com/user/emails", { headers }) as { email: string; primary: boolean; verified: boolean }[];
+    const emails = await providerJson("https://api.github.com/user/emails", { headers }, "email") as { email: string; primary: boolean; verified: boolean }[];
     const selected = emails.find(item => item.primary && item.verified);
     if (!selected) throw new Error("Verified email required");
     email = selected.email; emailVerified = true;

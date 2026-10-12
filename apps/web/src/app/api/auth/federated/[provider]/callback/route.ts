@@ -34,5 +34,11 @@ export async function GET(request: Request, { params }: { params: Promise<{ prov
     if (identity.email && await findUserByEmail(db, identity.email)) return fail("link");
     store.set(PENDING_COOKIE, sealLoginValue({ ...identity, expires: Date.now() + LOGIN_TTL * 1000 }, env.SESSION_SECRET), { httpOnly: true, secure: env.NODE_ENV === "production", sameSite: "lax", path: "/", maxAge: LOGIN_TTL });
     return NextResponse.redirect(new URL("/register?federated=1", env.APP_URL));
-  } catch { return fail("failed"); }
+  } catch (error) {
+    // Only fixed stage/status identifiers may leave the server; never expose provider responses or credentials.
+    const reference = error instanceof Error && "reference" in error && typeof error.reference === "string" && /^(token|profile|email)_(rejected|http_[1-5][0-9]{2})$/.test(error.reference) ? error.reference : "unavailable";
+    const target = new URL("/login?federated=failed", env.APP_URL);
+    target.searchParams.set("reference", reference);
+    return NextResponse.redirect(target);
+  }
 }

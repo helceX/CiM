@@ -20,6 +20,7 @@ import { sendEmail, verificationEmailBody } from "@/lib/email";
 import { rejectIfNotHuman } from "@/lib/turnstile";
 import { openLoginValue, PENDING_COOKIE, type LoginIdentity } from "@/lib/federated-login";
 import { createUserSession } from "@/lib/session";
+import { blogAttribution } from "@/lib/blog-attribution";
 
 const VERIFICATION_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
 
@@ -45,6 +46,7 @@ export async function POST(request: Request) {
     );
   }
   const input = parsed.data;
+  const acquisition = typeof json?.attribution === "string" ? blogAttribution(json.attribution, getEnv().SESSION_SECRET) : undefined;
 
   const existing = await findUserByEmail(db, input.email);
   if (existing) {
@@ -74,7 +76,7 @@ export async function POST(request: Request) {
 
   if (identity) store?.delete(PENDING_COOKIE);
   if (identity?.emailVerified) {
-    await recordAuditLog(db, asOrganizationId(organization.id), { actorUserId: user.id, action: "user.registered", targetType: "organization", targetId: organization.id });
+    await recordAuditLog(db, asOrganizationId(organization.id), { actorUserId: user.id, action: "user.registered", targetType: "organization", targetId: organization.id, metadata: acquisition });
     await createUserSession(user.id, { userAgent: request.headers.get("user-agent") ?? undefined, ipAddress: ip });
     return NextResponse.json({ ok: true, signedIn: true });
   }
@@ -88,6 +90,7 @@ export async function POST(request: Request) {
   await recordAuditLog(db, asOrganizationId(organization.id), {
     actorUserId: user.id,
     action: "user.registered",
+    metadata: acquisition,
     targetType: "organization",
     targetId: organization.id,
   });

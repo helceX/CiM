@@ -5,6 +5,7 @@ import { getEnv } from "@cim/config";
 import { configuredLoginProviders, FLOW_COOKIE, LOGIN_TTL, loginAuthorizeUrl, loginProvider, safeLoginNext, sealLoginValue, type LoginFlow } from "@/lib/federated-login";
 import { getCurrentUser } from "@/lib/session";
 import { checkRateLimit, clientIpFrom } from "@/lib/rate-limit";
+import { getBlogPost } from "@/content/blog";
 
 export async function GET(request: Request, { params }: { params: Promise<{ provider: string }> }) {
   const provider = loginProvider((await params).provider);
@@ -22,6 +23,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ prov
     userId = user.id;
   }
   const flow: LoginFlow = { provider, state: randomBytes(32).toString("base64url"), verifier: randomBytes(48).toString("base64url"), userId, next: safeLoginNext(url.searchParams.get("next")), expires: Date.now() + LOGIN_TTL * 1000 };
+  const blog = url.searchParams.get("blog");
+  if (!userId && blog && blog.length <= 120 && getBlogPost(blog)) flow.blogSource = blog;
   (await cookies()).set(FLOW_COOKIE, sealLoginValue(flow, env.SESSION_SECRET), { httpOnly: true, secure: env.NODE_ENV === "production", sameSite: "lax", path: "/", maxAge: LOGIN_TTL });
   return NextResponse.redirect(loginAuthorizeUrl(flow, `${env.APP_URL}/api/auth/federated/${provider}/callback`));
 }

@@ -7,7 +7,7 @@ import { Button, Field, Input } from "@cim/ui";
 import { TurnstileWidget } from "@/components/turnstile-widget";
 import { useLocalizedIssue } from "@/lib/use-localized-issue";
 
-export function RegisterForm({ turnstileSiteKey = null, federated = null }: { turnstileSiteKey?: string | null; federated?: { email: string; name: string } | null }) {
+export function RegisterForm({ turnstileSiteKey = null, federated = null, attribution = null }: { turnstileSiteKey?: string | null; federated?: { email: string; name: string } | null; attribution?: string | null }) {
   const t = useTranslations("auth.register");
   const common = useTranslations("auth");
   const legal = useTranslations("legal.forms");
@@ -35,6 +35,7 @@ export function RegisterForm({ turnstileSiteKey = null, federated = null }: { tu
       password: String(formData.get("password") ?? ""),
       turnstileToken: captchaToken ?? undefined,
       federated: Boolean(federated),
+      attribution,
     };
 
     try {

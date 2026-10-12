@@ -5,6 +5,7 @@ vi.mock("server-only", () => ({}));
 const { pending, createSession, sendEmail } = vi.hoisted(() => ({ pending: new Map<string, string>(), createSession: vi.fn(), sendEmail: vi.fn() }));
 vi.mock("next/headers", () => ({ cookies: async () => ({ get: (key: string) => pending.has(key) ? { value: pending.get(key) } : undefined, delete: (key: string) => pending.delete(key) }) }));
 vi.mock("@/lib/federated-login", () => import("../../../../lib/federated-login"));
+vi.mock("@/lib/blog-attribution", () => import("../../../../lib/blog-attribution"));
 vi.mock("@/lib/session", () => ({ createUserSession: createSession }));
 vi.mock("@/lib/rate-limit", () => ({ clientIpFrom: () => "test", checkRateLimit: async () => ({ allowed: true }) }));
 vi.mock("@/lib/turnstile", () => ({ rejectIfNotHuman: async () => null }));
@@ -21,7 +22,7 @@ afterAll(async () => {
     await db.delete(schema.users).where(eq(schema.users.id, item.userId));
   }
 });
-const request = (email: string) => new Request("http://localhost/api/auth/register", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ firstName: "Test", lastName: "User", companyName: tag, jobTitle: "Founder", email, password: "client-controlled", federated: true }) });
+const request = (email: string, attribution?: string) => new Request("http://localhost/api/auth/register", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ firstName: "Test", lastName: "User", companyName: tag, jobTitle: "Founder", email, password: "client-controlled", federated: true, attribution }) });
 async function remember(email: string) {
   const user = await findUserByEmail(db, email);
   expect(user).toBeDefined();
@@ -32,11 +33,14 @@ async function remember(email: string) {
 it("registers from the verified provider email rather than a modified browser email", async () => {
   const email = `${tag}-google@example.com`;
   pending.set("cim_login_pending", sealLoginValue({ provider: "google", subject: tag, email, emailVerified: true, name: "Test", expires: Date.now() + 60000 }, getEnv().SESSION_SECRET));
-  const response = await POST(request(`${tag}-attacker@example.com`));
+  const attribution = sealLoginValue({ blogSource: "medya-takibi-nedir", expires: Date.now() + 60000 }, getEnv().SESSION_SECRET);
+  const response = await POST(request(`${tag}-attacker@example.com`, attribution));
   expect(await response.json()).toMatchObject({ ok: true, signedIn: true });
   const user = await remember(email);
   expect(user.emailVerifiedAt).toBeInstanceOf(Date);
   expect(user.isPlatformSuperAdmin).toBe(false);
+  const [audit] = await db.select().from(schema.auditLogs).where(eq(schema.auditLogs.actorUserId, user.id));
+  expect(audit?.metadata).toEqual({ acquisition: { channel: "blog", slug: "medya-takibi-nedir" } });
   expect((await findLoginIdentity(db, "google", tag))?.id).toBe(user.id);
   expect(await findUserByEmail(db, `${tag}-attacker@example.com`)).toBeUndefined();
   expect(createSession).toHaveBeenCalledWith(user.id, expect.any(Object));

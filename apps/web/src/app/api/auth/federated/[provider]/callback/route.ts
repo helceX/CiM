@@ -32,7 +32,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ prov
     }
     // Never merge identities by email alone, including privileged accounts.
     if (identity.email && await findUserByEmail(db, identity.email)) return fail("link");
-    store.set(PENDING_COOKIE, sealLoginValue({ ...identity, expires: Date.now() + LOGIN_TTL * 1000 }, env.SESSION_SECRET), { httpOnly: true, secure: env.NODE_ENV === "production", sameSite: "lax", path: "/", maxAge: LOGIN_TTL });
+    store.set(PENDING_COOKIE, sealLoginValue({ ...identity, blogSource: flow.blogSource, expires: Date.now() + LOGIN_TTL * 1000 }, env.SESSION_SECRET), { httpOnly: true, secure: env.NODE_ENV === "production", sameSite: "lax", path: "/", maxAge: LOGIN_TTL });
     return NextResponse.redirect(new URL("/register?federated=1", env.APP_URL));
   } catch { return fail("failed"); }
 }

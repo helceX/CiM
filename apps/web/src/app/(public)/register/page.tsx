@@ -4,20 +4,25 @@ import { getTurnstileSiteKey } from "@/lib/turnstile";
 import { RegisterForm } from "./register-form";
 import { cookies } from "next/headers";
 import { getEnv } from "@cim/config";
-import { openLoginValue, PENDING_COOKIE, type LoginIdentity } from "@/lib/federated-login";
+import { openLoginValue, sealLoginValue, LOGIN_TTL, PENDING_COOKIE, type LoginIdentity } from "@/lib/federated-login";
 import { FederatedLoginOptions } from "@/components/federated-login-options";
+import { getBlogPost } from "@/content/blog";
 
 // Read per request: the Turnstile key comes from runtime environment variables.
 export const dynamic = "force-dynamic";
 
-export default async function RegisterPage({ searchParams }: { searchParams: Promise<{ federated?: string }> }) {
+export default async function RegisterPage({ searchParams }: { searchParams: Promise<{ federated?: string; blog?: string }> }) {
   const t = await getTranslations("auth.register");
-  const requested = (await searchParams).federated === "1";
+  const query = await searchParams;
+  const requested = query.federated === "1";
   const identity = requested ? openLoginValue<LoginIdentity & { expires: number }>((await cookies()).get(PENDING_COOKIE)?.value, getEnv().SESSION_SECRET) : null;
+  const candidate = identity?.blogSource ?? query.blog;
+  const blogSource = typeof candidate === "string" && candidate.length <= 120 && getBlogPost(candidate) ? candidate : undefined;
+  const attribution = blogSource ? sealLoginValue({ blogSource, expires: Date.now() + LOGIN_TTL * 1000 }, getEnv().SESSION_SECRET) : null;
   return (
     <AuthCard title={t("title")} subtitle={t("subtitle")}>
-      {!identity ? <FederatedLoginOptions /> : null}
-      <RegisterForm turnstileSiteKey={getTurnstileSiteKey()} federated={identity ? { email: identity.email, name: identity.name } : null} />
+      {!identity ? <FederatedLoginOptions blogSource={blogSource} /> : null}
+      <RegisterForm attribution={attribution} turnstileSiteKey={getTurnstileSiteKey()} federated={identity ? { email: identity.email, name: identity.name } : null} />
     </AuthCard>
   );
 }

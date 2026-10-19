@@ -1,3 +1,4 @@
+import { marketingMetadata } from "@/lib/marketing-metadata";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import {
@@ -307,4 +308,8 @@ export default async function LandingPage() {
       />
     </>
   );
+}
+
+export async function generateMetadata() {
+  return marketingMetadata("home");
 }

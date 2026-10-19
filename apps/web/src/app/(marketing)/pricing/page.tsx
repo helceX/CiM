@@ -1,3 +1,4 @@
+import { marketingMetadata } from "@/lib/marketing-metadata";
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { getMonitoringQueryLimit } from "@cim/core";
@@ -74,4 +75,8 @@ export default async function PricingPage() {
       />
     </>
   );
+}
+
+export async function generateMetadata() {
+  return marketingMetadata("pricing");
 }

@@ -14,6 +14,7 @@ export type BlogPost = {
   related: string[];
   cta: { title: string; body: string; href: string; label: string };
   sources?: { title: string; url: string }[];
+  modifiedAt?: string;
   download?: { href: string; label: string; description: string };
 };
 
@@ -351,6 +352,7 @@ export const blogPosts: BlogPost[] = [
   },
   {
     slug: "share-of-voice-nedir",
+    modifiedAt: "2026-10-19T12:17:00+03:00",
     download: {
       href: "/templates/share-of-voice-ornek.csv",
       label: "Örnek SOV tablosunu indir (CSV)",
@@ -1150,7 +1152,7 @@ export function blogJsonLd(post: BlogPost) {
         description: post.description,
         image: `${BLOG_ORIGIN}${blogCover(post)}`,
         datePublished: BLOG_DATE,
-        dateModified: BLOG_DATE,
+        dateModified: post.modifiedAt ?? BLOG_DATE,
         inLanguage: "tr-TR",
         author: {
           "@type": "Organization",

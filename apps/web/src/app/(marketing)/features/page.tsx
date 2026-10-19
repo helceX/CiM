@@ -1,6 +1,12 @@
+import { marketingMetadata } from "@/lib/marketing-metadata";
 import { getTranslations } from "next-intl/server";
 import { Reveal } from "@/components/marketing/reveal";
-import { CtaBand, FeatureRow, PageHero, SectionHead } from "@/components/marketing/sections";
+import {
+  CtaBand,
+  FeatureRow,
+  PageHero,
+  SectionHead,
+} from "@/components/marketing/sections";
 import { GlowCard } from "@/components/marketing/glow-card";
 
 const ROWS = [
@@ -55,7 +61,16 @@ export default async function FeaturesPage() {
           </ul>
         </div>
       </section>
-      <CtaBand title={home("title")} body={home("body")} primary={home("primary")} secondary={home("secondary")} />
+      <CtaBand
+        title={home("title")}
+        body={home("body")}
+        primary={home("primary")}
+        secondary={home("secondary")}
+      />
     </>
   );
+}
+
+export async function generateMetadata() {
+  return marketingMetadata("features");
 }

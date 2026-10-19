@@ -1,3 +1,4 @@
+import { marketingMetadata } from "@/lib/marketing-metadata";
 import { getTranslations } from "next-intl/server";
 import { Mail } from "lucide-react";
 import { GlowCard } from "@/components/marketing/glow-card";
@@ -34,4 +35,8 @@ export default async function ContactPage() {
       </section>
     </>
   );
+}
+
+export async function generateMetadata() {
+  return marketingMetadata("contact");
 }

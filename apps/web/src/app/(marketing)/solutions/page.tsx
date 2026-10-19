@@ -1,3 +1,4 @@
+import { marketingMetadata } from "@/lib/marketing-metadata";
 import { getTranslations } from "next-intl/server";
 import { Building2, Megaphone, Siren, Store } from "lucide-react";
 import { GlowCard } from "@/components/marketing/glow-card";
@@ -28,22 +29,45 @@ export default async function SolutionsPage() {
             <Reveal as="li" key={persona.key} delay={(index % 2) * 90}>
               <GlowCard className="h-full p-8">
                 <IconTile icon={persona.icon} tone={persona.tone} />
-                <h2 className="mt-6 text-3xl font-extrabold">{t(`personas.${persona.key}.title`)}</h2>
-                <p className="mt-3 text-[var(--mk-muted)]">{t(`personas.${persona.key}.body`)}</p>
+                <h2 className="mt-6 text-3xl font-extrabold">
+                  {t(`personas.${persona.key}.title`)}
+                </h2>
+                <p className="mt-3 text-[var(--mk-muted)]">
+                  {t(`personas.${persona.key}.body`)}
+                </p>
                 <ul className="mt-6 flex flex-col gap-2.5">
-                  {(t.raw(`personas.${persona.key}.points`) as string[]).map((point) => (
-                    <li key={point} className="flex items-start gap-3 text-sm text-zinc-200">
-                      <span aria-hidden="true" className="mt-1.5 size-1.5 shrink-0 rounded-full bg-[var(--mk-magenta)]" />
-                      {point}
-                    </li>
-                  ))}
+                  {(t.raw(`personas.${persona.key}.points`) as string[]).map(
+                    (point) => (
+                      <li
+                        key={point}
+                        className="flex items-start gap-3 text-sm text-zinc-200"
+                      >
+                        <span
+                          aria-hidden="true"
+                          className="mt-1.5 size-1.5 shrink-0 rounded-full bg-[var(--mk-magenta)]"
+                        />
+                        {point}
+                      </li>
+                    ),
+                  )}
                 </ul>
               </GlowCard>
             </Reveal>
           ))}
         </ul>
       </section>
-      <CtaBand title={t("cta.title")} body={t("cta.body")} primary={t("cta.primary")} primaryHref="/contact" secondary={t("cta.secondary")} secondaryHref="/register" />
+      <CtaBand
+        title={t("cta.title")}
+        body={t("cta.body")}
+        primary={t("cta.primary")}
+        primaryHref="/contact"
+        secondary={t("cta.secondary")}
+        secondaryHref="/register"
+      />
     </>
   );
+}
+
+export async function generateMetadata() {
+  return marketingMetadata("solutions");
 }

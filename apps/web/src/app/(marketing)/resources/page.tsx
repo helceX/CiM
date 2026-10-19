@@ -1,3 +1,4 @@
+import { marketingMetadata } from "@/lib/marketing-metadata";
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { BookOpenText, Braces, Webhook } from "lucide-react";
@@ -65,4 +66,8 @@ export default async function ResourcesPage() {
       />
     </>
   );
+}
+
+export async function generateMetadata() {
+  return marketingMetadata("resources");
 }

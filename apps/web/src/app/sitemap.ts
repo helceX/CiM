@@ -15,7 +15,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ...pages.map((path) => ({ url: `${BLOG_ORIGIN}${path}` })),
     ...blogPosts.map((post) => ({
       url: `${BLOG_ORIGIN}/blog/${post.slug}`,
-      lastModified: BLOG_DATE,
+      lastModified: post.modifiedAt ?? BLOG_DATE,
       images: [`${BLOG_ORIGIN}${blogCover(post)}`],
     })),
   ];

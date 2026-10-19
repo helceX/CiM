@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: public.ecr.aws/docker/library/postgres:17-bookworm
+        image: docker.io/library/postgres:17-bookworm
         env:
           POSTGRES_USER: cim
           POSTGRES_PASSWORD: cim
@@ -29,7 +29,7 @@ jobs:
           --health-timeout 5s
           --health-retries 10
       redis:
-        image: public.ecr.aws/docker/library/redis:8-alpine
+        image: docker.io/library/redis:8-alpine
         ports: ["6379:6379"]
         options: >-
           --health-cmd "redis-cli ping"
@@ -63,8 +63,8 @@ jobs:
         run: pnpm typecheck
 
       - name: Install pgvector in the PostgreSQL service
-        # Use the official Postgres mirror so service startup does not depend
-        # on Docker Hub's anonymous quota; PGDG supplies the vector extension.
+        # Use the official Postgres image; PGDG supplies pgvector.
+        # Application image builds use the registry fallback above.
         run: |
           docker exec -u root ${{ job.services.postgres.id }} apt-get update
           docker exec -u root ${{ job.services.postgres.id }} apt-get install -y --no-install-recommends postgresql-17-pgvector
@@ -166,7 +166,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: public.ecr.aws/docker/library/postgres:17-bookworm
+        image: docker.io/library/postgres:17-bookworm
         env:
           POSTGRES_USER: cim
           POSTGRES_PASSWORD: cim
@@ -178,7 +178,7 @@ jobs:
           --health-timeout 5s
           --health-retries 10
       redis:
-        image: public.ecr.aws/docker/library/redis:8-alpine
+        image: docker.io/library/redis:8-alpine
         ports: ["6379:6379"]
         options: >-
           --health-cmd "redis-cli ping"
@@ -203,8 +203,8 @@ jobs:
         run: pnpm exec playwright install --with-deps chromium
 
       - name: Install pgvector in the PostgreSQL service
-        # Use the official Postgres mirror so service startup does not depend
-        # on Docker Hub's anonymous quota; PGDG supplies the vector extension.
+        # Use the official Postgres image; PGDG supplies pgvector.
+        # Application image builds use the registry fallback above.
         run: |
           docker exec -u root ${{ job.services.postgres.id }} apt-get update
           docker exec -u root ${{ job.services.postgres.id }} apt-get install -y --no-install-recommends postgresql-17-pgvector

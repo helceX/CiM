@@ -42,5 +42,5 @@ test("updated article date agrees across sitemap, structured data and visible co
   const html = await article.text();
   expect(html).toContain('"dateModified":"2026-10-19T12:17:00+03:00"');
   expect(html).toContain("Güncelleme:");
-  expect(html).toContain('datetime="2026-10-19T12:17:00+03:00"');
+  expect(html).toMatch(/<time\s+datetime="2026-10-19T12:17:00\+03:00"/i);
 });

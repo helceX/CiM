@@ -36,7 +36,8 @@
 # EACCES the moment the container starts. Going straight to tsx's binary
 # skips corepack — and pnpm — entirely at runtime.
 
-FROM public.ecr.aws/docker/library/node:22-bookworm-slim AS base
+ARG NODE_IMAGE=public.ecr.aws/docker/library/node:22-bookworm-slim
+FROM ${NODE_IMAGE} AS base
 RUN corepack enable
 WORKDIR /repo
 
@@ -68,7 +69,7 @@ ENV PLAYWRIGHT_BROWSERS_PATH=/repo/.playwright-browsers
 RUN pnpm --filter @cim/reports exec playwright install --with-deps chromium
 
 # --- runner: whole built monorepo (see note above on why) ---
-FROM public.ecr.aws/docker/library/node:22-bookworm-slim AS runner
+FROM ${NODE_IMAGE} AS runner
 WORKDIR /repo
 ENV NODE_ENV=production
 ENV PLAYWRIGHT_BROWSERS_PATH=/repo/.playwright-browsers

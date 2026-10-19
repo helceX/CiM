@@ -9,7 +9,8 @@
 # CI's "docker-build" job (.github/workflows/ci.yml) builds this on every
 # push/PR so breakage is caught before it reaches a real deploy.
 
-FROM public.ecr.aws/docker/library/node:22-bookworm-slim AS base
+ARG NODE_IMAGE=public.ecr.aws/docker/library/node:22-bookworm-slim
+FROM ${NODE_IMAGE} AS base
 RUN corepack enable
 WORKDIR /repo
 
@@ -45,7 +46,7 @@ ENV REDIS_URL=redis://localhost:6379
 RUN pnpm --filter @cim/web build
 
 # --- runner: minimal image, only the traced standalone output ---
-FROM public.ecr.aws/docker/library/node:22-bookworm-slim AS runner
+FROM ${NODE_IMAGE} AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000

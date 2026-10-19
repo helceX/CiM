@@ -10,6 +10,10 @@ export type QueueHealthRow = {
   completed: number;
   failed: number;
   delayed: number;
+  failedLast24h: number;
+  lastCompletedAt: number | null;
+  oldestWaitingAt: number | null;
+  lastDurationMs: number | null;
 };
 
 const JOB_COUNT_TYPES = [
@@ -48,7 +52,14 @@ export async function getQueueHealth(): Promise<QueueHealthRow[]> {
   return Promise.all(
     queueNames.map(async (queueName) => {
       const queue = getCachedQueue(queueName);
-      const counts = await queue.getJobCounts(...JOB_COUNT_TYPES);
+      const now = Date.now();
+      const [counts, failedLast24h, completed, waiting] = await Promise.all([
+        queue.getJobCounts(...JOB_COUNT_TYPES),
+        getRedis().zcount(queue.toKey("failed"), now - 86_400_000, now),
+        queue.getJobs(["completed"], 0, 0, false),
+        queue.getJobs(["waiting"], 0, 0, true),
+      ]);
+      const latest = completed[0];
       return {
         queueName,
         waiting: counts.waiting ?? 0,
@@ -56,6 +67,13 @@ export async function getQueueHealth(): Promise<QueueHealthRow[]> {
         completed: counts.completed ?? 0,
         failed: counts.failed ?? 0,
         delayed: counts.delayed ?? 0,
+        failedLast24h,
+        lastCompletedAt: latest?.finishedOn ?? null,
+        oldestWaitingAt: waiting[0]?.timestamp ?? null,
+        lastDurationMs:
+          latest?.finishedOn != null && latest.processedOn != null
+            ? Math.max(0, latest.finishedOn - latest.processedOn)
+            : null,
       };
     }),
   );

@@ -539,6 +539,14 @@
       "body": "Neyi izlediğinizi ve ne kadar ödemeyi beklediğinizi söyleyin. Her yanıtı okuyoruz.",
       "primary": "İletişime geçin",
       "secondary": "Ücretsiz başlayın"
+    },
+    "current": {
+      "title": "Bugün ücretsiz başlangıçta ne var?",
+      "limit": "Organizasyon başına {limit} aktif izleme",
+      "body": "Bir izleme içinde birden fazla anahtar kelime kullanabilir, eşleşen haberleri inceleyebilir ve ilk projenizi oluşturabilirsiniz. Yeni bir izleme açmak için mevcut izlemenizi duraklatabilir veya silebilirsiniz.",
+      "scope": "Kapsam, erişilebilir ve aktif kaynaklarla sınırlıdır; her sosyal ağın tüm içeriği veya sınırsız geçmiş arşivi dahil değildir.",
+      "terms": "Saklama süresi, rapor ve bildirim kullanılabilirliği uygulamadaki mevcut ayarlara bağlıdır. Henüz yayımlanmamış ücretli paketler veya kesinleşmemiş limitler için bir taahhüt verilmez.",
+      "action": "Ücretsiz ilk izlemeni kur"
     }
   },
   "contact": {

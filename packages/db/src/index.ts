@@ -20,6 +20,8 @@ export * from "./repositories/ai";
 export * from "./repositories/insights";
 export * from "./repositories/reports";
 export * from "./repositories/admin";
+export * from "./repositories/source-coverage";
+export * from "./repositories/activation";
 export * from "./repositories/privacy";
 export * from "./repositories/privacy-purge";
 export * from "./repositories/digest";

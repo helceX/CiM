@@ -14,6 +14,7 @@ export type BlogPost = {
   related: string[];
   cta: { title: string; body: string; href: string; label: string };
   sources?: { title: string; url: string }[];
+  download?: { href: string; label: string; description: string };
 };
 
 export const BLOG_ORIGIN = "https://mediaory.io";
@@ -350,6 +351,12 @@ export const blogPosts: BlogPost[] = [
   },
   {
     slug: "share-of-voice-nedir",
+    download: {
+      href: "/templates/share-of-voice-ornek.csv",
+      label: "Örnek SOV tablosunu indir (CSV)",
+      description:
+        "Tamamı kurgusal üç marka, sabit dönem ve yöntem notları içerir. Kendi sayılarınıza göre toplamı ve yüzdeleri yeniden hesaplayın; dosya canlı Mediaory verisine bağlı değildir.",
+    },
     title: "Share of Voice nedir? Medya görünürlüğü nasıl hesaplanır?",
     category: "İletişim ölçümü",
     description:
@@ -363,6 +370,13 @@ export const blogPosts: BlogPost[] = [
         paragraphs: [
           "Haber adedi, marka anılması ve tahmini erişim farklı ölçüm birimleridir. Birini kullanıp diğerinin adını vermeyin. Başlangıç için ilgili haber adedi anlaşılır olabilir; ancak tekrarların dahil edilip edilmediği ve aynı haberde birden çok markanın nasıl sayıldığı açıklanmalıdır.",
           "Kurgusal örnekte Ada 40, Bora 35 ve Ceren 25 ilgili haberde yer alsın. Toplam 100 ise Ada'nın haber adedi bazlı payı yüzde 40'tır. Bu örnek gerçek şirket verisi değildir ve yüzde 40 pazar payı, satış payı veya tüketici bilinirliği anlamına gelmez.",
+        ],
+      },
+      {
+        title: "Aynı veriyle tekrar kontrolü yapın",
+        paragraphs: [
+          "İlk sayımda Ada 40, Bora 35 ve Ceren 25 haberle toplam 100 görünüm üretir: paylar sırasıyla yüzde 40, yüzde 35 ve yüzde 25 olur. Tekrar kontrolünde Ada'dan 10, Bora'dan 5 kayıt çıkarılırsa yeni sayılar 30, 30 ve 25; toplam ise 85 olur. Ada'nın payı artık 30 / 85 × 100 = yüzde 35,29'dur.",
+          "Bu değişim yeni bir haber veya performans kaybından değil, sayım yönteminden gelir. İndirilebilir örnekte iki senaryoyu ayrı satırlarda tutun; aynı dönemi, aynı marka setini ve aynı kaynak kapsamını yazın. Yüzdeleri iki ondalığa yuvarlarken küçük toplam farkları oluşabilir. Toplam sıfırsa yüzde üretmeyin, 'veri yok' yazın.",
         ],
       },
       {

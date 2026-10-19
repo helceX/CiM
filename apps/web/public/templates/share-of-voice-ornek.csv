@@ -1,0 +1,7 @@
+Senaryo,Donem,Marka,Haber_adedi,Toplam,SOV_yuzde,Yontem
+Ilk sayim,Ornek 30 gun,Ada,40,100,40.00,Kurgusal veri; ayni kaynak ve marka seti; tekrarlar dahil
+Ilk sayim,Ornek 30 gun,Bora,35,100,35.00,Kurgusal veri; ayni kaynak ve marka seti; tekrarlar dahil
+Ilk sayim,Ornek 30 gun,Ceren,25,100,25.00,Kurgusal veri; ayni kaynak ve marka seti; tekrarlar dahil
+Tekrarlar ayiklandi,Ornek 30 gun,Ada,30,85,35.29,Kurgusal veri; Ada 10 ve Bora 5 tekrar cikarildi
+Tekrarlar ayiklandi,Ornek 30 gun,Bora,30,85,35.29,Kurgusal veri; Ada 10 ve Bora 5 tekrar cikarildi
+Tekrarlar ayiklandi,Ornek 30 gun,Ceren,25,85,29.41,Kurgusal veri; Ada 10 ve Bora 5 tekrar cikarildi

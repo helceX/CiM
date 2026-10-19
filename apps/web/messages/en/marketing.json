@@ -539,6 +539,14 @@
       "body": "Tell us what you monitor and what you would expect to pay. We read every reply.",
       "primary": "Get in touch",
       "secondary": "Start free"
+    },
+    "current": {
+      "title": "What is available free today?",
+      "limit": "{limit} active monitoring per organization",
+      "body": "Use multiple keywords in one monitoring, review matching stories and create your first project. Pause or delete the current monitoring before creating another.",
+      "scope": "Coverage depends on available, active sources; it does not include every social network’s entire content or an unlimited historical archive.",
+      "terms": "Retention, reports and notifications depend on current in-app settings. Unreleased paid plans and unconfirmed limits are not promised.",
+      "action": "Set up your first monitoring free"
     }
   },
   "contact": {

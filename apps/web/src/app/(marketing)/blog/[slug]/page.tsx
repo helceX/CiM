@@ -37,7 +37,7 @@ export async function generateMetadata({
       url,
       locale: "tr_TR",
       publishedTime: BLOG_DATE,
-      modifiedTime: BLOG_DATE,
+      modifiedTime: post.modifiedAt ?? BLOG_DATE,
       authors: [BLOG_AUTHOR],
       images: [
         {
@@ -87,6 +87,15 @@ export default async function BlogArticle({
         <div className="blog-intro-meta">
           <span>{BLOG_AUTHOR}</span>
           <time dateTime={BLOG_DATE}>11 Ekim 2026</time>
+          {post.modifiedAt ? (
+            <time dateTime={post.modifiedAt}>
+              Güncelleme:{" "}
+              {new Intl.DateTimeFormat("tr-TR", {
+                dateStyle: "long",
+                timeZone: "Europe/Istanbul",
+              }).format(new Date(post.modifiedAt))}
+            </time>
+          ) : null}
           <span>{readingMinutes(post)} dk okuma</span>
         </div>
         <Image

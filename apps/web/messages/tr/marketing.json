@@ -1,7 +1,37 @@
 {
   "meta": {
     "title": "Mediaory — İletişim İstihbaratı Platformu",
-    "description": "Haberleri, açık web’i ve seçili sosyal akışları izleyin. Kaynaklı içgörüler, profilinize göre fırsatlar ve paylaşılabilir raporlarla gündemi bir sonraki adımınıza bağlayın."
+    "description": "Haberleri, açık web’i ve seçili sosyal akışları izleyin. Kaynaklı içgörüler, profilinize göre fırsatlar ve paylaşılabilir raporlarla gündemi bir sonraki adımınıza bağlayın.",
+    "pages": {
+      "home": {
+        "title": "Mediaory — Medya Takibi ve İletişim İstihbaratı",
+        "description": "Haberleri, açık web’i ve seçili sosyal akışları izleyin. Marka ve sektör gündemini kaynaklı içgörüler, uyarılar ve raporlarla takip edin."
+      },
+      "features": {
+        "title": "Medya Takibi Özellikleri | Mediaory",
+        "description": "Anahtar kelime izleme, haber tekrarlarını ayıklama, kaynaklı yapay zekâ özetleri, uyarılar ve medya raporlaması özelliklerini keşfedin."
+      },
+      "solutions": {
+        "title": "Marka, Rakip ve Sektör Takibi Çözümleri | Mediaory",
+        "description": "İletişim ekipleri için marka görünürlüğü, rakip hareketleri ve sektör gündemini takip etmeye yönelik Mediaory kullanım alanlarını inceleyin."
+      },
+      "pricing": {
+        "title": "Fiyatlandırma ve Ücretsiz Başlangıç | Mediaory",
+        "description": "Mediaory’nin mevcut ücretsiz izleme sınırını ve kaynak kapsamını öğrenin. İlk projenizi kurun; planlanan kullanıma dayalı fiyatlandırmayı inceleyin."
+      },
+      "resources": {
+        "title": "Medya Takibi Kaynakları ve Rehberler | Mediaory",
+        "description": "Medya takibi, iletişim ölçümü ve fırsat keşfi için Mediaory kaynaklarına, uygulama örneklerine ve blog rehberlerine ulaşın."
+      },
+      "contact": {
+        "title": "İletişim ve Ürün Soruları | Mediaory",
+        "description": "Mediaory ekibine medya takibi ihtiyaçlarınız, ürün sorularınız ve geri bildirimleriniz hakkında ulaşın."
+      },
+      "security": {
+        "title": "Veri Güvenliği ve Gizlilik Yaklaşımı | Mediaory",
+        "description": "Mediaory’nin organizasyon bazında veri ayrımı, erişim denetimi ve kaynak içeriğini işleme yaklaşımını inceleyin."
+      }
+    }
   },
   "nav": {
     "features": "Özellikler",

@@ -3,10 +3,15 @@ import type { ReactNode } from "react";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getTranslations } from "next-intl/server";
 import "./globals.css";
+import { BLOG_ORIGIN } from "@/content/blog";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("meta");
-  return { title: t("title"), description: t("description") };
+  return {
+    metadataBase: new URL(BLOG_ORIGIN),
+    title: t("title"),
+    description: t("description"),
+  };
 }
 
 export default async function RootLayout({ children }: { children: ReactNode }) {

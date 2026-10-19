@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: public.ecr.aws/docker/library/postgres:17-bookworm
+        image: docker.io/library/postgres:17-bookworm
         env:
           POSTGRES_USER: cim
           POSTGRES_PASSWORD: cim
@@ -29,7 +29,7 @@ jobs:
           --health-timeout 5s
           --health-retries 10
       redis:
-        image: public.ecr.aws/docker/library/redis:8-alpine
+        image: docker.io/library/redis:8-alpine
         ports: ["6379:6379"]
         options: >-
           --health-cmd "redis-cli ping"
@@ -63,8 +63,8 @@ jobs:
         run: pnpm typecheck
 
       - name: Install pgvector in the PostgreSQL service
-        # Use the official Postgres mirror so service startup does not depend
-        # on Docker Hub's anonymous quota; PGDG supplies the vector extension.
+        # Use the official Postgres image; PGDG supplies pgvector.
+        # Application image builds use the registry fallback above.
         run: |
           docker exec -u root ${{ job.services.postgres.id }} apt-get update
           docker exec -u root ${{ job.services.postgres.id }} apt-get install -y --no-install-recommends postgresql-17-pgvector
@@ -111,14 +111,14 @@ jobs:
         # runs first; no database is touched).
         if: matrix.target == 'web'
         run: |
-          # Shared hosted-runner IPs can also hit ECR's short burst limit.
+          # Retry transient registry failures before the runtime smoke check.
           # Retry the pull separately so docker run never skips the smoke test.
           for delay in 5 10 20 40; do
-            docker pull public.ecr.aws/docker/library/redis:8-alpine && break
+            docker pull docker.io/library/redis:8-alpine && break
             sleep "$delay"
           done
-          docker image inspect public.ecr.aws/docker/library/redis:8-alpine >/dev/null
-          docker run -d --name redis --network host public.ecr.aws/docker/library/redis:8-alpine
+          docker image inspect docker.io/library/redis:8-alpine >/dev/null
+          docker run -d --name redis --network host docker.io/library/redis:8-alpine
           docker run -d --name web --network host \
             -e SESSION_SECRET=ci-only-session-secret-0123456789abcdef0123456789abcdef \
             -e DATABASE_URL=postgres://ci:ci@127.0.0.1:5432/ci \
@@ -166,7 +166,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: public.ecr.aws/docker/library/postgres:17-bookworm
+        image: docker.io/library/postgres:17-bookworm
         env:
           POSTGRES_USER: cim
           POSTGRES_PASSWORD: cim
@@ -178,7 +178,7 @@ jobs:
           --health-timeout 5s
           --health-retries 10
       redis:
-        image: public.ecr.aws/docker/library/redis:8-alpine
+        image: docker.io/library/redis:8-alpine
         ports: ["6379:6379"]
         options: >-
           --health-cmd "redis-cli ping"
@@ -203,8 +203,8 @@ jobs:
         run: pnpm exec playwright install --with-deps chromium
 
       - name: Install pgvector in the PostgreSQL service
-        # Use the official Postgres mirror so service startup does not depend
-        # on Docker Hub's anonymous quota; PGDG supplies the vector extension.
+        # Use the official Postgres image; PGDG supplies pgvector.
+        # Application image builds use the registry fallback above.
         run: |
           docker exec -u root ${{ job.services.postgres.id }} apt-get update
           docker exec -u root ${{ job.services.postgres.id }} apt-get install -y --no-install-recommends postgresql-17-pgvector

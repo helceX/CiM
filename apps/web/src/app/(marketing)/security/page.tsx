@@ -1,3 +1,4 @@
+import { marketingMetadata } from "@/lib/marketing-metadata";
 import { getTranslations } from "next-intl/server";
 import { DatabaseZap, FileCheck2, KeyRound, Lock } from "lucide-react";
 import { GlowCard } from "@/components/marketing/glow-card";
@@ -28,14 +29,27 @@ export default async function SecurityPage() {
             <Reveal as="li" key={pillar.key} delay={(index % 2) * 90}>
               <GlowCard className="h-full p-8">
                 <IconTile icon={pillar.icon} tone={pillar.tone} />
-                <h2 className="mt-6 text-3xl font-extrabold">{t(`pillars.${pillar.key}.title`)}</h2>
-                <p className="mt-3 text-[var(--mk-muted)]">{t(`pillars.${pillar.key}.body`)}</p>
+                <h2 className="mt-6 text-3xl font-extrabold">
+                  {t(`pillars.${pillar.key}.title`)}
+                </h2>
+                <p className="mt-3 text-[var(--mk-muted)]">
+                  {t(`pillars.${pillar.key}.body`)}
+                </p>
               </GlowCard>
             </Reveal>
           ))}
         </ul>
       </section>
-      <CtaBand title={t("cta.title")} body={t("cta.body")} primary={t("cta.primary")} primaryHref="/contact" />
+      <CtaBand
+        title={t("cta.title")}
+        body={t("cta.body")}
+        primary={t("cta.primary")}
+        primaryHref="/contact"
+      />
     </>
   );
+}
+
+export async function generateMetadata() {
+  return marketingMetadata("security");
 }

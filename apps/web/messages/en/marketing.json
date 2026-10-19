@@ -1,7 +1,37 @@
 {
   "meta": {
     "title": "Mediaory — Communication Intelligence Platform",
-    "description": "Monitor news, the open web and selected social feeds. Turn source-backed insights and profile-matched opportunities into your next move, with reports your team can share."
+    "description": "Monitor news, the open web and selected social feeds. Turn source-backed insights and profile-matched opportunities into your next move, with reports your team can share.",
+    "pages": {
+      "home": {
+        "title": "Mediaory — Media Monitoring and Communication Intelligence",
+        "description": "Monitor news, the open web and selected social feeds. Follow brand and industry coverage with source-backed insights, alerts and reports."
+      },
+      "features": {
+        "title": "Media Monitoring Features | Mediaory",
+        "description": "Explore keyword monitoring, story deduplication, source-backed AI summaries, alerts and media reporting features."
+      },
+      "solutions": {
+        "title": "Brand, Competitor and Industry Monitoring Solutions | Mediaory",
+        "description": "Explore Mediaory use cases for communication teams tracking brand visibility, competitor activity and industry coverage."
+      },
+      "pricing": {
+        "title": "Pricing and Free Start | Mediaory",
+        "description": "Learn the current free monitoring limit and source coverage. Set up your first project and explore planned usage-based pricing."
+      },
+      "resources": {
+        "title": "Media Monitoring Resources and Guides | Mediaory",
+        "description": "Find Mediaory resources, practical examples and blog guides for media monitoring, communication measurement and opportunity discovery."
+      },
+      "contact": {
+        "title": "Contact and Product Questions | Mediaory",
+        "description": "Contact the Mediaory team about your media monitoring needs, product questions and feedback."
+      },
+      "security": {
+        "title": "Data Security and Privacy Approach | Mediaory",
+        "description": "Learn about organization data separation, access control and source content handling in Mediaory."
+      }
+    }
   },
   "nav": {
     "features": "Features",

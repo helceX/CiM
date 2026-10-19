@@ -38,10 +38,7 @@ export default async function PricingPage() {
             <p className="mt-3 text-[var(--mk-muted)]">{t("current.body")}</p>
             <p className="mt-3 text-[var(--mk-muted)]">{t("current.scope")}</p>
             <p className="mt-3 text-sm text-[var(--mk-muted)]">{t("current.terms")}</p>
-            <Link
-              href="/register"
-              className="mt-6 inline-block rounded-lg bg-[var(--mk-accent)] px-5 py-3 font-semibold underline underline-offset-4"
-            >
+            <Link href="/register" className="mk-btn mk-btn-primary mt-6">
               {t("current.action")}
             </Link>
           </GlowCard>

@@ -304,7 +304,15 @@ export default async function DashboardPage() {
             {recentMentions.length === 0 ? (
               <EmptyState
                 title="No mentions yet"
-                description="New matches will appear here as sources are checked — this can take a few minutes for a newly created query."
+                description="We check stored stories first, then match new stories as sources are checked. If nothing matches, review your keywords and source coverage. Try a distinctive brand name, spelling variant or relevant phrase."
+                action={
+                  <Link
+                    href="/monitoring"
+                    className="text-sm text-primary underline underline-offset-2"
+                  >
+                    Review monitoring keywords and sources
+                  </Link>
+                }
                 className="border-none"
               />
             ) : (

@@ -43,10 +43,24 @@ export type AssignableMember = { userId: string; firstName: string; lastName: st
  * What a person can do about a story that matters, by what the monitoring is looking for — one click each,
  * using the tags and assignment the drawer already has. Nothing here is sent anywhere.
  */
-const NEXT_STEPS: Record<Exclude<GoalKey, "coverage">, { tag: string; assign?: boolean; hint: string }> = {
-  risk: { tag: "Needs response", assign: true, hint: "Someone should read this and decide whether to respond." },
-  opportunity: { tag: "Opportunity", assign: true, hint: "Worth following up before the deadline passes." },
-  competitor: { tag: "Competitor move", hint: "Keep it with the other competitor moves for the next review." },
+const NEXT_STEPS: Record<
+  Exclude<GoalKey, "coverage">,
+  { tag: string; assign?: boolean; hint: string }
+> = {
+  risk: {
+    tag: "Needs response",
+    assign: true,
+    hint: "Someone should read this and decide whether to respond.",
+  },
+  opportunity: {
+    tag: "Opportunity",
+    assign: true,
+    hint: "Worth following up before the deadline passes.",
+  },
+  competitor: {
+    tag: "Competitor move",
+    hint: "Keep it with the other competitor moves for the next review.",
+  },
   policy: { tag: "Policy", hint: "Share it with whoever follows regulation." },
   trend: { tag: "Research", hint: "Keep it for the next report." },
 };
@@ -110,7 +124,15 @@ export function MentionDetailDrawer({
     fetch(`/api/mentions/${mentionId}`)
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (!cancelled) setDetail(data);
+        if (!cancelled) {
+          setDetail(data);
+          if (data)
+            void fetch("/api/activation/first-result", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ mentionId }),
+            }).catch(() => undefined);
+        }
       });
     return () => {
       cancelled = true;
@@ -333,6 +355,15 @@ export function MentionDetailDrawer({
                 Source
               </p>
               <p className="text-foreground">{detail.source.name}</p>
+              <p className="text-xs text-muted-foreground">
+                Source status: {detail.source.status} · Last checked:{" "}
+                {detail.source.lastCheckedAt
+                  ? new Date(detail.source.lastCheckedAt).toLocaleString()
+                  : "Not checked yet"}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Collected: {new Date(detail.article.fetchedAt).toLocaleString()}
+              </p>
               {detail.article.authorName ? (
                 <p className="text-muted-foreground">By {detail.article.authorName}</p>
               ) : null}
@@ -352,7 +383,9 @@ export function MentionDetailDrawer({
               </a>
             </section>
 
-            {detail.article.print ? <PrintClipping print={detail.article.print} /> : null}
+            {detail.article.print ? (
+              <PrintClipping print={detail.article.print} />
+            ) : null}
 
             {detail.socialAuthor ? (
               <section className="flex flex-col gap-1">
@@ -389,17 +422,32 @@ export function MentionDetailDrawer({
             ) : null}
 
             {(() => {
-              const signal = describeSignal(detail.mention.priority, detail.mention.signalReasons);
+              const signal = describeSignal(
+                detail.mention.priority,
+                detail.mention.signalReasons,
+              );
               if (!signal) return null;
-              const steps = detail.queryGoals.flatMap((goal) => (goal === "coverage" ? [] : [{ goal, ...NEXT_STEPS[goal] }]));
+              const steps = detail.queryGoals.flatMap((goal) =>
+                goal === "coverage" ? [] : [{ goal, ...NEXT_STEPS[goal] }],
+              );
               return (
-                <section aria-labelledby="why-it-matters" className="flex flex-col gap-2 rounded-lg border border-border bg-surface-muted p-3">
-                  <p id="why-it-matters" className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                <section
+                  aria-labelledby="why-it-matters"
+                  className="flex flex-col gap-2 rounded-lg border border-border bg-surface-muted p-3"
+                >
+                  <p
+                    id="why-it-matters"
+                    className="text-xs font-medium uppercase tracking-wide text-muted-foreground"
+                  >
                     Why you are seeing this
                   </p>
                   <div className="flex items-center gap-2">
-                    <Badge tone={signal.level === "high" ? "warning" : "neutral"}>{signal.label}</Badge>
-                    <span className="text-xs text-muted-foreground">for “{detail.queryName}”</span>
+                    <Badge tone={signal.level === "high" ? "warning" : "neutral"}>
+                      {signal.label}
+                    </Badge>
+                    <span className="text-xs text-muted-foreground">
+                      for “{detail.queryName}”
+                    </span>
                   </div>
                   <ul className="list-disc pl-4 text-foreground">
                     {signal.lines.map((line) => (
@@ -408,24 +456,40 @@ export function MentionDetailDrawer({
                   </ul>
                   {steps.length > 0 && signal.level !== "low" ? (
                     <div className="mt-1 flex flex-col gap-1.5 border-t border-border pt-2">
-                      <p className="text-xs font-medium text-foreground">What you can do</p>
+                      <p className="text-xs font-medium text-foreground">
+                        What you can do
+                      </p>
                       {steps.map((step) => (
-                        <div key={step.goal} className="flex flex-wrap items-center gap-2">
+                        <div
+                          key={step.goal}
+                          className="flex flex-wrap items-center gap-2"
+                        >
                           <span className="text-xs text-muted-foreground">
-                            {SIGNAL_GOALS.find((g) => g.key === step.goal)?.label}: {step.hint}
+                            {SIGNAL_GOALS.find((g) => g.key === step.goal)?.label}:{" "}
+                            {step.hint}
                           </span>
                           <span className="flex gap-1.5">
                             <Button
                               type="button"
                               size="sm"
                               variant="secondary"
-                              disabled={isAddingTag || detail.tags.some((tag) => tag.name === step.tag)}
+                              disabled={
+                                isAddingTag ||
+                                detail.tags.some((tag) => tag.name === step.tag)
+                              }
                               onClick={() => addTag(step.tag)}
                             >
                               Tag “{step.tag}”
                             </Button>
-                            {step.assign && detail.mention.assignedToUserId !== currentUserId ? (
-                              <Button type="button" size="sm" variant="secondary" disabled={isAssigning} onClick={() => handleAssign(currentUserId)}>
+                            {step.assign &&
+                            detail.mention.assignedToUserId !== currentUserId ? (
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="secondary"
+                                disabled={isAssigning}
+                                onClick={() => handleAssign(currentUserId)}
+                              >
                                 Assign to me
                               </Button>
                             ) : null}

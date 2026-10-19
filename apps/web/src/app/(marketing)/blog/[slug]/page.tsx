@@ -129,6 +129,15 @@ export default async function BlogArticle({
               ))}
             </section>
           ))}
+          {post.download ? (
+            <section aria-labelledby="download-heading">
+              <h2 id="download-heading">Uygulama şablonu</h2>
+              <p>{post.download.description}</p>
+              <a className="mk-btn mk-btn-primary" href={post.download.href} download>
+                {post.download.label}
+              </a>
+            </section>
+          ) : null}
           <section id="kontrol-listesi" className="blog-checklist">
             <h2>Uygulama kontrol listesi</h2>
             <ul>
@@ -141,7 +150,11 @@ export default async function BlogArticle({
             <p className="blog-eyebrow">MEDIAORY İLE SONRAKİ ADIM</p>
             <h2>{post.cta.title}</h2>
             <p>{post.cta.body}</p>
-            <Link className="mk-btn mk-btn-primary" prefetch={false} href={`/register/blog/${post.slug}`}>
+            <Link
+              className="mk-btn mk-btn-primary"
+              prefetch={false}
+              href={`/register/blog/${post.slug}`}
+            >
               Mediaory hesabınızı oluşturun ↗
             </Link>
             <Link

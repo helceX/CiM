@@ -102,11 +102,9 @@ test("someone with a Turkish browser can sign up, verify and set up their first 
 
   await page.goto(latestEmailLinkFor(email, "verify_email"));
   await expect(page).toHaveURL(/\/onboarding/, { timeout: 10_000 });
-  await expect(page.getByText("Adım 1 / 5")).toBeVisible();
+  await expect(page.getByText("Adım 1 / 3")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Neyi izlemek istiyorsunuz?" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Şirket" })).toBeVisible();
-  await page.getByRole("button", { name: "Devam" }).click();
-
   await page.getByLabel("Anahtar kelime").fill(company);
   await page.getByRole("button", { name: "Ekle" }).click();
   await expect(page.getByRole("button", { name: `${company} öğesini kaldır` })).toBeVisible();
@@ -114,7 +112,6 @@ test("someone with a Turkish browser can sign up, verify and set up their first 
   await expect(page.getByRole("heading", { name: "Kaynakları seçin" })).toBeVisible();
   await page.getByRole("button", { name: "Devam" }).click();
   await expect(page.getByRole("heading", { name: "Size nasıl haber verelim?" })).toBeVisible();
-  await page.getByRole("button", { name: "Devam" }).click();
   await expect(page.getByText(/kaynak türü genelinde 1 anahtar kelime izleniyor/)).toBeVisible();
   await page.getByRole("button", { name: "Panoya git" }).click();
 

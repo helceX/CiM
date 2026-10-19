@@ -24,22 +24,17 @@ test("register, verify email, complete onboarding, see dashboard", async ({ page
   await page.goto(verifyLink);
   await expect(page).toHaveURL(/\/onboarding/, { timeout: 5000 });
 
-  // Step 1: tracking target — "Company" is selected by default, continue.
-  await page.getByRole("button", { name: "Continue" }).click();
-
-  // Step 2: keywords
+  // Step 1: tracking target and keywords. Continue also saves the unsubmitted input.
+  await expect(page.getByRole("button", { name: "Continue" })).toBeDisabled();
+  await page.getByRole("button", { name: "Track my brand" }).click();
   await page.getByLabel("Keyword").fill("E2E Test Co");
-  await page.getByRole("button", { name: "Add" }).click();
-  await expect(page.getByRole("button", { name: "Remove E2E Test Co" })).toBeVisible();
   await page.getByRole("button", { name: "Continue" }).click();
 
-  // Step 3: sources — defaults (News, Web) are pre-checked, continue.
+  // Step 2: sources — defaults (News, Web) are pre-checked, continue.
   await page.getByRole("button", { name: "Continue" }).click();
 
-  // Step 4: notification preference — default selected, continue.
-  await page.getByRole("button", { name: "Continue" }).click();
-
-  // Step 5: project name — prefilled from the keyword, finish.
+  // Step 3: notifications and project name — prefilled from the pending keyword.
+  await expect(page.getByLabel("Project name")).toHaveValue("E2E Test Co");
   await page.getByRole("button", { name: "Go to dashboard" }).click();
 
   await expect(page).toHaveURL(/\/dashboard/, { timeout: 5000 });

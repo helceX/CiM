@@ -50,16 +50,13 @@ export async function registerAndOnboard(
   await page.goto(verifyLink);
   await expect(page).toHaveURL(/\/onboarding/, { timeout: 5000 });
 
-  await page.getByRole("button", { name: "Continue" }).click(); // step 1: tracking target
-
   await page.getByLabel("Keyword").fill(keyword);
   await page.getByRole("button", { name: "Add" }).click();
   await expect(page.getByRole("button", { name: `Remove ${keyword}` })).toBeVisible();
-  await page.getByRole("button", { name: "Continue" }).click(); // step 2: keywords
+  await page.getByRole("button", { name: "Continue" }).click(); // step 1: target and keywords
 
-  await page.getByRole("button", { name: "Continue" }).click(); // step 3: sources (defaults)
-  await page.getByRole("button", { name: "Continue" }).click(); // step 4: notification preference
-  await page.getByRole("button", { name: "Go to dashboard" }).click(); // step 5: project name
+  await page.getByRole("button", { name: "Continue" }).click(); // step 2: sources (defaults)
+  await page.getByRole("button", { name: "Go to dashboard" }).click(); // step 3: notifications and project
 
   // Onboarding completion is a real server round trip; on a loaded CI runner it can exceed 5s.
   await expect(page).toHaveURL(/\/dashboard/, { timeout: 20_000 });

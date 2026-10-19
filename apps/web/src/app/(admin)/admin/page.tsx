@@ -103,7 +103,9 @@ export default async function AdminOverviewPage() {
           return { ok: false as const, sources: [] };
         }),
     ]);
-  const statusCounts = await countSourcesByStatus(db).catch(() => ({}) as Record<string, number>);
+  const statusCounts = await countSourcesByStatus(db).catch(
+    () => ({}) as Record<string, number>,
+  );
   const sourceTotal = Object.values(statusCounts).reduce((sum, n) => sum + n, 0);
   const openTakedowns = await countOpenTakedownRequests(db).catch(() => 0);
   const totals = totalsResult.totals;
@@ -130,15 +132,24 @@ export default async function AdminOverviewPage() {
           content.
         </p>
         <p className="mt-2 text-sm">
-          <Link href="/admin/email" className="text-primary underline underline-offset-2">
+          <Link
+            href="/admin/email"
+            className="text-primary underline underline-offset-2"
+          >
             Email delivery &amp; unverified accounts
           </Link>
           {" · "}
-          <Link href="/admin/sources" className="text-primary underline underline-offset-2">
+          <Link
+            href="/admin/sources"
+            className="text-primary underline underline-offset-2"
+          >
             Crawl sources &amp; Türkiye catalog
           </Link>
           {" · "}
-          <Link href="/admin/takedowns" className="text-primary underline underline-offset-2">
+          <Link
+            href="/admin/takedowns"
+            className="text-primary underline underline-offset-2"
+          >
             Takedown requests{openTakedowns > 0 ? ` (${openTakedowns} open)` : ""}
           </Link>
         </p>
@@ -174,29 +185,46 @@ export default async function AdminOverviewPage() {
       <section>
         <h2 className="text-sm font-semibold text-foreground">Storage</h2>
         {dbMb === null ? (
-          <p className="mt-2 text-sm text-muted-foreground">Database size is not available.</p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Database size is not available.
+          </p>
         ) : (
           <div className="mt-3 flex flex-col gap-3">
             <p className="text-sm text-foreground">
-              Database: <strong className="tabular-nums">{Math.round(dbMb).toLocaleString()} MB</strong>
+              Database:{" "}
+              <strong className="tabular-nums">
+                {Math.round(dbMb).toLocaleString()} MB
+              </strong>
               {usedShare !== null ? (
                 <>
-                  {" "}of a {volumeMb.toLocaleString()} MB volume ({Math.round(usedShare * 100)}%)
-                  {usedShare > 0.8 ? <Badge tone="danger">Almost full — enlarge the volume</Badge> : usedShare > 0.6 ? <Badge tone="warning">Over 60%</Badge> : null}
+                  {" "}
+                  of a {volumeMb.toLocaleString()} MB volume (
+                  {Math.round(usedShare * 100)}%)
+                  {usedShare > 0.8 ? (
+                    <Badge tone="danger">Almost full — enlarge the volume</Badge>
+                  ) : usedShare > 0.6 ? (
+                    <Badge tone="warning">Over 60%</Badge>
+                  ) : null}
                 </>
               ) : (
                 <span className="text-muted-foreground">
-                  {" "}— set DB_VOLUME_MB (the Postgres volume size in MB) on the web and worker services to see the share used.
+                  {" "}
+                  — set DB_VOLUME_MB (the Postgres volume size in MB) on the web and
+                  worker services to see the share used.
                 </span>
               )}
             </p>
             {largestTables.length > 0 ? (
               <ul className="grid gap-1 text-xs text-muted-foreground sm:grid-cols-2">
                 {largestTables.map((table) => (
-                  <li key={table.name} className="flex justify-between gap-3 rounded border border-border px-3 py-1.5">
+                  <li
+                    key={table.name}
+                    className="flex justify-between gap-3 rounded border border-border px-3 py-1.5"
+                  >
                     <span className="truncate text-foreground">{table.name}</span>
                     <span className="tabular-nums">
-                      {Math.round(table.bytes / 1_048_576).toLocaleString()} MB · ~{table.rows.toLocaleString()} rows
+                      {Math.round(table.bytes / 1_048_576).toLocaleString()} MB · ~
+                      {table.rows.toLocaleString()} rows
                     </span>
                   </li>
                 ))}
@@ -210,8 +238,19 @@ export default async function AdminOverviewPage() {
       </section>
 
       <section>
-        <h2 id="job-queues" className="scroll-mt-4 text-sm font-semibold text-foreground">Job queues</h2>
-        <div className="mt-3 overflow-hidden rounded-lg border border-border">
+        <h2
+          id="job-queues"
+          className="scroll-mt-4 text-sm font-semibold text-foreground"
+        >
+          Job queues
+        </h2>
+        <p className="mt-2 text-xs text-muted-foreground">
+          Retained totals are historical, not a current outage. The 24h count includes
+          failures still retained in Redis; retried or removed jobs are excluded. Last
+          success and duration describe the newest retained completed job. Missing
+          history is shown as unavailable.
+        </p>
+        <div className="mt-3 overflow-x-auto rounded-lg border border-border">
           <table className="w-full text-sm">
             <thead className="border-b border-border bg-surface-muted text-left text-xs text-muted-foreground">
               <tr>
@@ -219,7 +258,11 @@ export default async function AdminOverviewPage() {
                 <th className="px-4 py-2 font-medium">Waiting</th>
                 <th className="px-4 py-2 font-medium">Active</th>
                 <th className="px-4 py-2 font-medium">Completed</th>
-                <th className="px-4 py-2 font-medium">Failed</th>
+                <th className="px-4 py-2 font-medium">Failed (retained)</th>
+                <th className="px-4 py-2 font-medium">Failed (24h)</th>
+                <th className="px-4 py-2 font-medium">Last success (UTC)</th>
+                <th className="px-4 py-2 font-medium">Oldest waiting (UTC)</th>
+                <th className="px-4 py-2 font-medium">Last duration</th>
                 <th className="px-4 py-2 font-medium">Delayed</th>
               </tr>
             </thead>
@@ -227,7 +270,10 @@ export default async function AdminOverviewPage() {
               {queues.map((q) => (
                 <tr key={q.queueName}>
                   <td className="px-4 py-3 font-medium text-foreground">
-                    <Link href={`/admin/jobs/${q.queueName}`} className="underline-offset-2 hover:underline">
+                    <Link
+                      href={`/admin/jobs/${q.queueName}`}
+                      className="underline-offset-2 hover:underline"
+                    >
                       {q.queueName}
                     </Link>
                   </td>
@@ -237,11 +283,33 @@ export default async function AdminOverviewPage() {
                   <td className="px-4 py-3">
                     {q.failed > 0 ? (
                       <Link href={`/admin/jobs/${q.queueName}`}>
-                        <Badge tone="danger">{q.failed}</Badge>
+                        <Badge tone={q.failedLast24h > 0 ? "danger" : "neutral"}>
+                          {q.failed}
+                        </Badge>
                       </Link>
                     ) : (
                       q.failed
                     )}
+                  </td>
+                  <td className="px-4 py-3">
+                    <Badge tone={q.failedLast24h > 0 ? "danger" : "success"}>
+                      {q.failedLast24h}
+                    </Badge>
+                  </td>
+                  <td className="px-4 py-3 text-xs">
+                    {q.lastCompletedAt === null
+                      ? "Unavailable"
+                      : new Date(q.lastCompletedAt).toISOString()}
+                  </td>
+                  <td className="px-4 py-3 text-xs">
+                    {q.oldestWaitingAt === null
+                      ? "None"
+                      : new Date(q.oldestWaitingAt).toISOString()}
+                  </td>
+                  <td className="px-4 py-3 text-xs">
+                    {q.lastDurationMs === null
+                      ? "Unavailable"
+                      : `${q.lastDurationMs} ms`}
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">{q.delayed}</td>
                 </tr>
@@ -292,7 +360,12 @@ export default async function AdminOverviewPage() {
 
       <section aria-labelledby="source-health-heading">
         <div className="flex flex-wrap items-center gap-3">
-          <h2 id="source-health-heading" className="text-sm font-semibold text-foreground">Source health</h2>
+          <h2
+            id="source-health-heading"
+            className="text-sm font-semibold text-foreground"
+          >
+            Source health
+          </h2>
           {!sourcesResult.ok ? (
             <Badge tone="danger">Unavailable — query failed</Badge>
           ) : null}
@@ -300,7 +373,8 @@ export default async function AdminOverviewPage() {
             .filter((status) => (statusCounts[status] ?? 0) > 0)
             .map((status) => (
               <Badge key={status} tone={SOURCE_STATUS_TONE[status] ?? "neutral"}>
-                {statusCounts[status]!.toLocaleString()} {status === "unavailable" ? "paused" : status}
+                {statusCounts[status]!.toLocaleString()}{" "}
+                {status === "unavailable" ? "paused" : status}
               </Badge>
             ))}
         </div>
@@ -309,10 +383,16 @@ export default async function AdminOverviewPage() {
             <span>
               Show the sources that need attention first
               <span className="ml-2 font-normal text-muted-foreground">
-                ({Math.min(SOURCE_SAMPLE, sourceTotal).toLocaleString()} of {sourceTotal.toLocaleString()})
+                ({Math.min(SOURCE_SAMPLE, sourceTotal).toLocaleString()} of{" "}
+                {sourceTotal.toLocaleString()})
               </span>
             </span>
-            <span aria-hidden="true" className="text-muted-foreground transition-transform group-open:rotate-180">▾</span>
+            <span
+              aria-hidden="true"
+              className="text-muted-foreground transition-transform group-open:rotate-180"
+            >
+              ▾
+            </span>
           </summary>
           <div className="overflow-x-auto border-t border-border">
             <table className="w-full text-sm">
@@ -331,11 +411,17 @@ export default async function AdminOverviewPage() {
                   const capabilities = getConnectorCapabilities(source.connector);
                   return (
                     <tr key={source.id}>
-                      <td className="px-4 py-3 font-medium text-foreground">{source.name}</td>
+                      <td className="px-4 py-3 font-medium text-foreground">
+                        {source.name}
+                      </td>
                       <td className="px-4 py-3 text-muted-foreground">{source.type}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{source.connector}</td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {source.connector}
+                      </td>
                       <td className="px-4 py-3">
-                        <Badge tone={SOURCE_STATUS_TONE[source.status] ?? "neutral"}>{source.status}</Badge>
+                        <Badge tone={SOURCE_STATUS_TONE[source.status] ?? "neutral"}>
+                          {source.status}
+                        </Badge>
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex flex-wrap gap-1">
@@ -343,7 +429,8 @@ export default async function AdminOverviewPage() {
                             Real-time: {CAPABILITY_LABEL[capabilities.realTimeSearch]}
                           </Badge>
                           <Badge tone={CAPABILITY_TONE[capabilities.engagementMetrics]}>
-                            Engagement: {CAPABILITY_LABEL[capabilities.engagementMetrics]}
+                            Engagement:{" "}
+                            {CAPABILITY_LABEL[capabilities.engagementMetrics]}
                           </Badge>
                           <Badge tone={CAPABILITY_TONE[capabilities.officialApi]}>
                             Official API: {CAPABILITY_LABEL[capabilities.officialApi]}
@@ -351,7 +438,9 @@ export default async function AdminOverviewPage() {
                         </div>
                       </td>
                       <td className="px-4 py-3 text-muted-foreground">
-                        {source.lastCheckedAt ? source.lastCheckedAt.toLocaleString() : "Not available"}
+                        {source.lastCheckedAt
+                          ? source.lastCheckedAt.toLocaleString()
+                          : "Not available"}
                       </td>
                     </tr>
                   );
@@ -360,7 +449,13 @@ export default async function AdminOverviewPage() {
             </table>
             <p className="border-t border-border px-4 py-3 text-xs text-muted-foreground">
               Every source, with filters and pause controls, is on{" "}
-              <Link href="/admin/sources" className="text-primary underline underline-offset-2">Crawl sources</Link>.
+              <Link
+                href="/admin/sources"
+                className="text-primary underline underline-offset-2"
+              >
+                Crawl sources
+              </Link>
+              .
             </p>
           </div>
         </details>

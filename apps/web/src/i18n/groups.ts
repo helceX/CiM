@@ -21,14 +21,31 @@ export const MARKETING_NAMESPACES = [
 ] as const;
 
 /** Sign-in, sign-up, password and invitation pages: the marketing frame around them plus their own text. */
-export const AUTH_NAMESPACES = [...MARKETING_NAMESPACES, "auth", "validation", "ui"] as const;
+export const AUTH_NAMESPACES = [
+  ...MARKETING_NAMESPACES,
+  "auth",
+  "validation",
+  "ui",
+] as const;
 
 /** The setup wizard shown once, right after the e-mail is verified. */
 // "errors" holds the short generic sentences ("Something went wrong…") the wizard shows when a request fails.
-export const ONBOARDING_NAMESPACES = ["onboarding", "trackingTargets", "validation", "errors"] as const;
+export const ONBOARDING_NAMESPACES = [
+  "onboarding",
+  "trackingTargets",
+  "validation",
+  "errors",
+] as const;
 
 /** The signed-in panel (grows with each translated area). */
-export const PANEL_NAMESPACES = ["ui", "shell", "notifications", "palette", "validation", "opportunities"] as const;
+export const PANEL_NAMESPACES = [
+  "ui",
+  "shell",
+  "notifications",
+  "palette",
+  "validation",
+  "opportunities",
+] as const;
 
 /** Read on the server (API messages); sent to a browser only where a group above lists it. */
-export const SERVER_NAMESPACES = ["errors"] as const;
+export const SERVER_NAMESPACES = ["errors", "sourceCoverage"] as const;

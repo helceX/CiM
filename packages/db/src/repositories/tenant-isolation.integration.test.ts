@@ -1,15 +1,28 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db } from "../client";
 import { articles, sources } from "../schema/content";
-import { organizationMemberships, organizations, users, workspaces } from "../schema/index";
+import {
+  organizationMemberships,
+  organizations,
+  users,
+  workspaces,
+} from "../schema/index";
 import { createProject, getProject } from "./projects";
 import { createMonitoringQuery, getMonitoringQuery } from "./monitoring-queries";
-import { createMentionIfNotExists, getMentionDetail, setMentionFeedback } from "./mentions";
+import {
+  createMentionIfNotExists,
+  getMentionDetail,
+  setMentionFeedback,
+} from "./mentions";
 import { createReport, createReportRun, getReport, getReportRun } from "./reports";
 import { createNotificationForUser, markNotificationRead } from "./notifications";
 import { getMembership } from "./memberships";
 import { asOrganizationId } from "./tenant-scope";
+import { getActivationFunnel, recordFirstResultView } from "./activation";
+import { getMonitoringSourceCoverage } from "./source-coverage";
+import { auditLogs } from "../schema/audit";
+import { monitoringQueries } from "../schema/monitoring";
 
 /**
  * docs/architecture/SECURITY.md + docs/testing/TEST_STRATEGY.md commit to
@@ -37,6 +50,94 @@ describe("tenant isolation / IDOR (integration)", () => {
   let userAId: string;
   let userBId: string;
   let notificationAId: string;
+
+  it("records a first view once and refuses a different tenant's mention", async () => {
+    await recordFirstResultView(db, orgBId, userBId, mentionAId);
+    const rejected = await db.execute(sql`select count(*)::int as n from audit_logs
+      where organization_id = ${orgBId}::uuid and actor_user_id = ${userBId}::uuid
+      and action = 'activation.first_result_viewed'`);
+    expect(rejected.rows[0]?.n).toBe(0);
+    await Promise.all([
+      recordFirstResultView(db, orgAId, userAId, mentionAId),
+      recordFirstResultView(db, orgAId, userAId, mentionAId),
+    ]);
+    const accepted = await db.execute(sql`select count(*)::int as n from audit_logs
+      where organization_id = ${orgAId}::uuid and actor_user_id = ${userAId}::uuid
+      and action = 'activation.first_result_viewed'`);
+    expect(accepted.rows[0]?.n).toBe(1);
+  });
+
+  it("counts real activation stages and excludes platform operators", async () => {
+    const baseline = await getActivationFunnel(db);
+    await db.insert(auditLogs).values({
+      organizationId: orgAId,
+      actorUserId: userAId,
+      action: "user.registered",
+      targetType: "user",
+      createdAt: new Date(Date.now() - 86_400_000),
+    });
+    const funnel = await getActivationFunnel(db);
+    expect(funnel.registered).toBe(baseline.registered + 1);
+    expect(funnel.verified).toBe(baseline.verified + 1);
+    expect(funnel.monitoring).toBe(baseline.monitoring + 1);
+    expect(funnel.resultsAvailable).toBe(baseline.resultsAvailable + 1);
+    expect(funnel.resultViewed).toBe(baseline.resultViewed + 1);
+    await db
+      .update(users)
+      .set({ isPlatformSuperAdmin: true })
+      .where(eq(users.id, userAId));
+    try {
+      expect(await getActivationFunnel(db)).toEqual(baseline);
+    } finally {
+      await db
+        .update(users)
+        .set({ isPlatformSuperAdmin: false })
+        .where(eq(users.id, userAId));
+    }
+  });
+
+  it("limits source coverage to active tenant scopes and counts paused sources separately", async () => {
+    expect(await getMonitoringSourceCoverage(db, orgBId)).toBeNull();
+    await db
+      .update(monitoringQueries)
+      .set({ regionScopes: ["XK"] })
+      .where(eq(monitoringQueries.id, queryAId));
+    const before = await getMonitoringSourceCoverage(db, orgAId);
+    const inserted = await db
+      .insert(sources)
+      .values([
+        {
+          name: "Coverage paused",
+          domain: "coverage-paused.example",
+          country: "XK",
+          type: "news",
+          connector: "mock",
+          status: "unavailable",
+        },
+        {
+          name: "Coverage outside scope",
+          domain: "coverage-outside.example",
+          country: "US",
+          type: "news",
+          connector: "mock",
+          status: "healthy",
+        },
+      ])
+      .returning();
+    try {
+      const after = await getMonitoringSourceCoverage(db, orgAId);
+      expect(after?.total).toBe((before?.total ?? 0) + 1);
+      expect(after?.paused).toBe((before?.paused ?? 0) + 1);
+      expect(after?.active).toBe(before?.active);
+    } finally {
+      for (const source of inserted)
+        await db.delete(sources).where(eq(sources.id, source.id));
+      await db
+        .update(monitoringQueries)
+        .set({ regionScopes: [] })
+        .where(eq(monitoringQueries.id, queryAId));
+    }
+  });
 
   beforeAll(async () => {
     const [orgA] = await db
@@ -87,9 +188,12 @@ describe("tenant isolation / IDOR (integration)", () => {
     userAId = userA.id;
     userBId = userB.id;
 
-    await db
-      .insert(organizationMemberships)
-      .values({ organizationId: orgAId, userId: userAId, role: "organization_owner", status: "active" });
+    await db.insert(organizationMemberships).values({
+      organizationId: orgAId,
+      userId: userAId,
+      role: "organization_owner",
+      status: "active",
+    });
 
     const queryA = await createMonitoringQuery(db, orgAId, {
       projectId: projectAId,
@@ -194,7 +298,9 @@ describe("tenant isolation / IDOR (integration)", () => {
   });
 
   it("refuses a cross-tenant markNotificationRead (no-op)", async () => {
-    expect(await markNotificationRead(db, orgBId, userBId, notificationAId)).toBe(false);
+    expect(await markNotificationRead(db, orgBId, userBId, notificationAId)).toBe(
+      false,
+    );
     expect(await markNotificationRead(db, orgAId, userAId, notificationAId)).toBe(true);
   });
 

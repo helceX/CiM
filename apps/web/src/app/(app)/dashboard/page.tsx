@@ -24,6 +24,7 @@ import { BrandGroupComparisonSection } from "./brand-group-comparison-section";
 import { RecommendationsSection } from "./recommendations-section";
 import { RiskBanner } from "./risk-banner";
 import { PinnedVisualsSection } from "./pinned-visuals-section";
+import { SourceCoverage } from "@/components/source-coverage";
 
 // A "risk" insight row is only ever created when detectRisk actually
 // flags something (most periods produce nothing), unlike "whats_changed"
@@ -132,6 +133,8 @@ export default async function DashboardPage() {
         </div>
       </header>
 
+      <SourceCoverage organizationId={context.organizationId} />
+
       <KpiRow
         items={[
           { label: "Total mentions", value: String(summary.totalMentions) },
@@ -205,16 +208,25 @@ export default async function DashboardPage() {
       {brand.names.length > 0 ? (
         <section aria-labelledby="your-brand-heading">
           <div className="flex items-center justify-between">
-            <h2 id="your-brand-heading" className="text-sm font-semibold text-foreground">
+            <h2
+              id="your-brand-heading"
+              className="text-sm font-semibold text-foreground"
+            >
               Your brand in the news
             </h2>
-            <Link href="/mentions" className="text-xs text-primary underline underline-offset-2">
+            <Link
+              href="/mentions"
+              className="text-xs text-primary underline underline-offset-2"
+            >
               View all mentions
             </Link>
           </div>
           <p className="mt-1 text-xs text-muted-foreground">
             Stories that name{" "}
-            <strong className="font-semibold text-foreground">{brand.names.join(" · ")}</strong> directly — last 30 days.
+            <strong className="font-semibold text-foreground">
+              {brand.names.join(" · ")}
+            </strong>{" "}
+            directly — last 30 days.
           </p>
           <div className="mt-3 overflow-hidden rounded-lg border border-border">
             {brand.items.length === 0 ? (
@@ -237,13 +249,24 @@ export default async function DashboardPage() {
                         </Link>
                       </p>
                       {mention.sentiment ? (
-                        <Badge tone={SENTIMENT_TONE[mention.sentiment as keyof typeof SENTIMENT_TONE]}>{mention.sentiment}</Badge>
+                        <Badge
+                          tone={
+                            SENTIMENT_TONE[
+                              mention.sentiment as keyof typeof SENTIMENT_TONE
+                            ]
+                          }
+                        >
+                          {mention.sentiment}
+                        </Badge>
                       ) : null}
                     </div>
                     <p className="text-xs text-muted-foreground">
                       {source.name}
-                      {article.publishedAt ? ` · ${new Date(article.publishedAt).toLocaleDateString()}` : ""} · names{" "}
-                      <span className="text-foreground">{matchedName}</span> in the {where}
+                      {article.publishedAt
+                        ? ` · ${new Date(article.publishedAt).toLocaleDateString()}`
+                        : ""}{" "}
+                      · names <span className="text-foreground">{matchedName}</span> in
+                      the {where}
                     </p>
                   </li>
                 ))}
@@ -254,72 +277,93 @@ export default async function DashboardPage() {
       ) : (
         <section aria-labelledby="top-stories-heading">
           <div className="flex items-center justify-between">
-            <h2 id="top-stories-heading" className="text-sm font-semibold text-foreground">Latest stories</h2>
-            <Link href="/mentions" className="text-xs text-primary underline underline-offset-2">
+            <h2
+              id="top-stories-heading"
+              className="text-sm font-semibold text-foreground"
+            >
+              Latest stories
+            </h2>
+            <Link
+              href="/mentions"
+              className="text-xs text-primary underline underline-offset-2"
+            >
               View all mentions
             </Link>
           </div>
           <p className="mt-1 text-xs text-muted-foreground">
-            Add your company&apos;s name (and its short name) to a monitoring to see here the stories that name you
-            directly.{" "}
-            <Link href="/monitoring" className="text-primary underline underline-offset-2">
+            Add your company&apos;s name (and its short name) to a monitoring to see
+            here the stories that name you directly.{" "}
+            <Link
+              href="/monitoring"
+              className="text-primary underline underline-offset-2"
+            >
               Open monitoring
             </Link>
           </p>
-        <div className="mt-3 overflow-hidden rounded-lg border border-border">
-          {recentMentions.length === 0 ? (
-            <EmptyState
-              title="No mentions yet"
-              description="New matches will appear here as sources are checked — this can take a few minutes for a newly created query."
-              className="border-none"
-            />
-          ) : (
-            <ul className="divide-y divide-border">
-              {recentMentions.map(({ mention, article, source }) => (
-                <li key={mention.id} className="flex flex-col gap-1 px-4 py-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-sm font-medium text-foreground">
-                      <Link
-                        href={`/mentions?open=${mention.id}`}
-                        className="hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                      >
-                        {article.title}
-                      </Link>
-                    </p>
-                    <div className="flex shrink-0 items-center gap-2">
-                      {mention.sentiment ? (
+          <div className="mt-3 overflow-hidden rounded-lg border border-border">
+            {recentMentions.length === 0 ? (
+              <EmptyState
+                title="No mentions yet"
+                description="We check stored stories first, then match new stories as sources are checked. If nothing matches, review your keywords and source coverage. Try a distinctive brand name, spelling variant or relevant phrase."
+                action={
+                  <Link
+                    href="/monitoring"
+                    className="text-sm text-primary underline underline-offset-2"
+                  >
+                    Review monitoring keywords and sources
+                  </Link>
+                }
+                className="border-none"
+              />
+            ) : (
+              <ul className="divide-y divide-border">
+                {recentMentions.map(({ mention, article, source }) => (
+                  <li key={mention.id} className="flex flex-col gap-1 px-4 py-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-sm font-medium text-foreground">
+                        <Link
+                          href={`/mentions?open=${mention.id}`}
+                          className="hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                        >
+                          {article.title}
+                        </Link>
+                      </p>
+                      <div className="flex shrink-0 items-center gap-2">
+                        {mention.sentiment ? (
+                          <Badge
+                            tone={
+                              SENTIMENT_TONE[
+                                mention.sentiment as keyof typeof SENTIMENT_TONE
+                              ]
+                            }
+                          >
+                            {mention.sentiment}
+                          </Badge>
+                        ) : (
+                          <Badge tone="neutral">Unclassified</Badge>
+                        )}
                         <Badge
                           tone={
-                            SENTIMENT_TONE[
-                              mention.sentiment as keyof typeof SENTIMENT_TONE
+                            PRIORITY_TONE[
+                              mention.priority as keyof typeof PRIORITY_TONE
                             ]
                           }
                         >
-                          {mention.sentiment}
+                          {signalLevelLabel(mention.priority)}
                         </Badge>
-                      ) : (
-                        <Badge tone="neutral">Unclassified</Badge>
-                      )}
-                      <Badge
-                        tone={
-                          PRIORITY_TONE[mention.priority as keyof typeof PRIORITY_TONE]
-                        }
-                      >
-                        {signalLevelLabel(mention.priority)}
-                      </Badge>
+                      </div>
                     </div>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {source.name}
-                    {article.publishedAt
-                      ? ` · ${new Date(article.publishedAt).toLocaleDateString()}`
-                      : ""}
-                  </p>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+                    <p className="text-xs text-muted-foreground">
+                      {source.name}
+                      {article.publishedAt
+                        ? ` · ${new Date(article.publishedAt).toLocaleDateString()}`
+                        : ""}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </section>
       )}
     </div>

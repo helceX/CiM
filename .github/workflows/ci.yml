@@ -91,7 +91,14 @@ jobs:
         target: [web, worker]
     steps:
       - uses: actions/checkout@v4
-      - run: docker build -f apps/${{ matrix.target }}/Dockerfile -t cim-${{ matrix.target }}:ci .
+      - name: Build production image with official registry fallback
+        run: |
+          base_image=public.ecr.aws/docker/library/node:22-bookworm-slim
+          if ! docker pull "$base_image"; then
+            base_image=docker.io/library/node:22-bookworm-slim
+            docker pull "$base_image"
+          fi
+          docker build --build-arg NODE_IMAGE="$base_image" -f apps/${{ matrix.target }}/Dockerfile -t cim-${{ matrix.target }}:ci .
 
       - name: Smoke test the web image behind a proxy-style Host/Origin
         # A green `docker build` says nothing about whether the image works

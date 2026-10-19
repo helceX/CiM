@@ -1,24 +1,10 @@
 import Link from "next/link";
 import { Badge } from "@cim/ui";
 import { getConnectorCapabilities } from "@cim/core";
-import {
-  checkDatabaseHealth,
-  countOpenTakedownRequests,
-  db,
-  getDatabaseSizeBytes,
-  countSourcesByStatus,
-  getPlatformTotals,
-  listLargestTables,
-  listOrganizationsForAdmin,
-  listSourceHealthSample,
-} from "@cim/db";
 import { requireSuperAdmin } from "@/lib/admin";
-import { getQueueHealth } from "@/lib/admin-queues";
+import { loadAdminOverview } from "@/lib/admin-overview";
 import { KpiRow } from "@/components/kpi-row";
 import { StoragePrune } from "./storage-prune";
-
-/** How many sources the Overview lists (the full list, with filters, is on /admin/sources). */
-const SOURCE_SAMPLE = 200;
 
 const SOURCE_STATUS_TONE: Record<string, "success" | "warning" | "danger" | "neutral"> =
   {
@@ -56,69 +42,23 @@ const CAPABILITY_LABEL: Record<string, string> = {
 export default async function AdminOverviewPage() {
   await requireSuperAdmin();
 
-  // checkDatabaseHealth already catches internally and resolves to false
-  // rather than throwing — but that's pointless if a real Postgres outage
-  // just makes one of its Promise.all siblings reject instead, aborting
-  // the whole page (and the "Database unreachable" badge along with it)
-  // before it ever gets to render. Each DB-dependent call below falls
-  // back the same way getQueueHealth's Redis call already does — an
-  // {ok, ...} wrapper, not a bare value — so a genuinely empty result
-  // (0 organizations, no sources yet) never gets confused with "this
-  // section's query failed", the same "never a fabricated zero" rule
-  // billing.ts and usage-section.tsx already follow, and each failure is
-  // logged so an operator debugging a partial outage isn't staring at a
-  // silently-empty table with nothing in the logs to explain it.
-  const emptyTotals = {
-    totalOrganizations: 0,
-    totalUsers: 0,
-    totalSources: 0,
-    totalMentions: 0,
-    mentionsLast24h: 0,
-  };
-  const [totalsResult, dbHealthy, queueResult, organizationsResult, sourcesResult] =
-    await Promise.all([
-      getPlatformTotals(db)
-        .then((totals) => ({ ok: true as const, totals }))
-        .catch((error: unknown) => {
-          console.error("[admin] getPlatformTotals failed:", error);
-          return { ok: false as const, totals: emptyTotals };
-        }),
-      checkDatabaseHealth(db),
-      getQueueHealth()
-        .then((rows) => ({ ok: true as const, rows }))
-        .catch((error: unknown) => {
-          console.error("[admin] getQueueHealth failed:", error);
-          return { ok: false as const, rows: [] };
-        }),
-      listOrganizationsForAdmin(db)
-        .then((organizations) => ({ ok: true as const, organizations }))
-        .catch((error: unknown) => {
-          console.error("[admin] listOrganizationsForAdmin failed:", error);
-          return { ok: false as const, organizations: [] };
-        }),
-      listSourceHealthSample(db, SOURCE_SAMPLE)
-        .then((sources) => ({ ok: true as const, sources }))
-        .catch((error: unknown) => {
-          console.error("[admin] listSourceHealthSample failed:", error);
-          return { ok: false as const, sources: [] };
-        }),
-    ]);
-  const statusCounts = await countSourcesByStatus(db).catch(
-    () => ({}) as Record<string, number>,
-  );
-  const sourceTotal = Object.values(statusCounts).reduce((sum, n) => sum + n, 0);
-  const openTakedowns = await countOpenTakedownRequests(db).catch(() => 0);
-  const totals = totalsResult.totals;
-  const redisHealthy = queueResult.ok;
-  const queues = queueResult.rows;
-  const organizations = organizationsResult.organizations;
-  const sources = sourcesResult.sources;
-
-  // Disk: what fills the Postgres volume. Never fatal to the page.
-  const [dbSizeBytes, largestTables] = await Promise.all([
-    getDatabaseSizeBytes(db).catch(() => null),
-    listLargestTables(db, 6).catch(() => []),
-  ]);
+  const overview = await loadAdminOverview();
+  const { totals, dbHealthy, redisHealthy, statusCounts, openTakedowns, dbSizeBytes } = overview;
+  const queues = overview.queues ?? [];
+  const organizations = overview.organizations ?? [];
+  const sources = overview.sources ?? [];
+  const largestTables = overview.largestTables ?? [];
+  const sourceTotal = statusCounts === null ? null
+    : Object.values(statusCounts).reduce((sum, n) => sum + n, 0);
+  const attentionSources = statusCounts === null ? null
+    : ["delayed", "error", "blocked"].reduce((sum, status) => sum + (statusCounts?.[status] ?? 0), 0);
+  const failedQueues = overview.queues?.filter((queue) => queue.failedLast24h > 0) ?? null;
+  const unavailableSections = [
+    ["Platform totals", totals], ["Organizations", overview.organizations],
+    ["Source sample", overview.sources], ["Source totals", statusCounts],
+    ["Takedown requests", openTakedowns], ["Database size", dbSizeBytes],
+    ["Table sizes", overview.largestTables], ["Job queues", overview.queues],
+  ].filter(([, value]) => value === null).map(([name]) => String(name));
   const volumeMb = Number(process.env.DB_VOLUME_MB);
   const dbMb = dbSizeBytes === null ? null : dbSizeBytes / 1_048_576;
   const usedShare = dbMb !== null && volumeMb > 0 ? dbMb / volumeMb : null;
@@ -150,40 +90,59 @@ export default async function AdminOverviewPage() {
             href="/admin/takedowns"
             className="text-primary underline underline-offset-2"
           >
-            Takedown requests{openTakedowns > 0 ? ` (${openTakedowns} open)` : ""}
+            Takedown requests{openTakedowns === null ? " (count unavailable)" : ""}{openTakedowns !== null && openTakedowns > 0 ? ` (${openTakedowns} open)` : ""}
           </Link>
         </p>
       </div>
 
       <section>
         <h2 className="text-sm font-semibold text-foreground">System health</h2>
-        <div className="mt-3 flex gap-3">
+        <div className="mt-3 flex flex-wrap gap-3">
           <Badge tone={dbHealthy ? "success" : "danger"}>
             Database {dbHealthy ? "reachable" : "unreachable"}
           </Badge>
           <Badge tone={redisHealthy ? "success" : "danger"}>
             Redis {redisHealthy ? "reachable" : "unreachable"}
           </Badge>
-          {!totalsResult.ok ? <Badge tone="danger">Totals unavailable</Badge> : null}
+          {totals === null ? <Badge tone="danger">Totals unavailable</Badge> : null}
         </div>
+        <p className="mt-2 text-xs text-muted-foreground">
+          Last loaded (UTC): <time dateTime={overview.checkedAt.toISOString()}>{overview.checkedAt.toISOString().replace("T", " ").slice(0, 19)}</time>.
+          Reload this page for a fresh check. Service reachability does not guarantee every measurement succeeded.
+        </p>
         <div className="mt-4">
           <KpiRow
             items={[
-              { label: "Organizations", value: String(totals.totalOrganizations) },
-              { label: "Users", value: String(totals.totalUsers) },
-              { label: "Sources", value: String(totals.totalSources) },
+              { label: "Organizations", value: totals === null ? "Unavailable" : totals.totalOrganizations.toLocaleString() },
+              { label: "Users", value: totals === null ? "Unavailable" : totals.totalUsers.toLocaleString() },
+              { label: "Sources", value: totals === null ? "Unavailable" : totals.totalSources.toLocaleString() },
               {
                 label: "Mentions (24h)",
-                value: String(totals.mentionsLast24h),
-                hint: `${totals.totalMentions} total`,
+                value: totals === null ? "Unavailable" : totals.mentionsLast24h.toLocaleString(),
+                hint: totals === null ? "Measurement failed" : `${totals.totalMentions.toLocaleString()} total`,
               },
             ]}
           />
         </div>
       </section>
 
+      <section aria-labelledby="attention-heading" className="rounded-lg border border-border p-4">
+        <h2 id="attention-heading" className="text-sm font-semibold text-foreground">Needs attention</h2>
+        <ul className="mt-3 space-y-2 text-sm">
+          {!dbHealthy ? <li>Database check failed. Check the database service.</li> : null}
+          {!redisHealthy ? <li>Redis check failed. Check the queue service.</li> : null}
+          {unavailableSections.length > 0 ? <li>Measurements unavailable: {unavailableSections.join(", ")}. Reload or inspect service logs before treating these as empty.</li> : null}
+          {attentionSources !== null && attentionSources > 0 ? <li><Link href="/admin/sources" className="text-primary underline underline-offset-2">Review {attentionSources.toLocaleString()} delayed, errored or blocked sources</Link>. Paused sources are excluded.</li> : null}
+          {failedQueues !== null && failedQueues.length > 0 ? <li><Link href="#job-queues" className="text-primary underline underline-offset-2">Review {failedQueues.length} queues with retained failures in the last 24 hours</Link>.</li> : null}
+          {openTakedowns !== null && openTakedowns > 0 ? <li><Link href="/admin/takedowns" className="text-primary underline underline-offset-2">Review {openTakedowns} open takedown requests</Link>.</li> : null}
+          {usedShare !== null && usedShare > 0.6 ? <li><Link href="#storage" className="text-primary underline underline-offset-2">Database size exceeds {usedShare > 0.8 ? "80" : "60"}% of configured volume capacity</Link>. Review storage and capacity.</li> : null}
+          {dbHealthy && redisHealthy && unavailableSections.length === 0 && attentionSources === 0 && failedQueues?.length === 0 && openTakedowns === 0 && (usedShare === null || usedShare <= 0.6) ? <li>No issues detected by these checks.</li> : null}
+        </ul>
+        <p className="mt-3 text-xs text-muted-foreground">This summary covers the checks below. It does not confirm worker progress, content freshness or complete disk usage; database size excludes other volume files.</p>
+      </section>
+
       <section>
-        <h2 className="text-sm font-semibold text-foreground">Storage</h2>
+        <h2 id="storage" className="scroll-mt-4 text-sm font-semibold text-foreground">Storage</h2>
         {dbMb === null ? (
           <p className="mt-2 text-sm text-muted-foreground">
             Database size is not available.
@@ -214,6 +173,7 @@ export default async function AdminOverviewPage() {
                 </span>
               )}
             </p>
+            {overview.largestTables === null ? <p className="text-sm text-muted-foreground">Table sizes unavailable — query failed.</p> : null}
             {largestTables.length > 0 ? (
               <ul className="grid gap-1 text-xs text-muted-foreground sm:grid-cols-2">
                 {largestTables.map((table) => (
@@ -244,6 +204,7 @@ export default async function AdminOverviewPage() {
         >
           Job queues
         </h2>
+        {overview.queues === null ? <p className="mt-2 text-sm text-muted-foreground">Queue measurements unavailable — query failed.</p> : null}
         <p className="mt-2 text-xs text-muted-foreground">
           Retained totals are historical, not a current outage. The 24h count includes
           failures still retained in Redis; retried or removed jobs are excluded. Last
@@ -322,7 +283,7 @@ export default async function AdminOverviewPage() {
       <section>
         <div className="flex items-center gap-3">
           <h2 className="text-sm font-semibold text-foreground">Organizations</h2>
-          {!organizationsResult.ok ? (
+          {overview.organizations === null ? (
             <Badge tone="danger">Unavailable — query failed</Badge>
           ) : null}
         </div>
@@ -366,14 +327,15 @@ export default async function AdminOverviewPage() {
           >
             Source health
           </h2>
-          {!sourcesResult.ok ? (
+          {overview.sources === null ? (
             <Badge tone="danger">Unavailable — query failed</Badge>
           ) : null}
+          {statusCounts === null ? <Badge tone="danger">Source totals unavailable</Badge> : null}
           {(["healthy", "delayed", "error", "blocked", "unavailable"] as const)
-            .filter((status) => (statusCounts[status] ?? 0) > 0)
+            .filter((status) => (statusCounts?.[status] ?? 0) > 0)
             .map((status) => (
               <Badge key={status} tone={SOURCE_STATUS_TONE[status] ?? "neutral"}>
-                {statusCounts[status]!.toLocaleString()}{" "}
+                {statusCounts?.[status]!.toLocaleString()}{" "}
                 {status === "unavailable" ? "paused" : status}
               </Badge>
             ))}
@@ -383,8 +345,8 @@ export default async function AdminOverviewPage() {
             <span>
               Show the sources that need attention first
               <span className="ml-2 font-normal text-muted-foreground">
-                ({Math.min(SOURCE_SAMPLE, sourceTotal).toLocaleString()} of{" "}
-                {sourceTotal.toLocaleString()})
+                ({overview.sources === null ? "sample unavailable" : `${sources.length.toLocaleString()} shown`}
+                {sourceTotal === null ? "; total unavailable" : ` of ${sourceTotal.toLocaleString()}`})
               </span>
             </span>
             <span

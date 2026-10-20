@@ -1,4 +1,4 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import type { Db } from "../client";
 import { articles, mentions, sources } from "../schema/content";
 import { socialProfiles } from "../schema/social";
@@ -26,7 +26,7 @@ export async function getSocialSearchHealth(db: Db, organizationId: Organization
   });
 }
 
-export type SocialScope = { projectId?: string; queryId?: string; sinceDays: number };
+export type SocialScope = { projectId?: string; queryId?: string; queryIds?: string[]; sinceDays: number };
 
 /**
  * docs/architecture/ADR-006-SOCIAL-LISTENING.md — every query here scopes
@@ -40,6 +40,7 @@ function socialScopeWhere(organizationId: OrganizationId, scope: SocialScope) {
     eq(sources.type, "social"),
     scope.projectId ? eq(mentions.projectId, scope.projectId) : undefined,
     scope.queryId ? eq(mentions.queryId, scope.queryId) : undefined,
+    scope.queryIds !== undefined ? (scope.queryIds.length > 0 ? inArray(mentions.queryId, scope.queryIds) : sql`false`) : undefined,
     sql`${mentions.createdAt} >= now() - (${scope.sinceDays}::text || ' days')::interval`,
   );
 }
@@ -177,6 +178,7 @@ export async function getTrendingHashtags(
       and m.match_type = 'hashtag'
       ${scope.projectId ? sql`and m.project_id = ${scope.projectId}` : sql``}
       ${scope.queryId ? sql`and m.query_id = ${scope.queryId}` : sql``}
+      ${scope.queryIds !== undefined ? (scope.queryIds.length ? sql`and m.query_id in (${sql.join(scope.queryIds.map(id => sql`${id}`), sql`, `)})` : sql`and false`) : sql``}
       and m.created_at >= now() - (${scope.sinceDays * 2}::text || ' days')::interval
     group by hashtag
     order by current_count desc

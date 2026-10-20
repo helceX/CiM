@@ -17,7 +17,7 @@
       },
       "pricing": {
         "title": "Pricing and Free Start | Mediaory",
-        "description": "Learn the current free monitoring limit and source coverage. Set up your first project and explore planned usage-based pricing."
+        "description": "Mediaory free pilot: one active monitoring per organization, source checks about every 8 hours and current usage conditions. Paid plans are not on sale yet."
       },
       "resources": {
         "title": "Media Monitoring Resources and Guides | Mediaory",
@@ -52,7 +52,7 @@
     "security": "Security",
     "resources": "Resources",
     "contact": "Contact",
-    "tagline": "Communication intelligence for teams that need to know first — and know why.",
+    "tagline": "For teams reviewing source-linked coverage and sharing their findings.",
     "product": "Product",
     "trust": "Company",
     "account": "Account"
@@ -68,11 +68,11 @@
   "home": {
     "hero": {
       "eyebrow": "Communication intelligence platform",
-      "titleA": "See the story",
-      "titleB": "before it becomes the headline.",
-      "subtitle": "From news to open social feeds, see what matters in one place. Understand the source, discover opportunities for your organization and share the story with your team.",
-      "note": "Start with a query. Follow the story to an opportunity.",
-      "screenAlt": "The Mediaory dashboard showing mention totals, an AI summary of the last 24 hours and a mention trend.",
+      "titleA": "Bring coverage together,",
+      "titleB": "find what matters.",
+      "subtitle": "Source-linked media monitoring for small communications teams and startup ecosystems. Review brand, industry and possible opportunity signals, then share your findings.",
+      "note": "Free pilot · 1 active monitoring · Sources are checked about every 8 hours. Not a real-time crisis alert service.",
+      "screenAlt": "Illustrative Mediaory workspace; not live data or an analysis guarantee.",
       "chipMentions": "38 mentions · last 7 days",
       "chipAi": "AI summary · 90% confidence",
       "scene": {
@@ -120,7 +120,7 @@
         "filter": {
           "kicker": "Filter",
           "title": "Cut the noise, keep the signal.",
-          "body": "Narrow the feed by date, sentiment and priority. Review relevant news alongside its sources and matching reasons.",
+          "body": "Narrow coverage by date and priority. Sentiment filters apply to analyzed records; inspect sources alongside match reasons.",
           "alt": "The mentions table with search and sentiment, priority, date and assignment filters.",
           "scene": {
             "example": "Illustrative flow · not live data",
@@ -177,8 +177,8 @@
       "lead": "See what matters, check the source, and make your own decision.",
       "cards": {
         "grounded": {
-          "title": "Grounded AI",
-          "body": "Every insight ships with evidence, sources and a confidence score. If the data does not support a claim, Mediaory does not make it.",
+          "title": "Analysis with visible sources",
+          "body": "Inspect source links and match reasons. AI features depend on a configured provider; unanalyzed records are identified explicitly.",
           "meta": "Review the summary alongside its evidence",
           "sourceLabel": "With sources"
         },
@@ -213,8 +213,8 @@
       "note": "Phone screen is illustrative."
     },
     "cta": {
-      "title": "Know first. Know why.",
-      "body": "Set up a monitor, watch the first mentions land, and see how much quieter a day can be.",
+      "title": "Less noise. Clearer coverage.",
+      "body": "Create a monitoring, review the relevance of its first results and refine your coverage.",
       "primary": "Start monitoring",
       "secondary": "Talk to us"
     },
@@ -361,7 +361,7 @@
       },
       "ai": {
         "title": "Grounded AI insights",
-        "body": "Executive summaries, risk signals and recommendations — every claim linked to the mentions and metrics behind it, with confidence and method shown. Ask follow-up questions in plain language.",
+        "body": "Executive summaries, risk signals and Q&A are available when an AI provider is configured. Evidence and method are shown; these analyses do not run with the provider disabled and records may remain unclassified.",
         "points": [
           "“Why did this match?” on every mention",
           "Confidence, method and evidence on every insight",
@@ -542,25 +542,25 @@
   },
   "pricing": {
     "hero": {
-      "eyebrow": "Pricing",
-      "title": "Pay for what you",
-      "titleAccent": "actually track.",
-      "lead": "We are finalizing a simple, usage-based model instead of fixed tiers. Early users help shape it — and are first in line when it launches."
+      "eyebrow": "Free pilot",
+      "title": "Try the workflow",
+      "titleAccent": "before committing.",
+      "lead": "Start with a free account today. Paid plans are not on sale yet; this page describes the current pilot."
     },
     "idea": {
-      "title": "Where we are heading",
+      "title": "Know before you start",
       "items": {
         "credits": {
-          "title": "Credits, not tiers",
-          "body": "A single pool of credits you spend on what you monitor — no jumping to a bigger plan for one extra feature."
+          "title": "Available today",
+          "body": "Use multiple keywords in one active news monitoring. Review stored results; broad searches can produce more irrelevant matches."
         },
         "keywords": {
-          "title": "Priced by keyword",
-          "body": "Cost follows the keywords you track, so a focused setup stays affordable and a broad one scales predictably."
+          "title": "Analysis and reports",
+          "body": "AI availability depends on provider configuration. Unanalyzed content is not neutral. Check report and delivery options in your workspace."
         },
         "free": {
-          "title": "Start free",
-          "body": "You can create an account and set up your first project today, before pricing is announced."
+          "title": "Questions and feedback",
+          "body": "Email the team with your monitoring needs and expected outcome. No guaranteed support response time or uninterrupted-service commitment is offered."
         }
       }
     },
@@ -574,8 +574,8 @@
       "title": "What is available free today?",
       "limit": "{limit} active monitoring per organization",
       "body": "Use multiple keywords in one monitoring, review matching stories and create your first project. Pause or delete the current monitoring before creating another.",
-      "scope": "Coverage depends on available, active sources; it does not include every social network’s entire content or an unlimited historical archive.",
-      "terms": "Retention, reports and notifications depend on current in-app settings. Unreleased paid plans and unconfirmed limits are not promised.",
+      "scope": "Sources are checked about every 8 hours. Coverage is limited to active, accessible sources; real-time alerts, complete social networks and a full historical archive are not included.",
+      "terms": "There is no automatic paid conversion. Any paid offer will be announced separately. Reports and delivery depend on account permissions and configured connections; retention depends on organization settings. No fixed pilot end date or service-level commitment has been published.",
       "action": "Set up your first monitoring free"
     }
   },

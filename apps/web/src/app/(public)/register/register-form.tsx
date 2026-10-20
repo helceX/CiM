@@ -101,8 +101,8 @@ export function RegisterForm({ turnstileSiteKey = null, federated = null, attrib
       <Field id="companyName" label={t("company")} error={fieldErrors.companyName} required>
         <Input name="companyName" autoComplete="organization" required />
       </Field>
-      <Field id="jobTitle" label={t("position")} error={fieldErrors.jobTitle} required>
-        <Input name="jobTitle" required />
+      <Field id="jobTitle" label={t("position")} error={fieldErrors.jobTitle}>
+        <Input name="jobTitle" autoComplete="organization-title" />
       </Field>
       {!federated ? <Field
         id="password"

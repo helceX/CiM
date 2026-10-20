@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { ProfileChoiceField } from "./profile-choice-field";
 import { readProfileTerms, readProfileSingle } from "./profile-form-data";
+import { filterOpportunityReviews, type ReviewFilter } from "./review-filter";
 
 type Profile = {
   organizationType: string;
@@ -143,8 +144,9 @@ export function OpportunitiesClient({
   const t = useTranslations("opportunities");
   const locale = useLocale();
   const [groupBy, setGroupBy] = useState("date");
+  const [reviewFilter, setReviewFilter] = useState<ReviewFilter>("all");
   const [page, setPage] = useState(0);
-  const sorted = [...candidates].sort((a, b) => Date.parse(b.publishedAt ?? b.observedAt) - Date.parse(a.publishedAt ?? a.observedAt));
+  const sorted = filterOpportunityReviews(candidates, reviewFilter).sort((a, b) => Date.parse(b.publishedAt ?? b.observedAt) - Date.parse(a.publishedAt ?? a.observedAt));
   const pageCount = Math.max(1, Math.ceil(sorted.length / 10));
   const groups = new Map<string, Candidate[]>();
   for (const candidate of sorted.slice(page * 10, page * 10 + 10)) {
@@ -324,7 +326,7 @@ export function OpportunitiesClient({
             <h2 className="text-lg font-semibold">{t("signalsTitle")}</h2>
             <p className="mt-1 text-sm text-muted-foreground">{t("signalsHelp")}</p>
           </div>
-          <span className="text-sm text-muted-foreground">{candidates.length}</span>
+          <span className="text-sm text-muted-foreground">{sorted.length} / {candidates.length}</span>
         </div>
         <div className="mb-4 flex flex-wrap items-end gap-4">
           <form action="/opportunities" className="flex items-end gap-2">
@@ -340,11 +342,20 @@ export function OpportunitiesClient({
               <option value="date">{t("groupDate")}</option><option value="source">{t("groupSource")}</option><option value="status">{t("followupStatus")}</option>
             </select>
           </label>
+          <label className="flex flex-col gap-1 text-sm">{locale === "tr" ? "İnceleme durumu" : "Review state"}
+            <select value={reviewFilter} onChange={event => { setReviewFilter(event.target.value as ReviewFilter); setPage(0); }} className="rounded-md border border-border bg-background px-3 py-2">
+              <option value="all">{locale === "tr" ? "Tüm sinyaller" : "All signals"}</option>
+              <option value="source_checked">{locale === "tr" ? "Kaynağı kontrol edilen" : "Source checked"}</option>
+              <option value="unreviewed">{locale === "tr" ? "Henüz incelenmeyen" : "Not yet reviewed"}</option>
+              <option value="archived">{locale === "tr" ? "Arşivlenen" : "Archived"}</option>
+            </select>
+          </label>
         </div>
         <p className="mb-3 text-xs text-muted-foreground">{t("dateHelp")}</p>
-        {candidates.length === 0 ? (
+        <p className="mb-3 text-xs text-muted-foreground">{locale === "tr" ? "Kaynak kontrolü kullanıcı tarafından kaydedilir; başvurunun açık olduğunu veya kuruluşunuzun uygunluğunu otomatik doğrulamaz. Kapanmış veya ilgisiz sinyalleri inceleyip arşivleyebilirsiniz." : "Source checks are recorded by users; they do not automatically verify application availability or eligibility. Review and archive closed or irrelevant signals."}</p>
+        {sorted.length === 0 ? (
           <div className="rounded-xl border border-dashed border-border p-6 text-sm text-muted-foreground">
-            {profile ? t("empty") : t("setupFirst")}
+            {candidates.length > 0 ? (locale === "tr" ? "Bu inceleme filtresine uyan sinyal yok. Tüm sinyalleri seçerek geri dönün." : "No signals match this review filter. Select all signals to return.") : profile ? t("empty") : t("setupFirst")}
           </div>
         ) : (
           <div className="flex flex-col gap-4">

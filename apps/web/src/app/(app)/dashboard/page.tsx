@@ -1,4 +1,8 @@
 import Link from "next/link";
+import { getLocale } from "next-intl/server";
+import { getEnv } from "@cim/config";
+import { getAIProvider } from "@cim/ai";
+import { groupStoryRows, sentimentCoverage } from "@/lib/story-presentation";
 import { Badge, Button, EmptyState } from "@cim/ui";
 import { Radar } from "lucide-react";
 import { signalLevelLabel } from "@cim/core";
@@ -50,6 +54,9 @@ const PRIORITY_TONE = {
 
 export default async function DashboardPage() {
   const context = await requireOrgContext();
+  const locale = await getLocale();
+  const text = (tr: string, en: string) => locale === "tr" ? tr : en;
+  const date = (value: Date | string) => new Date(value).toLocaleDateString(locale, { timeZone: "Europe/Istanbul" });
   const [projects, user] = await Promise.all([
     listProjects(db, context.organizationId),
     getCurrentUser(),
@@ -59,11 +66,11 @@ export default async function DashboardPage() {
     return (
       <EmptyState
         icon={<Radar className="size-8" aria-hidden="true" />}
-        title="No monitoring has been created yet."
-        description="Track your brand, a competitor, or an industry topic to start seeing mentions here."
+        title={text("Henüz izleme oluşturulmadı.", "No monitoring has been created yet.")}
+        description={text("Burada sonuç görmek için markanızı, bir rakibi veya sektör konusunu izleyin.", "Track your brand, a competitor, or an industry topic to start seeing mentions here.")}
         action={
           <Button asChild size="sm">
-            <Link href="/onboarding">Create your first monitoring</Link>
+            <Link href="/onboarding">{text("İlk izlemenizi oluşturun", "Create your first monitoring")}</Link>
           </Button>
         }
       />
@@ -82,7 +89,7 @@ export default async function DashboardPage() {
     brand,
   ] = await Promise.all([
     getDashboardSummary(db, context.organizationId, { sinceDays: 7 }),
-    listRecentMentions(db, context.organizationId, { limit: 10 }),
+    listRecentMentions(db, context.organizationId, { limit: 50 }),
     getMentionVolumeSeries(db, context.organizationId, { sinceDays: 14 }),
     getLatestInsightForOrganization(db, context.organizationId, "whats_changed"),
     getCompetitorComparison(db, context.organizationId, { sinceDays: 7 }),
@@ -93,6 +100,12 @@ export default async function DashboardPage() {
     getBrandGroupComparison(db, context.organizationId, { sinceDays: 7 }),
     listBrandMentions(db, context.organizationId, { limit: 8, sinceDays: 30 }),
   ]);
+  const coverage = sentimentCoverage(summary);
+  const recentStories = groupStoryRows(recentMentions, 10);
+  const brandStories = groupStoryRows(brand.items, 8);
+  const aiAvailable = getAIProvider(getEnv()) !== null;
+  const sentimentLabel = (value: string) => locale === "tr" ? ({ positive: "Olumlu", neutral: "Nötr", negative: "Olumsuz" }[value] ?? value) : value;
+  const priorityLabel = (value: string) => locale === "tr" ? ({ low: "Düşük sinyal", normal: "İncelemeye değer", high: "Yüksek öncelik", critical: "Kritik" }[value] ?? value) : signalLevelLabel(value);
   const hasCompetitor = competitorComparison.some(
     (row) => row.trackingTarget === "competitor",
   );
@@ -113,21 +126,20 @@ export default async function DashboardPage() {
         <div className="relative flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-              {context.organizationName} · last 7 days · {projects.length} project
-              {projects.length === 1 ? "" : "s"}
+              {context.organizationName} · {text("son 7 gün", "last 7 days")} · {projects.length} {text("proje", projects.length === 1 ? "project" : "projects")}
             </p>
             <h1 className="mt-2">
-              <span className="sr-only">Dashboard — </span>
-              {user ? `Hello, ${user.firstName}.` : "Dashboard"}{" "}
-              <span className="mp-gradient-text">Here&apos;s what changed.</span>
+              <span className="sr-only">{text("Pano — ", "Dashboard — ")}</span>
+              {user ? text(`Merhaba, ${user.firstName}.`, `Hello, ${user.firstName}.`) : text("Pano", "Dashboard")}{" "}
+              <span className="mp-gradient-text">{text("Gündeminiz burada.", "Here’s what changed.")}</span>
             </h1>
           </div>
           <div className="flex flex-wrap gap-2">
             <Button asChild size="sm">
-              <Link href="/monitoring/new">New monitoring</Link>
+              <Link href="/monitoring/new">{text("Yeni izleme", "New monitoring")}</Link>
             </Button>
             <Button asChild size="sm" variant="secondary">
-              <Link href="/mentions">Open mentions</Link>
+              <Link href="/mentions">{text("Bahsetmeleri aç", "Open mentions")}</Link>
             </Button>
           </div>
         </div>
@@ -137,16 +149,13 @@ export default async function DashboardPage() {
 
       <KpiRow
         items={[
-          { label: "Total mentions", value: String(summary.totalMentions) },
-          { label: "Unique sources", value: String(summary.uniqueSources) },
-          { label: "High priority", value: String(summary.highPriority) },
+          { label: text("İzleme eşleşmeleri", "Total mentions"), value: String(summary.totalMentions) },
+          { label: text("Farklı kaynaklar", "Unique sources"), value: String(summary.uniqueSources) },
+          { label: text("Yüksek öncelik", "High priority"), value: String(summary.highPriority) },
           {
-            label: "Sentiment mix",
-            value:
-              summary.totalMentions > 0
-                ? `${Math.round((summary.positive / summary.totalMentions) * 100)}% positive`
-                : "—",
-            hint: `${summary.neutral} neutral · ${summary.negative} negative`,
+            label: text("Duygu analizi kapsamı", "Sentiment analysis coverage"),
+            value: coverage.percent === null ? text("Veri yok", "No data") : coverage.classified === 0 ? text("Henüz analiz yok", "Not analyzed yet") : `${coverage.percent}% ${text("analiz edildi", "analyzed")}`,
+            hint: `${coverage.classified} ${text("analiz edilmiş", "classified")} · ${coverage.unclassified} ${text("analiz edilmemiş", "unclassified")}`,
           },
         ]}
       />
@@ -156,16 +165,15 @@ export default async function DashboardPage() {
       {insight && insight.evidence.length > 0 ? (
         <section className="rounded-lg border border-border p-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-foreground">Since yesterday</h2>
+            <h2 className="text-sm font-semibold text-foreground">{text("Dünden bu yana", "Since yesterday")}</h2>
             <span className="text-xs text-muted-foreground">{insight.projectName}</span>
           </div>
           <p className="mt-2 text-sm text-foreground">{insight.summary}</p>
           <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-            <span>Confidence {Math.round(Number(insight.confidence) * 100)}%</span>
-            <span>Method: {insight.method}</span>
+            <span>{text("Güven", "Confidence")} {Math.round(Number(insight.confidence) * 100)}%</span>
+            <span>{text("Yöntem", "Method")}: {insight.method}</span>
             <span>
-              Based on {insight.evidence.length} mention
-              {insight.evidence.length === 1 ? "" : "s"}
+              {insight.evidence.length} {text("bahsetmeye dayanır", "supporting mentions")}
             </span>
           </div>
         </section>
@@ -175,20 +183,21 @@ export default async function DashboardPage() {
         <RecommendationsSection items={evidencedRecommendations} />
       ) : null}
 
-      <AiAssistantPanel />
+      <p className="text-xs text-muted-foreground">{text("Toplamlar izleme eşleşmeleridir; aynı haber birden fazla izlemede sayılabilir. Analiz edilmemiş kayıtlar nötr sayılmaz.", "Totals count monitoring matches; one story can match several monitorings. Unanalyzed records are not neutral.")}</p>
+      {aiAvailable ? <AiAssistantPanel /> : <section className="rounded-lg border border-border p-4"><h2 className="text-sm font-semibold">{text("Yapay zekâ analizi kapalı", "AI analysis is off")}</h2><p className="mt-1 text-sm text-muted-foreground">{text("Bu ortamda bir yapay zekâ sağlayıcısı etkin değil. Haber takibi ve kaynak bağlantıları çalışmaya devam eder; duygu ve yapay zekâ özetleri üretilmez.", "No AI provider is enabled in this environment. Monitoring and source links still work; sentiment and AI summaries are not generated.")}</p></section>}
 
       {summary.totalMentions > 0 ? (
         <section className="rounded-lg border border-border p-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-foreground">Mention trend</h2>
+            <h2 className="text-sm font-semibold text-foreground">{text("Bahsetme eğilimi", "Mention trend")}</h2>
             <Link
               href="/analytics"
               className="text-xs text-primary underline underline-offset-2"
             >
-              View analytics
+              {text("Analizi aç", "View analytics")}
             </Link>
           </div>
-          <p className="text-xs text-muted-foreground">Last 14 days.</p>
+          <p className="text-xs text-muted-foreground">{text("Son 14 gün.", "Last 14 days.")}</p>
           <div className="mt-2">
             <MentionTrendChart data={trend} />
           </div>
@@ -212,32 +221,32 @@ export default async function DashboardPage() {
               id="your-brand-heading"
               className="text-sm font-semibold text-foreground"
             >
-              Your brand in the news
+              {text("Haberlerde markanız", "Your brand in the news")}
             </h2>
             <Link
               href="/mentions"
               className="text-xs text-primary underline underline-offset-2"
             >
-              View all mentions
+              {text("Tüm bahsetmeler", "View all mentions")}
             </Link>
           </div>
           <p className="mt-1 text-xs text-muted-foreground">
-            Stories that name{" "}
+            {text("Şu adların", "Stories that name")}{" "}
             <strong className="font-semibold text-foreground">
               {brand.names.join(" · ")}
             </strong>{" "}
-            directly — last 30 days.
+            {text("doğrudan geçen hikâyeler — son 30 gün.", "directly — last 30 days.")}
           </p>
           <div className="mt-3 overflow-hidden rounded-lg border border-border">
             {brand.items.length === 0 ? (
               <EmptyState
-                title="No story names your company yet"
-                description="Stories show up here the moment a source writes your company's name in a headline or its first lines."
+                title={text("Henüz şirket adınızı içeren hikâye yok", "No story names your company yet")}
+                description={text("Şirket adınız başlıkta veya özette bulunduğunda, kaynak kontrolünün ardından burada görünür.", "Stories show up here the moment a source writes your company's name in a headline or its first lines.")}
                 className="border-none"
               />
             ) : (
               <ul className="divide-y divide-border">
-                {brand.items.map(({ mention, article, source, matchedName, where }) => (
+                {brandStories.map(({ representative: { mention, article, source, matchedName, where }, matches }) => (
                   <li key={mention.id} className="flex flex-col gap-1 px-4 py-3">
                     <div className="flex items-center justify-between gap-3">
                       <p className="text-sm font-medium text-foreground">
@@ -256,17 +265,16 @@ export default async function DashboardPage() {
                             ]
                           }
                         >
-                          {mention.sentiment}
+                          {sentimentLabel(mention.sentiment)}
                         </Badge>
                       ) : null}
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      {source.name}
+                      {source.name} · {matches} {text("gösterimdeki eşleşme", "matches in this view")}
                       {article.publishedAt
-                        ? ` · ${new Date(article.publishedAt).toLocaleDateString()}`
+                        ? ` · ${date(article.publishedAt)}`
                         : ""}{" "}
-                      · names <span className="text-foreground">{matchedName}</span> in
-                      the {where}
+                      · {text("eşleşen ad", "matched name")}: <span className="text-foreground">{matchedName}</span> · {text(where === "headline" ? "başlıkta" : "özette", where)}
                     </p>
                   </li>
                 ))}
@@ -281,43 +289,42 @@ export default async function DashboardPage() {
               id="top-stories-heading"
               className="text-sm font-semibold text-foreground"
             >
-              Latest stories
+              {text("Son hikâyeler", "Latest stories")}
             </h2>
             <Link
               href="/mentions"
               className="text-xs text-primary underline underline-offset-2"
             >
-              View all mentions
+              {text("Tüm bahsetmeler", "View all mentions")}
             </Link>
           </div>
           <p className="mt-1 text-xs text-muted-foreground">
-            Add your company&apos;s name (and its short name) to a monitoring to see
-            here the stories that name you directly.{" "}
+            {text("En yeni 50 eşleşme içindeki ortak haber ve hikâye kimlikleri birleştirilir; en fazla 10 hikâye gösterilir. Eşleşmelerin tamamı Bahsetmeler ekranında korunur.", "Known article and story identities within the latest 50 matches are grouped; up to 10 stories are shown. All matches remain available in Mentions.")}{" "}
             <Link
               href="/monitoring"
               className="text-primary underline underline-offset-2"
             >
-              Open monitoring
+              {text("İzlemeleri aç", "Open monitoring")}
             </Link>
           </p>
           <div className="mt-3 overflow-hidden rounded-lg border border-border">
             {recentMentions.length === 0 ? (
               <EmptyState
-                title="No mentions yet"
-                description="We check stored stories first, then match new stories as sources are checked. If nothing matches, review your keywords and source coverage. Try a distinctive brand name, spelling variant or relevant phrase."
+                title={text("Henüz eşleşme yok", "No mentions yet")}
+                description={text("Önce kayıtlı haberler kontrol edilir; yeni haberler yaklaşık 8 saatlik kaynak kontrollerinde eşleştirilir. Sonuç yoksa ayırt edici marka adınızı ve kaynak kapsamını kontrol edin.", "We check stored stories first, then match new stories as sources are checked. If nothing matches, review your keywords and source coverage. Try a distinctive brand name, spelling variant or relevant phrase.")}
                 action={
                   <Link
                     href="/monitoring"
                     className="text-sm text-primary underline underline-offset-2"
                   >
-                    Review monitoring keywords and sources
+                    {text("Kelimeleri ve kaynakları gözden geçirin", "Review monitoring keywords and sources")}
                   </Link>
                 }
                 className="border-none"
               />
             ) : (
               <ul className="divide-y divide-border">
-                {recentMentions.map(({ mention, article, source }) => (
+                {recentStories.map(({ representative: { mention, article, source }, matches }) => (
                   <li key={mention.id} className="flex flex-col gap-1 px-4 py-3">
                     <div className="flex items-center justify-between gap-3">
                       <p className="text-sm font-medium text-foreground">
@@ -337,10 +344,10 @@ export default async function DashboardPage() {
                               ]
                             }
                           >
-                            {mention.sentiment}
+                            {sentimentLabel(mention.sentiment)}
                           </Badge>
                         ) : (
-                          <Badge tone="neutral">Unclassified</Badge>
+                          <Badge tone="neutral">{text("Analiz edilmedi", "Unclassified")}</Badge>
                         )}
                         <Badge
                           tone={
@@ -349,14 +356,14 @@ export default async function DashboardPage() {
                             ]
                           }
                         >
-                          {signalLevelLabel(mention.priority)}
+                          {priorityLabel(mention.priority)}
                         </Badge>
                       </div>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      {source.name}
+                      {source.name} · {matches} {text("gösterimdeki eşleşme", "matches in this view")}
                       {article.publishedAt
-                        ? ` · ${new Date(article.publishedAt).toLocaleDateString()}`
+                        ? ` · ${date(article.publishedAt)}`
                         : ""}
                     </p>
                   </li>

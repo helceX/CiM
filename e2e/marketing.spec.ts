@@ -13,7 +13,8 @@ test("home page tells the story: hero, steps, active features, call to action", 
   page,
 }) => {
   await page.goto("/");
-  await expect(page.getByRole("heading", { level: 1 })).toContainText("See the story");
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("Bring coverage together");
+  await expect(page.getByText(/Sources are checked about every 8 hours/)).toBeVisible();
   await expect(
     page
       .getByRole("list", { name: "How Mediaory works, step by step" })
@@ -131,7 +132,7 @@ test("reduced motion: content is visible without any reveal animation", async ({
   await page.goto("/");
   await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
   await expect(
-    page.getByRole("heading", { name: /Know first\. Know why\./ }),
+    page.getByRole("heading", { name: /Less noise\. Clearer coverage\./ }),
   ).toBeVisible();
   expect(await page.locator('[data-reveal="hidden"]').count()).toBe(0);
   await context.close();
@@ -143,12 +144,12 @@ test("language switcher: English by default, Turkish on request, remembered", as
   await page.goto("/");
   await expect(page.locator("html")).toHaveAttribute("lang", "en");
   await page.getByLabel("Language").selectOption("tr");
-  await expect(page.getByRole("heading", { level: 1 })).toContainText("Hikâyeyi görün");
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("Gündemi derleyin");
   await expect(page.locator("html")).toHaveAttribute("lang", "tr");
   await page.goto("/pricing");
-  await expect(page.getByRole("heading", { level: 1 })).toContainText("ödeyin");
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("deneyin");
   await page.getByLabel("Dil").selectOption("en");
   await expect(page.getByRole("heading", { level: 1 })).toContainText(
-    "Pay for what you",
+    "Try the workflow",
   );
 });

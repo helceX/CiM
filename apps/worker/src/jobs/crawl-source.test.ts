@@ -48,7 +48,7 @@ const deps = (extra: Record<string, unknown> = {}) => ({
 });
 const NOW = Date.parse("2026-10-09T12:00:00Z");
 const HOUR = 3_600_000;
-const staleSource = { id: "s1", name: "Feed", connector: "rss", status: "healthy", type: "news", lastCheckedAt: minutesAgo(125) };
+const staleSource = { id: "s1", name: "Feed", connector: "rss", status: "healthy", type: "news", lastCheckedAt: minutesAgo(485) };
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -90,15 +90,15 @@ describe("processCrawlSourceJob — stale queued jobs", () => {
     expect(ingestSource).not.toHaveBeenCalled();
   });
 
-  it("does nothing for a source that was checked minutes ago (first attempt)", async () => {
-    selectResult.mockResolvedValue([{ id: "s1", name: "Feed", connector: "rss", lastCheckedAt: minutesAgo(5) }]);
+  it("does not fetch a stale queued job after the old two-hour interval (first attempt)", async () => {
+    selectResult.mockResolvedValue([{ id: "s1", name: "Feed", connector: "rss", lastCheckedAt: minutesAgo(125) }]);
     await processCrawlSourceJob(job(0), emailQueue, deps());
     expect(healthCheck).not.toHaveBeenCalled();
     expect(markSourceChecked).not.toHaveBeenCalled();
   });
 
   it("crawls a source whose interval has passed, and one never checked", async () => {
-    selectResult.mockResolvedValueOnce([{ id: "s1", name: "Feed", connector: "rss", lastCheckedAt: minutesAgo(125) }]);
+    selectResult.mockResolvedValueOnce([{ id: "s1", name: "Feed", connector: "rss", lastCheckedAt: minutesAgo(485) }]);
     await processCrawlSourceJob(job(0), emailQueue, deps());
     selectResult.mockResolvedValueOnce([{ id: "s1", name: "Feed", connector: "rss", lastCheckedAt: null }]);
     await processCrawlSourceJob(job(0), emailQueue, deps());
@@ -194,23 +194,23 @@ describe("processCrawlSourceJob — what a crawl remembers", () => {
     healthCheck.mockResolvedValue({ status: "error", message: "Feed responded HTTP 500" });
 
     await processCrawlSourceJob(job(0), emailQueue, deps()); // 1st failure: normal cadence
-    expect(state.states.get("s1")).toMatchObject({ failures: 1, nextAt: NOW + 2 * HOUR });
+    expect(state.states.get("s1")).toMatchObject({ failures: 1, nextAt: NOW + 8 * HOUR });
     expect(state.states.get("s1")?.failure).toEqual({ category: "server_error", checkedAt: NOW, stage: "health" });
-    await processCrawlSourceJob(job(0), emailQueue, deps({ now: () => NOW + 2 * HOUR })); // 2nd: 4 h
-    expect(state.states.get("s1")).toMatchObject({ failures: 2, nextAt: NOW + 6 * HOUR });
+    await processCrawlSourceJob(job(0), emailQueue, deps({ now: () => NOW + 8 * HOUR })); // 2nd: 16 h
+    expect(state.states.get("s1")).toMatchObject({ failures: 2, nextAt: NOW + 24 * HOUR });
     expect(healthCheck).toHaveBeenCalledTimes(2);
 
-    // two hours later it is still inside the wait: the publisher is not asked, the check is recorded
+    // eight hours later it is still inside the wait: the publisher is not asked, the check is recorded
     healthCheck.mockClear();
     markSourceChecked.mockClear();
-    await processCrawlSourceJob(job(0), emailQueue, deps({ now: () => NOW + 4 * HOUR }));
+    await processCrawlSourceJob(job(0), emailQueue, deps({ now: () => NOW + 16 * HOUR }));
     expect(healthCheck).not.toHaveBeenCalled();
     expect(markSourceChecked).toHaveBeenCalledWith(expect.anything(), "s1", "healthy");
     expect(stats).toHaveBeenLastCalledWith({ backoff_skips: 1 });
 
     // once the wait is over it asks again; a success resets the count
     healthCheck.mockResolvedValue({ status: "healthy" });
-    await processCrawlSourceJob(job(0), emailQueue, deps({ now: () => NOW + 7 * HOUR }));
+    await processCrawlSourceJob(job(0), emailQueue, deps({ now: () => NOW + 25 * HOUR }));
     expect(state.states.get("s1")).toMatchObject({ failures: 0 });
     expect(state.states.get("s1")?.nextAt).toBeUndefined();
     expect(state.states.get("s1")?.failure).toBeUndefined();
@@ -218,9 +218,9 @@ describe("processCrawlSourceJob — what a crawl remembers", () => {
 
   it("honours a Retry-After that asks for longer than the normal wait", async () => {
     selectResult.mockResolvedValue([staleSource]);
-    healthCheck.mockResolvedValue({ status: "error", message: "Feed responded HTTP 429 https://publisher.example/?token=private-token", retryAfterMs: 6 * HOUR });
+    healthCheck.mockResolvedValue({ status: "error", message: "Feed responded HTTP 429 https://publisher.example/?token=private-token", retryAfterMs: 20 * HOUR });
     await processCrawlSourceJob(job(0), emailQueue, deps());
-    expect(state.states.get("s1")).toMatchObject({ failures: 1, nextAt: NOW + 6 * HOUR });
+    expect(state.states.get("s1")).toMatchObject({ failures: 1, nextAt: NOW + 20 * HOUR });
     expect(state.states.get("s1")?.failure?.category).toBe("rate_limited");
     expect(JSON.stringify(state.states.get("s1"))).not.toContain("private-token");
   });

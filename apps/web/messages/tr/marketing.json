@@ -686,7 +686,7 @@
         {
           "title": "Ne sıklıkla",
           "body": [
-            "Yayıncı RSS/Atom akışları, site haritaları ve izin verilen sayfalar normalde iki saatte bir kontrol edilir. İsteğe bağlı Google Trends ülke akışları en fazla 15 dakikada bir kontrol edilir. Koşullu istekler değişmemiş akışların yeniden indirilmesini önler; hatalar ve istek sınırları sonraki kontrolü geciktirir."
+            "Yayıncı RSS/Atom akışları, site haritaları ve izin verilen sayfalar normalde sekiz saatte bir kontrol edilir. İsteğe bağlı Google Trends ülke akışları sekiz saatte bir kontrol edilir. Kısa haber akışlarında eski girdiler kontroller arasında kaybolabilir; eksiksiz geçmiş garantisi verilmez. Koşullu istekler değişmemiş akışların yeniden indirilmesini önler; hatalar ve istek sınırları sonraki kontrolü geciktirir."
           ]
         },
         {

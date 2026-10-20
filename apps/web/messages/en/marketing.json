@@ -686,7 +686,7 @@
         {
           "title": "How often",
           "body": [
-            "Publisher RSS/Atom feeds, sitemaps and allowed pages are normally checked every two hours. Optional Google Trends country feeds are checked at most every 15 minutes. Conditional requests avoid downloading unchanged feeds; errors and rate limits delay the next attempt."
+            "Publisher RSS/Atom feeds, sitemaps and allowed pages are normally checked every eight hours. Optional Google Trends country feeds are checked every eight hours. Short feeds may drop older entries between checks; complete historical coverage is not guaranteed. Conditional requests avoid downloading unchanged feeds; errors and rate limits delay the next attempt."
           ]
         },
         {

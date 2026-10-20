@@ -7,8 +7,8 @@ const PENDING_STATES = new Set(["waiting", "active", "delayed", "prioritized", "
 
 /**
  * Fans out one `crawl_source` job per active Source that is DUE (see
- * crawl-interval.ts — the tick is every 30 s, a real site is fetched every
- * two hours at most).
+ * crawl-interval.ts — production ticks every five minutes, a real site is fetched every
+ * eight hours at most).
  *
  * A source stays "due" until its job finishes and records the check, so when
  * the queue is busier than the tick (hundreds of sources, a few workers) the

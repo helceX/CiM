@@ -16,11 +16,15 @@ describe("listDueSources (integration)", () => {
   const cases = [
     { key: "never", connector: "rss", status: "healthy", lastCheckedAt: null },
     { key: "fresh-rss", connector: "rss", status: "healthy", lastCheckedAt: minutesAgo(2) },
-    { key: "just-under", connector: "rss", status: "healthy", lastCheckedAt: minutesAgo(119) },
-    { key: "just-over", connector: "rss", status: "healthy", lastCheckedAt: minutesAgo(121) },
-    { key: "stale-sitemap", connector: "sitemap", status: "error", lastCheckedAt: minutesAgo(300) },
+    { key: "just-under", connector: "rss", status: "healthy", lastCheckedAt: minutesAgo(479) },
+    { key: "exact-boundary", connector: "rss", status: "healthy", lastCheckedAt: minutesAgo(480) },
+    { key: "just-over", connector: "rss", status: "healthy", lastCheckedAt: minutesAgo(481) },
+    { key: "old-two-hour-cadence", connector: "rss", status: "healthy", lastCheckedAt: minutesAgo(125) },
+    { key: "fresh-trends", connector: "google-trends", status: "healthy", lastCheckedAt: minutesAgo(20) },
+    { key: "stale-trends", connector: "google-trends", status: "healthy", lastCheckedAt: minutesAgo(481) },
+    { key: "stale-sitemap", connector: "sitemap", status: "error", lastCheckedAt: minutesAgo(600) },
     { key: "fresh-api", connector: "api", status: "delayed", lastCheckedAt: minutesAgo(30) },
-    { key: "stale-unknown-connector", connector: "something-new", status: "healthy", lastCheckedAt: minutesAgo(125) },
+    { key: "stale-unknown-connector", connector: "something-new", status: "healthy", lastCheckedAt: minutesAgo(485) },
     { key: "fresh-unknown-connector", connector: "something-new", status: "healthy", lastCheckedAt: minutesAgo(60) },
     { key: "mock-fresh", connector: "mock", status: "healthy", lastCheckedAt: new Date(now.getTime() - 10_000) },
     { key: "mock-stale", connector: "mock", status: "healthy", lastCheckedAt: new Date(now.getTime() - 40_000) },
@@ -51,7 +55,7 @@ describe("listDueSources (integration)", () => {
 
     const nameOf = new Map(ids.map((id, i) => [id, cases[i]!.key]));
     expect(fromQuery.map((id) => nameOf.get(id)).sort()).toEqual(
-      ["blocked-stale", "just-over", "mock-stale", "never", "stale-sitemap", "stale-unknown-connector"].sort(),
+      ["blocked-stale", "exact-boundary", "just-over", "mock-stale", "never", "stale-sitemap", "stale-trends", "stale-unknown-connector"].sort(),
     );
   });
 });

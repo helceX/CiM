@@ -132,7 +132,7 @@ test("reduced motion: content is visible without any reveal animation", async ({
   await page.goto("/");
   await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
   await expect(
-    page.getByRole("heading", { name: /Know first\. Know why\./ }),
+    page.getByRole("heading", { name: /Less noise\. Clearer coverage\./ }),
   ).toBeVisible();
   expect(await page.locator('[data-reveal="hidden"]').count()).toBe(0);
   await context.close();

@@ -90,7 +90,8 @@ test("someone with a Turkish browser can sign up, verify and set up their first 
   await field("Soyad").fill("Yılmaz");
   await field("İş e-postası").fill(email);
   await field("Şirket adı").fill(company);
-  await field("Pozisyon").fill("İletişim Müdürü");
+  // Keep this blank through submission: position must actually be optional, not just labeled so.
+  await expect(field("Pozisyon (isteğe bağlı)")).toHaveJSProperty("required", false);
   // A weak password is explained in Turkish, not in the English the schema is written in.
   await field("Parola").fill("Kisa1");
   await page.getByRole("button", { name: "Hesap oluştur" }).click();

@@ -25,6 +25,7 @@ import {
   type WeeklyArchiveJobData,
   captureException,
   configureErrorReporting,
+  crawlSchedulerIntervalMs,
 } from "@cim/core";
 import { getRedisConnection } from "./redis";
 import { captureStorageSnapshot } from "./storage-history";
@@ -424,14 +425,14 @@ async function scheduleRepeatingJobs() {
   } catch (error) {
     console.error("[worker] could not clear queued crawl jobs at start:", error);
   }
-  // Every-30-seconds cadence is a dev-friendly default, not a fixed
-  // architectural choice — per-source polling intervals (brief §35) are
-  // Phase 3+ scope once source volume justifies differentiated cadence.
+  // Poll due sources every five minutes in production instead of querying
+  // Postgres every thirty seconds between eight-hour source checks.
+  // Development keeps its fast synthetic-source feedback loop.
   // BullMQ 6's job-scheduler API (upsertJobScheduler) replaces the old
   // `repeat` option on Queue#add — see the v5→v6 migration guide.
   await crawlSchedulerQueue.upsertJobScheduler(
     "crawl-scheduler-repeat",
-    { every: 30_000 },
+    { every: crawlSchedulerIntervalMs(process.env.NODE_ENV) },
     { name: QUEUE_NAMES.crawlScheduler, data: {} },
   );
   await alertSpikeCheckQueue.upsertJobScheduler(
@@ -560,7 +561,7 @@ async function scheduleRepeatingJobs() {
     { name: QUEUE_NAMES.purgePrivacy, data: {} },
   );
   console.log(
-    "Schedulers registered: source crawl (30s), signal scoring (2m), spike alert check (60s), " +
+    `Schedulers registered: source due check (${crawlSchedulerIntervalMs(process.env.NODE_ENV) / 1000}s; real sources every 8h), signal scoring (2m), spike alert check (60s), ` +
       "sentiment shift alert check (60s), emerging topic alert check (60s), " +
       "creator spike alert check (60s), " +
       "AI enrichment (20s), insight generation (2m), " +

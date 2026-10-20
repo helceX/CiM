@@ -27,7 +27,7 @@ import { discoverFeed, testSourceUrl } from "@cim/ingestion";
 export const IMPORT_BATCH = 50;
 const CONCURRENCY = 6;
 /**
- * Every source has one pending crawl job at the start of each 2-hour cycle, so a long queue alone says
+ * Every source has one pending crawl job at the start of each 8-hour cycle, so a long queue alone says
  * little. Feeds are held back only when the queue is huge, or when it is long AND its oldest job has
  * waited most of a cycle (the crawler is not keeping up).
  */

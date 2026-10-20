@@ -26,7 +26,7 @@ export function SocialSetup({ canSetup, turkish, editing }: { canSetup: boolean;
       const result = await response.json();
       if (!response.ok) throw new Error(result.error ?? text("Kurulum tamamlanamadı.", "Setup failed."));
       setMessage(result.active
-        ? text(`Takip ve panel bildirimleri hazır. Ön kontrolde ${result.sampleCount} uygun, tekil gönderi bulundu. Sonuçlar ilk tarama veya sonraki normal kontrolün ardından görünür; yaklaşık 2 saate kadar sürebilir.`, `Monitoring and in-app alerts are ready. Preflight found ${result.sampleCount} matching, unique posts. Results appear after the first crawl or next normal check; this can take up to approximately 2 hours.`)
+        ? text(`Takip ve panel bildirimleri hazır. Ön kontrolde ${result.sampleCount} uygun, tekil gönderi bulundu. Sonuçlar ilk tarama veya sonraki normal kontrolün ardından görünür; yaklaşık 8 saate kadar sürebilir.`, `Monitoring and in-app alerts are ready. Preflight found ${result.sampleCount} matching, unique posts. Results appear after the first crawl or next normal check; this can take up to approximately 8 hours.`)
         : text("Kurulum zaten var, ancak izleme veya bildirim kuralı durdurulmuş. İzlemeler ve Uyarılar bölümünden kontrol edin.", "Setup already exists, but monitoring or its alert rule is paused. Review Monitoring and Alerts."));
       router.refresh();
     } catch (error) {
@@ -42,7 +42,7 @@ export function SocialSetup({ canSetup, turkish, editing }: { canSetup: boolean;
         {text("Bluesky'nin açık gönderilerinde marka adınızı ve @hesabınızı arayın. Yeni eşleşmeler için panel bildirimi oluşturulur; bir saatlik bekleme süresi tekrar bildirimleri sınırlar.", "Search public Bluesky posts for your brand name and @account. New matches generate in-app alerts, with a one-hour cooldown to limit repeated notifications.")}
       </p>
       <p className="mt-2 text-xs text-muted-foreground">
-        {text("Kapsam: son 3 günün en yeni 30 sonucu, arama başına 2 saatte bir kontrol. Yoğun aramalarda gönderiler kaçabilir; bütün ağın veya geçmişin eksiksiz taraması değildir. Instagram, X, Facebook ve LinkedIn bu ücretsiz bağlantıya dahil değildir.", "Coverage: the latest 30 results from the past 3 days, checked every 2 hours per search. Busy searches may miss posts; this is not a complete network or historical scan. Instagram, X, Facebook and LinkedIn are not included in this free connection.")}
+        {text("Kapsam: son 3 günün en yeni 30 sonucu, arama başına 8 saatte bir kontrol. Yoğun aramalarda gönderiler kaçabilir; bütün ağın veya geçmişin eksiksiz taraması değildir. Instagram, X, Facebook ve LinkedIn bu ücretsiz bağlantıya dahil değildir.", "Coverage: the latest 30 results from the past 3 days, checked every 8 hours per search. Busy searches may miss posts; this is not a complete network or historical scan. Instagram, X, Facebook and LinkedIn are not included in this free connection.")}
       </p>
       {canSetup ? (
         <form className="mt-4 flex flex-col gap-3" onSubmit={(event) => { event.preventDefault(); void setup(); }}>

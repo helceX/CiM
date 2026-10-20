@@ -12,7 +12,7 @@ that phrase in contracts or marketing.
 | Never full text: title + link + time + excerpt ≤ 200 chars at a sentence/word boundary | `normalize.ts` `makeSnippet` |
 | Matching beyond the excerpt uses only a *word fingerprint* (hashes of words, not text; cannot be displayed or turned back into a sentence) | `packages/core/src/word-fingerprint.ts` |
 | Every result links back to the publisher's page | mention drawer, reports |
-| Polite polling: every real source once per 2 hours | `packages/core/src/crawl-interval.ts` |
+| Polite polling: every real source once per 8 hours | `packages/core/src/crawl-interval.ts` |
 | Honest identity: `Mediaory-Bot/1.0 (+https://mediaory.io/bot)`; page explains it | `safe-fetch.ts`, `/bot` |
 | News agencies (AA, DHA, İHA, Reuters, AP, AFP, Bloomberg) refused unless the admin confirms a written licence | `restricted-publishers.ts`, `/admin/sources` |
 | A `robots.txt` rule that names `Mediaory-Bot` stops feed fetching too | `robots.ts` `isExplicitlyBlockedByRobots` |
@@ -30,4 +30,4 @@ that phrase in contracts or marketing.
 - ~430 Turkish feeds are bundled as catalog candidates (`packages/core/src/source-catalog.generated.ts`). Only outlet name, feed URL and category were copied — never the list's text.
 - That repository has **no licence file**. Feed URLs are facts about other people's public sites, but a curated list can carry compilation rights, so: credit it (done in the generated file and the admin page), and consider opening an issue asking the author to add a licence or permission.
 - A listed feed is **not a permission** to use it commercially. AA and other licence-required agencies are filtered out automatically; for every other publisher the terms-of-use check is still yours (see "Still on the owner").
-- Several feeds share one host (e.g. 29 Sözcü, 20 Euronews category feeds): each is polled on its own 2-hour schedule, so a host with N feeds receives ~N×2 requests per 2 hours. If a publisher objects, block the domain (`/admin/takedowns`).
+- Several feeds share one host (e.g. 29 Sözcü, 20 Euronews category feeds): each is polled on its own 8-hour schedule, so a host with N feeds receives ~N×2 requests per 8 hours. If a publisher objects, block the domain (`/admin/takedowns`).

@@ -1,9 +1,9 @@
 /**
  * How long a source that keeps failing is left alone, and how a publisher's own "come back later" is read.
  *
- * A source is fetched every two hours (crawl-interval.ts). One that is down for a day used to be asked again at every one
- * of those cycles — twelve requests to a dead address, each with a health check, a database round trip and a log line.
- * After the second failure in a row the wait doubles (4 h, 8 h, 16 h) up to a day, and a success starts over; the
+ * A source is fetched every eight hours (crawl-interval.ts). Persistent failures extend that normal interval.
+ * This avoids repeated health checks, database round trips and log lines for a dead address.
+ * After the second failure in a row the wait doubles (16 h, then 24 h) up to a day, and a success starts over; the
  * first failure is not penalised, since a feed that hiccups once is the common case.
  */
 const HOUR = 3_600_000;

@@ -8,6 +8,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const listActiveOrganizationsForUsageCapture = vi.fn();
 const captureFeatureUsageSnapshot = vi.fn();
 const meterKeywordDay = vi.fn();
+const captureStorageSnapshot = vi.fn();
+vi.mock("../storage-history", () => ({ captureStorageSnapshot: (...args: unknown[]) => captureStorageSnapshot(...args) }));
 
 vi.mock("@cim/db", () => ({
   db: {},
@@ -22,6 +24,12 @@ const { processCaptureFeatureUsageJob } = await import("./capture-feature-usage"
 beforeEach(() => vi.clearAllMocks());
 
 describe("processCaptureFeatureUsageJob — per-org failure isolation", () => {
+  it("captures platform storage even when no active organizations exist", async () => {
+    listActiveOrganizationsForUsageCapture.mockResolvedValueOnce([]);
+    const now = new Date("2026-10-20T08:45:00Z");
+    await processCaptureFeatureUsageJob(now);
+    expect(captureStorageSnapshot).toHaveBeenCalledWith(now);
+  });
   it("still captures usage for org 2 when org 1's snapshot throws", async () => {
     listActiveOrganizationsForUsageCapture.mockResolvedValueOnce([
       { organizationId: "org-1" },

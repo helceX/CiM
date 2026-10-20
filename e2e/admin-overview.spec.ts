@@ -16,6 +16,8 @@ test("the operational overview is admin-only and exposes actionable health check
   await expect(attention).toBeVisible();
   await expect(attention).not.toContainText("Measurements unavailable");
   await expect(attention).toContainText("This summary covers the checks below");
+  await expect(page.getByRole("heading", { name: "Daily database size history" })).toBeVisible();
+  await expect(page.getByText(/Missing days are not estimated/)).toBeVisible();
   const violations = (await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "best-practice"]).analyze()).violations;
   expect(violations).toEqual([]);
 });

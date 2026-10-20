@@ -27,6 +27,7 @@ import {
   configureErrorReporting,
 } from "@cim/core";
 import { getRedisConnection } from "./redis";
+import { captureStorageSnapshot } from "./storage-history";
 import { processSendEmailJob } from "./jobs/send-email";
 import { processCrawlSourceJob } from "./jobs/crawl-source";
 import { processCrawlSchedulerJob } from "./jobs/crawl-scheduler";
@@ -569,6 +570,8 @@ async function scheduleRepeatingJobs() {
 }
 
 console.log("Worker started. Listening for queued jobs…");
+// Take today's baseline on deployment too; the daily 08:45 UTC job keeps it current.
+void captureStorageSnapshot();
 // Never `void` a bare async call at module scope: an unhandled rejection
 // here (e.g. Redis not yet reachable at boot) would otherwise crash the
 // whole process — every already-started Worker along with it — over

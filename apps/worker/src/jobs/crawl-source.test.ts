@@ -151,7 +151,7 @@ describe("processCrawlSourceJob — what a crawl remembers", () => {
     expect(stats).toHaveBeenCalledWith(expect.objectContaining({ checks: 1, changed: 1, stories_seen: 3, stories_skipped: 2, new_articles: 1 }));
   });
 
-  it("remembers nothing from a crawl that failed part-way", async () => {
+  it("records a processing failure without remembering partial progress or blaming the publisher", async () => {
     selectResult.mockResolvedValue([staleSource]);
     state.states.set("s1", remembered());
     healthCheck.mockResolvedValue({ status: "healthy", validators: { etag: '"v2"' } });
@@ -159,7 +159,8 @@ describe("processCrawlSourceJob — what a crawl remembers", () => {
 
     await expect(processCrawlSourceJob(job(0), emailQueue, deps())).rejects.toThrow("database went away");
 
-    expect(state.states.get("s1")).toEqual(remembered());
+    expect(state.states.get("s1")).toEqual({ ...remembered(), failures: 1, failure: { category: "other", checkedAt: NOW, stage: "ingestion" } });
+    expect(stats).toHaveBeenLastCalledWith({ checks: 1, failed: 1 });
     expect(markSourceChecked).toHaveBeenCalledWith(expect.anything(), "s1", "error");
   });
 
@@ -179,12 +180,22 @@ describe("processCrawlSourceJob — what a crawl remembers", () => {
     expect(state.states.get("s1")).toMatchObject({ fullAt: NOW });
   });
 
+  it("counts processing failures even when recording the database status also fails", async () => {
+    selectResult.mockResolvedValue([staleSource]);
+    ingestSource.mockRejectedValueOnce(new Error("database unavailable"));
+    markSourceChecked.mockRejectedValueOnce(new Error("status write unavailable"));
+    await expect(processCrawlSourceJob(job(0), emailQueue, deps())).rejects.toThrow("status write unavailable");
+    expect(stats).toHaveBeenLastCalledWith({ checks: 1, failed: 1 });
+    expect(state.states.get("s1")?.failure?.stage).toBe("ingestion");
+  });
+
   it("waits longer after repeated failures without contacting the publisher, and starts over after a success", async () => {
     selectResult.mockResolvedValue([staleSource]);
     healthCheck.mockResolvedValue({ status: "error", message: "Feed responded HTTP 500" });
 
     await processCrawlSourceJob(job(0), emailQueue, deps()); // 1st failure: normal cadence
     expect(state.states.get("s1")).toMatchObject({ failures: 1, nextAt: NOW + 2 * HOUR });
+    expect(state.states.get("s1")?.failure).toEqual({ category: "server_error", checkedAt: NOW, stage: "health" });
     await processCrawlSourceJob(job(0), emailQueue, deps({ now: () => NOW + 2 * HOUR })); // 2nd: 4 h
     expect(state.states.get("s1")).toMatchObject({ failures: 2, nextAt: NOW + 6 * HOUR });
     expect(healthCheck).toHaveBeenCalledTimes(2);
@@ -202,13 +213,16 @@ describe("processCrawlSourceJob — what a crawl remembers", () => {
     await processCrawlSourceJob(job(0), emailQueue, deps({ now: () => NOW + 7 * HOUR }));
     expect(state.states.get("s1")).toMatchObject({ failures: 0 });
     expect(state.states.get("s1")?.nextAt).toBeUndefined();
+    expect(state.states.get("s1")?.failure).toBeUndefined();
   });
 
   it("honours a Retry-After that asks for longer than the normal wait", async () => {
     selectResult.mockResolvedValue([staleSource]);
-    healthCheck.mockResolvedValue({ status: "error", message: "Feed responded HTTP 429", retryAfterMs: 6 * HOUR });
+    healthCheck.mockResolvedValue({ status: "error", message: "Feed responded HTTP 429 https://publisher.example/?token=private-token", retryAfterMs: 6 * HOUR });
     await processCrawlSourceJob(job(0), emailQueue, deps());
     expect(state.states.get("s1")).toMatchObject({ failures: 1, nextAt: NOW + 6 * HOUR });
+    expect(state.states.get("s1")?.failure?.category).toBe("rate_limited");
+    expect(JSON.stringify(state.states.get("s1"))).not.toContain("private-token");
   });
 
   it("does not wait on a retry of a failed attempt", async () => {

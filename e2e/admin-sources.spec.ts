@@ -13,6 +13,8 @@ test("a platform admin sees the Türkiye catalog and gets a clear error for an u
   await page.goto("/admin/sources");
   await expect(page.getByRole("heading", { name: "Crawl sources" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Türkiye catalog" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Source failure diagnostics" })).toBeVisible();
+  await expect(page.getByText(/Reasons are recorded from this release onward/)).toBeVisible();
   await expect(page.getByRole("button", { name: "Add Hürriyet", exact: true })).toBeVisible();
 
   // The community list is searchable and filterable; licence-required agencies are never offered.

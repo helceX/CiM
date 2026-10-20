@@ -10,6 +10,7 @@ import { CatalogImportPanel } from "./catalog-import-panel";
 import { CrawlActivity } from "./crawl-activity";
 import { getCrawlStats } from "@/lib/crawl-stats";
 import { SourceExplorer } from "./source-explorer";
+import { SourceDiagnostics } from "./source-diagnostics";
 import { sourceCollections } from "@cim/core/source-collections";
 import { WorldCatalogBrowser } from "./world-catalog-browser";
 
@@ -99,6 +100,7 @@ export default async function AdminSourcesPage() {
           <CrawlActivity stats={crawlStats} />
         </div>
       </section>
+      <SourceDiagnostics sources={sources} />
       <section aria-labelledby="current-heading">
         <h2 id="current-heading" className="text-sm font-semibold text-foreground">
           Current sources ({sources.length})

@@ -1,10 +1,15 @@
 import { sql } from "drizzle-orm";
 import type { Db } from "../client";
 
-/** Size of the whole database on disk — what fills the Postgres volume. */
+/** Database files only; other Postgres volume files (such as WAL) are excluded. */
 export async function getDatabaseSizeBytes(db: Db): Promise<number> {
   const result = await db.execute<{ size: string }>(sql`select pg_database_size(current_database())::text as size`);
-  return Number(result.rows[0]?.size ?? 0);
+  const raw = result.rows[0]?.size;
+  const bytes = Number(raw);
+  if (raw == null || raw === "" || !Number.isSafeInteger(bytes) || bytes < 0) {
+    throw new Error("Database size measurement unavailable");
+  }
+  return bytes;
 }
 
 export type TableSize = { name: string; bytes: number; rows: number };

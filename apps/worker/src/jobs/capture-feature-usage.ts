@@ -4,6 +4,7 @@ import {
   listActiveOrganizationsForUsageCapture,
   meterKeywordDay,
 } from "@cim/db";
+import { captureStorageSnapshot } from "../storage-history";
 
 /**
  * docs/architecture/DATA_MODEL.md "Subscription / FeatureUsage ...
@@ -23,6 +24,7 @@ import {
  */
 export async function processCaptureFeatureUsageJob(now: Date = new Date()): Promise<void> {
   const day = now.toISOString().slice(0, 10);
+  await captureStorageSnapshot(now);
   const orgs = await listActiveOrganizationsForUsageCapture(db);
   for (const { organizationId } of orgs) {
     // Isolated per org (the established fan-out pattern, generate-insight.ts)

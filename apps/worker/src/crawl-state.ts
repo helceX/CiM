@@ -2,6 +2,8 @@ import type Redis from "ioredis";
 import {
   CRAWL_STATS_TTL_SECONDS,
   crawlStatsKey,
+  crawlStateKey,
+  type CrawlFailure,
   type CrawlStatField,
 } from "@cim/core";
 
@@ -22,6 +24,8 @@ export type CrawlState = {
   /** Failed checks in a row, and the earliest time the next fetch is allowed. */
   failures: number;
   nextAt?: number;
+  /** Safe category only; raw provider messages may contain credentials. */
+  failure?: CrawlFailure;
 };
 
 export interface CrawlStateStore {
@@ -43,7 +47,7 @@ function warnOnce(what: string, error: unknown): void {
 }
 
 export function redisCrawlStateStore(redis: Redis): CrawlStateStore {
-  const key = (sourceId: string) => `crawl:state:${sourceId}`;
+  const key = crawlStateKey;
   return {
     async get(sourceId) {
       try {

@@ -10,11 +10,16 @@ export async function getCrawlStats(hours = 24, now: Date = new Date()): Promise
   try {
     const pipeline = getRedis().pipeline();
     for (let h = 0; h < hours; h += 1) pipeline.hgetall(crawlStatsKey(new Date(now.getTime() - h * 3_600_000)));
-    const results = (await pipeline.exec()) ?? [];
+    const results = await pipeline.exec();
+    if (!results || results.length !== hours) return null;
     const totals = emptyCrawlStats();
     for (const [error, hash] of results) {
-      if (error || !hash) continue;
-      for (const field of CRAWL_STAT_FIELDS) totals[field] += Number((hash as Record<string, string>)[field] ?? 0);
+      if (error || !hash) return null;
+      for (const field of CRAWL_STAT_FIELDS) {
+        const value = Number((hash as Record<string, string>)[field] ?? 0);
+        if (!Number.isSafeInteger(value) || value < 0) return null;
+        totals[field] += value;
+      }
     }
     return totals;
   } catch {

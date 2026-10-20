@@ -1,7 +1,7 @@
 import type { Job, Queue } from "bullmq";
 import { eq } from "drizzle-orm";
 import { crawlSignature, ingestSource } from "@cim/ingestion";
-import { crawlBackoffMs, crawlIntervalMs, isGoogleTrendsEnabled, isSourceDue, type CrawlSourceJobData, type SendEmailJobData } from "@cim/core";
+import { classifyFeedFailure, crawlBackoffMs, crawlIntervalMs, isGoogleTrendsEnabled, isSourceDue, type CrawlSourceJobData, type SendEmailJobData } from "@cim/core";
 import { db, markSourceChecked, schema, listActiveMonitoringQueriesForSourceType, type ActiveMonitoringQuery } from "@cim/db";
 import { getConnectorFor } from "../connector-registry";
 import type { SourceConnector } from "@cim/ingestion";
@@ -114,14 +114,14 @@ export async function processCrawlSourceJob(
   if (health.status !== "healthy") {
     const failures = (state?.failures ?? 0) + 1;
     const wait = crawlBackoffMs(failures, crawlIntervalMs(source.connector), health.retryAfterMs);
-    await store.set(source.id, { sig: state?.sig ?? sig, seen: state?.seen ?? [], validators: state?.validators, fullAt: state?.fullAt ?? 0, failures, nextAt: now + wait });
-    await markSourceChecked(db, source.id, health.status);
+    await store.set(source.id, { sig: state?.sig ?? sig, seen: state?.seen ?? [], validators: state?.validators, fullAt: state?.fullAt ?? 0, failures, nextAt: now + wait, failure: { category: classifyFeedFailure(health.message), checkedAt: now, stage: "health" } });
     await stats({ checks: 1, failed: 1 });
+    await markSourceChecked(db, source.id, health.status);
     return;
   }
 
   if (health.notModified && reusable) {
-    await store.set(source.id, { ...reusable, failures: 0, nextAt: undefined });
+    await store.set(source.id, { ...reusable, failures: 0, nextAt: undefined, failure: undefined });
     await markSourceChecked(db, source.id, "healthy");
     await stats({ checks: 1, not_modified: 1 });
     return;
@@ -134,6 +134,10 @@ export async function processCrawlSourceJob(
     // Record the attempt so the failure counts as a check: without this
     // lastCheckedAt stays old and the source would be re-fetched on every
     // scheduler tick instead of waiting out its crawl interval.
+    // Retain only the last completed crawl's progress. An ingestion error can
+    // also be a database failure, so do not label it as a publisher outage.
+    await store.set(source.id, { sig: state?.sig ?? sig, seen: state?.seen ?? [], validators: state?.validators, fullAt: state?.fullAt ?? 0, failures: (state?.failures ?? 0) + 1, failure: { category: "other", checkedAt: now, stage: "ingestion" } });
+    await stats({ checks: 1, failed: 1 });
     await markSourceChecked(db, source.id, "error");
     throw error;
   }

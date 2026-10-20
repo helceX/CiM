@@ -1019,6 +1019,26 @@
           "paragraphs": [
             "Her tema için hangi ekibin bilgi alacağını ve ne zaman aksiyon gerektiğini belirleyin. Mediaory'de izlenen marka gündemini konu haritasıyla değerlendirmek, tek bir büyük haber sayısından daha açıklayıcı bir tablo oluşturabilir. Ancak medya içeriği bütün paydaşların algısını temsil etmez. Gerektiğinde müşteri geri bildirimi ve diğer araştırmalarla birlikte okuyun. Aylık incelemede yeni temaları ve kullanışsız etiketleri tartışın. Amaç markaya bir genel not vermek yerine hangi güven sorusunun hangi kanıtla gündeme geldiğini ve kimin hangi adımı atacağını anlaşılır biçimde göstermektir."
           ]
+        },
+        {
+          "title": "Çalışma örneği: aynı haberi üç farklı soruya ayırmak",
+          "paragraphs": [
+            "Aşağıdaki örnek kurgusaldır. Lunavera adlı bir eğitim yazılımını izlediğinizi düşünün. “Ders sırasında sistem kesildi” başlıklı bir haber ürün güvenilirliği temasına girer. “Destek talebine üç gün yanıt verilmedi” hizmet deneyimi; “kurum öğrenci verilerini nasıl kullanıyor?” sorusu ise veri uygulamaları temasına girer. Üçünün de olumsuz olması aynı aksiyon sahibine gitmeleri gerektiği anlamına gelmez.",
+            "Bir haber hem kesintiyi hem destek yanıtını anlatıyorsa tek haber kimliğini koruyarak iki tema atayın. Tema toplamı iki, tekil haber toplamı bir olur. Raporunuzda bu ayrımı açıkça yazın. Aynı haberi başka bir yayın aktarıyorsa “aynı hikâyenin ikinci kaynağı” olarak işaretleyin; iki bağımsız olay gibi değerlendirmeyin."
+          ],
+          "steps": [
+            "Önce başlık, kaynak bağlantısı, yayın tarihi ve kayıt kimliğini yazın.",
+            "Temayı, dahil etme nedenini ve dışarıda bırakılacak örneği kaydedin.",
+            "İddia sahibini ve doğrulama durumunu ayrı sütunlarda tutun.",
+            "Aksiyon sahibini ve inceleme zamanını belirleyin; yalnızca duygu etiketine göre karar vermeyin."
+          ]
+        },
+        {
+          "title": "İki kişiyle tutarlılık kontrolü",
+          "paragraphs": [
+            "İlk 20 haberi iki ekip üyesine bağımsız olarak kodlatın. Örneğin 14 kayıtta aynı ana tema seçildiyse basit uyum oranı 14 / 20 = %70 olur. Bu, model doğruluğu veya istatistiksel güvenirlik sertifikası değildir; yalnızca bu küçük örneklemdeki anlaşma düzeyidir. Altı anlaşmazlığın gerekçelerini karşılaştırıp tema tanımlarını düzeltin.",
+            "İndirme dosyasındaki satırlar da kurgusaldır. Kendi verilerinizi eklemeden önce kuralları ve aksiyon sahiplerini değiştirin. Mediaory bu çalışma dosyasını otomatik itibar notuna dönüştürmez; araçtan çıkan bulgular insan değerlendirmesinin girdisidir."
+          ]
         }
       ],
       "checklist": [
@@ -1042,6 +1062,12 @@
         "label": "Mediaory özelliklerini incele",
         "title": "Gündeminizi kararlarla bağlayın",
         "body": "Mediaory ile marka ve sektör gündeminizi izleyin; bu rehberdeki yöntemi kendi takip ve iletişim planınıza uyarlayın."
+      },
+      "modifiedAt": "2026-10-20T20:00:00+03:00",
+      "download": {
+        "href": "/downloads/itibar-konu-haritasi-ornek.csv",
+        "label": "Kurgusal konu haritası çalışma dosyası (CSV)",
+        "description": "Tema, kapsam, kanıt ve aksiyon sahibi sütunlarıyla üç kurgusal örnek. Gerçek müşteri verisi içermez."
       }
     },
     {
@@ -1549,6 +1575,26 @@
           "paragraphs": [
             "Mediaory'deki marka ve rakip gündeminden seçilen bulguları belirlediğiniz set ve kapsamla değerlendirin. Görünürlük payı, pazar payı veya müşteri tercihi değildir. Yüksek pay bir kriz döneminden de kaynaklanabilir. Bu nedenle konu, mesaj ve duygu bağlamını yanında okuyun. Rakip listesinin değiştiği dönemlerde mümkünse eski setle ek karşılaştırma sunun. Raporun sonunda hangi iletişim sorusunun cevaplandığını ve hangi sorular için başka veri gerektiğini belirtin. Açık bir rakip seti, SOV sayısını tek başına büyük bir başarı iddiasına dönüştürmeden daha yararlı yorum üretir."
           ]
+        },
+        {
+          "title": "Hesap örneği: rakip eklemek sonucu neden değiştirir?",
+          "paragraphs": [
+            "Tamamı kurgusal bir örnekte, aynı 30 günlük dönem ve aynı kaynak kurallarıyla A markasının 60, B markasının 30, C markasının 10 tekil hikâyesi olsun. Toplam 100 hikâyede A’nın görünürlük payı 60 / 100 = %60 olur. Sonra 100 hikâyesi olan D markasını sete ekleyin. A’nın 60 hikâyesi değişmediği halde yeni payı 60 / 200 = %30 olur.",
+            "Bu değişim A’nın performansının yarıya düştüğünü kanıtlamaz; paydanın değiştiğini gösterir. Yönetici raporunda eski setle %60, genişletilmiş setle %30 değerlerini ve değişiklik tarihini yan yana sunun. D farklı bir ülkede veya başka bir müşteri ihtiyacında çalışıyorsa ayrı bir referans setinde tutmak daha anlaşılır olabilir."
+          ],
+          "steps": [
+            "Karşılaştırma sorusunu, ülkeyi, dili ve dönemi yazın.",
+            "Markaları doğrudan rakip, alternatif çözüm ve sektör referansı olarak ayırın.",
+            "Bütün markalarda aynı tekrar, kaynak ve yanlış eşleşme kurallarını uygulayın.",
+            "Rakip listesini sürümleyin; set değiştiğinde eski dönemleri sessizce yeni toplamla karşılaştırmayın."
+          ]
+        },
+        {
+          "title": "Kısa marka adlarında önce doğruluk kontrolü",
+          "paragraphs": [
+            "Örneğin A markası için gelen 60 aday kaydın 10’u başka bir kurumun aynı kısaltmasını içeriyorsa önce bunları ayırın. Düzeltilmiş sette A=50, B=30 ve C=10 olduğunda A’nın payı 50 / 90 ≈ %55,6 olur. Yanlış eşleşmeleri yalnızca bir markadan temizleyip diğerlerini kontrol etmemek karşılaştırmayı yine bozabilir.",
+            "İndirme dosyasında bu üç senaryo, kullanılan payda ve kontrol notları bulunur. Bunlar gerçek pazar payı veya Mediaory müşteri sonucu değildir. Üründeki “izleme eşleşmeleri” sayısı tekil hikâye sayısından farklı olabileceği için, raporun hangi birimi kullandığını belirtin."
+          ]
         }
       ],
       "checklist": [
@@ -1572,6 +1618,12 @@
         "label": "Mediaory özelliklerini incele",
         "title": "Gündeminizi kararlarla bağlayın",
         "body": "Mediaory ile marka ve sektör gündeminizi izleyin; bu rehberdeki yöntemi kendi takip ve iletişim planınıza uyarlayın."
+      },
+      "modifiedAt": "2026-10-20T20:00:00+03:00",
+      "download": {
+        "href": "/downloads/sov-rakip-seti-ornek.csv",
+        "label": "Rakip seti değişimini karşılaştıran örnek CSV",
+        "description": "Üç kurgusal senaryo: başlangıç seti, yeni rakip eklenmesi ve yanlış eşleşme düzeltmesi."
       }
     },
     {

@@ -168,6 +168,18 @@ describe("social listening repository (integration)", () => {
     });
   });
 
+  it("honors an explicit monitoring set, including an empty active set and tenant isolation", async () => {
+    const scope = { sinceDays: 7, queryIds: [] as string[] };
+    expect((await getSocialOverviewStats(db, organizationId, scope)).totalConversations).toBe(0);
+    expect(await getTopSocialPosts(db, organizationId, scope)).toEqual([]);
+    expect(await getTopSocialAuthors(db, organizationId, scope)).toEqual([]);
+    expect(await getSocialPlatformDistribution(db, organizationId, scope)).toEqual([]);
+    expect(await getTrendingHashtags(db, organizationId, scope)).toEqual([]);
+    expect(await getSocialSentimentBreakdown(db, organizationId, scope)).toEqual({ positive: 0, neutral: 0, negative: 0, unclassified: 0 });
+    expect((await getSocialOverviewStats(db, organizationId, { ...scope, queryIds: [queryId] })).totalConversations).toBe(3);
+    expect((await getSocialOverviewStats(db, asOrganizationId(crypto.randomUUID()), { ...scope, queryIds: [queryId] })).totalConversations).toBe(0);
+  });
+
   it("surfaces the matched hashtag as a trending hashtag with a zero baseline", async () => {
     const hashtags = await getTrendingHashtags(db, organizationId, { sinceDays: 7 });
     const brand = hashtags.find((h) => h.hashtag === "#brand");

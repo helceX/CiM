@@ -41,7 +41,7 @@ const SENTIMENT_TONE = {
 export default async function SocialListeningPage({
   searchParams,
 }: {
-  searchParams: Promise<{ since?: string; query?: string; edit?: string }>;
+  searchParams: Promise<{ since?: string; query?: string; edit?: string; history?: string }>;
 }) {
   const context = await requireOrgContext();
   const locale = await getLocale();
@@ -51,9 +51,11 @@ export default async function SocialListeningPage({
   const sinceDays = VALID_RANGES.includes(sinceDaysRaw) ? sinceDaysRaw : 30;
   const socialQueries = (await listMonitoringQueries(db, context.organizationId)).filter((query) => query.sourceTypes.includes("social"));
   const selectedQuery = socialQueries.find((query) => query.id === resolved.query);
+  const includeHistory = resolved.history === "1";
   const editing = resolved.edit === "1" && selectedQuery?.sourceTypes.length === 1 ? selectedQuery : undefined;
   const health = await getSocialSearchHealth(db, context.organizationId);
-  const scope = { sinceDays, ...(selectedQuery ? { queryId: selectedQuery.id } : {}) };
+  // An empty active set must return no rows, not silently fall back to every historical/demo match.
+  const scope = { sinceDays, queryIds: selectedQuery ? [selectedQuery.id] : socialQueries.filter(query => includeHistory || query.status === "active").map(query => query.id) };
 
   const [overview, platforms, sentiment, hashtags, authors, posts] = await Promise.all([
     getSocialOverviewStats(db, context.organizationId, scope),
@@ -91,9 +93,11 @@ export default async function SocialListeningPage({
       {health.length > 0 ? <SocialMonitorings items={health.map((item) => ({ ...item, sources: item.sources.map((source) => ({ ...source, checkedAt: source.checkedAt?.toISOString() ?? null })) }))} canEdit={context.permissions.includes("monitoring:write")} turkish={locale === "tr"} /> : null}
       <details className="rounded-lg border border-border p-4"><summary className="cursor-pointer text-sm font-semibold">{text("Hangi platformda neleri takip edebilirsiniz?", "What can you monitor on each platform?")}</summary><ul className="mt-3 flex flex-col gap-2 text-xs text-muted-foreground"><li><strong className="text-foreground">Bluesky:</strong> {text("Kendi kelimeleriniz ve hesap etiketleri için açık gönderi araması kullanılabilir. Son 3 günün en yeni 30 sonucu, arama başına yaklaşık 8 saatte bir; eksiksiz ağ taraması değildir.", "Public keyword and account-tag searches are available. Up to 30 recent results per search from the past 3 days, approximately every 8 hours; not a complete network scan.")}</li><li><strong className="text-foreground">Mastodon:</strong> {text("Genel gönderi araması sunucu ayarlarına ve yetkili hesap bağlantısına bağlıdır; bu formda etkin değildir.", "Post search depends on the server configuration and an authorized account connection; it is not enabled in this form.")}</li><li><strong className="text-foreground">Instagram · X · Facebook · LinkedIn:</strong> {text("Genel marka ve etiket takibi bu formda etkin değildir. Platforma uygun izinli bağlantılar gerekir; ücretli veya izinsiz bir tarama başlatılmadı.", "General brand/tag monitoring is not enabled in this form. Platform-compatible authorized connections are required; no paid or unauthorized collection has been started.")}</li><li><strong className="text-foreground">YouTube · Reddit · RSS:</strong> {text("Kanal veya kaynak akışları, bütün platformda yorum ve marka aramasıyla aynı kapsamda değildir. Burada bütün ağı izliyormuş gibi gösterilmez.", "Channel/source feeds are different from network-wide comment or brand search. They are not presented here as complete platform coverage.")}</li></ul></details>
       {socialQueries.length > 0 ? <nav aria-label={locale === "tr" ? "Sosyal izleme seçimi" : "Social monitoring selection"} className="flex flex-wrap gap-2">
-        <Link href={`/social?since=${sinceDays}`} aria-current={!selectedQuery ? "page" : undefined} className="rounded border border-border px-3 py-2 text-sm">{locale === "tr" ? "Tüm izlemeler" : "All monitorings"}</Link>
+        <Link href={`/social?since=${sinceDays}${includeHistory ? "&history=1" : ""}`} aria-current={!selectedQuery ? "page" : undefined} className="rounded border border-border px-3 py-2 text-sm">{text(includeHistory ? "Tüm izlemeler ve geçmiş" : "Aktif izlemeler", includeHistory ? "All monitorings and history" : "Active monitorings")}</Link>
         {socialQueries.map((query) => <Link key={query.id} href={`/social?since=${sinceDays}&query=${query.id}`} aria-current={selectedQuery?.id === query.id ? "page" : undefined} className="rounded border border-border px-3 py-2 text-sm">{query.name}</Link>)}
       </nav> : null}
+
+      <p className="text-xs text-muted-foreground">{text("Varsayılan görünüm yalnızca aktif izlemeleri içerir. Durdurulmuş örnekler ve geçmiş kayıtlar silinmez; bir izlemeyi seçerek veya geçmişi açarak inceleyebilirsiniz.", "The default view includes active monitorings only. Paused examples and historical records are preserved; select a monitoring or include history to inspect them.")} <Link className="text-primary underline" href={`/social?since=${sinceDays}${includeHistory ? "" : "&history=1"}`}>{text(includeHistory ? "Yalnızca aktif izlemeler" : "Durdurulmuş izlemeleri de göster", includeHistory ? "Active monitorings only" : "Include paused monitorings")}</Link></p>
 
       {overview.totalConversations === 0 ? (
         <EmptyState

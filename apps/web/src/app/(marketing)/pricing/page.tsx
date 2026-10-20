@@ -16,7 +16,6 @@ const IDEAS = [
 
 export default async function PricingPage() {
   const t = await getTranslations("pricing");
-  const common = await getTranslations("common");
   return (
     <>
       <PageHero
@@ -24,9 +23,7 @@ export default async function PricingPage() {
         title={t("hero.title")}
         accent={t("hero.titleAccent")}
         lead={t("hero.lead")}
-      >
-        <span className="mk-chip mk-chip-soon">{common("comingSoon")}</span>
-      </PageHero>
+      />
       <section className="mk-section pt-10" aria-labelledby="free-start-title">
         <div className="mk-wrap">
           <GlowCard className="p-8">

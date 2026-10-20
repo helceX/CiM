@@ -18,7 +18,7 @@ export const registerSchema = z.object({
   lastName: z.string().trim().min(1, "Last name is required").max(80),
   email: z.email("Enter a valid work email").max(255).toLowerCase(),
   companyName: z.string().trim().min(1, "Company name is required").max(160),
-  jobTitle: z.string().trim().min(1, "Position is required").max(120),
+  jobTitle: z.string().trim().max(120).default(""),
   password: passwordSchema,
 });
 export type RegisterInput = z.infer<typeof registerSchema>;

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { useLocale } from "next-intl";
 import { Button, Input } from "@cim/ui";
 
 type ConversationTurn = {
@@ -36,6 +37,8 @@ const MIN_QUESTION_LENGTH = 3;
  * multi-turn) stays unbuilt — this is Q&A, not a tool-calling loop.
  */
 export function AiAssistantPanel() {
+  const locale = useLocale();
+  const text = (tr: string, en: string) => locale === "tr" ? tr : en;
   const [question, setQuestion] = useState("");
   const [isAsking, setIsAsking] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -64,13 +67,13 @@ export function AiAssistantPanel() {
       });
       const data = await response.json();
       if (!response.ok) {
-        setError(data.error ?? "Something went wrong. Please try again.");
+        setError(locale === "tr" ? "Yanıt alınamadı. Lütfen yeniden deneyin; çok sık soru gönderdiyseniz birkaç dakika bekleyin." : data.error ?? text("İşlem tamamlanamadı. Lütfen yeniden deneyin.", "Something went wrong. Please try again."));
         return;
       }
       setTurns((prev) => [...prev, { question: trimmed, ...data }]);
       setQuestion("");
     } catch {
-      setError("Something went wrong. Please try again.");
+      setError(text("İşlem tamamlanamadı. Lütfen yeniden deneyin.", "Something went wrong. Please try again."));
     } finally {
       setIsAsking(false);
     }
@@ -78,11 +81,9 @@ export function AiAssistantPanel() {
 
   return (
     <section className="rounded-lg border border-border p-4">
-      <h2 className="text-sm font-semibold text-foreground">Ask AI</h2>
+      <h2 className="text-sm font-semibold text-foreground">{text("Yapay zekâya sorun", "Ask AI")}</h2>
       <p className="text-xs text-muted-foreground">
-        Ask about your recent coverage — grounded in your own mentions, never a
-        general-knowledge guess. Ask a follow-up any time; the conversation so
-        far carries forward.
+        {text("Son haberleriniz hakkında, kayıtlı bahsetmelerinize dayanan sorular sorun. Yanıtın kaynaklarını ve yöntemini inceleyin; takip sorularında önceki konuşma kullanılır.", "Ask about your recent coverage, grounded in your own mentions. Review the answer’s evidence and method; follow-ups retain the conversation.")}
       </p>
       {turns.length > 0 ? (
         <ol className="mt-3 flex flex-col gap-3">
@@ -91,8 +92,8 @@ export function AiAssistantPanel() {
               <p className="font-medium text-foreground">{turn.question}</p>
               <p className="mt-1 text-foreground">{turn.answer}</p>
               <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                <span>Confidence {Math.round(turn.confidence * 100)}%</span>
-                <span>Method: {turn.method}</span>
+                <span>{text("Güven", "Confidence")} {Math.round(turn.confidence * 100)}%</span>
+                <span>{text("Yöntem", "Method")}: {turn.method}</span>
               </div>
               {turn.evidence.length > 0 ? (
                 <ul className="mt-2 flex flex-col gap-1">
@@ -113,14 +114,14 @@ export function AiAssistantPanel() {
           onChange={(e) => setQuestion(e.target.value)}
           placeholder={
             turns.length > 0
-              ? "Ask a follow-up…"
-              : "e.g. What's the sentiment on our latest coverage?"
+              ? text("Takip sorusu sorun…", "Ask a follow-up…")
+              : text("Örn. Son haberlerimizde hangi konular öne çıkıyor?", "e.g. What's the sentiment on our latest coverage?")
           }
-          aria-label={turns.length > 0 ? "Ask a follow-up question" : "Ask the AI assistant a question"}
+          aria-label={turns.length > 0 ? text("Takip sorusu sorun", "Ask a follow-up question") : text("Yapay zekâ asistanına bir soru sorun", "Ask the AI assistant a question")}
           disabled={isAsking}
         />
         <Button type="submit" disabled={isAsking || question.trim().length < MIN_QUESTION_LENGTH}>
-          {isAsking ? "Asking…" : "Ask"}
+          {isAsking ? text("Yanıt hazırlanıyor…", "Asking…") : text("Sor", "Ask")}
         </Button>
       </form>
       {error ? (

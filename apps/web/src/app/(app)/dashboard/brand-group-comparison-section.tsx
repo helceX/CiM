@@ -1,5 +1,6 @@
+import { getLocale } from "next-intl/server";
+import { sentimentNetScore } from "@/lib/story-presentation";
 import type { BrandGroupComparisonRow } from "@cim/db";
-import { netSentiment } from "@cim/core";
 import { groupColorVar } from "@/lib/brand-group-colors";
 
 const KIND_LABEL = { own: "Own brands", competitor: "Competitor", category: "Category" } as const;
@@ -14,19 +15,20 @@ function percent(value: number | null): string {
  * bar is labelled with its group name and value, so colour is never the only
  * carrier of identity; the table underneath is the accessible data view.
  */
-export function BrandGroupComparisonSection({ rows }: { rows: BrandGroupComparisonRow[] }) {
+export async function BrandGroupComparisonSection({ rows }: { rows: BrandGroupComparisonRow[] }) {
+  const locale = await getLocale();
+  const text = (tr: string, en: string) => locale === "tr" ? tr : en;
   const totalMentions = rows.reduce((sum, row) => sum + row.totalMentions, 0);
   return (
     <section className="rounded-lg border border-border p-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-foreground">Group comparison</h2>
-        <span className="text-xs text-muted-foreground">Last 7 days</span>
+        <h2 className="text-sm font-semibold text-foreground">{text("Grup karşılaştırması", "Group comparison")}</h2>
+        <span className="text-xs text-muted-foreground">{text("Son 7 gün", "Last 7 days")}</span>
       </div>
 
       {totalMentions === 0 ? (
         <p className="mt-3 text-sm text-muted-foreground">
-          No mentions in these groups yet. Share of voice appears once a group&apos;s queries
-          match something.
+          {text("Bu gruplarda henüz eşleşme yok. Grubun izlemeleri sonuç bulduğunda görünürlük payı hesaplanır.", "No mentions in these groups yet. Share of voice appears once a group’s queries match something.")}
         </p>
       ) : (
         <div
@@ -49,23 +51,23 @@ export function BrandGroupComparisonSection({ rows }: { rows: BrandGroupComparis
         </div>
       )}
 
+      <p className="mt-2 text-xs text-muted-foreground">{text("Net duygu yalnızca analiz edilmiş kayıtlardan hesaplanır; analiz yoksa çizgi gösterilir. Eşleşme toplamları tekil haber sayısı değildir.", "Net sentiment uses analyzed records only; a dash means no analysis. Match totals are not unique-story counts.")}</p>
       <div className="mt-3 overflow-x-auto">
         <table className="w-full text-sm">
-          <caption className="sr-only">Brand group comparison, last 7 days</caption>
+          <caption className="sr-only">{text("Marka grubu karşılaştırması, son 7 gün", "Brand group comparison, last 7 days")}</caption>
           <thead>
             <tr className="border-b border-border text-left text-xs text-muted-foreground">
-              <th scope="col" className="py-1.5 pr-4 font-medium">Group</th>
-              <th scope="col" className="py-1.5 pr-4 font-medium">Queries</th>
-              <th scope="col" className="py-1.5 pr-4 font-medium">Mentions</th>
-              <th scope="col" className="py-1.5 pr-4 font-medium">Share of voice</th>
-              <th scope="col" className="py-1.5 pr-4 font-medium">Sentiment mix</th>
-              <th scope="col" className="py-1.5 font-medium">Net sentiment</th>
+              <th scope="col" className="py-1.5 pr-4 font-medium">{text("Grup", "Group")}</th>
+              <th scope="col" className="py-1.5 pr-4 font-medium">{text("İzlemeler", "Queries")}</th>
+              <th scope="col" className="py-1.5 pr-4 font-medium">{text("Eşleşmeler", "Mentions")}</th>
+              <th scope="col" className="py-1.5 pr-4 font-medium">{text("Görünürlük payı", "Share of voice")}</th>
+              <th scope="col" className="py-1.5 pr-4 font-medium">{text("Olumlu / Nötr / Olumsuz", "Sentiment mix")}</th>
+              <th scope="col" className="py-1.5 font-medium">{text("Net duygu", "Net sentiment")}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
             {rows.map((row) => {
-              const net = netSentiment(row);
-              const score = net === null ? null : Math.round(net * 100);
+              const score = sentimentNetScore(row);
               return (
                 <tr key={row.groupId}>
                   <th scope="row" className="py-2 pr-4 text-left font-normal text-foreground">
@@ -76,7 +78,7 @@ export function BrandGroupComparisonSection({ rows }: { rows: BrandGroupComparis
                         style={{ background: groupColorVar(row.color) }}
                       />
                       {row.name}
-                      <span className="text-xs text-muted-foreground">{KIND_LABEL[row.kind]}</span>
+                      <span className="text-xs text-muted-foreground">{text(({ own: "Kendi markalarınız", competitor: "Rakip", category: "Kategori" })[row.kind], KIND_LABEL[row.kind])}</span>
                     </span>
                   </th>
                   <td className="py-2 pr-4 text-muted-foreground">{row.queryCount}</td>

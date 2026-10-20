@@ -17,7 +17,7 @@
       },
       "pricing": {
         "title": "Fiyatlandırma ve Ücretsiz Başlangıç | Mediaory",
-        "description": "Mediaory’nin mevcut ücretsiz izleme sınırını ve kaynak kapsamını öğrenin. İlk projenizi kurun; planlanan kullanıma dayalı fiyatlandırmayı inceleyin."
+        "description": "Mediaory ücretsiz pilotu: organizasyon başına bir aktif izleme, yaklaşık 8 saatlik kaynak kontrolü ve mevcut kullanım koşulları. Ücretli paketler henüz satışta değil."
       },
       "resources": {
         "title": "Medya Takibi Kaynakları ve Rehberler | Mediaory",
@@ -52,7 +52,7 @@
     "security": "Güvenlik",
     "resources": "Kaynaklar",
     "contact": "İletişim",
-    "tagline": "Önce bilmesi — ve nedenini de bilmesi — gereken ekipler için iletişim istihbaratı.",
+    "tagline": "Haberleri kaynaklarıyla değerlendirmek ve bulgularını paylaşmak isteyen ekipler için.",
     "product": "Ürün",
     "trust": "Şirket",
     "account": "Hesap"
@@ -68,11 +68,11 @@
   "home": {
     "hero": {
       "eyebrow": "İletişim istihbaratı platformu",
-      "titleA": "Hikâyeyi görün,",
-      "titleB": "manşet olmadan önce.",
-      "subtitle": "Haberlerden açık sosyal akışlara, önemli olanı tek yerde görün. Kaynağıyla anlayın, kuruluşunuza uygun fırsatları keşfedin ve ekibinizle paylaşın.",
-      "note": "Bir sorguyla başlayın. Gündemden fırsata uzanın.",
-      "screenAlt": "Mediaory panosu: bahsetme toplamları, son 24 saatin yapay zekâ özeti ve bahsetme trendi.",
+      "titleA": "Gündemi derleyin,",
+      "titleB": "önemli olanı seçin.",
+      "subtitle": "Küçük iletişim ekipleri ve girişimcilik ekosistemi için kaynaklı haber takibi. Marka, sektör ve olası fırsat sinyallerini inceleyin; bulgularınızı ekibinizle paylaşın.",
+      "note": "Ücretsiz pilot · 1 aktif izleme · Kaynaklar yaklaşık 8 saatte bir kontrol edilir. Anlık kriz alarmı değildir.",
+      "screenAlt": "Temsili Mediaory çalışma alanı; canlı veri veya analiz garantisi değildir.",
       "chipMentions": "38 bahsetme · son 7 gün",
       "chipAi": "Yapay zekâ özeti · %90 güven",
       "scene": {
@@ -120,7 +120,7 @@
         "filter": {
           "kicker": "Filtrele",
           "title": "Gürültüyü eleyin, sinyali tutun.",
-          "body": "Tarih, duygu ve öncelikle akışınızı daraltın. İlgili haberleri, eşleşme nedenlerini ve kaynaklarını birlikte inceleyin.",
+          "body": "Tarih ve öncelikle akışınızı daraltın. Duygu filtresi yalnızca analizi yapılmış kayıtlarda anlamlıdır; kaynak ve eşleşme nedenini birlikte inceleyin.",
           "alt": "Arama ile duygu, öncelik, tarih ve atama filtrelerini içeren bahsetmeler tablosu.",
           "scene": {
             "example": "Örnek akış · canlı veri değildir",
@@ -177,8 +177,8 @@
       "lead": "Neyin önemli olduğunu görün, kaynağını inceleyin ve kendi kararınızı verin.",
       "cards": {
         "grounded": {
-          "title": "Dayanaklı yapay zekâ",
-          "body": "Her içgörü kanıt, kaynak ve güven skoru ile gelir. Veri bir iddiayı desteklemiyorsa Mediaory o iddiayı yapmaz.",
+          "title": "Kaynağı görünen analiz",
+          "body": "Haber bağlantısını ve eşleşme nedenini inceleyin. Yapay zekâ özellikleri yapılandırılmış sağlayıcıya bağlıdır; analiz edilmeyen kayıtlar açıkça belirtilir.",
           "meta": "Özeti dayanağıyla birlikte inceleyin",
           "sourceLabel": "Kaynakla birlikte"
         },
@@ -213,8 +213,8 @@
       "note": "Telefon ekranı temsilidir."
     },
     "cta": {
-      "title": "Önce bilin. Nedenini de bilin.",
-      "body": "Bir izleme kurun, ilk bahsetmelerin düşmesini izleyin ve bir günün ne kadar sakinleşebileceğini görün.",
+      "title": "Daha az gürültü. Daha açık bir gündem.",
+      "body": "Bir izleme kurun, ilk sonuçların ilgisini değerlendirin ve kapsamınızı ihtiyacınıza göre düzenleyin.",
       "primary": "İzlemeye başla",
       "secondary": "Bizimle konuşun"
     },
@@ -361,7 +361,7 @@
       },
       "ai": {
         "title": "Dayanaklı yapay zekâ içgörüleri",
-        "body": "Yönetici özetleri, risk sinyalleri ve öneriler — her iddia arkasındaki bahsetmelere ve metriklere bağlı, güven ve yöntem gösterilir. Takip sorularını düz dille sorun.",
+        "body": "Yapılandırılmış bir yapay zekâ sağlayıcısı varsa yönetici özetleri, risk sinyalleri ve soru-cevap kullanılabilir. Kanıt ve yöntem gösterilir; sağlayıcı kapalıysa bu analizler çalışmaz ve kayıtlar sınıflandırılmamış kalabilir.",
         "points": [
           "Her bahsetmede “Neden eşleşti?”",
           "Her içgörüde güven, yöntem ve kanıt",
@@ -542,25 +542,25 @@
   },
   "pricing": {
     "hero": {
-      "eyebrow": "Fiyatlandırma",
-      "title": "Gerçekten takip ettiğiniz kadar",
-      "titleAccent": "ödeyin.",
-      "lead": "Sabit paketler yerine basit, kullanıma dayalı bir model üzerinde çalışıyoruz. Erken kullanıcılar şekillendirmeye yardım eder ve yayına girdiğinde ilk sırada yer alır."
+      "eyebrow": "Ücretsiz pilot",
+      "title": "Önce faydasını",
+      "titleAccent": "deneyin.",
+      "lead": "Bugün ücretsiz hesapla başlayın. Ücretli paketler henüz satışta değil; bu sayfa mevcut pilotun kapsamını açıklar."
     },
     "idea": {
-      "title": "Nereye gidiyoruz",
+      "title": "Başlamadan önce bilin",
       "items": {
         "credits": {
-          "title": "Paket değil, kredi",
-          "body": "İzlediğiniz şeye harcadığınız tek bir kredi havuzu — tek bir ekstra özellik için daha büyük pakete geçmek yok."
+          "title": "Bugünkü kapsam",
+          "body": "Bir aktif haber izlemesinde birden fazla anahtar kelime kullanın. Kaydedilmiş sonuçları inceleyin; geniş sorgular daha çok ilgisiz eşleşme getirebilir."
         },
         "keywords": {
-          "title": "Anahtar kelimeye göre fiyat",
-          "body": "Maliyet takip ettiğiniz anahtar kelimeleri izler; odaklı bir kurulum uygun kalır, geniş bir kurulum öngörülebilir biçimde ölçeklenir."
+          "title": "Analiz ve raporlar",
+          "body": "Yapay zekâ analizinin kullanılabilirliği sağlayıcı ayarına bağlıdır. Analiz edilmemiş içerik nötr sayılmaz. Rapor ve gönderim seçeneklerini çalışma alanınızda kontrol edin."
         },
         "free": {
-          "title": "Ücretsiz başlayın",
-          "body": "Fiyatlar açıklanmadan önce bugün hesap oluşturabilir ve ilk projenizi kurabilirsiniz."
+          "title": "Sorularınız için",
+          "body": "Takip ihtiyacınızı ve beklediğiniz sonucu ekibe e-postayla iletin. Otomatik destek süresi veya kesintisiz hizmet garantisi verilmez."
         }
       }
     },
@@ -574,8 +574,8 @@
       "title": "Bugün ücretsiz başlangıçta ne var?",
       "limit": "Organizasyon başına {limit} aktif izleme",
       "body": "Bir izleme içinde birden fazla anahtar kelime kullanabilir, eşleşen haberleri inceleyebilir ve ilk projenizi oluşturabilirsiniz. Yeni bir izleme açmak için mevcut izlemenizi duraklatabilir veya silebilirsiniz.",
-      "scope": "Kapsam, erişilebilir ve aktif kaynaklarla sınırlıdır; her sosyal ağın tüm içeriği veya sınırsız geçmiş arşivi dahil değildir.",
-      "terms": "Saklama süresi, rapor ve bildirim kullanılabilirliği uygulamadaki mevcut ayarlara bağlıdır. Henüz yayımlanmamış ücretli paketler veya kesinleşmemiş limitler için bir taahhüt verilmez.",
+      "scope": "Kaynaklar yaklaşık 8 saatte bir kontrol edilir. Kapsam aktif, erişilebilir kaynaklarla sınırlıdır; anlık alarm, bütün sosyal ağlar veya eksiksiz geçmiş arşivi dahil değildir.",
+      "terms": "Otomatik ücretli dönüşüm yoktur. Ücretli bir teklif ayrıca açıklanır. Rapor ve bildirimler hesap izinlerine ve yapılandırılmış bağlantılara; saklama süresi kuruluş ayarlarına bağlıdır. Pilot için sabit bitiş tarihi ve hizmet seviyesi taahhüdü yayımlanmamıştır.",
       "action": "Ücretsiz ilk izlemeni kur"
     }
   },

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getLocale } from "next-intl/server";
 import { Badge, Button, EmptyState } from "@cim/ui";
 import { Radar } from "lucide-react";
 import { autoKeywordClusters, companyNames, crawlIntervalMs, describeRegionScopes, intentSummary, parseKeywordSpec } from "@cim/core";
@@ -9,25 +10,26 @@ import { monitoringFamily } from "@/lib/monitoring-families";
 import { MonitoringCheck } from "./monitoring-check";
 
 /** Small suffix on a chip when the keyword has a stricter-than-default rule. */
-function KeywordRule({ term }: { term: string }) {
+function KeywordRule({ term, turkish }: { term: string; turkish: boolean }) {
+  const text = (tr: string, en: string) => turkish ? tr : en;
   const spec = parseKeywordSpec(term);
   if (spec.caseSensitive) {
-    return <span className="ml-1 text-[11px] text-muted-foreground" title="Matched as the whole word with exactly these capitals">· exact caps</span>;
+    return <span className="ml-1 text-[11px] text-muted-foreground" title={text("Tam kelime ve aynı büyük/küçük harflerle eşleşir", "Matched as the whole word with exactly these capitals")}>· {text("aynı harf biçimi", "exact caps")}</span>;
   }
   if (spec.prefix) {
-    return <span className="ml-1 text-[11px] text-muted-foreground" title="Matches words that start with this">· word start</span>;
+    return <span className="ml-1 text-[11px] text-muted-foreground" title={text("Bu ifadeyle başlayan kelimeleri eşleştirir", "Matches words that start with this")}>· {text("kelime başlangıcı", "word start")}</span>;
   }
   return null;
 }
 
 /** "14 minutes ago" — coarse on purpose; the exact time is in the tooltip. */
-function ago(date: Date): string {
+function ago(date: Date, turkish = false): string {
   const minutes = Math.max(0, Math.round((Date.now() - date.getTime()) / 60_000));
-  if (minutes < 1) return "just now";
-  if (minutes < 60) return `${minutes} min ago`;
+  if (minutes < 1) return turkish ? "az önce" : "just now";
+  if (minutes < 60) return turkish ? `${minutes} dk önce` : `${minutes} min ago`;
   const hours = Math.round(minutes / 60);
-  if (hours < 48) return `${hours} h ago`;
-  return `${Math.round(hours / 24)} days ago`;
+  if (hours < 48) return turkish ? `${hours} sa önce` : `${hours} h ago`;
+  return turkish ? `${Math.round(hours / 24)} gün önce` : `${Math.round(hours / 24)} days ago`;
 }
 
 /**
@@ -35,7 +37,8 @@ function ago(date: Date): string {
  * crawler runs on our servers around the clock — it does not depend on anyone
  * having the app open — so this shows what it has actually done, not a promise.
  */
-function CoverageStrip({ coverage }: { coverage: CrawlCoverage }) {
+function CoverageStrip({ coverage, turkish }: { coverage: CrawlCoverage; turkish: boolean }) {
+  const text = (tr: string, en: string) => turkish ? tr : en;
   const interval = crawlIntervalMs("rss");
   const stale = coverage.lastScanAt !== null && Date.now() - coverage.lastScanAt.getTime() > 3 * interval;
   return (
@@ -44,20 +47,19 @@ function CoverageStrip({ coverage }: { coverage: CrawlCoverage }) {
       role="status"
     >
       {coverage.activeSources === 0 ? (
-        "No sources are being scanned yet."
+        text("Henüz kaynak taranmıyor.", "No sources are being scanned yet.")
       ) : (
         <>
-          Scanning <strong className="text-foreground">{coverage.activeSources.toLocaleString()}</strong> sources about every {interval / 3_600_000} hours on our
-          servers (your computer does not need to be on).{" "}
+          <strong className="text-foreground">{coverage.activeSources.toLocaleString(turkish ? "tr-TR" : "en-GB")}</strong> {text(`kaynak yaklaşık ${interval / 3_600_000} saatte bir sunucularımızda kontrol edilir; bilgisayarınızın açık olması gerekmez.`, `sources are checked about every ${interval / 3_600_000} hours on our servers; your computer does not need to be on.`)}{" "}
           {coverage.lastScanAt ? (
             <>
-              Last scan <time dateTime={coverage.lastScanAt.toISOString()} title={coverage.lastScanAt.toISOString()}>{ago(coverage.lastScanAt)}</time>
-              {stale ? " — longer than expected." : ""}
+              {text("Son kontrol", "Last scan")} <time dateTime={coverage.lastScanAt.toISOString()} title={coverage.lastScanAt.toISOString()}>{ago(coverage.lastScanAt, turkish)}</time>
+              {stale ? text(" — beklenenden uzun sürdü.", " — longer than expected.") : ""}
             </>
           ) : (
-            "First scan has not finished yet."
+            text("İlk kontrol henüz tamamlanmadı.", "First scan has not finished yet.")
           )}{" "}
-          {coverage.storiesLast24h.toLocaleString()} new stories in the last 24 hours.
+          {coverage.storiesLast24h.toLocaleString(turkish ? "tr-TR" : "en-GB")} {text("yeni haber, son 24 saat. Bu sayı sizin izlemenizin eşleşme sayısı değildir.", "new stories in the last 24 hours. This is not your monitoring’s match count.")}
         </>
       )}
     </p>
@@ -66,6 +68,9 @@ function CoverageStrip({ coverage }: { coverage: CrawlCoverage }) {
 
 export default async function MonitoringListPage() {
   const context = await requireOrgContext();
+  const locale = await getLocale();
+  const turkish = locale === "tr";
+  const text = (tr: string, en: string) => turkish ? tr : en;
   const [queries, counts, coverage, brandGroups] = await Promise.all([
     listMonitoringQueries(db, context.organizationId),
     countMentionsByQuery(db, context.organizationId),
@@ -88,27 +93,26 @@ export default async function MonitoringListPage() {
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-lg font-semibold text-foreground">Monitoring</h1>
+          <h1 className="text-lg font-semibold text-foreground">{text("İzlemeler", "Monitoring")}</h1>
           <p className="text-sm text-muted-foreground">
-            Queries tracking your brands, competitors, and topics. Keywords match whole words
-            and their usual endings (girişimci → girişimcilerin).
+            {text("Markanızı, rakiplerinizi ve konularınızı izleyen sorgular. Kelimeler tam kelime ve olağan ekleriyle eşleşir (girişimci → girişimcilerin).", "Queries tracking your brands, competitors, and topics. Keywords match whole words and their usual endings (girişimci → girişimcilerin).")}
           </p>
         </div>
         <Button asChild size="sm">
-          <Link href="/monitoring/new">New monitoring</Link>
+          <Link href="/monitoring/new">{text("Yeni izleme", "New monitoring")}</Link>
         </Button>
       </div>
 
-      <CoverageStrip coverage={coverage} />
+      <CoverageStrip coverage={coverage} turkish={turkish} />
 
       {queries.length === 0 ? (
         <EmptyState
           icon={<Radar className="size-8" aria-hidden="true" />}
-          title="No monitoring has been created yet."
-          description="Try tracking your brand, campaign, or a competitor."
+          title={text("Henüz izleme oluşturulmadı.", "No monitoring has been created yet.")}
+          description={text("Markanızı, kampanyanızı veya bir rakibi izleyerek başlayın.", "Try tracking your brand, campaign, or a competitor.")}
           action={
             <Button asChild size="sm">
-              <Link href="/monitoring/new">Create your first monitoring query</Link>
+              <Link href="/monitoring/new">{text("İlk izlemenizi oluşturun", "Create your first monitoring query")}</Link>
             </Button>
           }
         />
@@ -120,8 +124,8 @@ export default async function MonitoringListPage() {
                 <h2 className="flex items-baseline gap-2 text-sm font-semibold text-foreground">
                   {family.label}
                   <span className="text-xs font-normal text-muted-foreground">
-                    {family.items.length} monitoring{family.items.length === 1 ? "" : "s"}
-                    {family.mapped ? " · your group" : " · grouped by name"}
+                    {family.items.length} {text("izleme", family.items.length === 1 ? "monitoring" : "monitorings")}
+                    {family.mapped ? text(" · grubunuz", " · your group") : text(" · ada göre gruplandı", " · grouped by name")}
                   </span>
                 </h2>
               ) : null}
@@ -143,11 +147,11 @@ export default async function MonitoringListPage() {
                   <div className="flex flex-wrap items-center gap-2">
                     <h2 className="text-sm font-semibold text-foreground">{query.name}</h2>
                     <Badge tone={query.status === "active" ? "success" : "neutral"}>
-                      {query.status}
+                      {text(query.status === "active" ? "Aktif" : "Durduruldu", query.status)}
                     </Badge>
                   </div>
                   {keywords.length > 0 ? (
-                    <ul className="flex flex-wrap gap-1.5" aria-label={`Keywords for ${query.name}`}>
+                    <ul className="flex flex-wrap gap-1.5" aria-label={text(`${query.name} anahtar kelimeleri`, `Keywords for ${query.name}`)}>
                       {keywords.slice(0, 12).map(({ term, kind }) => (
                         <li
                           key={`${kind}:${term}`}
@@ -157,16 +161,16 @@ export default async function MonitoringListPage() {
                               : "rounded-sm bg-secondary px-2 py-0.5 text-xs text-secondary-foreground"
                           }
                         >
-                          {kind === "exclude" ? <span className="sr-only">Excluded: </span> : null}
+                          {kind === "exclude" ? <span className="sr-only">{text("Hariç: ", "Excluded: ")}</span> : null}
                           {term}
                           {kind === "include" && !term.startsWith('"') ? (
-                            <KeywordRule term={term} />
+                            <KeywordRule term={term} turkish={turkish} />
                           ) : null}
                         </li>
                       ))}
                       {keywords.length > 12 ? (
                         <li className="px-1 py-0.5 text-xs text-muted-foreground">
-                          +{keywords.length - 12} more
+                          +{keywords.length - 12} {text("daha", "more")}
                         </li>
                       ) : null}
                     </ul>
@@ -175,12 +179,12 @@ export default async function MonitoringListPage() {
                   )}
                   {companyNames(ast).length > 0 ? (
                     <p className="text-xs text-muted-foreground">
-                      Company: <span className="text-foreground">{companyNames(ast).join(" = ")}</span>
+                      {text("Kurum", "Company")}: <span className="text-foreground">{companyNames(ast).join(" = ")}</span>
                     </p>
                   ) : null}
                   {autoKeywordClusters(ast.include).length > 0 ? (
                     <p className="text-xs text-muted-foreground">
-                      Grouped automatically:{" "}
+                      {text("Otomatik gruplar", "Grouped automatically")}: {" "}
                       {autoKeywordClusters(ast.include)
                         .map((cluster) => cluster.join(" · "))
                         .join(" | ")}
@@ -188,31 +192,31 @@ export default async function MonitoringListPage() {
                   ) : null}
                   {ast.aliasGroups && ast.aliasGroups.length > 0 ? (
                     <p className="text-xs text-muted-foreground">
-                      Same thing: {ast.aliasGroups.map((group) => group.join(" = ")).join(" · ")}
+                      {text("Aynı anlam", "Same thing")}: {ast.aliasGroups.map((group) => group.join(" = ")).join(" · ")}
                     </p>
                   ) : null}
                   <p className="text-xs text-muted-foreground">
-                    Sources: {query.sourceTypes.join(", ")} · Where: {describeRegionScopes(query.regionScopes)} · Created{" "}
-                    {new Date(query.createdAt).toLocaleDateString()}
+                    {text("Kaynak türleri", "Sources")}: {query.sourceTypes.join(", ")} · {text("Bölge", "Where")}: {turkish && query.regionScopes.length === 0 ? "Dünya geneli" : describeRegionScopes(query.regionScopes)} · {text("Oluşturulma", "Created")}{" "}
+                    {new Date(query.createdAt).toLocaleDateString(locale, { timeZone: "Europe/Istanbul" })}
                   </p>
                   {(() => {
                     const summary = intentSummary(ast.intent);
                     if (summary) {
                       return (
                         <p className="text-xs text-muted-foreground">
-                          Looking for: <span className="text-foreground">{summary.looking}</span> · Showing:{" "}
+                          {text("Hedef", "Looking for")}: <span className="text-foreground">{summary.looking}</span> · {text("Görünüm", "Showing")}: {" "}
                           <span className="text-foreground">{summary.showing}</span>
                         </p>
                       );
                     }
                     return canEdit ? (
                       <p className="text-xs text-muted-foreground">
-                        Shows every story.{" "}
+                        {text("Tüm eşleşmeleri gösterir.", "Shows every story.")}{" "}
                         <Link href={`/monitoring/${query.id}/edit`} className="text-primary underline underline-offset-2">
-                          Choose what matters
+                          {text("Önemli olanı seçin", "Choose what matters")}
                           <span className="sr-only"> for {query.name}</span>
                         </Link>{" "}
-                        to see the important ones first.
+                        {text("ve ilgili sonuçları öne çıkarın.", "to see the important ones first.")}
                       </p>
                     ) : null;
                   })()}
@@ -221,23 +225,23 @@ export default async function MonitoringListPage() {
                 <div className="flex shrink-0 items-center gap-4 sm:flex-col sm:items-end sm:gap-1">
                   <p className="text-sm text-foreground">
                     <span className="font-semibold">{count.last7Days}</span>{" "}
-                    <span className="text-muted-foreground">in 7 days</span>
+                    <span className="text-muted-foreground">{text("son 7 günde", "in 7 days")}</span>
                   </p>
-                  <p className="text-xs text-muted-foreground">{count.total} total</p>
+                  <p className="text-xs text-muted-foreground">{count.total} {text("toplam eşleşme", "total")}</p>
                   <p className="text-xs text-muted-foreground">
                     {count.latestAt ? (
                       <>
-                        Latest story <time dateTime={count.latestAt.toISOString()} title={count.latestAt.toISOString()}>{ago(count.latestAt)}</time>
+                        {text("Son haber", "Latest story")} <time dateTime={count.latestAt.toISOString()} title={count.latestAt.toISOString()}>{ago(count.latestAt, turkish)}</time>
                       </>
                     ) : (
-                      "No stories yet"
+                      text("Henüz haber yok", "No stories yet")
                     )}
                   </p>
                   <Link
                     href={`/mentions?query=${query.id}`}
                     className="text-sm text-primary underline underline-offset-2"
                   >
-                    View mentions
+                    {text("Bahsetmeleri aç", "View mentions")}
                     <span className="sr-only"> for {query.name}</span>
                   </Link>
                   {canEdit ? (
@@ -245,7 +249,7 @@ export default async function MonitoringListPage() {
                       href={`/monitoring/${query.id}/edit`}
                       className="text-sm text-primary underline underline-offset-2"
                     >
-                      Edit
+                      {text("Düzenle", "Edit")}
                       <span className="sr-only"> {query.name}</span>
                     </Link>
                   ) : null}

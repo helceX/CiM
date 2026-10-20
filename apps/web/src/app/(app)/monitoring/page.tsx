@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Badge, Button, EmptyState } from "@cim/ui";
 import { Radar } from "lucide-react";
-import { autoKeywordClusters, companyNames, describeRegionScopes, intentSummary, parseKeywordSpec } from "@cim/core";
+import { autoKeywordClusters, companyNames, crawlIntervalMs, describeRegionScopes, intentSummary, parseKeywordSpec } from "@cim/core";
 import { countMentionsByQuery, db, getCrawlCoverage, listBrandGroups, listMonitoringQueries } from "@cim/db";
 import type { CrawlCoverage } from "@cim/db";
 import { requireOrgContext } from "@/lib/tenant";
@@ -36,7 +36,8 @@ function ago(date: Date): string {
  * having the app open — so this shows what it has actually done, not a promise.
  */
 function CoverageStrip({ coverage }: { coverage: CrawlCoverage }) {
-  const stale = coverage.lastScanAt !== null && Date.now() - coverage.lastScanAt.getTime() > 6 * 3_600_000;
+  const interval = crawlIntervalMs("rss");
+  const stale = coverage.lastScanAt !== null && Date.now() - coverage.lastScanAt.getTime() > 3 * interval;
   return (
     <p
       className={`rounded-lg border px-3 py-2 text-xs ${stale ? "border-warning/50 text-warning" : "border-border text-muted-foreground"}`}
@@ -46,7 +47,7 @@ function CoverageStrip({ coverage }: { coverage: CrawlCoverage }) {
         "No sources are being scanned yet."
       ) : (
         <>
-          Scanning <strong className="text-foreground">{coverage.activeSources.toLocaleString()}</strong> sources every 2 hours on our
+          Scanning <strong className="text-foreground">{coverage.activeSources.toLocaleString()}</strong> sources about every {interval / 3_600_000} hours on our
           servers (your computer does not need to be on).{" "}
           {coverage.lastScanAt ? (
             <>
